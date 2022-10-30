@@ -1,0 +1,44 @@
+# byoverbs/futures.txt
+
+# what i might should make next for us
+
+
+Emacs too, not just Vim
+
+
+more on chopping output, beyond:  less -FIRX
+like qlq could vary by Terminal Window Height
+
+
+d for diff -brpu a b
+
+
+Python files of nothing but quoted examples
+
+
+Makefile
+
+make
+make pwnyou
+make pwnme
+make push
+
+
+mv.py arg - mv -i with 'git config user.initials' and date-time last modified
+cp.py arg - cp -ipR with 'git config user.initials' and date-time last modified
+
+
+touch.py examples
+
+
+bin/qno
+git.py 'git diff --name-only' or 'git show --pretty= --name-only' "$@"
+qspno 1
+
+
+sh.py vim "$@"
+trace and run it
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.txt
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -1,0 +1,12 @@
+# ~/.gitconfig
+# far away from:  .git/config
+
+
+[user]
+	email = jqdoe@example.com
+	name = J Q Doe
+	initials = jqdoe
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot-gitconfig
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

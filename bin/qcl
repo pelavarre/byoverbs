@@ -1,0 +1,6 @@
+set -e
+echo 'did you mean: ' git clean -ffxdq "$@"
+echo press ⌃D to execute, or ⌃C to quit
+cat - >/dev/null
+set -xe
+git clean -ffxdq "$@"

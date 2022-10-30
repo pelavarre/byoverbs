@@ -1,0 +1,2 @@
+set -xe
+git log --oneline --no-decorate -10 "$@"

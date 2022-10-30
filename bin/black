@@ -1,0 +1,3 @@
+set -e
+echo + '~/.pyvenvs/black/bin/black' "$@" >&2
+~/.pyvenvs/black/bin/black "$@"
