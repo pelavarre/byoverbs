@@ -3,41 +3,53 @@
 # what i might should make next for us
 
 
+bin/
+
+erase Mac v Linux
+@ find.py .
+@ tac.py, tail.py -r, tail.py +3
+@ ls.py --full-time
+but with --ext=.py to show the source
+
 Emacs too, not just Vim
 
-
-more on chopping output, beyond:  less -FIRX
-like qlq could vary by Terminal Window Height
-
-
 d for diff -brpu a b
-
-
-Python files of nothing but quoted examples
-
-
-Makefile
-
-make
-make pwnyou
-make pwnme
-make push
-
 
 mv.py arg - mv -i with 'git config user.initials' and date-time last modified
 cp.py arg - cp -ipR with 'git config user.initials' and date-time last modified
 
-
-touch.py examples
-
+make pwnme
+make pwnyou
 
 bin/qno
 git.py 'git diff --name-only' or 'git show --pretty= --name-only' "$@"
 qspno 1
 
 
-sh.py vim "$@"
-trace and run it
+demos/
+
+demos/byotools.py to temporarily sys.path for: from byotools import *
+demos/keycaps.py - msvcrt, select, termios, pty
+demos/numpad.py
+demos/rpn.py
+demos/buttonfiles/macos/
+
+archives/ dir
+to capture what's still earning a place at bin/
+?
+
+
+sh.py
+
+Python files of nothing but quoted examples
+
+more on chopping output, beyond:  less -FIRX
+like qlq could vary by Terminal Window Height
+
+
+vi.py
+
+move Python Def
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.txt

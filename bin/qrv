@@ -1,0 +1,2 @@
+echo + git remote -v >&2
+echo "git clone $(git remote -v |xargs -n 1 |grep : |uniq)"

@@ -8,7 +8,7 @@ touch -d 1999-12-31T23:59:59.999 t.touch
 import byotools as byo
 
 
-byo.exit_if()
+byo.sys_exit_if()
 
 raise NotImplementedError("sorry, i haven't yet written this part of it here")
 

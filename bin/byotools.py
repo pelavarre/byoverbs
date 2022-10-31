@@ -6,21 +6,24 @@ usage: import byotools as byo  # define Func's
 competently welcome you into Sh Terminal work, batteries included
 
 examples:
-  byo.exit_if()  # prints examples and exits, else help lines and exits, else returns
+  byo.sys_exit_if()  # prints examples or help lines and exits, else returns
 """
 
 import __main__
 import datetime as dt
 import os
 import pdb
+import shlex
 import subprocess
 import sys
 import textwrap
 
-_ = pdb
+if not hasattr(__builtins__, "breakpoint"):
+    breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
 
 _ = subprocess.run  # new since Sep/2015 Python 3.5
 _ = dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6
+# _ = breakpoint  # new since Jun/2018 Python 3.7
 # _ = importlib.import_module("dataclasses")  # new since Jun/2018 Python 3.7
 # _ = f"{sys.version_info[:3]=}"  # new since Oct/2019 Python 3.8
 # _ = shlex.join  # new since Oct/2019 Python 3.8
@@ -103,6 +106,11 @@ def ast_fetch_testdoc():
 
 
 #
+# Add some Def's to Import Os
+#
+
+
+#
 # Add some Def's to Import ShLex
 #
 
@@ -120,19 +128,74 @@ def shlex_parms_dash_dash_h(parms):
             return True
 
 
+def shlex_parms_one_posarg():
+    """Accept one Arg without "-" Dash Options, preceded by a "--" Sep or not"""
+
+    parms = sys.argv[1:]
+    if sys.argv[1:][:1] == ["--"]:
+        parms = sys.argv[2:]
+
+    parm = None
+    if len(parms) == 1:
+        parm = parms[-1]
+        if parm.startswith("-"):
+            parm = None
+
+    return parm
+
+
+#
+# Add some Def's to Import SubProcess
+#
+
+
+def subprocess_run(shline):
+    """Call SubProcess Run on a ShLine, but with Shell None, and without Stdin"""
+
+    argv = shlex.split(shline)
+
+    _ = subprocess.run(argv, stdin=subprocess.PIPE, check=True)
+
+
+def subprocess_run_oneline(shline):
+    """Pull 1 Line from SubProcess Run"""
+
+    argv = shlex.split(shline)
+
+    run = subprocess.run(
+        argv,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+
+    assert not run.stderr, run.stderr
+
+    stdout = run.stdout.decode()
+    lines = stdout.splitlines()
+
+    assert len(lines) == 1, repr(lines[:3])
+
+    line = lines[-1]
+
+    return line
+
+
 #
 # Add some Def's to Import Sys
 #
 
 
-def exit_if():
+def sys_exit_if():
     """Print examples and exit, else print help lines and exit, else return"""
 
-    exit_if_testdoc()
-    exit_if_argdoc()
+    sys_exit_if_testdoc()
+    sys_exit_if_argdoc()
+    sys_exit_if_not_implemented()
 
 
-def exit_if_argdoc():
+def sys_exit_if_argdoc():
     """Print help lines and exit"""
 
     doc = ast_fetch_argdoc()
@@ -144,7 +207,16 @@ def exit_if_argdoc():
         sys.exit()
 
 
-def exit_if_testdoc():
+def sys_exit_if_not_implemented():
+    """Exit by raising unhandled NotImplementedError() if given options or args"""
+
+    parms = sys.argv[1:]
+    if parms != ["--"]:
+
+        raise NotImplementedError(sys.argv[1:])
+
+
+def sys_exit_if_testdoc():
     """Print examples and exit"""
 
     doc = ast_fetch_testdoc()
@@ -154,3 +226,18 @@ def exit_if_testdoc():
         print(doc)
 
         sys.exit()
+
+
+def sys_stderr_print(*args, **kwargs):
+    """Work like Print, but write Sys Stderr in place of Sys Stdout"""
+
+    kwargs_ = dict(kwargs)
+    if "file" not in kwargs.keys():
+        kwargs_["file"] = sys.stderr
+
+    sys.stdout.flush()
+
+    print(*args, **kwargs_)
+
+    if "file" not in kwargs.keys():
+        sys.stderr.flush()

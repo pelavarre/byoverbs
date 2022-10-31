@@ -7,17 +7,12 @@ choose preferences for each new Zsh session
 '''
 
 
-# Grow the Path, choose the first Pwd, and suggest Scp
-
-export PATH=$PATH:/Library/Frameworks/Python.framework/Versions/3.11/bin
-export PATH=$PATH:$HOME/bin
+# Fetch Keys and grow the Path
 
 ssh-add ~/.ssh/*id_rsa 2>/dev/null
 
-pushd ~/Public/byoverbs >/dev/null
-
-echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
-echo
+export PATH=$PATH:/Library/Frameworks/Python.framework/Versions/3.11/bin
+export PATH=$PATH:$HOME/bin
 
 
 # Abbreviate the next Pwd
@@ -52,6 +47,15 @@ function pips () {
     echo + source ~/.pyvenvs/pips/bin/activate >&2
     source ~/.pyvenvs/pips/bin/activate >&2
 }
+
+
+# Choose the first Pwd, and suggest Scp
+
+pushd ~/Desktop >/dev/null
+pushd ~/Public/byoverbs >/dev/null
+
+echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
+echo
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot-zprofile
