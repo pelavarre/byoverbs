@@ -32,6 +32,7 @@ import datetime as dt
 import difflib
 import os
 import pdb
+import re
 import select
 import string
 import sys
@@ -40,7 +41,8 @@ import textwrap
 import tty
 import unicodedata
 
-_ = pdb
+if not hasattr(__builtins__, "breakpoint"):
+    breakpoint = pdb.set_trace
 
 
 DEFAULT_NONE = None
@@ -74,17 +76,16 @@ def run_loopback():
     print("Beware of ⌃ ⌥ Space or ⌃ ⌥ ⇧ Space changing your Keyboard Input Source")
 
     print()
-    print("Press the same keystroke twice to quit")
+    print("Press the same keystroke 3 times to quit")
 
     # React to each Stroke as it comes, don't wait for more
 
     with stdtty_open(sys.stderr) as chatting:
-
-        stroke = None
+        strokes = list()
         while True:
-            stroke_minus = stroke
 
-            (millis, stroke) = chatting.read_millis_stroke()
+            (millis, t1, stroke) = chatting.read_millis_stroke()
+            _ = t1
 
             # Work up details on the Stroke
 
@@ -98,14 +99,15 @@ def run_loopback():
 
             print(str_int_millis, hexxed, keycaps, vimmed, end="\r\n")
 
-            # Quit after the first keystroke that comes twice in a row
+            # Quit after the 3rd Copy of any 1 Stroke
 
-            if stroke_minus == stroke:
+            strokes.append(stroke)
+            if strokes[-3:] == (3 * [stroke]):
 
                 break
 
 
-def run_fireplace():
+def run_fireplace():  # noqa  # C901 too complex (12)  # FIXME
     """Fire key caps bright when struck, fade to black, then grey, then gone"""
 
     DENT = "    "
@@ -117,7 +119,7 @@ def run_fireplace():
     print("Beware of ⌃ ⌥ Space or ⌃ ⌥ ⇧ Space changing your Keyboard Input Source")
 
     print()
-    print("Press the same keystroke twice to quit")
+    print("Press the same keystroke 3 times to quit")
 
     print()
 
@@ -127,23 +129,32 @@ def run_fireplace():
     indexable = "\n".join((DENT + _ + DENT) for _ in plottable.splitlines())
     plotted = "\n".join((len(_) * " ") for _ in indexable.splitlines())
 
-    # React to each keystroke as it comes, don't wait for more
+    # Run with keystrokes forwarded when they occur, don't wait for more
 
+    t_by_keycap = dict()
     with stdtty_open(sys.stderr) as chatting:
-
-        stroke = None
+        strokes = list()
         while True:
-            stroke_minus = stroke
 
-            (_, stroke) = chatting.read_millis_stroke()
+            # Read the next Stroke
+
+            (millis, t1, stroke) = chatting.read_millis_stroke()
+            _ = millis
+
             keycaps = KEYCAP_LISTS_BY_STROKE.get(stroke, DEFAULT_NONE)
 
-            # Trace the Key Caps of the Stroke
+            # Trace its Key Caps
 
             print(end="\r\n")
             print(end="\r\n")
 
             print(keycaps, end="\r\n")
+
+            # Keep the Time Last Struck for each Key Cap
+
+            for keycap_list in keycaps:
+                for keycap in keycap_list.split():
+                    t_by_keycap[keycap] = t1
 
             # Form a new Board
 
@@ -161,19 +172,60 @@ def run_fireplace():
                         start = find + len(whole)
                         plotted = plotted[:find] + whole + plotted[start:]
 
-            # Quit after the first keystroke that comes twice in a row
+            # Print the details
 
             print(end="\r\n")
             print(end="\r\n")
 
+            now = dt.datetime.now()
             for line in plotted.splitlines():
-                print(line.rstrip(), end="\r\n")
+                chars = line.rstrip()
 
-            #
+                emits = list()
+                splits = re.split(r"([ ]+)", string=chars)
+                for split in splits:
+                    emit = split
+                    if split.strip():
+                        keycap = split
+                        emit = colorize(keycap, t=t_by_keycap[keycap], now=now)
+                    emits.append(emit)
 
-            if stroke_minus == stroke:
+                print("".join(emits), end="\r\n")
+
+            # Quit after the 3rd Copy of any 1 Stroke
+
+            strokes.append(stroke)
+            if strokes[-3:] == (3 * [stroke]):
 
                 break
+
+
+def colorize(keycap, t, now):
+    """Choose a Color for the Key Cap, else replace it with Spaces"""
+
+    # Find Teal, Green, Gold, Pink, Red, Blue, Black, Grey in the Ascii Colors
+
+    no_color = 0  # todo: might should only switch to No Color at the end?
+    colors_by_age = [36, 32, 33, 35, 31, 34, 30, 37]
+
+    # Measure the age of the last Stroke of this Key Cap
+
+    nowt = now - t
+    age = int(nowt.total_seconds() / 0.500)
+
+    # Replace with Spaces after awhile
+
+    if age not in range(len(colors_by_age)):
+        emit = len(keycap) * " "
+
+        return emit
+
+    # Fire bright when struck, fade to black, then grey, then gone
+
+    color = colors_by_age[age]
+    emit = "\x1B[{}m{}\x1B[{}m".format(color, keycap, no_color)
+
+    return emit
 
 
 #
@@ -738,7 +790,7 @@ class stdtty_open:  # Linux & Mac only?
 
         millis = (t1 - t0).total_seconds() * 1000
 
-        return (millis, stroke)
+        return (millis, t1, stroke)
 
     def read_stroke(self):
         """Read one Keystroke"""
@@ -896,5 +948,5 @@ if __name__ == "__main__":
     main()
 
 
-# posted into:  https://github.com/pelavarre/byobash/blob/main/tui/keycaps.py
-# copied from:  git clone https://github.com/pelavarre/byobash.git
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/keycaps.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git
