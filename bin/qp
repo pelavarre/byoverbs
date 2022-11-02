@@ -1,0 +1,12 @@
+function qp () {
+    echo '+ popd >/dev/null' >&2
+    popd >/dev/null
+
+    echo '+ (dirs -p |head -1)'
+    (dirs -p |head -1)
+
+    if [[ -e .git/ ]]; then
+        echo '+ git rev-parse --abbrev-ref HEAD'
+        git rev-parse --abbrev-ref HEAD
+    fi
+}

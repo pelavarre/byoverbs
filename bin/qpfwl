@@ -1,0 +1,16 @@
+set -e
+
+(set -xe; git rev-parse --abbrev-ref HEAD)
+
+echo +
+echo 'did you mean: ' git push --force-with-lease "$@"
+echo press ⌃D to execute, or ⌃C to quit
+cat - >/dev/null
+
+if ! git rev-parse --abbrev-ref HEAD |grep $(git config user.email |cut -d@ -f1); then
+    echo "not auth'ed at branch: " $(git rev-parse --abbrev-ref HEAD)
+    exit 1
+fi
+
+set -xe
+git push --force-with-lease "$@"

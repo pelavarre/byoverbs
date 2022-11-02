@@ -1,0 +1,2 @@
+set -xe
+git rev-parse --abbrev-ref HEAD
