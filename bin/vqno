@@ -1,2 +1,8 @@
-set -xe
-vim $($(dirname $0)/qno) "$@"
+qno=$(dirname $0)/qno
+if [[ $(git rev-parse --show-toplevel) == $PWD ]]; then
+    set -xe
+    vim $($qno) "$@"
+else
+    set -xe
+    (cd $(git rev-parse --show-toplevel) && vim $($qno) "$@")
+fi

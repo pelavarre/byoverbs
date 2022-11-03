@@ -3,5 +3,13 @@ if ! which emacs >/dev/null; then
     emacs=/opt/homebrew/bin/emacs
 fi
 
-set -xe
-$emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($(dirname $0)/qno) "$@"
+if [[ $(git rev-parse --show-toplevel) == $PWD ]]; then
+    set -xe
+    $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qno0) "$@"
+else
+    set -xe
+    (
+        cd $(git rev-parse --show-toplevel) \
+            && $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qno0) "$@"
+    )
+fi
