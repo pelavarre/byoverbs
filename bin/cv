@@ -1,2 +1,7 @@
-set -xe
-pbpaste
+if [ -t 0 ]; then
+    set -xe
+    pbpaste
+else
+    set -xe
+    pbcopy
+fi

@@ -1,2 +1,12 @@
-set -xe
-awk '{print $NF}'
+if [[ $# == 0 ]]; then
+    set -xe
+    awk '{print $NF}'  # last word per line
+else
+    if [[ $1 < 0 ]]; then
+        set -xe
+        awk '{print $(NF + 1 + '$1')}'  # word -1, -2, etc
+    else
+        set -xe
+        awk '{print $'$1'}'  # word 1, 2, etc, if not 0 for all words
+    fi
+fi

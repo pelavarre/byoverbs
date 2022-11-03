@@ -1,0 +1,7 @@
+function zh() {  # for Zsh, not for Bash
+    (
+        set -xe
+        history -t '%b %d %H:%M:%S' 0
+        # Bash HISTTIMEFORMAT='%b %d %H:%M:%S  ' history
+    )
+}

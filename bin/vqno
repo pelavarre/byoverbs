@@ -1,0 +1,2 @@
+set -xe
+vim $($(dirname $0)/qno) "$@"

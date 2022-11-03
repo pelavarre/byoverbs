@@ -5,15 +5,15 @@
 
 bin/
 
+insert separators more smoothly than
+% cv |g : |gv '0:00:0[0123]' |g http |column -t |(sleep 0.1 && awk 'BEGIN{print ""} {o=d; h=0+substr($4, 1, 2); d=(h >= 6) && (h < 18)} (o != d){print ""} {print}' && echo)
+
 explain bin/screen.bash
 
 add whence.py to default to whence -a including Aliases & Funcs of Bash & Zsh
 
 grow bin/a to take separator and index as arg
     not only always default to no explicit separator and the NF kind of NF+1-1 index
-
-traces by set -xe
-go to Stdout, not Stderr : -(
 
 erase Mac v Linux
 @ find.py .
@@ -28,11 +28,8 @@ d for diff -brpu a b
 mv.py arg - mv -i with 'git config user.initials' and date-time last modified
 cp.py arg - cp -ipR with 'git config user.initials' and date-time last modified
 
-make pwnme
-make pwnyou
+make pwnyou - for pushing out diff's
 
-bin/qno
-git.py 'git diff --name-only' or 'git show --pretty= --name-only' "$@"
 qspno 1
 
 

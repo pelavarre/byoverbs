@@ -1,4 +1,4 @@
 set -e
 LINES=$(stty size </dev/tty |cut -d' ' -f1)
 set -xe
-head -$((LINES / 3)) "$@"
+tail -$((LINES / 3)) "$@"

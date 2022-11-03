@@ -24,10 +24,34 @@ alias ~='echo + cd "~" >&2 && cd ~ && (dirs -p |head -1)'
 : setopt AUTO_CD  # Zsh  # lacks tab-completion
 : shopt -s autocd 2>/dev/null  # Bash
 
+
+# Copy-edit Zsh Funcs from GitHub PELaVarre 'byoverbs/bin/'
+
 function qcd () {
-    echo + 'cd $(git rev-parse --show-toplevel)' >&2
-    cd $(git rev-parse --show-toplevel)
-    dirs -p |head -1
+    echo + 'cd $(git rev-parse --show-toplevel && ...)' >&2
+    git rev-parse --show-toplevel \
+        && cd $(git rev-parse --show-toplevel) \
+        && (dirs -p |head -1)
+}
+
+function qp () {
+    echo '+ popd >/dev/null' >&2
+    popd >/dev/null
+
+    echo '+ (dirs -p |head -1)'
+    (dirs -p |head -1)
+
+    if [[ -e .git/ ]]; then
+        echo '+ git rev-parse --abbrev-ref HEAD'
+        git rev-parse --abbrev-ref HEAD
+    fi
+}
+
+function zh() {  # for Zsh, not for Bash
+    (
+        set -xe
+        HISTTIMEFORMAT='%b %d %H:%M:%S  ' history 0  # Bash takes no 0 here
+    )
 }
 
 
@@ -49,10 +73,19 @@ function pips () {
 }
 
 
+
+# Authorize ZProfile Extensions
+
+if [[ -e ~/.ssh/zprofile ]]; then
+    source ~/.ssh/zprofile
+fi
+
+
 # Choose the first Pwd, and suggest Scp
 
-pushd ~/Desktop >/dev/null
-pushd ~/Public/byoverbs >/dev/null
+: pushd ~ >/dev/null  # default at Mac
+pushd ~/Desktop >/dev/null  # thus, at:  qp
+pushd ~/Public/byoverbs >/dev/null  # thus, at:  ..
 
 echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 echo

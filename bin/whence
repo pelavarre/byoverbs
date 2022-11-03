@@ -1,3 +1,2 @@
-set -e
-echo + which "$@" >&2
+set -xe
 which "$@"

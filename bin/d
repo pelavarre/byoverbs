@@ -1,0 +1,14 @@
+if [[ $# == 0 ]]; then
+    set -- -brpu a b "$@"
+else
+    if [[ $# == 1 ]]; then
+        set -- -brpu a "$@"
+    else
+        if [[ $# == 2 ]]; then
+            set -- -brpu "$@"
+        fi
+    fi
+fi
+
+set -xe
+diff "$@"

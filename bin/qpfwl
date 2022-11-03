@@ -1,8 +1,8 @@
 set -e
 
 (set -xe; git rev-parse --abbrev-ref HEAD)
-
 echo +
+
 echo 'did you mean: ' git push --force-with-lease "$@"
 echo press ⌃D to execute, or ⌃C to quit
 cat - >/dev/null

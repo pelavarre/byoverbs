@@ -18,7 +18,7 @@
 :set background=dark
 :set background=light
 :syntax off
-:syntax on
+:syntax on  # such as for :set syntax=.bash
 
 
 " Configure the other basics

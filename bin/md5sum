@@ -1,0 +1,2 @@
+set -xe
+openssl dgst -md5 "$@" |tr '()=_' ' ' |awk '{print $3, $2}'
