@@ -5,6 +5,10 @@
 
 bin/
 
+explain bin/screen.bash
+
+add whence.py to default to whence -a including Aliases & Funcs of Bash & Zsh
+
 grow bin/a to take separator and index as arg
     not only always default to no explicit separator and the NF kind of NF+1-1 index
 

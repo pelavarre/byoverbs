@@ -1,0 +1,7 @@
+if [[ $# == 0 ]]; then
+    echo 'cat - >/dev/null' >&2
+    cat - >/dev/null
+else
+    echo cat "$@" >&2
+    cat "$@"
+fi
