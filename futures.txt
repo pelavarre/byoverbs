@@ -1,9 +1,15 @@
 # byoverbs/futures.txt
 
-# what i might should make next for us
+# what i might should make next for us soon
 
 
 bin/
+
+grow bin/a to take separator and index as arg
+    not only always default to no explicit separator and the NF kind of NF+1-1 index
+
+traces by set -xe
+go to Stdout, not Stderr : -(
 
 erase Mac v Linux
 @ find.py .

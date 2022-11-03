@@ -1,2 +1,4 @@
+set -e
+LINES=$(stty size </dev/tty |cut -d' ' -f1)
 set -xe
-git log --oneline --no-decorate -10 "$@"
+git log --oneline --no-decorate -$((LINES / 3)) "$@"
