@@ -1,2 +1,3 @@
 set -xe
 tail -r "$@"
+# some Mac lack Linux Tac  # some Linux lack Mac Tail R
