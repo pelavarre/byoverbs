@@ -11,18 +11,21 @@ options:
 
 quirks:
   reacts complexly to
-  + Control, Fn, ⌥ Option Alt, & ⌘ Command keys for shifting keys
+  + CapsLock, Control, Fn, ⌥ Option Alt, & ⌘ Command keys for shifting keys
   + Option Grave and Option E I N U keys for prefixing other keys
   + Terminal > Preferences > Profiles > Keyboard > Use Option As Meta
   + pressing ⌃ ⌥ Space to change System Preferences > Keyboard > Input Sources
+  + pressing Key Caps that work outside, such as ⇧ by itself, or F11 in place of ⌥ F6
 
 examples:
   git clone https://github.com/pelavarre/byobash.git
   tui/keycaps.py  # show these examples
-  tui/keycaps.py --
+  tui/keycaps.py --  # show a fireplace of key caps bright when struck, then fading
+  tui/keycaps.py --loopback  # show only the mechanics inside
 """
 
 # code reviewed by people, and by Black and Flake8
+# developed by:  F=demos/keycaps.py && black $F && flake8 $F && $F --
 
 
 import __main__
@@ -47,16 +50,20 @@ if not hasattr(__builtins__, "breakpoint"):
 
 DEFAULT_NONE = None
 
+MILLIS_PER_COLOR = 500  # milliseconds of Key Cap life per color
+
 
 #
 # Run from the Sh command line
 #
 
 
-def main():
+def main(sys_argv=None):
     """Run from the Sh command line"""
 
-    args = parse_keycaps_args()  # exits if no args, etc
+    args = parse_keycaps_args(sys_argv)  # exits if no args, etc
+
+    require_tty()
 
     if args.loopback:
         run_loopback()
@@ -66,17 +73,38 @@ def main():
     run_fireplace()
 
 
+def require_tty():
+    """Fail-fast when not run from a Terminal"""
+
+    try:
+        with stdtty_open(sys.stderr):
+            pass
+    except Exception as exc:
+        sys_stderr_print("Traceback (most recent call last):")
+        sys_stderr_print("  ...")
+        sys_stderr_print("{}: {}".format(type(exc).__name__, exc))
+
+        sys_stderr_print()
+        sys_stderr_print("Run this code inside a Terminal, such as a Windows Dos Box")
+
+        sys.exit(1)
+
+
 def run_loopback():
     """Show one line per keystroke"""
 
     # Greet people
 
     print()
-    print("Beware of Caps Lock changing your Keyboard Input Byte Codes")
+    print("Beware of F11 moving your Terminal Windows, try ⌥ F6 instead")
     print("Beware of ⌃ ⌥ Space or ⌃ ⌥ ⇧ Space changing your Keyboard Input Source")
+    print("Beware of CapsLock changing your Keyboard Input Byte Codes")
 
     print()
-    print("Press the same keystroke 3 times to quit")
+    print("Type faster or slower to see more colors:", COLORS)
+
+    print()
+    print("Press the same Keystroke 3 times to quit")
 
     # React to each Stroke as it comes, don't wait for more
 
@@ -107,7 +135,7 @@ def run_loopback():
                 break
 
 
-def run_fireplace():  # noqa  # C901 too complex (12)  # FIXME
+def run_fireplace():
     """Fire key caps bright when struck, fade to black, then grey, then gone"""
 
     DENT = "    "
@@ -115,18 +143,22 @@ def run_fireplace():  # noqa  # C901 too complex (12)  # FIXME
     # Greet people
 
     print()
-    print("Beware of Caps Lock changing your Keyboard Input Byte Codes")
+    print("Beware of F11 moving your Terminal Windows, try ⌥ F6 instead")
     print("Beware of ⌃ ⌥ Space or ⌃ ⌥ ⇧ Space changing your Keyboard Input Source")
+    print("Beware of CapsLock changing your Keyboard Input Byte Codes")
 
     print()
-    print("Press the same keystroke 3 times to quit")
+    print("Type faster or slower to see more colors:", COLORS)
 
     print()
 
     # Form a Board of Keycaps to print
 
     plottable = textwrap.dedent(MACBOOK_KEYCAP_CHARS).strip()
+    plottable = "\n".join(_ for _ in plottable.splitlines() if _)
+
     indexable = "\n".join((DENT + _ + DENT) for _ in plottable.splitlines())
+
     plotted = "\n".join((len(_) * " ") for _ in indexable.splitlines())
 
     # Run with keystrokes forwarded when they occur, don't wait for more
@@ -134,21 +166,45 @@ def run_fireplace():  # noqa  # C901 too complex (12)  # FIXME
     t_by_keycap = dict()
     with stdtty_open(sys.stderr) as chatting:
         strokes = list()
+        sep = None
         while True:
 
-            # Read the next Stroke
+            # Prompt and read the next Stroke
+
+            if not sep:
+                print(end="\r\n")
+
+            prompt = "    -- Press the same Keystroke 3 times to quit --"
+            print(prompt, end="\r")
 
             (millis, t1, stroke) = chatting.read_millis_stroke()
             _ = millis
 
-            keycaps = KEYCAP_LISTS_BY_STROKE.get(stroke, DEFAULT_NONE)
+            print(len(prompt) * " ", end="\r")
 
-            # Trace its Key Caps
+            rep_stroke = chars_encode_repr(stroke.decode()).replace(r"\x1B", r"\e")
 
-            print(end="\r\n")
-            print(end="\r\n")
+            default_list = list()
+            keycaps = KEYCAP_LISTS_BY_STROKE.get(stroke, default_list)
 
-            print(keycaps, end="\r\n")
+            # Separate one Trace of Key Caps from the next
+
+            if not sep:
+                sep = True
+
+                print(end="\r\n")
+
+            # Trace the Stroke itself
+
+            print(keycaps, rep_stroke, end="\r\n")
+
+            # Trace nothing more, when the Stroke sent no Key Caps
+
+            if not keycaps:
+
+                continue
+
+            sep = None
 
             # Keep the Time Last Struck for each Key Cap
 
@@ -156,41 +212,16 @@ def run_fireplace():  # noqa  # C901 too complex (12)  # FIXME
                 for keycap in keycap_list.split():
                     t_by_keycap[keycap] = t1
 
-            # Form a new Board
-
-            for keycap_list in keycaps:
-                for keycap in keycap_list.split():
-                    whole = " " + keycap + " "
-
-                    start = 0
-                    while True:
-                        find = indexable.find(whole, start)
-                        if find < 0:
-
-                            break
-
-                        start = find + len(whole)
-                        plotted = plotted[:find] + whole + plotted[start:]
-
-            # Print the details
+            # Plot the Keyboard of Key Caps
 
             print(end="\r\n")
             print(end="\r\n")
 
-            now = dt.datetime.now()
-            for line in plotted.splitlines():
-                chars = line.rstrip()
+            (plotted, lines) = plotted_plot_keycaps(
+                plotted, indexable=indexable, t_by_keycap=t_by_keycap, keycaps=keycaps
+            )
 
-                emits = list()
-                splits = re.split(r"([ ]+)", string=chars)
-                for split in splits:
-                    emit = split
-                    if split.strip():
-                        keycap = split
-                        emit = colorize(keycap, t=t_by_keycap[keycap], now=now)
-                    emits.append(emit)
-
-                print("".join(emits), end="\r\n")
+            print("\r\n".join(lines), end="\r\n")
 
             # Quit after the 3rd Copy of any 1 Stroke
 
@@ -198,6 +229,62 @@ def run_fireplace():  # noqa  # C901 too complex (12)  # FIXME
             if strokes[-3:] == (3 * [stroke]):
 
                 break
+
+
+def plotted_plot_keycaps(plotted, indexable, t_by_keycap, keycaps):
+    """Plot the Keyboard of Key Caps"""
+
+    # Form a new Board
+
+    for keycap_list in keycaps:
+        for keycap in keycap_list.split():
+            whole = " " + keycap + " "
+
+            start = 0
+            while True:
+                find = indexable.find(whole, start)
+                if find < 0:
+
+                    break
+
+                start = find + len(whole)
+                plotted = plotted[:find] + whole + plotted[start:]
+
+    # Print the details
+
+    now = dt.datetime.now()
+    lines = list()
+    for line in plotted.splitlines():
+        chars = line.rstrip()
+
+        emits = list()
+        splits = re.split(r"([ ]+)", string=chars)
+        for split in splits:
+            emit = split
+            if split.strip():
+                keycap = split
+                emit = colorize(keycap, t=t_by_keycap[keycap], now=now)
+            emits.append(emit)
+
+        emitting = "".join(emits).rstrip()
+
+        lines.append(emitting)
+
+    # Drop the blank lines above and below the visible Key Caps
+
+    while lines and not lines[0]:
+        lines.pop(0)
+
+    while lines and not lines[-1]:
+        lines.pop(-1)
+
+    #
+
+    return (plotted, lines)
+
+
+COLOR_BY_AGE = [36, 32, 33, 35, 31, 34, 30, 37]
+COLORS = ", ".join("\x1B[{}m#{}\x1B[0m".format(_, _) for _ in COLOR_BY_AGE)
 
 
 def colorize(keycap, t, now):
@@ -211,11 +298,12 @@ def colorize(keycap, t, now):
     # Measure the age of the last Stroke of this Key Cap
 
     nowt = now - t
-    age = int(nowt.total_seconds() / 0.500)
+    timeout = MILLIS_PER_COLOR / 1e3  # often 500e-3
+    age = int(nowt.total_seconds() / timeout)
 
     # Replace with Spaces after awhile
 
-    if age not in range(len(colors_by_age)):
+    if age not in range(len(COLOR_BY_AGE)):
         emit = len(keycap) * " "
 
         return emit
@@ -246,10 +334,12 @@ MACBOOK_KEYCAP_CHARS = r"""
            A  S  D  F  G  H  J  K  L  ;  '  Return
 
     ⇧       Z  X  C  V  B  N  M  ,  .  /         ⇧
-                                            ↑
-    Fn  ⌃  ⌥  ⌘   Space          ⌘   ⌥    ← ↓ →
+    Fn  ⌃  ⌥  ⌘                  ⌘   ⌥      ↑
+                  Space                   ← ↓ →
 
 """
+
+MACBOOK_SHIFT_KEYCAPS = "⇧ ↑ Fn ⌃ ⌥ ⌘ ← ↓ →".split()
 
 
 # List the Punctuation Marks found by Chords of Shift plus a Key Cap
@@ -480,6 +570,11 @@ KEYCAP_LISTS_BY_STROKE.update(  # the Option Punctuation-Mark strokes
     }
 )
 
+for _KC in MACBOOK_SHIFT_KEYCAPS:
+    _KB = _KC.encode()
+    assert _KB not in KEYCAP_LISTS_BY_STROKE.keys(), _KB
+    KEYCAP_LISTS_BY_STROKE[_KB] = [_KC]
+
 
 def require_keycap_lists_sorted():
     """Require Chords in each KeyCap List sorted by '', '⌃', '⌥', '⇧', '⌃ ⌥', etc"""
@@ -512,12 +607,14 @@ require_keycap_lists_sorted()
 #
 
 
-def parse_keycaps_args():
+def parse_keycaps_args(sys_argv):
     """Take Words from the Sh Command Line into KeyCaps Py"""
+
+    as_sys_argv = sys_argv if sys_argv else [None, "--"]
 
     # Drop the '--' Separator if present, even while declaring no Pos Args
 
-    sys_parms = sys.argv[1:]
+    sys_parms = as_sys_argv[1:]
     if sys_parms == ["--"]:
         sys_parms = list()
 
@@ -525,7 +622,7 @@ def parse_keycaps_args():
 
     parser = compile_keycaps_argdoc()
     args = parser.parse_args(sys_parms)  # exits if "-h", "--h", "--he", ... "--help"
-    if not sys.argv[1:]:
+    if not as_sys_argv[1:]:
         doc = __main__.__doc__
 
         exit_via_testdoc(doc, epi="examples")  # exits because no args
@@ -550,7 +647,7 @@ def compile_keycaps_argdoc():
         exit_unless_doc_eq(doc, parser)
 
     except SystemExit:
-        stderr_print("keycaps.py: ERROR: main doc and argparse parser disagree")
+        sys_stderr_print("keycaps.py: ERROR: main doc and argparse parser disagree")
 
         raise
 
@@ -629,7 +726,7 @@ def exit_unless_doc_eq(doc, parser):
     )
 
     if diff_lines:
-        stderr_print("\n".join(diff_lines))
+        sys_stderr_print("\n".join(diff_lines))
 
         sys.exit(1)  # trust caller to log SystemExit exceptions well
 
@@ -650,12 +747,19 @@ def exit_via_testdoc(doc, epi):
     sys.exit(0)
 
 
-def stderr_print(*args, **kwargs):  # todo: what if "file" in kwargs.keys() ?
-    """Work like Print, but write Stderr in place of Stdout"""
+def sys_stderr_print(*args, **kwargs):
+    """Work like Print, but write Sys Stderr in place of Sys Stdout"""
+
+    kwargs_ = dict(kwargs)
+    if "file" not in kwargs.keys():
+        kwargs_["file"] = sys.stderr
 
     sys.stdout.flush()
-    print(*args, file=sys.stderr, **kwargs)
-    sys.stderr.flush()
+
+    print(*args, **kwargs_)
+
+    if "file" not in kwargs.keys():
+        sys.stderr.flush()
 
 
 #
@@ -675,23 +779,51 @@ def bytes_hex_repr(xxs):
     return rep  # such as b'\x09\x0A\x0D\x20' for b'\t\n\r '
 
 
+def chars_encode_repr(chars):
+    r"""Repr of the Encode of Chars, except \a \b \e \f for those"""
+
+    if chars == "'":
+        rep = '"{}"'.format(chars)  # the three chars " ' "
+
+        return rep
+
+    rep = "".join(ch_encode_repr(_) for _ in chars)
+    rep = "b'{}'".format(rep)
+
+    return rep
+
+
 def ch_encode_repr(ch):
-    r"""Repr of the Encode of Ch, but b'\a', b'\b', and b'\f ' instead,for those"""
+    r"""Repr of the Encode of Ch, except \a \b \e \f for those"""
+
+    #
+
+    c0c1s = list(range(0x00, 0x20)) + [0x7F] + list(range(0x80, 0xA0))
+    c0c1s += [0xA0, 0xDA]
+    c0c1_set = set(c0c1s)
+
+    encodables = r"\abeftrn"
+    encoded = b"\\\a\b\x1B\f\t\r\n"
+
+    assert len(encodables) == len(encoded), (len(encodables), len(encoded))
+
+    #
 
     assert len(ch) == 1, repr(ch)
 
+    ord_ch = ord(ch)
     xxs = ch.encode()
-    index = b"\a\b\f\t\r\n".find(xxs)
 
-    rep = repr(xxs)
+    index = encoded.find(xxs)
+
     if index >= 0:
-        rep = r"b'\{}'".format("abftrn"[index])
+        rep = r"\{}".format(encodables[index])
+    elif ord_ch in c0c1_set:
+        rep = r"\x{:02X}".format(ord_ch)
     else:
-        rep = repr(xxs)
-        rep = rep[0] + rep[1:].upper()
-        rep = rep.replace(r"\X", r"\x")
+        rep = ch
 
-    return rep  # such as b'\a\b\f\n\t\r ' for itself  # such as b'\x1B' for Esc
+    return rep
 
 
 def vim_c0_repr(chars):
@@ -713,16 +845,15 @@ def vim_c0_repr(chars):
 #
 
 
-OPTION_E = "\N{Acute Accent}".encode()
-OPTION_GRAVE = "\N{Grave Accent}".encode()
-OPTION_I = "\N{Modifier Letter Circumflex Accent}".encode()
-OPTION_N = "\N{Small Tilde}".encode()
-OPTION_U = "\N{Diaeresis}".encode()
+def stdtty_open(stdtty):
+    """Accept such usage as 'with stdtty_open(sys.stderr):'"""
 
-OPTION_PREFIXES = (OPTION_E, OPTION_GRAVE, OPTION_I, OPTION_N, OPTION_U)
+    obj = StdTtyOpenerCloser(stdtty)
+
+    return obj
 
 
-class stdtty_open:  # Linux & Mac only?
+class StdTtyOpenerCloser:  # FIXME work in Windows too, not just in Mac and Linux
     r"""
     Emulate a glass teletype at Stdio, such as the 1978 DEC VT100 Video Terminal
 
@@ -793,29 +924,50 @@ class stdtty_open:  # Linux & Mac only?
         return (millis, t1, stroke)
 
     def read_stroke(self):
-        """Read one Keystroke"""
+        """Block enough to read one Keystroke"""
 
         fd = self.fd
 
-        xxs = os.read(fd, 1)
-        while self.select_select_rlist(timeout=0):
-            xxs += os.read(fd, 1)
+        # Read one Byte, or a burst of Bytes begun by b"\x1B" Esc
 
-        if xxs in OPTION_PREFIXES:
-            if self.select_select_rlist(timeout=0.001):
-                while self.select_select_rlist(timeout=0):
-                    xxs += os.read(fd, 1)
+        encodings = os.read(fd, 1)
+        if encodings == b"\x1B":
+            while self.select_select_rlist(timeout=0):
+                encodings += os.read(fd, 1)
+
+        # Read more Bytes to complete a partial trailing Unicode Encoding
+
+        while True:
+            try:
+                _ = encodings.decode()
+            except UnicodeDecodeError:
+                encodings += os.read(fd, 1)
+
+                continue
+
+            break
+
+        # Read more Bytes to keep small bursts of Paste together
+
+        while self.select_select_rlist(timeout=0):
+            encodings += os.read(fd, 1)
+
+        # Require UTF-8 input
 
         try:
-            xxs.decode()
+            encodings.decode()
         except UnicodeDecodeError:
-            print("UnicodeDecodeError: {}".format(xxs))
+            print("UnicodeDecodeError: {}".format(encodings))
 
             raise
 
-        stroke = xxs
+        # Succeed
+
+        stroke = encodings
 
         return stroke
+
+        # passes when tested by Keystrokes
 
         # b'\x1B[Z' for ⇧ Tab  # same bytes as CSI Z, aka Emacs BackTab
         # b'b'\x1b[1;2C' for ⇧ ←  # same bytes as Left(m=1, n=2), so doubled in row
@@ -828,6 +980,8 @@ class stdtty_open:  # Linux & Mac only?
         # doubles of Option E I N U Grave send themselves and still mark a vowel
         # Option E I N U before consonants send the marks themselves
         # Option Grave before consonants drops itself
+
+        # FIXME: fails to bundle as much Paste as 3 rapid ⌘ V Paste's of this File
 
     def select_select_rlist(self, timeout):
         """Wait till next Byte of Keystroke, next burst of Paste pasted, or Timeout"""
@@ -880,6 +1034,7 @@ C1_NAMES_PLUS = """
 # "\x1B\x5B" is 2 Char CSI encoded by UTF-8 as b"\x1B\x5B" == b"\x1B["
 
 # "\xA0" aka "\N{NBSP}" is the first Char just past the C1 Chars, at ⌥ Space
+# "\xAD" aka "\N{Soft Hyphen}", not far past the C1 Chars, looks lots like "\u002D" "-"
 
 
 # Index C0 & C1 Control Chars by their short Uppercase names from Unicode Org U000 Pdf
@@ -903,7 +1058,7 @@ assert len(CC_NAME_BY_CH) == len(CC_CH_BY_NAME)
 # Show "\x19" also has "EOM" short name in Python, vs only "EM" short name in Unicode
 
 EM = unicodedata.lookup("EOM")
-assert "\x19" == EM, (b"\x19", EM)
+assert "\x19" == "\N{EOM}" == EM
 
 
 def unicodedata_lookup(name):
@@ -912,7 +1067,7 @@ def unicodedata_lookup(name):
     try:
         ch = unicodedata.lookup(name)
     except KeyError:
-        if name == "EM":  # recover from mystic irregular KeyError at "EM"
+        if name == "EM":  # recover from mystic KeyError at:  unicodedata.lookup("EM")
             ch = CC_CH_BY_NAME[name]
         else:
 
@@ -921,12 +1076,16 @@ def unicodedata_lookup(name):
     return ch
 
 
+assert unicodedata.name("\u00A0") == "NO-BREAK SPACE"
+assert "\u00A0" == "\N{NBSP}" == "\N{No-Break Space}"
+
+
 def unicodedata_name(ch):
     r"""One of the \N{name}s of a Char"""
 
     if ch == "\u00A0":
 
-        return "NBSP"  # vs "No-Break Space"
+        return "NBSP"  # choose "NBSP" a la Html '&nbsp;' over "No-Break Space"
 
     try:
         name = unicodedata.name(ch).title()
@@ -945,7 +1104,7 @@ def unicodedata_name(ch):
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/keycaps.py
