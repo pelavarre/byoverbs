@@ -1,0 +1,2 @@
+set -xe
+printf "\e[8;999;$(stty size |cut -d' ' -f2)t"

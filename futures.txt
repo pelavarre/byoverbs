@@ -3,7 +3,71 @@
 # what i might should make next for us soon
 
 
+demos/
+
+wait longer once paste is large
+list deffed by Py File and not mentioned by that same Py File
+
+
+bin/vi.py
+solve Bash C-x C-e first
+try loud insert mode that expires at arrows, when not fed, etc
+pattern of search-replace that keeps lit the searches and the replaces
+
+
+bin/git.py
+wrong accident redefine Origin where? how about: git push origin HEAD:origin/feature/foo
+git log --no-decorate --pretty=format:'%h%x09%an%x09%cd%x20%x09%s' --author=plavarre |grep May |grep '2021 -'
+git show :1:FILENAME # base
+git show :2:FILENAME # theirs
+git show :3:FILENAME # ours
+
+
+bin/diff.py
+diff -Bbw
+
+
+bin/curl.py
+Include the HTTP response headers in the output ... date of doc ...
+
+
+vim
+solve evolving Vim vs:  :set listchars=tab:\\·,trail:·
+solve Multi Buffer Vim, such as
+    :nnoremap <space><space> :b <C-d>
+    :nnoremap <BS> :b#<CR>
+    :nnoremap <S-Tab> :bprevious<CR>
+    :nnoremap <Tab> :bnext<CR>
+
+
 bin/
+
+test venv:  rm -fr sandbox9/ && python3 -m venv --prompt SBOX9 sandbox9 && source sandbox9/bin/activate
+
+the version is y.m.d till it needs to be something else?
+
+dd some large file, to keep it easy to raise free space quickly
+
+~ dreams of sharing Sh Terminal space more fairly ~
+# diff -urp <(echo $LESSOPEN) <(echo '| /usr/bin/lesspipe %s')
+#
+
+cp.py with 1 arg
+
+loop for more input inside:  open.py --
+strip trailing slash
+
+whoa wrong to promise no screen
+$ screen.bash
+++ screen -r 1 Socket in /run/screen/S-plavarre
+There is no screen to be resumed matching 1.
+$ screen -ls
+There is a screen on:
+	2615111.pts-0.dev-plavarre3	(11/09/2022 06:18:56 PM)	(Detached)
+1 Socket in /run/screen/S-plavarre.
+$ screen.bash 1
+
+... |t -50
 
 insert separators more smoothly than
 % cv |g : |gv '0:00:0[0123]' |g http |column -t |(sleep 0.1 && awk 'BEGIN{print ""} {o=d; h=0+substr($4, 1, 2); d=(h >= 6) && (h < 18)} (o != d){print ""} {print}' && echo)
