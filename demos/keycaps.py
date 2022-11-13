@@ -18,8 +18,8 @@ quirks:
 
 examples:
   git clone https://github.com/pelavarre/byobash.git
-  tui/keycaps.py  # show these examples
-  tui/keycaps.py --  # show a fireplace of key caps bright when struck, then fading
+  demos/keycaps.py  # show these examples
+  demos/keycaps.py --  # show a fireplace of key caps bright when struck, then fading
 """
 
 # code reviewed by people, and by Black and Flake8
@@ -103,55 +103,6 @@ def require_tty():
         sys.exit(1)
 
 
-_ = '''  # retain these Sourcelines while Git Diff goes wrong to care
-
-def run_loopback():
-    """Show one line per keystroke"""
-
-    # Greet people
-
-    print()
-    print("Beware of F11 moving your Terminal Windows, try ⌥ F6 instead")
-    print("Beware of ⌃ ⌥ Space or ⌃ ⌥ ⇧ Space changing your Keyboard Input Source")
-    print("Beware of CapsLock changing your Keyboard Input Byte Codes")
-
-    print()
-    print("Type faster or slower to see more colors:", COLORS)
-
-    print()
-    print("Press the same Keystroke 3 times to quit")
-
-    # React to each Stroke as it comes, don't wait for more
-
-    with stdtty_open(sys.stderr) as chatting:
-        strokes = list()
-        while True:
-
-            (millis, t1, stroke) = chatting.read_millis_stroke()
-            _ = t1
-
-            # Work up details on the Stroke
-
-            str_int_millis = "{:6}".format(int(millis))
-
-            keycaps = KEYCAP_LISTS_BY_STROKE.get(stroke, DEFAULT_NONE)
-            hexxed = bytes_hex_repr(stroke)
-            vimmed = vim_c0_repr(stroke.decode())
-
-            # Print the details
-
-            print(str_int_millis, hexxed, keycaps, vimmed, end="\r\n")
-
-            # Quit after the 3rd Copy of any 1 Stroke
-
-            strokes.append(stroke)
-            if strokes[-3:] == (3 * [stroke]):
-
-                break
-
-'''
-
-
 def run_fireplace():
     """Fire key caps bright when struck, fade to black, then grey, then gone"""
 
@@ -174,44 +125,61 @@ def run_fireplace():
     # Run with keystrokes forwarded when they occur, don't wait for more
 
     with stdtty_open(sys.stderr) as chatting:
-        strokes = list()
+        quit_strokes = list()
         while True:
             prompt = "    -- Press the same Keystroke 3 times to quit --"
 
-            # Prompt and read the next Stroke
+            # Prompt and read the next one or two Strokes
 
-            main.prompt = prompt
+            (strokes, millis, t1) = chatting.read_strokes_millis_t1(prompt)
+            for (index, stroke) in enumerate(strokes_split(strokes)):
+                alt_millis = 0 if index else millis
+                quit_strokes.append(stroke)
 
-            print(prompt, end="\r")
-            (stroke, millis, t1) = chatting.read_stroke_millis_t1()
-            print(len(prompt) * " ", end="\r")
+                # Pick out which Key Caps might have been struck to form the Stroke
 
-            # Pick out which Key Caps might have been struck to form the Stroke
+                default_empty = list()
+                keycaps = KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
 
-            default_empty = list()
-            keycaps = KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
+                # Print the Stroke, and print the Board of Key Caps if Key Caps found
 
-            # Print the Stroke, and print the Board of Key Caps if Key Caps found
+                if keycaps:
+                    print(end="\r\n")
 
-            if keycaps:
-                print(end="\r\n")
+                stroke_print(stroke, millis=alt_millis, t1=t1, keycaps=keycaps)
 
-            stroke_print(stroke, millis=millis, t1=t1, keycaps=keycaps)
-
-            if keycaps:
-                print(end="\r\n")
-                keycaps_plot(keycaps, t1=t1)
-                keycaps_print(keycaps, stroke=stroke, t1=t1)
-                print(end="\r\n")
+                if keycaps:
+                    print(end="\r\n")
+                    keycaps_plot(keycaps, t1=t1)
+                    keycaps_print(keycaps, stroke=stroke, t1=t1)
+                    print(end="\r\n")
 
             # Quit after the 3rd Copy of any 1 Stroke coming slowly from fingers
 
-            strokes.append(stroke)
             if millis < 100:  # Don't quit while holding down a Key Cap to repeat
-                strokes.clear()
-            if strokes[-3:] == (3 * [stroke]):
+                quit_strokes.clear()
+
+            if quit_strokes[-3:] == (3 * [stroke]):
 
                 break
+
+
+def strokes_split(strokes):  # tested by ⌥ E E ⌥ E Q, etc
+    """Split the Option E I N U Grave accentuators when present"""
+
+    mac_accentuators = b"\x60 \xC2\xB4 \xCB\x86 \xCB\x9C \xC2\xA8".split()
+    assert MAC_ACCENTUATORS == mac_accentuators
+
+    for accentuator in MAC_ACCENTUATORS:
+        if strokes.startswith(accentuator):
+            if strokes != accentuator:
+                splits = [accentuator, strokes[len(accentuator) :]]
+
+                return splits
+
+    splits = [strokes]
+
+    return splits
 
 
 def stroke_print(stroke, millis, t1, keycaps):
@@ -418,6 +386,8 @@ MACBOOK_KEYCAP_CHARS = r"""
 
 MACBOOK_PASTE_KEYCAPS = "⇧ ↑ Fn ⌃ ⌥ ⌘ ← ↓ →".split()
 
+MAC_ACCENTUATORS = b"\x60 \xC2\xB4 \xCB\x86 \xCB\x9C \xC2\xA8".split()  # E I N U Grave
+
 
 # List the Punctuation Marks found by Chords of Shift plus a Key Cap
 
@@ -460,11 +430,11 @@ CHORDS = ["", "⌃", "⌥", "⇧", "⌃ ⌥", "⌃ ⇧", "⌥ ⇧", "⌃ ⌥ ⇧
 
 _8_DELETES = list("{} Delete".format(_).strip() for _ in CHORDS)
 
-_12_ESCAPES = ["⌃ [", "⌃ ⌥ [", "⌃ ⌥ [", "⌃ ⌥ ⇧ ["]
-_12_ESCAPES += list("{} Esc".format(_).strip() for _ in CHORDS)
+_11_ESCAPES = ["⌃ [", "⌃ ⌥ [", "⌃ ⌥ ⇧ ["]
+_11_ESCAPES += list("{} Esc".format(_).strip() for _ in CHORDS)
 
-_11_TABS = ["⌃ I", "⌃ ⌥ I", "⌃ ⌥ ⇧ I"]
-_11_TABS += list("{} Tab".format(_).strip() for _ in CHORDS)
+_7_TABS = ["⌃ I", "⌃ ⌥ I", "⌃ ⌥ ⇧ I"]
+_7_TABS += list("{} Tab".format(_).strip() for _ in ["", "⌃", "⌥", "⌃ ⌥"])
 
 _11_RETURNS = ["⌃ M", "⌃ ⌥ M", "⌃ ⌥ ⇧ M"]
 _11_RETURNS += list("{} Return".format(_).strip() for _ in CHORDS)
@@ -472,16 +442,17 @@ _11_RETURNS += list("{} Return".format(_).strip() for _ in CHORDS)
 KEYCAP_LISTS_BY_STROKE.update(  # the rest of Printable Ascii and Control C0 Ascii
     {
         b"\x00": ["⌃ Space", "⌃ ⇧ Space", "⌃ ⇧ 2", "⌃ ⌥ ⇧ 2"],  # near to ⇧2 for @
-        b"\x09": _11_TABS,  # drawn as ⇥
+        b"\x09": _7_TABS,  # drawn as ⇥
         b"\x0D": _11_RETURNS,  # drawn as ↩
-        b"\x1B": _12_ESCAPES,  # drawn as ⎋
+        b"\x1B": _11_ESCAPES,  # drawn as ⎋
         b"\x1B\x5B\x5A": ["⇧ Tab", "⌃ ⇧ Tab", "⌥ ⇧ Tab", "⌃ ⌥ ⇧ Tab"],  # drawn as ⇥
-        b"\x1C": ["⌃ \\", "⌃ ⌥ \\", "⌃ ⌥ \\", "⌃ ⌥ ⇧ \\"],
-        b"\x1D": ["⌃ ]", "⌃ ⌥ ]", "⌃ ⌥ ]", "⌃ ⌥ ⇧ ]"],
+        b"\x1C": ["⌃ \\", "⌃ ⌥ \\", "⌃ ⌥ ⇧ \\"],
+        b"\x1D": ["⌃ ]", "⌃ ⌥ ]", "⌃ ⌥ ⇧ ]"],
         b"\x1E": ["⌃ ⇧ 6", "⌃ ⌥ ⇧ 6"],  # near to ⇧6 for ^
-        b"\x1F": ["⌃ -", "⌃ ⌥ -", "⌃ ⌥ -", "⌃ ⌥ ⇧ -"],  # near to ⇧- for _
+        b"\x1F": ["⌃ -", "⌃ ⌥ -", "⌃ ⌥ ⇧ -"],  # near to ⇧- for _
         b"\x20": ["Space", "⇧ Space"],
         b"\x5C": ["\\", "⌥ Y"],  # ⌥ Y is \ in place of ¥, when inside Terminal
+        b"\x60": ["`", "⌥ `", "⌥ ⇧ `", "⌥ ` Space"],  # Backtick, ⌥ Grave, etc
         b"\x7F": _8_DELETES,  # or drawn as ⌫ and ⌦
         b"\xC2\xA0": ["⌥ Space", "⌥ ⇧ Space"],
     }
@@ -561,25 +532,45 @@ KEYCAP_LISTS_BY_STROKE.update(  # the Option Digit strokes
     }
 )
 
-KEYCAP_LISTS_BY_STROKE.update(  # the Option Letter strokes that don't set up accents
+KEYCAP_LISTS_BY_STROKE.update(  # the Option Letter strokes
     {
         b"\xC3\xA5": ["⌥ A"],
         b"\xE2\x88\xAB": ["⌥ B"],
         b"\xC3\xA7": ["⌥ C"],
         b"\xE2\x88\x82": ["⌥ D"],  # not followed by ⌥ E
+        b"\xC3\xA1": ["⌥ E A"],
+        b"\xC3\xA9": ["⌥ E E"],
+        b"\xC3\xAD": ["⌥ E I"],
+        b"\x6A\xCC\x81": ["⌥ E J"],
+        b"\xC3\xB3": ["⌥ E O"],
+        b"\xC3\xBA": ["⌥ E U"],
         b"\xC6\x92": ["⌥ F"],
         b"\xC2\xA9": ["⌥ G"],
         b"\xCB\x99": ["⌥ H"],  # not followed by ⌥ I
+        b"\xC3\xA2": ["⌥ I A"],
+        b"\xC3\xAA": ["⌥ I E"],
+        b"\xC3\xAE": ["⌥ I I"],
+        b"\xC3\xB4": ["⌥ I O"],
+        b"\xC3\xBB": ["⌥ I U"],
         b"\xE2\x88\x86": ["⌥ J"],
         b"\xCB\x9A": ["⌥ K"],
         b"\xC2\xAC": ["⌥ L"],
         b"\xC2\xB5": ["⌥ M"],  # not followed by ⌥ N
+        b"\xC3\xA3": ["⌥ N A"],
+        b"\xC3\xB1": ["⌥ N N"],
+        b"\xC3\xB5": ["⌥ N O"],
         b"\xC3\xB8": ["⌥ O"],
         b"\xCF\x80": ["⌥ P"],
         b"\xC5\x93": ["⌥ Q"],
         b"\xC2\xAE": ["⌥ R"],
         b"\xC3\x9F": ["⌥ S"],
         b"\xE2\x80\xA0": ["⌥ T"],  # not followed by ⌥ U
+        b"\xC3\xA4": ["⌥ U A"],
+        b"\xC3\xAB": ["⌥ U E"],
+        b"\xC3\xAF": ["⌥ U I"],
+        b"\xC3\xB6": ["⌥ U O"],
+        b"\xC3\xBC": ["⌥ U U"],
+        b"\xC3\xBF": ["⌥ U Y"],
         b"\xE2\x88\x9A": ["⌥ V"],
         b"\xE2\x88\x91": ["⌥ W"],
         b"\xE2\x89\x88": ["⌥ X"],
@@ -588,28 +579,33 @@ KEYCAP_LISTS_BY_STROKE.update(  # the Option Letter strokes that don't set up ac
         b"\xC4\xB1": ["⌥ ⇧ B"],
         b"\xC3\x87": ["⌥ ⇧ C"],
         b"\xC3\x8E": ["⌥ ⇧ D"],
-        b"\xC2\xB4": ["⌥ ⇧ E"],
+        b"\xC2\xB4": ["⌥ E", "⌥ ⇧ E", "⌥ ⇧ E Space"],
         b"\xC3\x8F": ["⌥ ⇧ F"],
         b"\xCB\x9D": ["⌥ ⇧ G"],
         b"\xC3\x93": ["⌥ ⇧ H"],
-        b"\xCB\x86": ["⌥ ⇧ I"],
+        b"\xCB\x86": ["⌥ I", "⌥ ⇧ I", "⌥ ⇧ I Space"],
         b"\xC3\x94": ["⌥ ⇧ J"],
         b"\xEF\xA3\xBF": ["⌥ ⇧ K"],
         b"\xC3\x92": ["⌥ ⇧ L"],
         b"\xC3\x82": ["⌥ ⇧ M"],
-        b"\xCB\x9C": ["⌥ ⇧ N"],
+        b"\xCB\x9C": ["⌥ N", "⌥ ⇧ N", "⌥ ⇧ N Space"],
         b"\xC3\x98": ["⌥ ⇧ O"],
         b"\xE2\x88\x8F": ["⌥ ⇧ P"],
         b"\xC5\x92": ["⌥ ⇧ Q"],
         b"\xE2\x80\xB0": ["⌥ ⇧ R"],
         b"\xC3\x8D": ["⌥ ⇧ S"],
         b"\xCB\x87": ["⌥ ⇧ T"],
-        b"\xC2\xA8": ["⌥ ⇧ U"],
+        b"\xC2\xA8": ["⌥ U", "⌥ ⇧ U", "⌥ ⇧ U Space"],
         b"\xE2\x97\x8A": ["⌥ ⇧ V"],
         b"\xE2\x80\x9E": ["⌥ ⇧ W"],
         b"\xCB\x9B": ["⌥ ⇧ X"],
         b"\xC3\x81": ["⌥ ⇧ Y"],
         b"\xC2\xB8": ["⌥ ⇧ Z"],
+        b"\xC3\xA0": ["⌥ ` A"],
+        b"\xC3\xA8": ["⌥ ` E"],
+        b"\xC3\xAC": ["⌥ ` I"],
+        b"\xC3\xB2": ["⌥ ` O"],
+        b"\xC3\xB9": ["⌥ ` U"],
     }
 )
 
@@ -638,20 +634,16 @@ KEYCAP_LISTS_BY_STROKE.update(  # the Option Punctuation-Mark strokes
     }
 )
 
-for _KC in MACBOOK_PASTE_KEYCAPS:
-    _KB = _KC.encode()
-    assert _KB not in KEYCAP_LISTS_BY_STROKE.keys(), _KB
-    KEYCAP_LISTS_BY_STROKE[_KB] = [_KC]
-
-MAX_LEN_KEY_CAPS_STROKE_6 = max(len(_) for _ in KEYCAP_LISTS_BY_STROKE.keys())
-assert MAX_LEN_KEY_CAPS_STROKE_6 == 6, MAX_LEN_KEY_CAPS_STROKE_6
-
 
 def require_keycap_lists_sorted():
     """Require Chords in each KeyCap List sorted by '', '⌃', '⌥', '⇧', '⌃ ⌥', etc"""
 
+    stroke_by_keycap_tuple = dict()
+
     for (stroke, keycap_list) in KEYCAP_LISTS_BY_STROKE.items():
         assert isinstance(keycap_list, list), repr(keycap_list)
+
+        # Require Chords sorted by '', '⌃', '⌥', '⇧', '⌃ ⌥', etc - per Apple Standard
 
         chord_by_cap = collections.defaultdict(list)
         for keycap in keycap_list:
@@ -661,16 +653,37 @@ def require_keycap_lists_sorted():
             chord = " ".join(splits[:-1])
             cap = splits[-1]
 
+            if chord not in CHORDS:
+                assert splits[0] == "⌥", splits
+
+                continue  # shrug off "⌥ ` Space", "⌥ E E", etc
+
             chord_by_cap[cap].append(chord)
 
         for (cap, chords) in chord_by_cap.items():
             indices = list(CHORDS.index(_) for _ in chords)
             assert indices == sorted(indices), (keycap_list, indices)
 
-            # print(stroke, chords, cap, indices)
+        # Require no Alt Encodings till later
+
+        for keycap in keycap_list:
+            splits = keycap.split()
+
+            keycap_tuple = tuple(splits)
+            assert keycap_tuple not in stroke_by_keycap_tuple.keys(), repr(keycap)
+            stroke_by_keycap_tuple[keycap_tuple] = stroke
 
 
 require_keycap_lists_sorted()
+
+
+for _KC in MACBOOK_PASTE_KEYCAPS:
+    _KB = _KC.encode()
+    assert _KB not in KEYCAP_LISTS_BY_STROKE.keys(), _KB
+    KEYCAP_LISTS_BY_STROKE[_KB] = [_KC]  # adds Alt Encodings of ↑ ← ↓ →
+
+MAX_LEN_KEY_CAPS_STROKE_6 = max(len(_) for _ in KEYCAP_LISTS_BY_STROKE.keys())
+assert MAX_LEN_KEY_CAPS_STROKE_6 == 6, MAX_LEN_KEY_CAPS_STROKE_6
 
 
 #
@@ -972,13 +985,15 @@ class StdTtyOpenerCloser:  # FIXME work in Windows too, not just in Mac and Linu
             # when = termios.TCSAFLUSH  # todo: find a test that cares
             termios.tcsetattr(fd, when, getattr_)
 
-    def read_stroke_millis_t1(self):
-        """Read one Keystroke, but also measure how long it took to arrive"""
+    def read_strokes_millis_t1(self, prompt):
+        """Read one or two Keystrokes, and measure how long they took to arrive"""
 
         stroke_print.t2 = stroke_print.t1
 
+        print(prompt, end="\r")
+
         t0 = dt.datetime.now()
-        stroke = self.read_stroke()
+        stroke = self.read_stroke(prompt)
         t1 = dt.datetime.now()
 
         stroke_print.t0 = t0
@@ -988,48 +1003,48 @@ class StdTtyOpenerCloser:  # FIXME work in Windows too, not just in Mac and Linu
 
         return (stroke, millis, t1)
 
-    def read_stroke(self):
+    def read_stroke(self, prompt):
         """Read 1 Byte, or b"\x1B" Esc leading a burst of Bytes, or a Paste of Bytes"""
 
         fd = self.fd
-
-        prompt = main.prompt
 
         assert MAC_PASTE_CHUNK_1022 == 1022
         assert MAC_PASTE_125MS == 125e-3
 
         stroke = b""
+        length = MAC_PASTE_CHUNK_1022
         while True:
-            length = MAC_PASTE_CHUNK_1022
             more = os.read(fd, length)
-
-            if False:  # last jittered Sat 12/Nov/2022
-                assert random.randint(0, 1)
 
             stroke += more
 
-            if len(more) == length:
-                if self.kbhit(timeout=MAC_PASTE_125MS):
-                    # todo: solve separating multiple strokes of ⌘ V Paste
+            assert more
+            if False:  # last jittered Sat 12/Nov/2022
+                assert random.randint(0, 1)
 
-                    if len(stroke) == len(more):
+            if len(more) == length:
+                # todo: solve always splitting multiple strokes of ⌘ V Paste
+
+                if self.kbhit(timeout=MAC_PASTE_125MS):
+                    # todo: solve always joining Option E I N U Grave to consonant
+
+                    if len(more) == len(stroke):
                         print(len(prompt) * " ", end="\r")
 
-                    str_count = "{:,}".format(len(stroke)).replace(",", "_")
-                    print(
-                        "Taking more than",
-                        str_count,
-                        "bytes of Paste",
-                        end="\r\n",
-                    )
+                    str_count = "{:,}".format(len(more)).replace(",", "_")
+                    print(str_count, "bytes of Paste", end="\r\n")
 
-                    continue
+                continue
 
             break
 
-        return stroke
+        if len(stroke) > length:
+            str_count = "{:,}".format(len(stroke) % length).replace(",", "_")
+            print(str_count, "bytes of Paste", end="\r\n")
 
-        # passes when tested by Keystrokes
+        print(len(prompt) * " ", end="\r")
+
+        return stroke
 
         # b'\x1B[Z' for ⇧ Tab  # same bytes as CSI Z, aka Emacs BackTab
         # b'b'\x1b[1;2C' for ⇧ ←  # same bytes as Left(m=1, n=2), so doubled in row
@@ -1040,8 +1055,7 @@ class StdTtyOpenerCloser:  # FIXME work in Windows too, not just in Mac and Linu
         # b'\x1Bf' aka ⌥ F for ⌥ →  # same bytes as Meta F, aka Emacs Forward-Word
 
         # doubles of Option E I N U Grave send themselves and still mark a vowel
-        # Option E I N U before consonants send the marks themselves
-        # Option Grave before consonants drops itself
+        # Option E I N U Grave before consonants send the marks themselves
 
     def kbhit(self, timeout):
         """Wait till next Byte of Keystroke, next burst of Paste pasted, or Timeout"""
