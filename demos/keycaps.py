@@ -17,7 +17,7 @@ quirks:
   + pressing Key Caps that work outside, such as ⇧ by itself, or F11 in place of ⌥ F6
 
 examples:
-  git clone https://github.com/pelavarre/byobash.git
+  git clone https://github.com/pelavarre/byoverb.git
   demos/keycaps.py  # show these examples
   demos/keycaps.py --  # show a fireplace of key caps bright when struck, then fading
 """

@@ -3,19 +3,21 @@
 """
 usage: tictactoe.py [-h]
 
-draw Tic-Tac-Toe vividly
+draw a Tic-Tac-Toe Board more vividly than we do by hand
 
 options:
   -h, --help  show this help message and exit
 
 quirks:
-  accepts coordinates as input:  A 1, A 2, A 3, B 1, B 2, etc
-  quits when you input characters outside of printable Ascii
+  plots X or O or . in your A B C choice of column and 1 2 3 choice of row
+  choose X after O, or O after X for you, but lets you choose X or O or . if you like
+  clears the Board when you press Tab or the - Dash key
+  quits the Game when you press Q or Esc
 
 examples:
-  git clone https://github.com/pelavarre/byobash.git
+  git clone https://github.com/pelavarre/byoverb.git
   demos/tictactoe.py  # show these examples
-  demos/tictactoe.py --  # draw a Tic-Tac-Toe board more vividly than we do by hand
+  demos/tictactoe.py --  # draw a Tic-Tac-Toe Board more vividly than we do by hand
 """
 
 # code reviewed by people, and by Black and Flake8
@@ -42,32 +44,50 @@ def main(sys_argv=None):
 
     keycaps.parse_keycaps_args(sys_argv)  # exits if no args, etc
     keycaps.require_tui()
-
-    run_game()
-
-
-def run_game():
-    """Draw a Tic-Tac-Toe board more vividly than we do by hand"""
-
-    cell_by_y = {"1": ".", "2": ".", "3": "."}
-    cell_by_x_y = dict(A=dict(cell_by_y), B=dict(cell_by_y), C=dict(cell_by_y))
-
-    run_game.cell_by_x_y = cell_by_x_y
-    run_game.turn = "X"
-    run_game.x = None
-    run_game.y = None
-
-    # Run with keystrokes forwarded when they occur, don't wait for more
-
-    print_board()
-
-    shunting = None
     with keycaps.tui_open(sys.stderr) as tui:
+        g = Game(tui, n=3)
+
+        g.run_once()
+
+
+class Game:
+    """Interpret Keystrokes"""
+
+    def __init__(self, tui, n):
+
+        self.tui = tui
+        self.n = n
+
+        self.start()
+
+    def start(self):
+        """Start over"""
+
+        n = self.n
+
+        self.board = Board(n)
+        self.turn = "X"
+        self.x = None
+        self.y = None
+
+    def run_once(self):
+        """Run once"""
+
+        board = self.board
+        tui = self.tui
+
+        tui.print()
+        board.tui_print(tui)
+        tui.print()
+
+        shunting = None
         while True:
             dent = "    "
-            keymap = "Press Esc to quit, or one of . - 1 2 3 A B C X O Tab Q"
 
-            choices = [run_game.x, run_game.y, run_game.turn]
+            keymap = "1 2 3 A B C, . X O, - Tab, # Return, or Esc"
+            keymap = "Press Q to quit, or one of {}".format(keymap)
+
+            choices = [self.turn, self.x, self.y]
             choices = list(_ for _ in choices if _)
             if not choices:
                 prompt = dent + "-- {} --".format(keymap)
@@ -88,248 +108,230 @@ def run_game():
                     shunting = False
 
                 if not shunting:
-                    take_ch(ch=ch.upper())
+                    self.take_ch(ch=ch.upper())
 
+    def take_ch(self, ch):
+        """Choose a Column, or mutate and print the Tic-Tac-Toe Board"""
 
-def take_ch(ch):
-    """Choose a Column, or mutate and print the Tic-Tac-Toe Board"""
+        tui = self.tui
 
-    # Choose a Column or Row of Cells
+        # Choose a Column or Row of Cells
 
-    if ch in "ABC":
-        run_game.x = ch
-        if run_game.x and run_game.y:
-            add_move()
+        if ch in "ABC":
+            self.x = ch
+            self.move_once()
 
-        return
+            return
 
-    if ch in "123":
-        run_game.y = ch
-        if run_game.x and run_game.y:
-            add_move()
+        if ch in "123":
+            self.y = ch
+            self.move_once()
 
-        return
+            return
 
-    # Change the Player
+        # Change the Player
 
-    if ch in "XO.":
-        run_game.turn = ch
+        if ch in "XO.":
+            self.turn = ch
 
-        return
+            return
 
-    # Clear the Board
+        # Clear the Board
 
-    if ch in "\b\t-\x7F":  # Backspace Tab Dash Delete
-        clear_board()
+        if ch in "\t-":  # Tab Dash
+            dent = "    "
+            tui.print(dent + "Tab")
 
-        return
+            self.start()
 
-    # Quit the Game
+            tui.print()
+            self.board.tui_print(tui)
+            tui.print()
 
-    if ch in "\x1BQ":  # Esc
+            return
 
-        sys.exit()
+        # Quit the Game
 
+        if ch in "\x1BQ":  # Esc
 
-def clear_board():
-    """Clear the Cells, print the Board, pick next Player"""
+            sys.exit()
 
-    cell_by_x_y = run_game.cell_by_x_y
+    def move_once(self):
+        """Mutate the Cell, print the Board, pick next Player"""
 
-    # Mutate zero or many or all Cells
+        board = self.board
+        tui = self.tui
+        turn = self.turn
+        x = self.x
+        y = self.y
 
-    before_cells = list_cells()
+        # Return early if no Row or no Column chosen
 
-    for cell_by_y in cell_by_x_y.values():
-        for (y, v) in cell_by_y.items():
-            cell_by_y[y] = "."
+        if not (x and y):
 
-    after_cells = list_cells()
+            return
 
-    # Return if no mutation
+        # Mutate one Cell, else return early
 
-    if before_cells == after_cells:
-        if run_game.x is run_game.y is None:
-            if run_game.turn == "X":
+        before = list(board.cells)
+        board.x_y_mutate(x, y, turn)
 
-                return
+        if board.cells == before:
 
-    # Trace the Instruction
+            return
 
-    print("Tab")
+        # Trace the instruction
 
-    # Print the mutated Board
+        dent = "    "
 
-    print_board()
+        tui.print(dent + "{}{} = {}".format(x, y, turn))
 
-    # Start over with X moves first
+        # Print the mutated Board
 
-    run_game.x = None
-    run_game.y = None
-    run_game.turn = "X"
+        tui.print()
+        board.tui_print(tui)
+        tui.print()
 
+        # Mutate the Turn too
 
-def add_move():
-    """Mutate the Cell, print the Board, pick next Player"""
+        self.turn = self.choose_next_turn()
+        self.x = None
+        self.y = None
 
-    cell_by_x_y = run_game.cell_by_x_y
+    def choose_next_turn(self):
+        """Pick the next Mark in alternation, else X to above O, else O up to X"""
 
-    # Clone the Instruction
+        board = self.board
+        turn = self.turn
 
-    x = run_game.x
-    y = run_game.y
-    turn = run_game.turn
+        cells = board.cells
 
-    # Mutate one Cell, or zero Cells
+        counter = collections.Counter(cells)
 
-    before_cells = list_cells()
+        if turn == "X":
+            turn = "O"
+        elif turn == "O":
+            turn = "X"
+        else:
+            turn = "X" if (counter["X"] <= counter["O"]) else "O"
 
-    cell_by_x_y[x][y] = turn.lower()
+        return turn
 
-    mark_the_wins()
-    after_cells = list_cells()
 
-    # Return if no mutation
+class Board:
+    """Lay out Cells in a square NxN Grid of '.', 'O', and 'X'"""
 
-    if before_cells == after_cells:
+    def __init__(self, n):
 
-        return
+        # Form the Cells
 
-    # Trace the Instruction
+        assert 1 <= n <= 9
 
-    dent = "    "
+        cells = (n * n) * ["."]
 
-    print(end="\r\n")
-    print(dent + "{}{} = {}".format(x, y, turn), end="\r\n")
+        # Index the Cells
 
-    # Consume the Instruction
+        xs = list("ABCDEFGHI"[:n])
+        ys = list("12345679"[:n])
 
-    run_game.x = None
-    run_game.y = None
-    run_game.turn = None
+        rxs = list(reversed(xs))
+        rys = list(reversed(ys))
 
-    # Print the mutated Board
+        xys = list((x, y) for y in ys for x in xs)
 
-    print_board()
+        # Publish the Indices and the Cells
 
-    # Pick the next Player in alternation, else X to above O, else O up to X
+        self.n = n
+        self.cells = cells
 
-    counter = collections.Counter(after_cells)
+        self.xs = xs
+        self.ys = ys
+        self.rxs = rxs
+        self.rys = rys
+        self.xys = xys
 
-    if turn == "X":
-        turn = "O"
-    elif turn == "O":
-        turn = "X"
-    else:
-        turn = "X" if (counter["X"] <= counter["O"]) else "O"
+        self.streaks = self.form_streaks()
 
-    run_game.turn = turn
+    def form_streaks(self):
+        """List the ways to win"""
 
+        xs = self.xs
+        ys = self.ys
+        rys = self.rys
 
-def mark_the_wins():  # noqa  # FIXME C901 'mark_the_wins' is too complex (20
-    """Uppercase each run of 3 X and each run of 3 O"""
+        streaks = list()
 
-    cell_by_x_y = run_game.cell_by_x_y
+        for y in ys:  # rows
+            streak = list((x, y) for x in xs)
+            streaks.append(streak)
 
-    # Transpose the Board
+        for x in xs:  # columns
+            streak = list((x, y) for y in ys)
+            streaks.append(streak)
 
-    cell_by_y_x = dict()
+        streak = list((x, y) for (x, y) in zip(xs, ys))
+        streaks.append(streak)  # diagonal - upper left to lower right
 
-    for (x, cell_by_y) in cell_by_x_y.items():
-        for (y, cell) in cell_by_y.items():
-            if y in cell_by_y_x:
-                assert x not in cell_by_y_x[y].keys()
-            else:
-                cell_by_y_x[y] = dict()
+        streak = list((x, y) for (x, y) in zip(xs, rys))
+        streaks.append(streak)  # diagonal - upper right to lower left
 
-            cell_by_y_x[y][x] = cell
+        return streaks
 
-    # List the X and list the Y
+    def x_y_mutate(self, x, y, turn):
+        """Mutate the one Cell at X, Y"""
 
-    xs = list(cell_by_x_y.keys())
-    ys = list(cell_by_y_x.keys())
+        cells = self.cells
+        xys = self.xys
 
-    # Walk by X to win Columns
+        xy = (x, y)
+        index = xys.index(xy)
+        cells[index] = turn.lower()
 
-    for x in xs:
-        x_set = set(cell_by_y_x[y][x] for y in ys)
-        if len(x_set) == 1:
-            cell = list(x_set)[-1]
-            if cell != ".":
+        self.mark_wins_and_losses()
 
-                for y in ys:
-                    cell_by_x_y[x][y] = cell_by_x_y[x][y].upper()
+    def mark_wins_and_losses(self):
+        """Mark Streaks in upper case, the other cells in lower case"""
 
-    # Walk by Y to win Rows
+        cells = self.cells
+        xys = self.xys
+        streaks = self.streaks
 
-    for y in ys:
-        y_set = set(cell_by_x_y[x][y] for x in xs)
-        if len(y_set) == 1:
-            cell = list(y_set)[-1]
-            if cell != ".":
+        for xy in xys:
+            index = xys.index(xy)
+            cells[index] = cells[index].lower()
 
-                for x in xs:
-                    cell_by_x_y[x][y] = cell_by_x_y[x][y].upper()
+        for streak in streaks:
+            streak_set = set(cells[xys.index(xy)] for xy in streak)
+            if len(streak_set) == 1:
+                cell = list(streak_set)[-1]
+                if cell != ".":
 
-    # Walk by X Y and by Y X to win Diagonals
+                    for xy in streak:
+                        index = xys.index(xy)
+                        cells[index] = cells[index].upper()
 
-    up_x_set = set()
-    for (y, x) in zip(cell_by_y_x.keys(), cell_by_x_y.keys()):
-        cell = cell_by_y_x[y][x]
-        up_x_set.add(cell)
+    def tui_print(self, tui):
+        """Print the Cells"""
 
-    if len(up_x_set) == 1:
-        cell = list(up_x_set)[-1]
-        if cell != ".":
-            for (y, x) in zip(cell_by_y_x.keys(), cell_by_x_y.keys()):
+        cells = self.cells
 
-                cell_by_x_y[x][y] = cell_by_x_y[x][y].upper()
+        xs = self.xs
+        ys = self.ys
+        xys = self.xys
 
-    down_x_set = set()
-    for (y, x) in zip(cell_by_y_x.keys(), reversed(cell_by_x_y.keys())):
-        cell = cell_by_y_x[y][x]
-        down_x_set.add(cell)
+        dent = "    "
+        dminus = dent[:-1]
 
-    if len(down_x_set) == 1:
-        cell = list(down_x_set)[-1]
-        if cell != ".":
-            for (y, x) in zip(cell_by_y_x.keys(), reversed(cell_by_x_y.keys())):
-
-                cell_by_x_y[x][y] = cell_by_x_y[x][y].upper()
-
-
-def list_cells():
-    """List the Cells across every Row"""
-
-    cell_by_x_y = run_game.cell_by_x_y
-
-    cells = list(
-        cell for cell_by_y in cell_by_x_y.values() for cell in cell_by_y.values()
-    )
-
-    return cells
-
-
-def print_board():
-    """Print the Tic-Tac-Toe Board"""
-
-    cell_by_x_y = run_game.cell_by_x_y
-
-    dent = "    "
-    dminus = dent[:-1]
-
-    print(end="\r\n")
-    print(end="\r\n")
-    print(dminus, "", "  A B C", end="\r\n")
-    print(end="\r\n")
-    for y in "123":
-        print(dminus, y, "", end=" ")
-        for x in "ABC":
-            cell = cell_by_x_y[x][y]
-            print(cell, end=" ")
-        print(end="\r\n")
-
-    print(end="\r\n")
+        tui.print(dminus, "", "", "", " ".join(self.xs))
+        tui.print()
+        for y in ys:
+            tui.print(dminus, y, "", end=" ")
+            for x in xs:
+                xy = (x, y)
+                index = xys.index(xy)
+                cell = cells[index]
+                tui.print(cell, end=" ")
+            tui.print()
 
 
 #
@@ -374,11 +376,24 @@ if __name__ == "__main__":
     main(sys.argv)
 
 
-# todo: count the wins
-# todo: count the excess of X or O plus Turn - by the rules game is even or +X
+# todo: up arrow auto move
+# todo: down arrow random move
+# todo: bang random mutate
+# todo: keep a rewind/ ff history on the left right arrows and backspace delete
 
-# todo: search the rotations, print each distinct
-# todo: search the flips of each rotation, assert no distinct found
+# todo: draw counters not yet placed to fill the blank cells
+
+# todo: sort uniq to reduce flips and rotations, print what remains
+# todo: index center cell, corner cells, mid cells
+# todo: colour X O pairs of bursts of moves by age
+
+# todo: count the streaks
+# todo: count the excess of X or O plus Turn
+# todo: sketch how many X wins vs O wins still possible
+
+# todo: lean into always doing something in reply to input
+# todo: could toggle start with X vs O
+# todo: could mark the Board somehow for next X or next O
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/tictactoe.py
