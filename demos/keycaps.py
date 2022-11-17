@@ -980,7 +980,7 @@ class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
 
         print(*args, **kwargs_)
 
-    def readline(self, prompt=None):
+    def readline(self, prompt=""):
         """Read the Byte Encoding of 1 Keystroke, or Paste"""
 
         # Immediately return a 2nd Keystroke that came in with a 1st Keystroke
@@ -994,16 +994,26 @@ class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
         # Read one Byte or a burst of Bytes = 1 or 2 Keystrokes, or Paste
 
         strokes = self.kbread(prompt)
+        chars = strokes.decode()
 
         # Return the 1st Keystroke that came as a pair of Accentuator plus 2nd Keystroke
 
         mac_accentuators = b"\x60 \xC2\xB4 \xCB\x86 \xCB\x9C \xC2\xA8".split()
         assert MAC_ACCENTUATORS == mac_accentuators  # Option E I N U Grave
 
-        for accentuator in MAC_ACCENTUATORS:
-            if strokes.startswith(accentuator):
-                if strokes != accentuator:
-                    self.line = strokes[len(accentuator) :]
+        if len(chars) <= 2:
+            for accentuator in MAC_ACCENTUATORS:
+                if strokes.startswith(accentuator):
+                    line = strokes[len(accentuator) :]
+                    self.line = line
+
+                    splits = list()
+                    splits.append(accentuator)
+                    if line:
+                        splits.append(line)
+
+                    if prompt:
+                        self.print("Os Read returned", splits)
 
                     return accentuator
 
@@ -1023,7 +1033,7 @@ class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
 
         # Print a prompt to clear before returning
 
-        self.kbprompt(prompt)
+        self.kbprompt_write(prompt)
         prompted = prompt
 
         # Take 1 or 2 Keystrokes coming in
@@ -1049,7 +1059,7 @@ class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
 
                         # Clear the prompt early, to make room for Log Lines
 
-                        self.kbprompt_clear(prompted)
+                        self.kbprompt_erase(prompted)
                         prompted = ""
 
                     # Log each Fragment of Paste, before the last Fragment
@@ -1075,8 +1085,7 @@ class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
 
         # Clear the prompt
 
-        self.kbprompt_clear(prompted)
-        prompted = ""
+        self.kbprompt_erase(prompted)
 
         # Succeed
 
@@ -1094,17 +1103,20 @@ class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
         # Option E I N U Grave before consonants send the marks themselves
         # sometimes as a pair of Keystrokes, sometimes as one and then the next
 
-    def kbprompt(self, prompt):
+    def kbprompt_write(self, prompt):
         """Print a prompt in the Line, but leave the Cursor at the left of it"""
 
         if prompt:
-            self.print(prompt, end="\r")
+            self.print(prompt, end="")
+            sys.stdout.flush()
 
-    def kbprompt_clear(self, prompt):
+    def kbprompt_erase(self, prompt):
         """Erase a prompt in the Line, and leave the Cursor at the left of it"""
 
         if prompt:
+            self.print("", end="\r")
             self.print(len(prompt) * " ", end="\r")
+            sys.stdout.flush()
 
     def kbhit(self, timeout):  # 'timeout' in seconds
         """Wait till next Byte of Keystroke, next burst of Paste pasted, or Timeout"""

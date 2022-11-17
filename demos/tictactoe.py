@@ -34,6 +34,9 @@ if not hasattr(__builtins__, "breakpoint"):
     breakpoint = pdb.set_trace
 
 
+DENT = 4 * " "
+
+
 #
 # Run from the Sh command line
 #
@@ -77,26 +80,29 @@ class Game:
         tui = self.tui
 
         tui.print()
+        tui.print("# XC3 OB2 XA1 OC1 XB1 OC2 XA2 OA3  # is an O Win by Fork")
+
+        tui.print()
         board.tui_print(tui)
         tui.print()
 
         shunting = None
         while True:
-            dent = "    "
 
-            keymap = "1 2 3 A B C, . X O, - Tab, # Return, or Esc"
+            keymap = "123 ABC .XO - Tab # Return Esc"
             keymap = "Press Q to quit, or one of {}".format(keymap)
+            # todo: prompts for n != 3
 
             choices = [self.turn, self.x, self.y]
             choices = list(_ for _ in choices if _)
             if not choices:
-                prompt = dent + "-- {} --".format(keymap)
+                prompt = DENT + "{} ".format(keymap)
             else:
-                prompt = dent + "-- {} with {} --".format(keymap, " ".join(choices))
+                prompt = DENT + "{} with {}".format(keymap, "".join(choices))
 
-            tui.print(prompt, end="\r")
+            tui.kbprompt_write(prompt)
             stroke = tui.readline()
-            tui.print(len(prompt) * " ", end="\r")
+            tui.kbprompt_erase(prompt)
 
             chars = stroke.decode()
 
@@ -139,8 +145,7 @@ class Game:
         # Clear the Board
 
         if ch in "\t-":  # Tab Dash
-            dent = "    "
-            tui.print(dent + "Tab")
+            tui.print(DENT + "Tab")
 
             self.start()
 
@@ -153,6 +158,8 @@ class Game:
         # Quit the Game
 
         if ch in "\x1BQ":  # Esc
+            tui.print(DENT + "Q")
+            tui.print()
 
             sys.exit()
 
@@ -182,9 +189,7 @@ class Game:
 
         # Trace the instruction
 
-        dent = "    "
-
-        tui.print(dent + "{}{} = {}".format(x, y, turn))
+        tui.print(DENT + "{}{}{}".format(turn, x, y))
 
         # Print the mutated Board
 
@@ -319,8 +324,7 @@ class Board:
         ys = self.ys
         xys = self.xys
 
-        dent = "    "
-        dminus = dent[:-1]
+        dminus = DENT[:-1]
 
         tui.print(dminus, "", "", "", " ".join(self.xs))
         tui.print()
@@ -375,6 +379,8 @@ _ = """
 if __name__ == "__main__":
     main(sys.argv)
 
+
+# todo: trace the complete compressed history to name the game, not just last move
 
 # todo: up arrow auto move
 # todo: down arrow random move
