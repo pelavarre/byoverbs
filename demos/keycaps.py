@@ -72,13 +72,9 @@ COLOR_500MS = 500e-3  # milliseconds of Key Cap life per color
 def main(sys_argv=None):
     """Run from the Sh command line"""
 
-    stroke_print.t0 = None
-    stroke_print.t1 = dt.datetime.now()
-    stroke_print.t2 = None
-
     parse_keycaps_args(sys_argv)  # exits if no args, etc
 
-    require_tty()
+    require_tui()
 
     keycaps_plot.t_by_keycap = dict()
     keycaps_plot.plotted = str()
@@ -86,11 +82,11 @@ def main(sys_argv=None):
     run_fireplace()
 
 
-def require_tty():
-    """Fail-fast when not run from a Terminal"""
+def require_tui():
+    """Fail-fast when not run from a Text User Interface (TUI) Terminal"""
 
     try:
-        with stdtty_open(sys.stderr):
+        with tui_open(sys.stderr):
             pass
     except Exception as exc:
         sys_stderr_print("Traceback (most recent call last):")
@@ -124,39 +120,45 @@ def run_fireplace():
 
     # Run with keystrokes forwarded when they occur, don't wait for more
 
-    with stdtty_open(sys.stderr) as chatting:
+    t1 = dt.datetime.now()
+
+    with tui_open(sys.stderr) as tui:
         quit_strokes = list()
         while True:
             prompt = "    -- Press the same Keystroke 3 times to quit --"
 
             # Prompt and read the next one or two Strokes
 
-            (strokes, millis, t1) = chatting.read_strokes_millis_t1(prompt)
-            for (index, stroke) in enumerate(strokes_split(strokes)):
-                alt_millis = 0 if index else millis
-                quit_strokes.append(stroke)
+            t2 = t1
 
-                # Pick out which Key Caps might have been struck to form the Stroke
+            t0 = dt.datetime.now()
+            stroke = tui.readline(prompt)
+            t1 = dt.datetime.now()
 
-                default_empty = list()
-                keycaps = KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
+            quit_strokes.append(stroke)
 
-                # Print the Stroke, and print the Board of Key Caps if Key Caps found
+            # Pick out which Key Caps might have been struck to form the Stroke
 
-                if keycaps:
-                    print(end="\r\n")
+            default_empty = list()
+            keycaps = KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
 
-                stroke_print(stroke, millis=alt_millis, t1=t1, keycaps=keycaps)
+            # Print the Stroke, and print the Board of Key Caps if Key Caps found
 
-                if keycaps:
-                    print(end="\r\n")
-                    keycaps_plot(keycaps, t1=t1)
-                    keycaps_print(keycaps, stroke=stroke, t1=t1)
-                    print(end="\r\n")
+            if keycaps:
+                tui.print()
+
+            tui_stroke_print(tui, stroke=stroke, t0=t0, t1=t1, t2=t2, keycaps=keycaps)
+
+            if keycaps:
+                tui.print()
+                keycaps_plot(keycaps, t1=t1)
+                tui_keycaps_print(tui, keycaps=keycaps, stroke=stroke, t1=t1)
+                tui.print()
 
             # Quit after the 3rd Copy of any 1 Stroke coming slowly from fingers
 
-            if millis < 100:  # Don't quit while holding down a Key Cap to repeat
+            t1t0 = (t1 - t0).total_seconds() * 1000
+            if t1t0 < 100:  # Don't quit while holding down a Key Cap to repeat
                 quit_strokes.clear()
 
             if quit_strokes[-3:] == (3 * [stroke]):
@@ -164,30 +166,13 @@ def run_fireplace():
                 break
 
 
-def strokes_split(strokes):  # tested by ⌥ E E ⌥ E Q, etc
-    """Split the Option E I N U Grave accentuators when present"""
-
-    mac_accentuators = b"\x60 \xC2\xB4 \xCB\x86 \xCB\x9C \xC2\xA8".split()
-    assert MAC_ACCENTUATORS == mac_accentuators
-
-    for accentuator in MAC_ACCENTUATORS:
-        if strokes.startswith(accentuator):
-            if strokes != accentuator:
-                splits = [accentuator, strokes[len(accentuator) :]]
-
-                return splits
-
-    splits = [strokes]
-
-    return splits
-
-
-def stroke_print(stroke, millis, t1, keycaps):
+def tui_stroke_print(tui, stroke, t0, t1, t2, keycaps):
     """Print the Stroke itself"""
 
-    # Measure the time from last input to next block for input
+    # Measure time
 
-    t0t2 = (stroke_print.t0 - stroke_print.t2).total_seconds() * 1000
+    t0t2 = (t0 - t2).total_seconds() * 1000  # time from last block to this block
+    t1t0 = (t1 - t0).total_seconds() * 1000  # time lost in this block
 
     # Choose a hex representation of Bytes
 
@@ -207,13 +192,13 @@ def stroke_print(stroke, millis, t1, keycaps):
 
     hexxed = hexlify(stroke)
 
-    str_t1t0 = "{:,}".format(int(millis)).replace(",", "_")
+    str_t1t0 = "{:,}".format(int(t1t0)).replace(",", "_")
     str_t0t2 = "{:,}".format(int(t0t2)).replace(",", "_")
 
     assert MAX_LEN_KEY_CAPS_STROKE_6 == 6 < 10
     if len(stroke) <= 10:
 
-        print(
+        tui.print(
             "{} {} {} ({}) {} {} ms".format(
                 keycaps,
                 len(stroke),
@@ -221,8 +206,7 @@ def stroke_print(stroke, millis, t1, keycaps):
                 hexxed,
                 str_t0t2,
                 str_t1t0,
-            ),
-            end="\r\n",
+            )
         )
 
         return
@@ -237,11 +221,10 @@ def stroke_print(stroke, millis, t1, keycaps):
     hexxed_1 = hexlify(stroke[-3:])
     alt_hexxed = "x {} ... {}".format(hexxed_0, hexxed_1)
 
-    print(
+    tui.print(
         "{} {} {} ({}) {} {} ms".format(
             keycaps, len(stroke), alt_rep, alt_hexxed, str_t0t2, str_t1t0
-        ),
-        end="\r\n",
+        )
     )
 
 
@@ -292,7 +275,7 @@ def keycaps_plot(keycaps, t1):
     keycaps_plot.plotted = plotted
 
 
-def keycaps_print(keycaps, stroke, t1):
+def tui_keycaps_print(tui, keycaps, stroke, t1):
     """Plot the Keyboard of Key Caps"""
 
     plotted = keycaps_plot.plotted
@@ -329,7 +312,8 @@ def keycaps_print(keycaps, stroke, t1):
 
     # Print the Lines of colored Key Caps
 
-    print("\r\n".join(lines), end="\r\n")
+    for line in lines:
+        tui.print(line)
 
 
 def colorize(keycap, t, now):
@@ -896,15 +880,15 @@ def ch_encode_repr(ch):
 #
 
 
-def stdtty_open(stdtty):
-    """Accept such usage as 'with stdtty_open(sys.stderr):'"""
+def tui_open(stdio):
+    """Accept such usage as 'with tui_open(sys.stderr):'"""
 
-    obj = StdTtyOpenerCloser(stdtty)
+    tui = GlassTeletype(stdio)
 
-    return obj
+    return tui
 
 
-class StdTtyOpenerCloser:  # FIXME work in Windows too, not just in Mac and Linux
+class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
     r"""
     Emulate a glass teletype at Stdio, such as the 1978 DEC VT100 Video Terminal
 
@@ -916,33 +900,35 @@ class StdTtyOpenerCloser:  # FIXME work in Windows too, not just in Mac and Linu
 
     # stty -a |tr -d ' \t' |tr ';' '\n' |grep '=^' |sort
 
-    def __init__(self, stdtty):
+    def __init__(self, stdio):
         """Work at Sys Stderr, or elsewhere"""
 
-        fd = stdtty.fileno()
+        fd = stdio.fileno()
 
-        self.fd = fd
-        self.getattr_ = None
-        self.stdtty = stdtty
+        self.fd = fd  # File Descriptor of Keyboard, for Os Read
+        self.stdio = stdio  # File Stream of Keyboard, for IsATty and Flush
+        self.tcgetattr = None  # Configuration of Terminal at Entry
+
+        self.line = None  # the 2nd Keystroke that came in with a 1st Keystroke
 
     def __enter__(self):
         """Flush, then start taking Keystrokes literally & writing Lf as itself"""
 
         fd = self.fd
-        getattr_ = self.getattr_
-        stdtty = self.stdtty
+        tcgetattr = self.tcgetattr
+        stdio = self.stdio
 
         # Flush output before changing buffering
 
-        stdtty.flush()
+        stdio.flush()
 
         # Stop line-buffering input, or leave it stopped
 
-        if stdtty.isatty() and (getattr_ is None):
-            getattr_ = termios.tcgetattr(fd)
-            assert getattr_ is not None
+        if stdio.isatty() and (tcgetattr is None):
+            tcgetattr = termios.tcgetattr(fd)
+            assert tcgetattr is not None
 
-            self.getattr_ = getattr_
+            self.tcgetattr = tcgetattr
 
             tty.setraw(fd, when=termios.TCSADRAIN)  # not TCSAFLUSH
 
@@ -950,9 +936,9 @@ class StdTtyOpenerCloser:  # FIXME work in Windows too, not just in Mac and Linu
 
         # Succeed
 
-        chatting = self
+        tui = self
 
-        return chatting
+        return tui
 
     def __exit__(self, *exc_info):
         """Flush, then stop taking Keystrokes literally & start writing Lf as Cr Lf"""
@@ -960,12 +946,12 @@ class StdTtyOpenerCloser:  # FIXME work in Windows too, not just in Mac and Linu
         _ = exc_info
 
         fd = self.fd
-        getattr_ = self.getattr_
-        stdtty = self.stdtty
+        tcgetattr = self.tcgetattr
+        stdio = self.stdio
 
         # Flush output before changing buffering
 
-        stdtty.flush()
+        stdio.flush()
 
         # Compile-time option to flush input too
 
@@ -978,73 +964,123 @@ class StdTtyOpenerCloser:  # FIXME work in Windows too, not just in Mac and Linu
 
         # Start line-buffering input, or leave it started
 
-        if getattr_ is not None:
-            self.getattr_ = None  # mutate
+        if tcgetattr is not None:
+            self.tcgetattr = None  # mutate
 
             when = termios.TCSADRAIN
             # when = termios.TCSAFLUSH  # todo: find a test that cares
-            termios.tcsetattr(fd, when, getattr_)
+            termios.tcsetattr(fd, when, tcgetattr)
 
-    def read_strokes_millis_t1(self, prompt):
-        """Read one or two Keystrokes, and measure how long they took to arrive"""
+    def print(self, *args, **kwargs):
+        """Like Print, but default End to "\r\n" of Tui, not "\n" of Terminal"""
 
-        stroke_print.t2 = stroke_print.t1
+        kwargs_ = dict(kwargs)
+        if "end" not in kwargs.keys():
+            kwargs_["end"] = "\r\n"
 
-        print(prompt, end="\r")
+        print(*args, **kwargs_)
 
-        t0 = dt.datetime.now()
-        stroke = self.read_stroke(prompt)
-        t1 = dt.datetime.now()
+    def readline(self, prompt=None):
+        """Read the Byte Encoding of 1 Keystroke, or Paste"""
 
-        stroke_print.t0 = t0
-        stroke_print.t1 = t1
+        # Immediately return a 2nd Keystroke that came in with a 1st Keystroke
 
-        millis = (t1 - t0).total_seconds() * 1000
+        line = self.line
+        if self.line:  # tested by Mac ⌥ E E ⌥ E Q, etc
+            self.line = None
 
-        return (stroke, millis, t1)
+            return line
 
-    def read_stroke(self, prompt):
-        """Read 1 Byte, or b"\x1B" Esc leading a burst of Bytes, or a Paste of Bytes"""
+        # Read one Byte or a burst of Bytes = 1 or 2 Keystrokes, or Paste
+
+        strokes = self.kbread(prompt)
+
+        # Return the 1st Keystroke that came as a pair of Accentuator plus 2nd Keystroke
+
+        mac_accentuators = b"\x60 \xC2\xB4 \xCB\x86 \xCB\x9C \xC2\xA8".split()
+        assert MAC_ACCENTUATORS == mac_accentuators  # Option E I N U Grave
+
+        for accentuator in MAC_ACCENTUATORS:
+            if strokes.startswith(accentuator):
+                if strokes != accentuator:
+                    self.line = strokes[len(accentuator) :]
+
+                    return accentuator
+
+        # Return 1 Keystroke, or Paste
+
+        stroke = strokes
+
+        return stroke
+
+    def kbread(self, prompt):
+        """Read one Byte or a burst of Bytes = 1 or 2 Keystrokes, or Paste"""
 
         fd = self.fd
 
         assert MAC_PASTE_CHUNK_1022 == 1022
         assert MAC_PASTE_125MS == 125e-3
 
-        stroke = b""
+        # Print a prompt to clear before returning
+
+        self.kbprompt(prompt)
+        prompted = prompt
+
+        # Take 1 or 2 Keystrokes coming in
+
+        strokes = b""
         length = MAC_PASTE_CHUNK_1022
         while True:
             more = os.read(fd, length)
-
-            stroke += more
-
             assert more
+
+            strokes += more
+
+            # Maybe emulate 'os.read' raising an exception
+
             if False:  # last jittered Sat 12/Nov/2022
                 assert random.randint(0, 1)
 
+            # Spike Latency of precisely largest Paste, to catch a chance of more
+
             if len(more) == length:
-                # todo: solve always splitting multiple strokes of ⌘ V Paste
-
                 if self.kbhit(timeout=MAC_PASTE_125MS):
-                    # todo: solve always joining Option E I N U Grave to consonant
+                    if len(more) == len(strokes):
 
-                    if len(more) == len(stroke):
-                        print(len(prompt) * " ", end="\r")
+                        # Clear the prompt early, to make room for Log Lines
 
-                    str_count = "{:,}".format(len(more)).replace(",", "_")
-                    print(str_count, "bytes of Paste", end="\r\n")
+                        self.kbprompt_clear(prompted)
+                        prompted = ""
 
-                continue
+                    # Log each Fragment of Paste, before the last Fragment
+
+                    if prompt:
+                        str_count = "{:,}".format(len(more)).replace(",", "_")
+                        logline = "{} bytes of Paste".format(str_count)
+                        self.print(logline)
+
+                    continue
 
             break
 
-        if len(stroke) > length:
-            str_count = "{:,}".format(len(stroke) % length).replace(",", "_")
-            print(str_count, "bytes of Paste", end="\r\n")
+            # todo: test splitting or joining multiple strokes of ⌘ V Paste
 
-        print(len(prompt) * " ", end="\r")
+        # Log the last Fragment of Paste
 
-        return stroke
+        if len(strokes) > length:
+            if prompt:
+                str_count = "{:,}".format(len(more) % length).replace(",", "_")
+                logline = "{} bytes of Paste".format(str_count)
+                self.print(logline)
+
+        # Clear the prompt
+
+        self.kbprompt_clear(prompted)
+        prompted = ""
+
+        # Succeed
+
+        return strokes
 
         # b'\x1B[Z' for ⇧ Tab  # same bytes as CSI Z, aka Emacs BackTab
         # b'b'\x1b[1;2C' for ⇧ ←  # same bytes as Left(m=1, n=2), so doubled in row
@@ -1056,21 +1092,33 @@ class StdTtyOpenerCloser:  # FIXME work in Windows too, not just in Mac and Linu
 
         # doubles of Option E I N U Grave send themselves and still mark a vowel
         # Option E I N U Grave before consonants send the marks themselves
+        # sometimes as a pair of Keystrokes, sometimes as one and then the next
 
-    def kbhit(self, timeout):
+    def kbprompt(self, prompt):
+        """Print a prompt in the Line, but leave the Cursor at the left of it"""
+
+        if prompt:
+            self.print(prompt, end="\r")
+
+    def kbprompt_clear(self, prompt):
+        """Erase a prompt in the Line, and leave the Cursor at the left of it"""
+
+        if prompt:
+            self.print(len(prompt) * " ", end="\r")
+
+    def kbhit(self, timeout):  # 'timeout' in seconds
         """Wait till next Byte of Keystroke, next burst of Paste pasted, or Timeout"""
 
-        rlist = [self.stdtty]
-        wlist = list()
-        xlist = list()
+        rs_0 = [self.stdio]
+        ws_0 = list()
+        xs_0 = list()
 
-        selected = select.select(rlist, wlist, xlist, timeout)
+        (rs_1, _, _) = select.select(rs_0, ws_0, xs_0, timeout)
 
-        (rlist2, _, _) = selected
-        if rlist2 != rlist:
-            assert rlist2 == [], rlist2
+        if rs_1 != rs_0:
+            assert rs_1 == [], rs_1
 
-        return rlist2
+        return rs_1
 
 
 #

@@ -23,7 +23,6 @@ examples:
 
 
 import collections
-import datetime as dt
 import pdb
 import sys
 
@@ -41,12 +40,8 @@ if not hasattr(__builtins__, "breakpoint"):
 def main(sys_argv=None):
     """Run from the Sh command line"""
 
-    keycaps.stroke_print.t0 = None
-    keycaps.stroke_print.t1 = dt.datetime.now()
-    keycaps.stroke_print.t2 = None
-
     keycaps.parse_keycaps_args(sys_argv)  # exits if no args, etc
-    keycaps.require_tty()
+    keycaps.require_tui()
 
     run_game()
 
@@ -67,7 +62,7 @@ def run_game():
     print_board()
 
     shunting = None
-    with keycaps.stdtty_open(sys.stderr) as chatting:
+    with keycaps.tui_open(sys.stderr) as tui:
         while True:
             dent = "    "
             keymap = "Press Esc to quit, or one of . - 1 2 3 A B C X O Tab Q"
@@ -79,19 +74,21 @@ def run_game():
             else:
                 prompt = dent + "-- {} with {} --".format(keymap, " ".join(choices))
 
-            (strokes, millis, t1) = chatting.read_strokes_millis_t1(prompt)
+            tui.print(prompt, end="\r")
+            stroke = tui.readline()
+            tui.print(len(prompt) * " ", end="\r")
 
-            for (index, stroke) in enumerate(keycaps.strokes_split(strokes)):
-                chars = stroke.decode()
-                for ch in chars:  # like for when multiple Chars pasted together
+            chars = stroke.decode()
 
-                    if ch == "#":
-                        shunting = True
-                    elif ch in "\r\n":
-                        shunting = False
+            for ch in chars:  # like for when multiple Chars pasted together
 
-                    if not shunting:
-                        take_ch(ch=ch.upper())
+                if ch == "#":
+                    shunting = True
+                elif ch in "\r\n":
+                    shunting = False
+
+                if not shunting:
+                    take_ch(ch=ch.upper())
 
 
 def take_ch(ch):
