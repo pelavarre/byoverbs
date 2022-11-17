@@ -26,8 +26,10 @@ Our work here gives you **examples** first,
     if you type all of Space Dash Dash before you press Return
 
     touch.py  # show these examples and exit
-    touch.py --h  # show the help lines and exit
+    touch.py --h  # show help lines and exit
     touch.py --  # create a file named for now, such as 't.touch~1231jqd2359~'
+
+Its guesses are correct, because you chose them
 
 Linux and Python conventions spell out how to send these marks,
   but no so very much what they mean -

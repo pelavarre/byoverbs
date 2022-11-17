@@ -17,7 +17,6 @@ quirks:
 examples:
 
   find.py  # show these examples and exit
-  find.py --h  # show this help message and exit
   find.py --  # find .
 
   find.py .  # find .

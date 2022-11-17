@@ -45,6 +45,8 @@ AST_DEFAULT_DOC = """
       -h, --help  show this help message and exit
 
     examples:
+      $VERB.py  # show these examples and exit
+      $VERB.py --  # guess what to do, and do it
 """
 
 

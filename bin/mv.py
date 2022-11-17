@@ -3,11 +3,11 @@
 """
 usage: mv.py [-i] [FROM | FROM... TO]
 
-rename Files or Dirs
+rename files or dirs
 
 positional arguments:
-  FROM       the old name of a File or Dir
-  TO         the new name of a File or Dir
+  FROM       the old name of a file or dir
+  TO         the new name of a file or dir
 
 options:
   --help     show this help message and exit
@@ -21,10 +21,9 @@ quirks:
 examples:
 
   mv.py  # show these examples and exit
-  mv.py --h  # show this help message and exit
   mv.py --  # moves Image Files into the Trash, else moves last File off Stack
 
-  echo mv -i "$(ls -1rt |tail -1)"{,$(date +~%m%djqd%H%M~)}
+  echo mv -i "$(ls -1rt |tail -1)"{,$(date +~%m%djqd%H%M~)} __jqd-trash__/.
   echo mv *.jpeg *.jpg *.png __jqd-trash__/.
 """
 
@@ -44,6 +43,7 @@ def main():
     # Say who's calling
 
     jqd = byo.subprocess_run_oneline("git config user.initials")
+    jqd = jqd if jqd else "jqd"
 
     # Look for a Trash Can
 
@@ -81,7 +81,7 @@ def main():
     if fromfile:
         stat = os.stat(fromfile)
         mtime = dt.datetime.fromtimestamp(stat.st_mtime)
-        tofile = fromfile + mtime.strftime("~%m%djqd%H%M~").replace("jqd", jqd)
+        tofile = fromfile + mtime.strftime("~%m%d{jqd}%H%M~").format(jqd=jqd)
 
     # Choose a Sh Line, else quit
 
