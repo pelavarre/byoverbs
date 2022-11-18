@@ -1,0 +1,17 @@
+index=0
+while [[ $# != 0 ]]; do
+
+    if ! [[ "$1" =~ ^[-] ]]; then
+        index=$((index + 1))
+        argv[$((index))]="-e"
+    fi
+
+    index=$((index + 1))
+    argv[$((index))]="$1"
+
+    shift
+
+done
+
+set -xe
+git grep -l "${argv[@]}" -- "$OLDPWD"
