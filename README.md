@@ -56,6 +56,12 @@ Linux mostly ships only Verbs that don't end in Dot P Y,
 
 How you place Files into your Sh Path can vary wildly
 
+A quick test is
+
+    git clone https://github.com/pelavarre/byoverbs.git
+    cd byoverbs/bin/
+    export PATH="${PATH:+$PATH:}$PWD"
+
 My technique is
 
     mkdir -p ~/bin
