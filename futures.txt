@@ -15,6 +15,8 @@ solve Bash C-x C-e first
 try loud insert mode that expires at arrows, when not fed, etc
 pattern of search-replace that keeps lit the searches and the replaces
 syntax coloring without corrupting spaces past end-of-line
+history of what was replaced, what was deleted
+edit as bookmark, reached by Undo
 
 
 bin/git.py
@@ -23,6 +25,8 @@ git log --no-decorate --pretty=format:'%h%x09%an%x09%cd%x20%x09%s' --author=plav
 git show :1:FILENAME # base
 git show :2:FILENAME # theirs
 git show :3:FILENAME # ours
+git reflog
+git reset HEAD~1
 
 
 bin/diff.py

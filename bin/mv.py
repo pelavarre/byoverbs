@@ -19,8 +19,8 @@ quirks:
   goes well with Cp, Mv, Ls, Rm, RmDir, Touch
 
 examples:
-
   mv.py  # show these examples and exit
+  mv.py --h  # show help lines and exit (more reliable than -h)
   mv.py --  # moves Image Files into the Trash, else moves last File off Stack
 
   echo mv -i "$(ls -1rt |tail -1)"{,$(date +~%m%djqd%H%M~)} __jqd-trash__/.
@@ -29,6 +29,7 @@ examples:
 
 import datetime as dt
 import os
+import sys
 
 import byotools as byo
 
@@ -36,9 +37,13 @@ import byotools as byo
 def main():
     """Run as a Sh Verb"""
 
-    # Accept one Arg, preceded by a "--" Sep or not
+    # Require one Arg without "-" Dash Options, preceded by a "--" Sep or not
 
     parm = byo.shlex_parms_one_posarg()
+    if not parm:
+        if sys.argv[1:] != ["--"]:
+
+            byo.sys_exit()  # prints examples or help lines or exception, and exits
 
     # Say who's calling
 
@@ -85,9 +90,6 @@ def main():
 
     # Choose a Sh Line, else quit
 
-    if not parm:
-        byo.sys_exit_if()  # prints examples or help lines and exits, else returns
-
     shline = None
     if patterns and not parm:  # cleans out the trash
         ttyline = "mv -i {} {}/.".format(" ".join(patterns), trash_reldir)
@@ -102,7 +104,7 @@ def main():
     # Run the chosen Sh Line, and return
 
     byo.sys_stderr_print("+ {}".format(ttyline))
-    byo.subprocess_run(shline)
+    byo.subprocess_run_plus(shline)
 
 
 main()

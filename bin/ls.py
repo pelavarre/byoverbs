@@ -22,6 +22,7 @@ quirks:
 examples:
 
   ls.py  # show these examples and exit
+  ls.py --h  # show help lines and exit (more reliable than -h)
   ls.py --  # count off the '%m%djqd' backup copies of Dirs and Files in the Stack
 
   ls -1rt |grep $(date +%m%djqd) |cat -n |expand
@@ -30,30 +31,10 @@ examples:
 import byotools as byo
 
 
-def main():
-    """Run as a Sh Verb"""
+jqd = byo.subprocess_run_oneline("git config user.initials")
+jqd = jqd if jqd else "jqd"
 
-    # Require one Arg, preceded by a "--" Sep or not
+ttyline = "ls -1rt |grep $(date +%m%d{jqd}) |cat -n |expand".format(jqd=jqd)
+shline = "bash -c {!r}".format(ttyline)
 
-    parm = byo.shlex_parms_one_posarg()
-
-    # Say who's calling
-
-    jqd = byo.subprocess_run_oneline("git config user.initials")
-    jqd = jqd if jqd else "jqd"
-
-    # Choose a Sh Line, else quit
-
-    if not parm:
-        byo.sys_exit_if()  # prints examples or help lines and exits, else returns
-
-    ttyline = "ls -1rt |grep $(date +%m%d{jqd}) |cat -n |expand".format(jqd=jqd)
-    shline = "bash -c {!r}".format(ttyline)
-
-    # Run the chosen Sh Line, and return
-
-    byo.sys_stderr_print("+ {}".format(ttyline))
-    byo.subprocess_run(shline)
-
-
-main()
+byo.sys_exit_if(shline, ttyline=ttyline)

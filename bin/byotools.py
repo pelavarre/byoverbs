@@ -151,8 +151,8 @@ def shlex_parms_one_posarg():
 #
 
 
-def subprocess_run(shline):
-    """Call SubProcess Run on a ShLine, but with Shell None, and without Stdin"""
+def subprocess_run_plus(shline):
+    """Call SubProcess Run on a ShLine, without Stdin, with Check True"""
 
     argv = shlex.split(shline)
 
@@ -189,12 +189,36 @@ def subprocess_run_oneline(shline):
 #
 
 
-def sys_exit_if():
-    """Print examples and exit, else print help lines and exit, else return"""
+def sys_exit():
+    """Prints examples or help lines or exception, and exits"""
 
-    sys_exit_if_testdoc()
-    sys_exit_if_argdoc()
-    sys_exit_if_not_implemented()
+    sys_exit_if()
+
+    raise NotImplementedError(sys.argv[1:])
+
+
+def sys_exit_if(shline=None, ttyline=None):
+    """Print examples & exit, or print help lines & exit, or shell out & return"""
+
+    alt_ttyline = ttyline if ttyline else shline
+
+    # Sometimes print & exit
+
+    sys_exit_if_testdoc()  # prints examples & exits if no args
+
+    sys_exit_if_argdoc()  # prints help lines & exits if "--h" arg, but ignores "-h"
+
+    sys_exit_if_not_implemented()  # raises unhandled exception if arg isn't just:  --
+
+    # Call the ShLine, if any
+
+    if shline:
+        sys_stderr_print("+ {}".format(alt_ttyline))
+        subprocess_run_plus(shline)
+
+    # Succeed
+
+    pass
 
 
 def sys_exit_if_argdoc():

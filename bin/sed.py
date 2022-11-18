@@ -14,33 +14,16 @@ quirks:
 examples:
 
   sed.py  # show these examples and exit
+  sed.py --h  # show help lines and exit (more reliable than -h)
   sed.py --  # prefix each line with "-- " and suffix each line with " --"
 
-  pbpaste |sed 's,^,-- ,' |sed 's,$, --,' |pbcopy
+  pbpaste |awk '{print $NF}' |sed 's,^,-- ,' |sed 's,$, --,' |pbcopy
 """
 
 import byotools as byo
 
 
-def main():
-    """Run as a Sh Verb"""
+ttyline = "pbpaste |awk '{print $NF}' |sed 's,^,-- ,' |sed 's,$, --,' |pbcopy"
+shline = "bash -c {!r}".format(ttyline)
 
-    # Require one Arg, preceded by a "--" Sep or not
-
-    parm = byo.shlex_parms_one_posarg()
-
-    # Choose a Sh Line, else quit
-
-    if not parm:
-        byo.sys_exit_if()  # prints examples or help lines and exits, else returns
-
-    ttyline = "pbpaste |sed 's,^,-- ,' |sed 's,$, --,' |pbcopy"
-    shline = "bash -c {!r}".format(ttyline)
-
-    # Run the chosen Sh Line, and return
-
-    byo.sys_stderr_print("+ {}".format(ttyline))
-    byo.subprocess_run(shline)
-
-
-main()
+byo.sys_exit_if(shline, ttyline=ttyline)

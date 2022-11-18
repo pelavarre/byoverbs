@@ -1,8 +1,13 @@
-if [[ $(git diff --name-only "$@") ]]; then
+if [[ $# != 0 ]]; then
     set -xe
-    git diff --name-only "$@"
-else
-    set -xe
-    git diff --name-only "$@"
     git show --pretty= --name-only "$@"
+else
+    if [[ $(git diff --name-only) ]]; then
+        set -xe
+        git diff --name-only
+    else
+        set -xe
+        git diff --name-only
+        git show --pretty= --name-only
+    fi
 fi

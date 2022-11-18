@@ -1,3 +1,5 @@
+qno=$(dirname $0)/qno
+
 emacs=emacs
 if ! which emacs >/dev/null; then
     emacs=/opt/homebrew/bin/emacs
@@ -5,11 +7,11 @@ fi
 
 if [[ $(git rev-parse --show-toplevel) == $PWD ]]; then
     set -xe
-    $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qno0) "$@"
+    $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qno "$@")
 else
     set -xe
     (
         cd $(git rev-parse --show-toplevel) \
-            && $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qno0) "$@"
+            && $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qno "$@")
     )
 fi

@@ -1,2 +1,7 @@
-set -xe
-git commit --all --fixup "$@"
+if [[ $# == 0 ]]; then
+    set -xe
+    git commit --all --fixup HEAD
+else
+    set -xe
+    git commit --all --fixup "$@"
+fi

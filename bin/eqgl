@@ -1,0 +1,9 @@
+qgl=$(dirname $0)/qgl
+
+emacs=emacs
+if ! which emacs >/dev/null; then
+    emacs=/opt/homebrew/bin/emacs
+fi
+
+set -xe
+$emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qgl "$@")

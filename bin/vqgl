@@ -1,0 +1,3 @@
+qgl=$(dirname $0)/qgl
+set -xe
+vim $($qgl "$@")
