@@ -16,13 +16,13 @@ options:
   -m      show as comma separated names
 
 quirks:
-  goes well with:  cp.py, mv.py, rm.py, rmdir.py, touch.py
+  goes well with Cp, Ls, Mv, Rm, RmDir, Touch
   classic Ls dumps all the Items, with no Scroll limit, when given no Parms
 
 examples:
 
   ls.py  # show these examples and exit
-  ls.py --  # as if:  ls
+  ls.py --  # count off the '%m%djqd' backup copies of Dirs and Files in the Stack
 
   ls -1rt |grep $(date +%m%djqd) |cat -n |expand
 """

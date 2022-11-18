@@ -31,7 +31,7 @@ import sys
 import keycaps
 
 if not hasattr(__builtins__, "breakpoint"):
-    breakpoint = pdb.set_trace
+    breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
 
 
 DENT = 4 * " "

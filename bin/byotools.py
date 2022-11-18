@@ -221,11 +221,13 @@ def sys_exit_if_not_implemented():
 def sys_exit_if_testdoc():
     """Print examples and exit"""
 
-    doc = ast_fetch_testdoc()
+    testdoc = ast_fetch_testdoc()
 
     parms = sys.argv[1:]
     if not parms:
-        print(doc)
+        print()
+        print(testdoc)
+        print()
 
         sys.exit()
 

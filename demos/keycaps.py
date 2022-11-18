@@ -47,7 +47,7 @@ import tty
 _ = time
 
 if not hasattr(__builtins__, "breakpoint"):
-    breakpoint = pdb.set_trace
+    breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
 
 
 MAC_PASTE_CHUNK_1022 = 1022
