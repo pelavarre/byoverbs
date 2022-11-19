@@ -1,0 +1,7 @@
+if [[ $# == 0 ]]; then
+    set -xe
+    git ls-files "$OLDPWD"
+else
+    set -xe
+    git ls-files "$OLDPWD" |grep "$@"
+fi
