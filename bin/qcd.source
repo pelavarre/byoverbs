@@ -1,6 +1,4 @@
-function qcd () {
-    echo + 'cd $(git rev-parse --show-toplevel && ...)' >&2
-    git rev-parse --show-toplevel \
-        && cd $(git rev-parse --show-toplevel) \
-        && (dirs -p |head -1)
-}
+echo + 'cd $(git rev-parse --show-toplevel && ...)' >&2
+git rev-parse --show-toplevel >/dev/null \
+    && cd $(git rev-parse --show-toplevel) \
+    && (dirs -p |head -1)

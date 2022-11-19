@@ -10,6 +10,10 @@ regex generation to mask input enough and not too much
 list deffed by Py File and not mentioned by that same Py File
 
 
+bin/pwnme
+could more or less volunteer and authorize the destructive prep of:  qcl
+
+
 bin/vi.py
 solve Bash C-x C-e first
 try loud insert mode that expires at arrows, when not fed, etc

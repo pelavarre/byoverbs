@@ -1,7 +1,7 @@
 if [[ $# == 0 ]]; then
-    set -xe
-    git ls-files "$OLDPWD"
+    echo "+ git ls-files $OLDPWD" >&2
+    git ls-files $OLDPWD
 else
-    set -xe
-    git ls-files "$OLDPWD" |grep "$@"
+    echo "+ git ls-files $OLDPWD |grep -i $@" >&2
+    git ls-files $OLDPWD |grep -i "$@"
 fi

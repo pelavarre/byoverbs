@@ -25,36 +25,6 @@ alias ~='echo + cd "~" >&2 && cd ~ && (dirs -p |head -1)'
 : shopt -s autocd 2>/dev/null  # Bash
 
 
-# Copy-edit Zsh Funcs from GitHub PELaVarre 'byoverbs/bin/'
-
-function qcd () {
-    echo + 'cd $(git rev-parse --show-toplevel && ...)' >&2
-    git rev-parse --show-toplevel \
-        && cd $(git rev-parse --show-toplevel) \
-        && (dirs -p |head -1)
-}
-
-function qp () {
-    echo '+ popd >/dev/null' >&2
-    popd >/dev/null
-
-    echo '+ (dirs -p |head -1)'
-    (dirs -p |head -1)
-
-    if [[ -e .git/ ]]; then
-        echo '+ git rev-parse --abbrev-ref HEAD'
-        git rev-parse --abbrev-ref HEAD
-    fi
-}
-
-function zh() {  # for Zsh, not for Bash
-    (
-        set -xe
-        HISTTIMEFORMAT='%b %d %H:%M:%S  ' history 0  # Bash takes no 0 here
-    )
-}
-
-
 # Keep copies of the Sh Input lines indefinitely, in the order given
 
 type -f precmd >/dev/null
@@ -65,6 +35,14 @@ if [[ $? != 0 ]]; then
 fi
 
 
+# Emulate the Autocorrections of macOS > System Preferences > Keyboard > Replace
+
+function /: { echo '/: ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⇧ ⋮ ⌃ ⌘ ⌥ ⎋' |tee >(pbcopy); }
+
+function :shrug: () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
+function :scf: () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
+
+
 # Sandbox Python Extensions
 
 function pips () {
@@ -72,6 +50,23 @@ function pips () {
     source ~/.pyvenvs/pips/bin/activate >&2
 }
 
+
+# Source Zsh Funcs from a LocalHost Clone of GitHub PELaVarre 'byoverbs/bin/zprofile'
+
+function qcd () { source $(dirname $(which q))/qcd.source "$@"; }
+function qp () { source $(dirname $(which q))/qp.source "$@"; }
+function zh () { source $(dirname $(which q))/zh.source "$@"; }
+
+function qo () { (source $(dirname $(which q))/qo "$@"); }
+function qof () { (source $(dirname $(which q))/qof "$@"); }
+function qoi () { (source $(dirname $(which q))/qoi "$@"); }
+function qoil () { (source $(dirname $(which q))/qoil "$@"); }
+function qol () { (source $(dirname $(which q))/qol "$@"); }
+
+
+#
+# Wrap up
+#
 
 
 # Authorize ZProfile Extensions
@@ -86,6 +81,9 @@ fi
 : pushd ~ >/dev/null  # default at Mac
 pushd ~/Desktop >/dev/null  # thus, at:  qp
 pushd ~/Public/byoverbs >/dev/null  # thus, at:  ..
+
+cd demos/  # choose my $OLDPWD
+cd - >/dev/null
 
 echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 echo

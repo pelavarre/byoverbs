@@ -1,17 +1,25 @@
-index=0
-while [[ $# != 0 ]]; do
+if [[ $# == 0 ]]; then
 
-    if ! [[ "$1" =~ ^[-] ]]; then
+    echo '+ git grep -i -l' >&2
+    git grep -i -l
+
+else
+
+    index=0
+    while [[ $# != 0 ]]; do
+
+        if ! [[ "$1" =~ ^[-] ]]; then
+            index=$((index + 1))
+            parms[index]="-e"
+        fi
+
         index=$((index + 1))
-        argv[$((index))]="-e"
-    fi
+        parms[index]="$1"
 
-    index=$((index + 1))
-    argv[$((index))]="$1"
+        shift
 
-    shift
+    done
 
-done
-
-set -xe
-git grep -il "${argv[@]}" -- "$OLDPWD"
+    echo '+ git grep -i -l' "${parms[@]}" -- "$OLDPWD" >&2
+    git grep -i -l "${parms[@]}" -- "$OLDPWD"
+fi
