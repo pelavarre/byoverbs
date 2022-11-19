@@ -1,0 +1,46 @@
+function _sys_parms_complete_for_grep () {
+    : "insert '-e' in front of every positional argument"
+
+    index=0
+    while [[ $# != 0 ]]; do
+
+        if ! [[ "$1" =~ ^[-] ]]; then
+            index=$((index + 1))
+            sys_parms[$((index))]="-e"
+        fi
+
+        index=$((index + 1))
+        sys_parms[$((index))]="$1"
+
+        shift
+
+    done
+}
+
+function qo () {
+    _sys_parms_complete_for_grep "$@"
+    (set -xe; git grep -i "${sys_parms[@]}" -- "$OLDPWD")
+}
+
+function qof () {
+    if [[ $# == 0 ]]; then
+        (set -xe; git ls-files "$OLDPWD")
+    else
+        (set -xe; git ls-files "$OLDPWD" |grep "$@")
+    fi
+}
+
+function qoi () {
+    _sys_parms_complete_for_grep "$@"
+    (set -xe; git grep "${sys_parms[@]}" -- "$OLDPWD")
+}
+
+function qoil () {
+    _sys_parms_complete_for_grep "$@"
+    (set -xe; git grep -l "${sys_parms[@]}" -- "$OLDPWD")
+}
+
+function qol () {
+    _sys_parms_complete_for_grep "$@"
+    (set -xe; git grep -il "${sys_parms[@]}" -- "$OLDPWD")
+}
