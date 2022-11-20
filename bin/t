@@ -1,4 +1,9 @@
 set -e
 LINES=$(stty size </dev/tty |cut -d' ' -f1)
-set -xe
-tail -$((LINES / 3)) "$@"
+if [[ $# == 0 ]]; then
+    set -xe
+    tail -$((LINES / 3))
+else
+    set -xe
+    tail "$@"
+fi
