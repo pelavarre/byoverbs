@@ -1,17 +1,19 @@
-qno=$(dirname $0)/qno
+qno=$(dirname "$0")/qno
 
 emacs=emacs
 if ! which emacs >/dev/null; then
     emacs=/opt/homebrew/bin/emacs
 fi
 
-if [[ $(git rev-parse --show-toplevel) == $PWD ]]; then
+if [[ $(git rev-parse --show-toplevel) == "$PWD" ]]; then
     set -xe
+    # shellcheck disable=SC2046  # Quote this to prevent word splitting
     $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qno "$@")
 else
     set -xe
     (
-        cd $(git rev-parse --show-toplevel) \
+        # shellcheck disable=SC2046  # Quote this to prevent word splitting
+        cd "$(git rev-parse --show-toplevel)" \
             && $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qno "$@")
     )
 fi

@@ -40,8 +40,9 @@ help:
 
 # Restyle & test the source, then tell me to push it
 
-push: black flake8 selftest
+push: black flake8 shellcheck selftest
 	rm -fr bin/__pycache__/
+	rm -fr tmp/
 	:
 	git log --oneline --no-decorate -1
 	git status --short --ignored
@@ -54,19 +55,26 @@ push: black flake8 selftest
 	:
 
 
-# Restyle the commas, quotes, spaces, and tabs of the source
+# Restyle the commas, quotes, spaces, and tabs of the Python Source Files
 
 black:
 	~/.pyvenvs/black/bin/black ../byoverbs
 
 
-# Lint the source, quickly and meaningfully
+# Lint the Python Source Files, quickly and meaningfully
 
 flake8:
 	~/.pyvenvs/flake8/bin/flake8 \
 		--max-line-length=999 --max-complexity 10 --ignore=E203,W503 ../byoverbs
 	# --ignore=E203  # Black '[ : ]' rules over E203 whitespace before ':'
 	# --ignore=W503  # 2017 Pep 8 and Black over W503 line break before bin op
+
+
+# Lint the Bash Source Files, quickly
+
+shellcheck:
+	mkdir -p tmp/
+	demos/shellcheck.bash
 
 
 # Test the source

@@ -127,6 +127,8 @@ Python files of nothing but quoted examples
 more on chopping output, beyond:  less -FIRX
 like qlq could vary by Terminal Window Height
 
+shopt -s histverify
+
 
 vi.py
 

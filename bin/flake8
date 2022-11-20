@@ -1,5 +1,6 @@
 set -e
 
+# shellcheck disable=SC2088  # Tilde does not expand in quotes, but $HOME does
 echo + '~/.pyvenvs/flake8/bin/flake8' \
     --max-line-length=999 --max-complexity 10 --ignore=E203,W503 "$@"
 

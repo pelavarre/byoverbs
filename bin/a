@@ -4,11 +4,11 @@ if [[ $# == 0 ]]; then
 else
     index=$1
     shift
-    if [[ $index < 0 ]]; then
+    if [[ $index -lt 0 ]]; then
         set -xe
-        awk "$@" '{print $(NF + 1 + '$index')}'  # word -1, -2, etc
+        awk "$@" '{print $(NF + 1 + '"$index"')}'  # word -1, -2, etc
     else
         set -xe
-        awk "$@" '{print $'$index'}' # word 1, 2, etc, if not 0 for all words
+        awk "$@" '{print $'"$index"'}' # word 1, 2, etc, if not 0 for all words
     fi
 fi

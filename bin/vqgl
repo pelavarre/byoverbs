@@ -1,3 +1,4 @@
-qgl=$(dirname $0)/qgl
+qgl=$(dirname "$0")/qgl
 set -xe
+# shellcheck disable=SC2046  # Quote this to prevent word splitting
 vim $($qgl "$@")

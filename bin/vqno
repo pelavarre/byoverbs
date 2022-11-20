@@ -1,8 +1,10 @@
-qno=$(dirname $0)/qno
-if [[ $(git rev-parse --show-toplevel) == $PWD ]]; then
+qno=$(dirname "$0")/qno
+if [[ $(git rev-parse --show-toplevel) == "$PWD" ]]; then
     set -xe
+    # shellcheck disable=SC2046  # Quote this to prevent word splitting
     vim $($qno "$@")
 else
     set -xe
-    (cd $(git rev-parse --show-toplevel) && vim $($qno "$@"))
+    # shellcheck disable=SC2046  # Quote this to prevent word splitting
+    (cd "$(git rev-parse --show-toplevel)" && vim $($qno "$@"))
 fi

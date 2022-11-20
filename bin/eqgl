@@ -1,4 +1,4 @@
-qgl=$(dirname $0)/qgl
+qgl=$(dirname "$0")/qgl
 
 emacs=emacs
 if ! which emacs >/dev/null; then
@@ -6,4 +6,5 @@ if ! which emacs >/dev/null; then
 fi
 
 set -xe
+# shellcheck disable=SC2046  # Quote this to prevent word splitting
 $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qgl "$@")

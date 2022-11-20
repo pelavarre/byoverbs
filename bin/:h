@@ -1,2 +1,2 @@
 set -xe
-printf "\e[8;$(stty size |cut -d' ' -f1);999t"
+printf '\e[8;%s;999t' "$(stty size |cut -d' ' -f1)"
