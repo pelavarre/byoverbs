@@ -10,7 +10,8 @@ options:
 
 quirks:
   plots X or O or . in your A B C choice of column and 1 2 3 choice of row
-  choose X after O, or O after X for you, but lets you choose X or O or . if you like
+  chooses X after O, or O after X for you, but lets you choose X or O or . if you like
+  mutates some random Cell randomly, when you press the ! Bang key (the ⇧1 chord)
   clears the Board when you press Tab or the - Dash key
   quits the Game when you press Q or Esc
 
@@ -26,6 +27,7 @@ examples:
 
 import collections
 import pdb
+import random
 import sys
 
 import keycaps
@@ -35,6 +37,12 @@ if not hasattr(__builtins__, "breakpoint"):
 
 
 DENT = 4 * " "
+
+ESC_STROKES = list()
+ESC_STROKES.append("\x1B")  # Esc
+ESC_STROKES.append("\x1B[B")  # alt encoding of "\N{Downwards Arrow}"
+
+TURNS = "XO."
 
 
 #
@@ -78,11 +86,12 @@ class Game:
         """Run once"""
 
         board = self.board
-        moves = self.moves
         tui = self.tui
 
+        keymap = "123 ABC .XO ! - Tab Q Esc"
+
         tui.print()
-        tui.print("Press the '#' or Return key, else one of:  123 ABC .XO - Tab Q Esc")
+        tui.print("Press the '#' or Return key, else one of:  {}".format(keymap))
         tui.print("such as:  XC3 OB2 XA1 OC1 XB1 OC2 XA2 OA3  # is an O Win by Fork")
 
         tui.print()
@@ -103,6 +112,9 @@ class Game:
             tui.kbprompt_erase(prompt)
 
             chars = stroke.decode()
+            if chars.startswith("\x1B"):
+                if chars not in ESC_STROKES:
+                    chars = ""
 
             for ch in chars:  # like for when multiple Chars pasted together
 
@@ -135,10 +147,21 @@ class Game:
 
         # Change the Player
 
+        assert TURNS == "XO."
+
         if ch in "XO.":
             self.turn = ch
 
             return
+
+        # Inject a random mutation
+
+        if ch in "!":
+            self.mutate_one_cell()
+
+            return
+
+        # if ch in ("\x1B[B", "\N{Downwards Arrow}"):
 
         # Clear the Board
 
@@ -156,13 +179,14 @@ class Game:
         # Quit the Game
 
         if ch in "\x1BQ":  # Esc
+
             tui.print(DENT + "Q")
             tui.print()
 
             sys.exit()
 
     def move_once(self):
-        """Mutate the Cell, print the Board, pick next Player"""
+        """Mutate the chosen Cell, print the Board, pick next Player"""
 
         board = self.board
         moves = self.moves
@@ -177,7 +201,7 @@ class Game:
 
             return
 
-        # Mutate one Cell, else return early
+        # Mutate the chosen Cell, else leave it unchanged and return early
 
         before = list(board.cells)
         board.x_y_mutate(x, y, turn)
@@ -190,6 +214,7 @@ class Game:
 
         move = "{}{}{}".format(turn, x, y)
         moves.append(move)
+        moves = board.moves_drop_cancelled(moves)
 
         tui.print(DENT + " ".join(moves))
 
@@ -223,6 +248,20 @@ class Game:
             turn = "X" if (counter["X"] <= counter["O"]) else "O"
 
         return turn
+
+    def mutate_one_cell(self):  # !
+        """Mutate one Cell chosen at random, print the Board, pick next Player"""
+
+        board = self.board
+
+        move = board.choose_random_move()
+        (turn, x, y) = move
+
+        self.turn = turn
+        self.x = x
+        self.y = y
+
+        self.move_once()
 
 
 class Board:
@@ -317,6 +356,47 @@ class Board:
                         index = xys.index(xy)
                         cells[index] = cells[index].upper()
 
+    def choose_random_move(self):
+        """Mutate one random choice of Cell"""
+
+        cells = self.cells
+        xys = self.xys
+
+        xy = random.choice(xys)
+        index = xys.index(xy)
+        turn_before = cells[index].upper()
+
+        turns = list(TURNS)
+        turns.remove(turn_before)
+
+        (x, y) = xy
+        turn = random.choice(turns)
+
+        move = "{}{}{}".format(turn, x, y)
+
+        return move
+
+    def moves_drop_cancelled(self, moves):
+        """Drop the earlier moves cancelled by later moves"""
+
+        uniques = list()
+
+        xys_set = set()
+        for move in reversed(moves):
+            assert len(move) == len("Oxy")
+
+            (turn, x, y) = move
+            xy = (x, y)
+
+            if xy not in xys_set:
+                xys_set.add(xy)
+                if turn != ".":
+                    uniques.append(move)
+
+        uniques = list(reversed(uniques))
+
+        return uniques
+
     def tui_print(self, tui):
         """Print the Cells"""
 
@@ -381,9 +461,9 @@ _ = """
 if __name__ == "__main__":
     main(sys.argv)
 
+
 # todo: up arrow auto move
 # todo: down arrow random move
-# todo: bang random mutate
 # todo: keep a rewind/ ff history on the left right arrows and backspace delete
 
 # todo: draw counters not yet placed to fill the blank cells
