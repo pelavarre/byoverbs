@@ -39,6 +39,9 @@ demos/keycaps.py - add import msvcrt
 demos/morse.py - take . - Space/Return as input to show all matches, then less matches
 demos/rpn.py
 
+test Paste at Windows
+    does it all come through as single Keystrokes in the same millisecond?
+
 list deffed by Py File and not mentioned by that same Py File
 
 import the ByoTools, don't just copy-edit fragments?

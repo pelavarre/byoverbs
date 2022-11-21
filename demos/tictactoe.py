@@ -88,7 +88,7 @@ class Game:
         board = self.board
         tui = self.tui
 
-        keymap = "123 ABC .XO ↓ ! - Tab Q Esc"
+        keymap = "123 ABC .XO J↓ ! - Tab Q Esc"
 
         tui.print()
         tui.print("Press the '#' or Return key, else one of:  {}".format(keymap))
@@ -151,7 +151,7 @@ class Game:
 
         # Change the Player
 
-        if chars in ("X", "O", "."):
+        if chars in (".", "O", "X"):
             self.turn = chars
             self.move_onto_x_y()
 
@@ -159,7 +159,7 @@ class Game:
 
         # Move next at a random Cell
 
-        if chars in ("\x1B[B", "\N{Downwards Arrow}"):
+        if chars in ("J", "\x1B[B", "\N{Downwards Arrow}"):
             self.move_onto_empty()
 
             return

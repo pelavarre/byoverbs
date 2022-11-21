@@ -38,13 +38,20 @@ import os
 import pdb
 import random
 import re
-import select
+import select  # deployed in Windows only for Sockets, not also for Keyboards
 import string
 import sys
-import termios
 import textwrap
 import time
-import tty
+
+try:
+    import termios
+    import tty
+except ImportError:
+    termios = None
+    tty = None
+
+    import msvcrt
 
 _ = time
 
@@ -436,7 +443,15 @@ _7_TABS += list("{} Tab".format(_).strip() for _ in ["", "⌃", "⌥", "⌃ ⌥"
 _11_RETURNS = ["⌃ M", "⌃ ⌥ M", "⌃ ⌥ ⇧ M"]
 _11_RETURNS += list("{} Return".format(_).strip() for _ in CHORDS)
 
-KEYCAP_LISTS_BY_STROKE.update(  # the rest of Printable Ascii and Control C0 Ascii
+KEYCAP_LISTS_BY_STROKE.update(  # more Printable Ascii
+    {
+        b"\x20": ["Space", "⇧ Space"],
+        b"\x5C": ["\\", "⌥ Y"],  # ⌥ Y is \ in place of ¥, when inside Terminal
+        b"\x60": ["`", "⌥ `", "⌥ ⇧ `", "⌥ ` Space"],  # Backtick, ⌥ Grave, etc
+    }
+)
+
+KEYCAP_LISTS_BY_STROKE.update(  # more Control C0 Ascii at Mac
     {
         b"\x00": ["⌃ Space", "⌃ ⇧ Space", "⌃ ⇧ 2", "⌃ ⌥ ⇧ 2"],  # near to ⇧2 for @
         b"\x09": _7_TABS,  # drawn as ⇥
@@ -447,13 +462,12 @@ KEYCAP_LISTS_BY_STROKE.update(  # the rest of Printable Ascii and Control C0 Asc
         b"\x1D": ["⌃ ]", "⌃ ⌥ ]", "⌃ ⌥ ⇧ ]"],
         b"\x1E": ["⌃ ⇧ 6", "⌃ ⌥ ⇧ 6"],  # near to ⇧6 for ^
         b"\x1F": ["⌃ -", "⌃ ⌥ -", "⌃ ⌥ ⇧ -"],  # near to ⇧- for _
-        b"\x20": ["Space", "⇧ Space"],
-        b"\x5C": ["\\", "⌥ Y"],  # ⌥ Y is \ in place of ¥, when inside Terminal
-        b"\x60": ["`", "⌥ `", "⌥ ⇧ `", "⌥ ` Space"],  # Backtick, ⌥ Grave, etc
         b"\x7F": _8_DELETES,  # or drawn as ⌫ and ⌦
         b"\xC2\xA0": ["⌥ Space", "⌥ ⇧ Space"],
     }
 )
+# todo: b"\x0A" is ⌃ Enter at Windows
+# todo: b"\x7F" is ⌃ Backspace at Windows
 
 for _N in range(0x80):  # require all the b"\x00"..b"\x7F" Ascii found by Strokes
     assert chr(_N).encode() in KEYCAP_LISTS_BY_STROKE.keys(), _N
@@ -466,7 +480,7 @@ assert (0x40 ^ ord("^")) == 0x1E
 assert (0x40 ^ ord("_")) == 0x1F
 assert (0x40 ^ ord("?")) == 0x7F
 
-KEYCAP_LISTS_BY_STROKE.update(  # the Arrow Key Caps
+KEYCAP_LISTS_BY_STROKE.update(  # the Arrow Key Caps at Mac
     {
         b"\x1B\x5B\x31\x3B\x32\x43": ["⇧ →"],
         b"\x1B\x5B\x31\x3B\x32\x44": ["⇧ ←"],
@@ -479,7 +493,7 @@ KEYCAP_LISTS_BY_STROKE.update(  # the Arrow Key Caps
     }
 )
 
-KEYCAP_LISTS_BY_STROKE.update(  # the Fn Key Caps
+KEYCAP_LISTS_BY_STROKE.update(  # the Fn Key Caps at Mac
     {
         b"\x1B\x4F\x50": ["F1"],  # drawn as:  fn F1
         b"\x1B\x4F\x51": ["F2"],
@@ -504,7 +518,7 @@ KEYCAP_LISTS_BY_STROKE.update(  # the Fn Key Caps
     }
 )
 
-KEYCAP_LISTS_BY_STROKE.update(  # the Option Digit strokes
+KEYCAP_LISTS_BY_STROKE.update(  # the Option Digit strokes at Mac
     {
         b"\xC2\xBA": ["⌥ 0"],
         b"\xC2\xA1": ["⌥ 1"],
@@ -529,7 +543,7 @@ KEYCAP_LISTS_BY_STROKE.update(  # the Option Digit strokes
     }
 )
 
-KEYCAP_LISTS_BY_STROKE.update(  # the Option Letter strokes
+KEYCAP_LISTS_BY_STROKE.update(  # the Option Letter strokes at Mac
     {
         b"\xC3\xA5": ["⌥ A"],
         b"\xE2\x88\xAB": ["⌥ B"],
@@ -606,7 +620,7 @@ KEYCAP_LISTS_BY_STROKE.update(  # the Option Letter strokes
     }
 )
 
-KEYCAP_LISTS_BY_STROKE.update(  # the Option Punctuation-Mark strokes
+KEYCAP_LISTS_BY_STROKE.update(  # the Option Punctuation-Mark strokes at Mac
     {
         b"\xE2\x80\x93": ["⌥ -"],
         b"\xE2\x89\xA0": ["⌥ ="],
@@ -672,6 +686,50 @@ def require_keycap_lists_sorted():
 
 
 require_keycap_lists_sorted()
+
+
+KEYCAP_LISTS_BY_STROKE.update(  # Control C0 Ascii at Windows
+    {
+        b"\x00\x03": ["⌃ ⇧ 2"],
+        b"\x00\x94": ["⌃ Tab"],
+        b"\x00\x95": ["⌃ /"],
+    }
+)
+
+KEYCAP_LISTS_BY_STROKE.update(  # the Arrow Key Caps at Windows
+    {
+        b"\xE0\x48": ["↑"],  # drawn as ▲
+        b"\xE0\x4B": ["←"],  # drawn as ◀
+        b"\xE0\x4D": ["→"],  # drawn as ▶
+        b"\xE0\x50": ["↓"],  # drawn as ▼
+        b"\xE0\x73": ["⌃ ←"],
+        b"\xE0\x74": ["⌃ →"],
+    }
+)
+
+KEYCAP_LISTS_BY_STROKE.update(  # some of the Extra Key Caps at Windows
+    {
+        b"\x00\x76": ["⌃ PgDn"],
+        b"\x00\x84": ["⌃ PgUp"],
+        b"\xE0\x47": ["Home"],
+        b"\xE0\x49": ["PgUp"],
+        b"\xE0\x4F": ["End"],
+        b"\xE0\x51": ["PgDn"],
+        b"\xE0\x76": ["⌃ PgDn"],
+        b"\xE0\x86": ["⌃ PgUp"],
+    }
+)
+
+KEYCAP_LISTS_BY_STROKE.update(  # more of the Extra Key Caps at Windows
+    {
+        b"\xE0\x52": ["Ins"],
+        b"\xE0\x53": ["Del"],
+        b"\xE0\x92": ["⌃ Ins"],
+        b"\xE0\x93": ["⌃ Del"],
+    }
+)
+
+# todo: KeyboardInterrupt can be Fn B at Windows?
 
 
 for _KC in MACBOOK_PASTE_KEYCAPS:
@@ -937,15 +995,16 @@ class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
 
         # Stop line-buffering input, or leave it stopped
 
-        if stdio.isatty() and (tcgetattr is None):
-            tcgetattr = termios.tcgetattr(fd)
-            assert tcgetattr is not None
+        if termios:
+            if stdio.isatty() and (tcgetattr is None):
+                tcgetattr = termios.tcgetattr(fd)
+                assert tcgetattr is not None
 
-            self.tcgetattr = tcgetattr
+                self.tcgetattr = tcgetattr
 
-            tty.setraw(fd, when=termios.TCSADRAIN)  # not TCSAFLUSH
+                tty.setraw(fd, when=termios.TCSADRAIN)  # not TCSAFLUSH
 
-            # todo: show that queued input survives
+                # todo: show that queued input survives
 
         # Succeed
 
@@ -971,18 +1030,27 @@ class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
         assert MAC_PASTE_CHUNK_1022 == 1022
 
         if True:  # last jittered Sat 12/Nov/2022
-            length = MAC_PASTE_CHUNK_1022
-            while self.kbhit(timeout=0):
-                _ = os.read(fd, length)
+
+            if not termios:
+                while msvcrt.kbhit():
+                    strokes = msvcrt.getch()
+                    if strokes in (b"\x00", b"\xE0"):
+                        strokes += msvcrt.getch()
+
+            if termios:
+                length = MAC_PASTE_CHUNK_1022
+                while self.kbhit(timeout=0):
+                    _ = os.read(fd, length)
 
         # Start line-buffering input, or leave it started
 
-        if tcgetattr is not None:
-            self.tcgetattr = None  # mutate
+        if termios:
+            if tcgetattr is not None:
+                self.tcgetattr = None  # mutate
 
-            when = termios.TCSADRAIN
-            # when = termios.TCSAFLUSH  # todo: find a test that cares
-            termios.tcsetattr(fd, when, tcgetattr)
+                when = termios.TCSADRAIN
+                # when = termios.TCSAFLUSH  # todo: find a test that cares
+                termios.tcsetattr(fd, when, tcgetattr)
 
     def print(self, *args, **kwargs):
         """Like Print, but default End to "\r\n" of Tui, not "\n" of Terminal"""
@@ -1006,29 +1074,35 @@ class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
 
         # Read one Byte or a burst of Bytes = 1 or 2 Keystrokes, or Paste
 
-        strokes = self.kbread(prompt)
+        if termios:
+            strokes = self.kbread_with_termios(prompt)
+        else:
+            strokes = self.kbread_with_msvcrt(prompt)
+
         chars = strokes.decode()
 
         # Return the 1st Keystroke that came as a pair of Accentuator plus 2nd Keystroke
 
-        mac_accentuators = b"\x60 \xC2\xB4 \xCB\x86 \xCB\x9C \xC2\xA8".split()
-        assert MAC_ACCENTUATORS == mac_accentuators  # Option E I N U Grave
+        if termios:
 
-        if len(chars) <= 2:
-            for accentuator in MAC_ACCENTUATORS:
-                if strokes.startswith(accentuator):
-                    line = strokes[len(accentuator) :]
-                    self.line = line
+            mac_accentuators = b"\x60 \xC2\xB4 \xCB\x86 \xCB\x9C \xC2\xA8".split()
+            assert MAC_ACCENTUATORS == mac_accentuators  # Option E I N U Grave
 
-                    splits = list()
-                    splits.append(accentuator)
-                    if line:
-                        splits.append(line)
+            if len(chars) <= 2:
+                for accentuator in MAC_ACCENTUATORS:
+                    if strokes.startswith(accentuator):
+                        line = strokes[len(accentuator) :]
+                        self.line = line
 
-                    if prompt:
-                        self.print("Os Read returned", splits)
+                        splits = list()
+                        splits.append(accentuator)
+                        if line:
+                            splits.append(line)
 
-                    return accentuator
+                        if prompt:
+                            self.print("Os Read returned", splits)
+
+                        return accentuator
 
         # Return 1 Keystroke, or Paste
 
@@ -1036,8 +1110,34 @@ class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
 
         return stroke
 
-    def kbread(self, prompt):
+    def kbread_with_msvcrt(self, prompt):
         """Read one Byte or a burst of Bytes = 1 or 2 Keystrokes, or Paste"""
+
+        assert not termios
+
+        # Print a prompt to clear before returning
+
+        self.kbprompt_write(prompt)
+        prompted = prompt
+
+        # Take 1 or Keystroke coming in
+
+        strokes = msvcrt.getch()
+        if strokes in (b"\x00", b"\xE0"):
+            strokes += msvcrt.getch()
+
+        # Clear the prompt
+
+        self.kbprompt_erase(prompted)
+
+        # Succeed
+
+        return strokes
+
+    def kbread_with_termios(self, prompt):
+        """Read one Byte or a burst of Bytes = 1 or 2 Keystrokes, or Paste"""
+
+        assert termios
 
         fd = self.fd
 
