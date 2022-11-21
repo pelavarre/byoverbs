@@ -26,7 +26,6 @@ examples:
 # developed by:  cls && F=demos/tictactoe.py && black $F && flake8 $F && $F --
 
 
-import collections
 import pdb
 import random
 import sys
@@ -41,7 +40,9 @@ DENT = 4 * " "
 
 ESC_STROKES = list()
 ESC_STROKES.append("\x1B")  # Esc
+ESC_STROKES.append("\x1B[A")  # alt encoding of "\N{Upwards Arrow}" ↑
 ESC_STROKES.append("\x1B[B")  # alt encoding of "\N{Downwards Arrow}" ↓
+ESC_STROKES.append("\x1B[D")  # alt encoding of "\N{Leftwards Arrow}" ←
 
 TURNS = "XO."
 
@@ -139,13 +140,17 @@ class Game:
 
         if chars in ("A", "B", "C"):
             self.x = chars
-            self.move_onto_x_y()
+            if self.y:
+                self.move_onto_x_y()
+                self.turn = self.choose_next_turn(after=self.turn)
 
             return
 
         if chars in ("1", "2", "3"):
             self.y = chars
-            self.move_onto_x_y()
+            if self.x:
+                self.move_onto_x_y()
+                self.turn = self.choose_next_turn(after=self.turn)
 
             return
 
@@ -153,11 +158,19 @@ class Game:
 
         if chars in (".", "O", "X"):
             self.turn = chars
-            self.move_onto_x_y()
+
+            assert (not self.x) or (not self.y), (self.x, self.y)
 
             return
 
-        # Move next at a random Cell
+        # Make a winning move  # K ↑
+
+        # if chars in ("K", "\x1B[A", "\N{Upwards Arrow}"):
+        #     # FIXME: self.move_well()
+
+        #     return
+
+        # Move next at a random Cell  # J ↓
 
         if chars in ("J", "\x1B[B", "\N{Downwards Arrow}"):
             self.move_onto_empty()
@@ -167,20 +180,27 @@ class Game:
         # Inject a random mutation
 
         if chars in ("!",):
-            self.mutate_one_cell()
+            self.move_onto_random()
 
             return
 
+        # Undo the last done Move  # H Backspace Delete ←
+
+        # if chars in ("H", "\x08", "\x7F", "\x1B[D", "\N{Leftwards Arrow}"):
+        #     # FIXME: self.move_undo()
+
+        #     return
+
         # Clear the Board
 
-        if chars in ("\t", "-"):  # Tab Dash
+        if chars in ("\t", "-"):  # - Tab
             self.board_clear()
 
             return
 
         # Quit the Game
 
-        if chars in ("\x1B", "Q"):  # Esc Q
+        if chars in ("\x1B", "Q"):  # Q Esc
 
             tui.print(DENT + "Q")
             tui.print()
@@ -194,7 +214,7 @@ class Game:
 
             sys.exit()
 
-    def move_onto_x_y(self):
+    def move_onto_x_y(self):  # .OX, ABC, 123
         """Mutate the chosen Cell, print the Board, pick next Player"""
 
         board = self.board
@@ -203,11 +223,20 @@ class Game:
         x = self.x
         y = self.y
 
-        # Return early if no Row or no Column chosen
+        assert x and y, (x, y)
 
-        if not (x and y):
+        # Restart the choosing of X and Y
 
-            return
+        self.x = None
+        self.y = None
+
+        #
+        # FIXME: refactor - move this work into Board
+        # FIXME: visibly decline Moves that don't change the Board
+        # FIXME: don't reprint Board when Move declined
+        # FIXME: do collect the Cells for each Tuple of Moves, including initial Empty
+        # FIXME: undo becomes rollback the collections and reprint the Board
+        #
 
         # Mutate the chosen Cell, else leave it unchanged and return early
 
@@ -217,6 +246,12 @@ class Game:
         if board.cells == before:
 
             return
+
+        # FIXME: add the accepted Move
+
+        #
+        #
+        #
 
         # Print the mutated Board as zero or more Handicaps, plus X O moves in turn
 
@@ -236,28 +271,33 @@ class Game:
         board.tui_print(tui)
         tui.print()
 
-        # Mutate the Turn too
+        # Say a Move was made
 
-        self.turn = self.choose_next_turn()
-        self.x = None
-        self.y = None
+        return
 
-    def choose_next_turn(self):
+    def choose_next_turn(self, after):
         """Pick the next Mark in alternation, else X to above O, else O up to X"""
 
         board = self.board
         turn = self.turn
 
         cells = board.cells
+        wins = board.wins
 
-        counter = collections.Counter(cells)
+        x_cells = list(_ for _ in cells if _.upper() == "X")
+        o_cells = list(_ for _ in cells if _.upper() == "O")
 
-        if turn == "X":
+        if after == "X":
             turn = "O"
-        elif turn == "O":
+        elif after == "O":
             turn = "X"
         else:
-            turn = "X" if (counter["X"] <= counter["O"]) else "O"
+            assert after == ".", after
+            turn = "X" if (len(x_cells) <= len(o_cells)) else "O"
+
+        move = board.choose_random_empty_else_none()
+        if wins or not move:
+            turn = "."
 
         return turn
 
@@ -265,25 +305,27 @@ class Game:
         """Move on to a random choice of empty Cell, if any exist"""
 
         board = self.board
+        wins = board.wins
 
         move = board.choose_random_empty_else_none()
-        if board.wins or not move:
+        if wins or not move:
 
             self.board_clear()
 
-        else:
+            return
 
-            (empty, x, y) = move
+        (empty, x, y) = move
 
-            assert empty == "."
-            assert self.turn == self.turn
+        assert empty == "."
+        assert self.turn == self.turn
 
-            self.x = x
-            self.y = y
+        self.x = x
+        self.y = y
 
-            self.move_onto_x_y()
+        self.move_onto_x_y()  # does nothing when:  self.turn == "."
+        self.turn = self.choose_next_turn(after=self.turn)
 
-    def mutate_one_cell(self):  # !
+    def move_onto_random(self):  # !
         """Mutate one Cell chosen at random, print the Board, pick next Player"""
 
         board = self.board
@@ -296,8 +338,9 @@ class Game:
         self.y = y
 
         self.move_onto_x_y()
+        self.turn = self.choose_next_turn(after=".")
 
-    def board_clear(self):
+    def board_clear(self):  # - Tab
         """Clear the Board"""
 
         tui = self.tui
@@ -332,10 +375,9 @@ class Board:
 
         xys = list((x, y) for y in ys for x in xs)
 
-        # Publish the Indices and the Cells
+        # Publish the Immutables
 
         self.n = n
-        self.cells = cells
 
         self.xs = xs
         self.ys = ys
@@ -345,6 +387,9 @@ class Board:
 
         self.streaks = self.form_streaks()
 
+        # Publish the Mutables
+
+        self.cells = cells
         self.moves = list()
         self.wins = list()
 
@@ -372,6 +417,8 @@ class Board:
         streaks.append(streak)  # diagonal - upper right to lower left
 
         return streaks
+
+    # FIXME: def moves_undo_one(self):
 
     def x_y_mutate(self, x, y, turn):
         """Mutate the one Cell at X, Y"""
@@ -451,20 +498,24 @@ class Board:
 
         return move
 
+    # FIXME: def choose_well(self):
+    # Newell & Simon 1972
+    # win, block, fork, block fork, center, opposite corner, empty corner, empty side
+
     def add_move(self, move):
         """Add a Move, but then separate the Handicaps from X O Moves in turn"""
 
         moves = self.moves
 
-        # Add the one Move, but drop any Move it cancels
+        # Add the one Move
 
         moves.append(move)
 
-        self._moves_drop_cancelled()
-
         # Split the Handicaps out of the X O Moves in turn
 
-        handicaps = list(moves)
+        uniques = self._moves_drop_cancelled()
+
+        handicaps = list(uniques)
         xo_moves = list()
 
         turn = "X"
@@ -503,7 +554,8 @@ class Board:
                     uniques.append(move)
 
         uniques = list(reversed(uniques))
-        moves[::] = uniques
+
+        return uniques
 
     def tui_print(self, tui):
         """Print the Cells"""
