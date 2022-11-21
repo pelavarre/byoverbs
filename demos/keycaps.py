@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""
+r"""
 usage: keycaps.py [-h]
 
 fire key caps bright when struck, fade to black, then grey, then gone
@@ -20,7 +20,9 @@ examples:
   git clone https://github.com/pelavarre/byoverb.git
   demos/keycaps.py  # show these examples
   demos/keycaps.py --  # show a fireplace of key caps bright when struck, then fading
-"""
+  for C in 36 32 33 35 31 34 30 37; do printf "\e[${C}m""color""\e[0m\n"; done
+  # colors text as:  color color color color color color color color
+"""  # note: COLOR_AS mutates this __main__.__doc__ far below
 
 # code reviewed by people, and by Black and Flake8
 # developed by:  F=demos/keycaps.py && black $F && flake8 $F && $F --
@@ -55,13 +57,23 @@ MAC_PASTE_125MS = 125e-3
 
 
 NO_COLOR = 0
-COLOR_BY_AGE = 36, 32, 33, 35, 31, 34, 30, 37
+
+COLOR_CHARS_FORMAT = "\x1B[{}m{}\x1B[0m"  # .format(color, chars)
+# todo: might should color spaces
+
+COLOR_BY_AGE = (36, 32, 33, 35, 31, 34, 30, 37)
 # Ansi Colors = Cyan, Green, Yellow, Magenta, Red, Blue, Black, White
 # but their Yellow, Magenta, White come to me as Gold, Pink, Grey
 
-COLORS = ", ".join("\x1B[{}m#{}\x1B[0m".format(_, _) for _ in COLOR_BY_AGE)
+COLORS = list(COLOR_BY_AGE)
+STR_COLORS = ", ".join("\x1B[{}m#{}\x1B[0m".format(_, _) for _ in COLOR_BY_AGE)
+
+COLOR_AS = "".join((" " "\x1B[" + str(_) + "m" "color" "\x1B[0m") for _ in COLOR_BY_AGE)
 
 COLOR_500MS = 500e-3  # milliseconds of Key Cap life per color
+
+
+__main__.__doc__ = __main__.__doc__.replace(8 * " color", " " + COLOR_AS)
 
 
 #
@@ -112,7 +124,7 @@ def run_fireplace():
     print()
     print(
         "Type faster or slower to see more of {} colors:  {}".format(
-            len(COLORS), COLORS
+            len(COLORS), STR_COLORS
         )
     )
 
@@ -319,7 +331,6 @@ def tui_keycaps_print(tui, keycaps, stroke, t1):
 def colorize(keycap, t, now):
     """Choose a Color for the Key Cap, else replace it with Spaces"""
 
-    assert NO_COLOR == 0
     assert tuple(COLOR_BY_AGE) == (36, 32, 33, 35, 31, 34, 30, 37)
     assert COLOR_500MS == 500e-3
 
@@ -338,9 +349,11 @@ def colorize(keycap, t, now):
 
     # Fire bright when struck, fade to black, then grey, then gone
 
+    assert NO_COLOR == 0
+    assert COLOR_CHARS_FORMAT == "\x1B[{}m{}\x1B[0m"
+
     color = COLOR_BY_AGE[age]
-    emit = "\x1B[{}m{}\x1B[{}m".format(color, keycap, NO_COLOR)
-    # todo: might should only switch to No Color at the end?
+    emit = COLOR_CHARS_FORMAT.format(color, keycap)
 
     return emit
 
