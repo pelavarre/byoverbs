@@ -185,6 +185,13 @@ class Game:
             tui.print(DENT + "Q")
             tui.print()
 
+            WAR_GAMES_QUOTE = "A strange game"  # from "War Games" 1983
+            WAR_GAMES_QUOTE += ". The only winning move is not to play"
+            WAR_GAMES_QUOTE += ". How about a nice game of chess?"
+
+            tui.print(WAR_GAMES_QUOTE)
+            tui.print()
+
             sys.exit()
 
     def move_onto_x_y(self):
