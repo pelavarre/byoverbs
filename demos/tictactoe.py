@@ -11,6 +11,7 @@ options:
 quirks:
   plots X or O or . in your A B C choice of column and 1 2 3 choice of row
   chooses X after O, or O after X for you, but lets you choose X or O or . if you like
+  steps the Game forward by one random Move, when you press the ↓ Downwards Arrow key
   mutates some random Cell randomly, when you press the ! Bang key (the ⇧1 chord)
   clears the Board when you press Tab or the - Dash key
   quits the Game when you press Q or Esc
@@ -40,7 +41,7 @@ DENT = 4 * " "
 
 ESC_STROKES = list()
 ESC_STROKES.append("\x1B")  # Esc
-ESC_STROKES.append("\x1B[B")  # alt encoding of "\N{Downwards Arrow}"
+ESC_STROKES.append("\x1B[B")  # alt encoding of "\N{Downwards Arrow}" ↓
 
 TURNS = "XO."
 
@@ -77,7 +78,6 @@ class Game:
         n = self.n
 
         self.board = Board(n)
-        self.moves = list()
         self.turn = "X"
         self.x = None
         self.y = None
@@ -88,7 +88,7 @@ class Game:
         board = self.board
         tui = self.tui
 
-        keymap = "123 ABC .XO ! - Tab Q Esc"
+        keymap = "123 ABC .XO ↓ ! - Tab Q Esc"
 
         tui.print()
         tui.print("Press the '#' or Return key, else one of:  {}".format(keymap))
@@ -112,84 +112,85 @@ class Game:
             tui.kbprompt_erase(prompt)
 
             chars = stroke.decode()
-            if chars.startswith("\x1B"):
-                if chars not in ESC_STROKES:
-                    chars = ""
 
-            for ch in chars:  # like for when multiple Chars pasted together
+            str_list = [chars]
+            if not chars.startswith("\x1B"):
+                str_list = list(chars)
+            str_list = list((_.upper() if (len(_) == 1) else _) for _ in str_list)
 
-                if ch == "#":
+            for chars in str_list:  # like for when multiple Chars pasted together
+
+                if chars == "#":
                     shunting = True
-                elif ch in "\r\n":
+                elif chars in ("\r", "\n"):
                     shunting = False
 
                 if not shunting:
-                    self.take_ch(ch=ch.upper())
+                    self.take_chars(chars)
 
-    def take_ch(self, ch):
+    def take_chars(self, chars):
         """Choose a Column, or mutate and print the Tic-Tac-Toe Board"""
 
         tui = self.tui
 
+        assert TURNS == "XO."
+
         # Choose a Column or Row of Cells
 
-        if ch in "ABC":
-            self.x = ch
-            self.move_once()
+        if chars in ("A", "B", "C"):
+            self.x = chars
+            self.move_onto_x_y()
 
             return
 
-        if ch in "123":
-            self.y = ch
-            self.move_once()
+        if chars in ("1", "2", "3"):
+            self.y = chars
+            self.move_onto_x_y()
 
             return
 
         # Change the Player
 
-        assert TURNS == "XO."
+        if chars in ("X", "O", "."):
+            self.turn = chars
+            self.move_onto_x_y()
 
-        if ch in "XO.":
-            self.turn = ch
+            return
+
+        # Move next at a random Cell
+
+        if chars in ("\x1B[B", "\N{Downwards Arrow}"):
+            self.move_onto_empty()
 
             return
 
         # Inject a random mutation
 
-        if ch in "!":
+        if chars in ("!",):
             self.mutate_one_cell()
 
             return
 
-        # if ch in ("\x1B[B", "\N{Downwards Arrow}"):
-
         # Clear the Board
 
-        if ch in "\t-":  # Tab Dash
-            tui.print(DENT + "Tab")
-
-            self.start()
-
-            tui.print()
-            self.board.tui_print(tui)
-            tui.print()
+        if chars in ("\t", "-"):  # Tab Dash
+            self.board_clear()
 
             return
 
         # Quit the Game
 
-        if ch in "\x1BQ":  # Esc
+        if chars in ("\x1B", "Q"):  # Esc Q
 
             tui.print(DENT + "Q")
             tui.print()
 
             sys.exit()
 
-    def move_once(self):
+    def move_onto_x_y(self):
         """Mutate the chosen Cell, print the Board, pick next Player"""
 
         board = self.board
-        moves = self.moves
         tui = self.tui
         turn = self.turn
         x = self.x
@@ -210,13 +211,17 @@ class Game:
 
             return
 
-        # Trace the instruction
+        # Print the mutated Board as zero or more Handicaps, plus X O moves in turn
 
         move = "{}{}{}".format(turn, x, y)
-        moves.append(move)
-        moves = board.moves_drop_cancelled(moves)
+        (handicaps, xo_moves) = board.add_move(move)
 
-        tui.print(DENT + " ".join(moves))
+        if handicaps:
+            tui.print(DENT + " ".join(handicaps))
+        if xo_moves:
+            tui.print(DENT + " ".join(xo_moves))
+        if not (handicaps or xo_moves):
+            tui.print(DENT + "Tab")
 
         # Print the mutated Board
 
@@ -249,19 +254,54 @@ class Game:
 
         return turn
 
+    def move_onto_empty(self):  # ↓
+        """Move on to a random choice of empty Cell, if any exist"""
+
+        board = self.board
+
+        move = board.choose_random_empty_else_none()
+        if board.wins or not move:
+
+            self.board_clear()
+
+        else:
+
+            (empty, x, y) = move
+
+            assert empty == "."
+            assert self.turn == self.turn
+
+            self.x = x
+            self.y = y
+
+            self.move_onto_x_y()
+
     def mutate_one_cell(self):  # !
         """Mutate one Cell chosen at random, print the Board, pick next Player"""
 
         board = self.board
 
-        move = board.choose_random_move()
+        move = board.choose_random_mutate()
         (turn, x, y) = move
 
         self.turn = turn
         self.x = x
         self.y = y
 
-        self.move_once()
+        self.move_onto_x_y()
+
+    def board_clear(self):
+        """Clear the Board"""
+
+        tui = self.tui
+
+        tui.print(DENT + "Tab")
+
+        self.start()
+
+        tui.print()
+        self.board.tui_print(tui)
+        tui.print()
 
 
 class Board:
@@ -297,6 +337,9 @@ class Board:
         self.xys = xys
 
         self.streaks = self.form_streaks()
+
+        self.moves = list()
+        self.wins = list()
 
     def form_streaks(self):
         """List the ways to win"""
@@ -341,6 +384,9 @@ class Board:
         cells = self.cells
         xys = self.xys
         streaks = self.streaks
+        wins = self.wins
+
+        wins.clear()
 
         for xy in xys:
             index = xys.index(xy)
@@ -352,12 +398,34 @@ class Board:
                 cell = list(streak_set)[-1]
                 if cell != ".":
 
+                    wins.append(streak)
+
                     for xy in streak:
                         index = xys.index(xy)
                         cells[index] = cells[index].upper()
 
-    def choose_random_move(self):
-        """Mutate one random choice of Cell"""
+    def choose_random_empty_else_none(self):
+        """Choose one empty Cell at random"""
+
+        cells = self.cells
+        xys = self.xys
+
+        empty_xys = list(_ for _ in xys if cells[xys.index(_)] == ".")
+        if not empty_xys:
+
+            return None
+
+        xy = random.choice(empty_xys)
+
+        turn = "."
+        (x, y) = xy
+
+        move = "{}{}{}".format(turn, x, y)
+
+        return move
+
+    def choose_random_mutate(self):
+        """Choose one Cell at random and also choose randomly how to mutate it"""
 
         cells = self.cells
         xys = self.xys
@@ -369,15 +437,49 @@ class Board:
         turns = list(TURNS)
         turns.remove(turn_before)
 
-        (x, y) = xy
         turn = random.choice(turns)
+        (x, y) = xy
 
         move = "{}{}{}".format(turn, x, y)
 
         return move
 
-    def moves_drop_cancelled(self, moves):
+    def add_move(self, move):
+        """Add a Move, but then separate the Handicaps from X O Moves in turn"""
+
+        moves = self.moves
+
+        # Add the one Move, but drop any Move it cancels
+
+        moves.append(move)
+
+        self._moves_drop_cancelled()
+
+        # Split the Handicaps out of the X O Moves in turn
+
+        handicaps = list(moves)
+        xo_moves = list()
+
+        turn = "X"
+        while handicaps:
+            fitting_moves = list(_ for _ in handicaps if _.startswith(turn))
+            if fitting_moves:
+                move = fitting_moves[0]
+                handicaps.remove(move)
+                xo_moves.append(move)
+
+                turn = "X" if (turn != "X") else "O"
+
+                continue
+
+            break
+
+        return (handicaps, xo_moves)
+
+    def _moves_drop_cancelled(self):
         """Drop the earlier moves cancelled by later moves"""
+
+        moves = self.moves
 
         uniques = list()
 
@@ -394,8 +496,7 @@ class Board:
                     uniques.append(move)
 
         uniques = list(reversed(uniques))
-
-        return uniques
+        moves[::] = uniques
 
     def tui_print(self, tui):
         """Print the Cells"""
@@ -462,18 +563,18 @@ if __name__ == "__main__":
     main(sys.argv)
 
 
-# todo: up arrow auto move
-# todo: down arrow random move
 # todo: keep a rewind/ ff history on the left right arrows and backspace delete
+# todo: up arrow auto strong move
 
 # todo: draw counters not yet placed to fill the blank cells
 
 # todo: sort uniq to reduce flips and rotations, print what remains
 # todo: index center cell, corner cells, mid cells
 # todo: colour X O pairs of bursts of moves by age
+# todo: colour handicap X O
 
-# todo: count the streaks
-# todo: count the excess of X or O plus Turn
+# todo: count the wins
+# todo: count the handicaps
 # todo: sketch how many X wins vs O wins still possible
 
 # todo: lean into always doing something in reply to input
