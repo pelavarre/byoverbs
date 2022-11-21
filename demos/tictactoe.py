@@ -69,6 +69,7 @@ class Game:
         n = self.n
 
         self.board = Board(n)
+        self.moves = list()
         self.turn = "X"
         self.x = None
         self.y = None
@@ -77,10 +78,12 @@ class Game:
         """Run once"""
 
         board = self.board
+        moves = self.moves
         tui = self.tui
 
         tui.print()
-        tui.print("# XC3 OB2 XA1 OC1 XB1 OC2 XA2 OA3  # is an O Win by Fork")
+        tui.print("Press the '#' or Return key, else one of:  123 ABC .XO - Tab Q Esc")
+        tui.print("such as:  XC3 OB2 XA1 OC1 XB1 OC2 XA2 OA3  # is an O Win by Fork")
 
         tui.print()
         board.tui_print(tui)
@@ -89,16 +92,11 @@ class Game:
         shunting = None
         while True:
 
-            keymap = "123 ABC .XO - Tab # Return Esc"
-            keymap = "Press Q to quit, or one of {}".format(keymap)
-            # todo: prompts for n != 3
-
             choices = [self.turn, self.x, self.y]
             choices = list(_ for _ in choices if _)
-            if not choices:
-                prompt = DENT + "{} ".format(keymap)
-            else:
-                prompt = DENT + "{} with {}".format(keymap, "".join(choices))
+
+            template = "Press Q or Esc to quit, else some other key, after:  {}"
+            prompt = DENT + template.format("".join(choices))
 
             tui.kbprompt_write(prompt)
             stroke = tui.readline()
@@ -167,6 +165,7 @@ class Game:
         """Mutate the Cell, print the Board, pick next Player"""
 
         board = self.board
+        moves = self.moves
         tui = self.tui
         turn = self.turn
         x = self.x
@@ -189,7 +188,10 @@ class Game:
 
         # Trace the instruction
 
-        tui.print(DENT + "{}{}{}".format(turn, x, y))
+        move = "{}{}{}".format(turn, x, y)
+        moves.append(move)
+
+        tui.print(DENT + " ".join(moves))
 
         # Print the mutated Board
 
@@ -379,9 +381,6 @@ _ = """
 if __name__ == "__main__":
     main(sys.argv)
 
-
-# todo: trace the complete compressed history to name the game, not just last move
-
 # todo: up arrow auto move
 # todo: down arrow random move
 # todo: bang random mutate
@@ -400,6 +399,8 @@ if __name__ == "__main__":
 # todo: lean into always doing something in reply to input
 # todo: could toggle start with X vs O
 # todo: could mark the Board somehow for next X or next O
+
+# todo: 'def run_once' prompts for n != 3
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/tictactoe.py
