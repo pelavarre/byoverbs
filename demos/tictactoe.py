@@ -127,17 +127,17 @@ class Game:
                 "\x1B": self.quit_game,  # Esc
                 "!": self.move_onto_random,
                 "-": self.board_clear,
-                # "\x08": self.move_undo,  # Backspace  # Control+H
-                # "H": self.move_undo,
+                "\x08": self.moves_undo_one,  # Backspace  # Control+H
+                "H": self.moves_undo_one,
                 "J": self.move_onto_empty,
                 # "K": self.move_well,
                 "Q": self.quit_game,
-                # "\x7F": self.move_undo,  # Delete  # Control+?
-                # "\x1B[A": self.move_well,  # Upwards Arrow ↑
-                "\x1B[B": self.move_onto_empty,  # Downwards Arrow ↓
-                # "\x1B[D": self.move_undo,  # Leftwards Arrow ←
-                # "\N{Downwards Arrow}": self.move_onto_empty,  # ↓
-                # "\N{Leftwards Arrow}": self.move_undo,  # ←
+                "\x7F": self.moves_undo_one,  # Delete  # Control+?
+                # "\x1B[A": self.move_well,  # UpwardsArrow ↑
+                "\x1B[B": self.move_onto_empty,  # DownwardsArrow ↓
+                "\x1B[D": self.moves_undo_one,  # LeftwardsArrow ←
+                "\N{Downwards Arrow}": self.move_onto_empty,  # ↓
+                "\N{Leftwards Arrow}": self.moves_undo_one,  # ←
                 # "\N{Upwards Arrow}": self.move_well,  # ↑
             }
         )
@@ -151,7 +151,7 @@ class Game:
         func_by_key = self.func_by_key
         tui = self.tui
 
-        keymap = "123 ABC .XO J↓ ! - Tab Q Esc"
+        keymap = "123 ABC .XO HJ←↓ ! - Tab Q Esc"
 
         tui.print()
         tui.print("Press the '#' or Return key, else one of:  {}".format(keymap))
@@ -198,6 +198,23 @@ class Game:
 
                         self.key = None
 
+    def quit_game(self):  # Q Esc
+        """Quit the Game"""
+
+        tui = self.tui
+
+        tui.print(DENT + "Q")
+        tui.print()
+
+        WAR_GAMES_QUOTE = "A strange game"  # from "War Games" 1983
+        WAR_GAMES_QUOTE += ". The only winning move is not to play"
+        WAR_GAMES_QUOTE += ". How about a nice game of chess?"
+
+        tui.print(WAR_GAMES_QUOTE)
+        tui.print()
+
+        sys.exit()
+
     def choose_x(self):  # A B C
         """Choose a Column of the Board to move onto"""
 
@@ -226,23 +243,6 @@ class Game:
         assert (not self.x) or (not self.y), (self.x, self.y)
 
         self.turn = key
-
-    def quit_game(self):  # Q Esc
-        """Quit the Game"""
-
-        tui = self.tui
-
-        tui.print(DENT + "Q")
-        tui.print()
-
-        WAR_GAMES_QUOTE = "A strange game"  # from "War Games" 1983
-        WAR_GAMES_QUOTE += ". The only winning move is not to play"
-        WAR_GAMES_QUOTE += ". How about a nice game of chess?"
-
-        tui.print(WAR_GAMES_QUOTE)
-        tui.print()
-
-        sys.exit()
 
     def move_onto_x_y(self):  # A B C 1 2 3
         """Mutate the chosen Cell, print the Board, pick next Player"""
@@ -297,7 +297,7 @@ class Game:
 
         return turn
 
-    def move_onto_empty(self):  # ↓
+    def move_onto_empty(self):  # ↓ DownwardsArrow
         """Move on to a random choice of empty Cell, if any exist"""
 
         board = self.board
@@ -335,6 +335,21 @@ class Game:
         if not self.move_onto_x_y():
             assert False  # always changes 1 Cell, never returns None
         self.turn = self.choose_next_turn(after=".")
+
+    def moves_undo_one(self):  # Backspace H Delete ← LeftwardsArrow
+        """Undo the Last Move"""
+
+        board = self.board
+        tui = self.tui
+
+        move = board.moves_undo_one()
+
+        turn = "X"
+        if move:
+            (turn, x, y) = move
+        self.turn = turn
+
+        board.tui_print(tui)
 
     def board_clear(self):  # - Tab
         """Clear the Board"""
@@ -416,7 +431,29 @@ class Board:
 
         return streaks
 
-    # FIXME: def moves_undo_one(self):
+    def moves_undo_one(self):
+        """Undo the Last Move"""
+
+        moves = self.moves
+        if not moves:
+
+            return None
+
+        move = moves.pop()
+        self._moves_replay()
+
+        return move
+
+    def _moves_replay(self):
+        """Wipe the Cells and replay the Moves"""
+
+        cells = self.cells
+        moves = self.moves
+
+        cells[::] = list(len(cells) * ["."])
+        for after_move in moves:
+            (turn, x, y) = after_move
+            self.x_y_mutate(x, y, turn)
 
     def x_y_mutate(self, x, y, turn):
         """Mutate the one Cell at X, Y"""
@@ -445,7 +482,7 @@ class Board:
             cells[index] = cells[index].lower()
 
         for streak in streaks:
-            streak_set = set(cells[xys.index(xy)] for xy in streak)
+            streak_set = set(cells[xys.index(xy)].upper() for xy in streak)
             if len(streak_set) == 1:
                 cell = list(streak_set)[-1]
                 if cell != ".":
@@ -518,6 +555,14 @@ class Board:
 
         move = "{}{}{}".format(turn, x, y)
         moves.append(move)
+
+        # Replay all the Moves, to test the incremental Mutation
+
+        after = list(cells)
+        self._moves_replay()
+        replayed = list(cells)
+
+        assert after == replayed, (after, replayed)
 
         # Succeed
 
