@@ -116,7 +116,7 @@ edit as bookmark, reached by Undo
 
 ### Emacs Py
 
-syntax coloring without corrupting spaces past end-of-line
+syntax coloring without coloring trailing spaces past end-of-line
 
 ### Git Py
 

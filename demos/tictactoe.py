@@ -60,7 +60,7 @@ def main(sys_argv=None):
     with keycaps.tui_open(sys.stderr) as tui:
         g = Game(tui, n=3)
 
-        g.run_once()
+        g.run_till_quit()
 
 
 class Game:
@@ -79,14 +79,71 @@ class Game:
         n = self.n
 
         self.board = Board(n)
+
+        self.key = None
+        self.func_by_key = self.form_func_by_key()
+
         self.turn = "X"
         self.x = None
         self.y = None
 
-    def run_once(self):
-        """Run once"""
+    def form_func_by_key(self):
+        """Choose which Keystroke calls for what action"""
+
+        func_by_key = dict()
+
+        func_by_key.update(
+            {
+                ".": self.choose_turn,
+                "O": self.choose_turn,
+                "X": self.choose_turn,
+            }
+        )
+
+        func_by_key.update(
+            {
+                "A": self.choose_x,
+                "B": self.choose_x,
+                "C": self.choose_x,
+            }
+        )
+
+        func_by_key.update(
+            {
+                "1": self.choose_y,
+                "2": self.choose_y,
+                "3": self.choose_y,
+            }
+        )
+
+        func_by_key.update(
+            {
+                "\t": self.board_clear,  # Tab
+                "\x1B": self.quit_game,  # Esc
+                "!": self.move_onto_random,
+                "-": self.board_clear,
+                # "\x08": self.move_undo,  # Backspace  # Control+H
+                # "H": self.move_undo,
+                "J": self.move_onto_empty,
+                # "K": self.move_well,
+                "Q": self.quit_game,
+                # "\x7F": self.move_undo,  # Delete  # Control+?
+                # "\x1B[A": self.move_well,  # Upwards Arrow ↑
+                "\x1B[B": self.move_onto_empty,  # Downwards Arrow ↓
+                # "\x1B[D": self.move_undo,  # Leftwards Arrow ←
+                # "\N{Downwards Arrow}": self.move_onto_empty,  # ↓
+                # "\N{Leftwards Arrow}": self.move_undo,  # ←
+                # "\N{Upwards Arrow}": self.move_well,  # ↑
+            }
+        )
+
+        return func_by_key
+
+    def run_till_quit(self):
+        """Run till Quit"""
 
         board = self.board
+        func_by_key = self.func_by_key
         tui = self.tui
 
         keymap = "123 ABC .XO J↓ ! - Tab Q Esc"
@@ -119,102 +176,70 @@ class Game:
                 str_list = list(chars)
             str_list = list((_.upper() if (len(_) == 1) else _) for _ in str_list)
 
-            for chars in str_list:  # like for when multiple Chars pasted together
+            for key in str_list:  # like for when multiple Chars pasted together
 
-                if chars == "#":
+                if key == "#":
                     shunting = True
-                elif chars in ("\r", "\n"):
+                elif key in ("\r", "\n"):
                     shunting = False
 
                 if not shunting:
-                    self.take_chars(chars)
+                    if key in func_by_key.keys():
 
-    def take_chars(self, chars):
-        """Choose a Column, or mutate and print the Tic-Tac-Toe Board"""
+                        func = func_by_key[key]
+
+                        self.key = key
+                        func()
+
+                        self.key = None
+
+    def choose_x(self):  # A B C
+        """Choose a Column of the Board to move onto"""
+
+        key = self.key
+
+        self.x = key
+        if self.y:
+            self.move_onto_x_y()
+            self.turn = self.choose_next_turn(after=self.turn)
+
+    def choose_y(self):  # 1 2 3
+        """Choose a Row of the Board to move onto"""
+
+        key = self.key
+
+        self.y = key
+        if self.x:
+            self.move_onto_x_y()
+            self.turn = self.choose_next_turn(after=self.turn)
+
+    def choose_turn(self):  # . O X
+        """Choose who moves next"""
+
+        key = self.key
+
+        assert (not self.x) or (not self.y), (self.x, self.y)
+
+        self.turn = key
+
+    def quit_game(self):  # Q Esc
+        """Quit the Game"""
 
         tui = self.tui
 
-        assert TURNS == "XO."
+        tui.print(DENT + "Q")
+        tui.print()
 
-        # Choose a Column or Row of Cells
+        WAR_GAMES_QUOTE = "A strange game"  # from "War Games" 1983
+        WAR_GAMES_QUOTE += ". The only winning move is not to play"
+        WAR_GAMES_QUOTE += ". How about a nice game of chess?"
 
-        if chars in ("A", "B", "C"):
-            self.x = chars
-            if self.y:
-                self.move_onto_x_y()
-                self.turn = self.choose_next_turn(after=self.turn)
+        tui.print(WAR_GAMES_QUOTE)
+        tui.print()
 
-            return
+        sys.exit()
 
-        if chars in ("1", "2", "3"):
-            self.y = chars
-            if self.x:
-                self.move_onto_x_y()
-                self.turn = self.choose_next_turn(after=self.turn)
-
-            return
-
-        # Change the Player
-
-        if chars in (".", "O", "X"):
-            self.turn = chars
-
-            assert (not self.x) or (not self.y), (self.x, self.y)
-
-            return
-
-        # Make a winning move  # K ↑
-
-        # if chars in ("K", "\x1B[A", "\N{Upwards Arrow}"):
-        #     # FIXME: self.move_well()
-
-        #     return
-
-        # Move next at a random Cell  # J ↓
-
-        if chars in ("J", "\x1B[B", "\N{Downwards Arrow}"):
-            self.move_onto_empty()
-
-            return
-
-        # Inject a random mutation
-
-        if chars in ("!",):
-            self.move_onto_random()
-
-            return
-
-        # Undo the last done Move  # H Backspace Delete ←
-
-        # if chars in ("H", "\x08", "\x7F", "\x1B[D", "\N{Leftwards Arrow}"):
-        #     # FIXME: self.move_undo()
-
-        #     return
-
-        # Clear the Board
-
-        if chars in ("\t", "-"):  # - Tab
-            self.board_clear()
-
-            return
-
-        # Quit the Game
-
-        if chars in ("\x1B", "Q"):  # Q Esc
-
-            tui.print(DENT + "Q")
-            tui.print()
-
-            WAR_GAMES_QUOTE = "A strange game"  # from "War Games" 1983
-            WAR_GAMES_QUOTE += ". The only winning move is not to play"
-            WAR_GAMES_QUOTE += ". How about a nice game of chess?"
-
-            tui.print(WAR_GAMES_QUOTE)
-            tui.print()
-
-            sys.exit()
-
-    def move_onto_x_y(self):  # .OX, ABC, 123
+    def move_onto_x_y(self):  # A B C 1 2 3
         """Mutate the chosen Cell, print the Board, pick next Player"""
 
         board = self.board
@@ -275,7 +300,7 @@ class Game:
 
         return
 
-    def choose_next_turn(self, after):
+    def choose_next_turn(self, after):  # . X O
         """Pick the next Mark in alternation, else X to above O, else O up to X"""
 
         board = self.board
@@ -622,6 +647,12 @@ if __name__ == "__main__":
     main(sys.argv)
 
 
+# todo: color the Board as (0 or more X or O Handicaps, X O Move Pairs, X Move)
+# todo: keep the Moves as a List
+# todo: on adding a Move, work up an incremental prediction, then affirm it
+# todo: on deleting a Move, just redraw the Board
+# todo: color the Pairs from bright to dim, with no color for Handicaps
+
 # todo: keep a rewind/ ff history on the left right arrows and backspace delete
 # todo: up arrow auto strong move
 
@@ -629,18 +660,16 @@ if __name__ == "__main__":
 
 # todo: sort uniq to reduce flips and rotations, print what remains
 # todo: index center cell, corner cells, mid cells
-# todo: colour X O pairs of bursts of moves by age
-# todo: colour handicap X O
 
 # todo: count the wins
 # todo: count the handicaps
 # todo: sketch how many X wins vs O wins still possible
 
-# todo: lean into always doing something in reply to input
+# todo: lean more into always doing something in reply to input
 # todo: could toggle start with X vs O
 # todo: could mark the Board somehow for next X or next O
 
-# todo: 'def run_once' prompts for n != 3
+# todo: 'def run_till_quit' prompts for n != 3
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/tictactoe.py
