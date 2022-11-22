@@ -11,6 +11,8 @@ options:
 quirks:
   plots X or O or . in your A B C choice of column and 1 2 3 choice of row
   chooses X after O, or O after X for you, but lets you choose X or O or . if you like
+  undoes your last Move, when you press the ← Leftwards Arrow key
+  redoes your last Undone Move, when you press the → Rightwards Arrow key
   steps the Game forward by one random Move, when you press the ↓ Downwards Arrow key
   mutates some random Cell randomly, when you press the ! Bang key (the ⇧1 chord)
   clears the Board when you press Tab or the - Dash key
@@ -131,13 +133,16 @@ class Game:
                 "H": self.moves_undo_one,
                 "J": self.move_onto_empty,
                 # "K": self.move_well,
+                "L": self.moves_redo_one,
                 "Q": self.quit_game,
                 "\x7F": self.moves_undo_one,  # Delete  # Control+?
                 # "\x1B[A": self.move_well,  # UpwardsArrow ↑
                 "\x1B[B": self.move_onto_empty,  # DownwardsArrow ↓
+                "\x1B[C": self.moves_redo_one,  # RightwardsArrow →
                 "\x1B[D": self.moves_undo_one,  # LeftwardsArrow ←
                 "\N{Downwards Arrow}": self.move_onto_empty,  # ↓
                 "\N{Leftwards Arrow}": self.moves_undo_one,  # ←
+                "\N{Rightwards Arrow}": self.moves_undo_one,  # →
                 # "\N{Upwards Arrow}": self.move_well,  # ↑
             }
         )
@@ -151,7 +156,7 @@ class Game:
         func_by_key = self.func_by_key
         tui = self.tui
 
-        keymap = "123 ABC .XO HJ←↓ ! - Tab Q Esc"
+        keymap = "123 ABC .XO HJL ←↓→ ! - Tab Q Esc"
 
         tui.print()
         tui.print("Press the '#' or Return key, else one of:  {}".format(keymap))
@@ -344,12 +349,27 @@ class Game:
 
         move = board.moves_undo_one()
 
-        turn = "X"
+        if not move:
+            self.turn = "X"
+        else:
+            (turn, x, y) = move
+            self.turn = turn
+
+            board.tui_print(tui)
+
+    def moves_redo_one(self):  # L → RightwardsArrow
+        """Redo the Last Undone"""
+
+        board = self.board
+        tui = self.tui
+
+        move = board.moves_redo_one()
+
         if move:
             (turn, x, y) = move
-        self.turn = turn
+            self.turn = turn
 
-        board.tui_print(tui)
+            board.tui_print(tui)
 
     def board_clear(self):  # - Tab
         """Clear the Board"""
@@ -404,6 +424,7 @@ class Board:
 
         self.cells = cells
         self.moves = list()
+        self.undos = list()
         self.wins = list()
 
     def form_streaks(self):
@@ -435,11 +456,32 @@ class Board:
         """Undo the Last Move"""
 
         moves = self.moves
+        undos = self.undos
+
         if not moves:
 
             return None
 
         move = moves.pop()
+        undos.append(move)
+
+        self._moves_replay()
+
+        return move
+
+    def moves_redo_one(self):
+        """Redo the Last Undone"""
+
+        moves = self.moves
+        undos = self.undos
+
+        if not undos:
+
+            return None
+
+        move = undos.pop()
+        moves.append(move)
+
         self._moves_replay()
 
         return move
