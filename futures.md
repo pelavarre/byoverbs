@@ -26,6 +26,7 @@ contents
 + + Python Py
 + + Vim Py
 + + Whence Py
++ Read Me
 + Copied from
 
 ## Urgencies
@@ -169,6 +170,7 @@ dreams of sharing Sh Terminal space more fairly
 
 ### Open Py
 
+print the last word by itself, such as 'ABC-12345' from http://jira/browse/ABC-12345
 keep the session open till quit
 strip trailing slash
 
@@ -198,6 +200,10 @@ solve Multi Buffer Vim, such as
 ### Whence Py
 
 default to whence -a including Aliases & Funcs of Bash & Zsh
+
+## Read Me
+
+it's got an early index of source code in it, i might should catch that up
 
 ## Copied from
 

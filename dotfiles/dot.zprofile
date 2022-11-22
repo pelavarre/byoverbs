@@ -71,15 +71,21 @@ function qol () { (source $(dirname $(which q))/qol "$@"); }
 
 # Authorize ZProfile Extensions
 
-if [[ -e ~/.ssh/zprofile ]]; then
-    source ~/.ssh/zprofile
-fi
+function source-zprofiles () {
+    if [[ -e ~/.ssh/zprofile ]]; then
+        source ~/.ssh/zprofile
+    fi
+    if [[ -e ~/work/zprofile ]]; then
+        source ~/work/zprofile
+    fi
+}
 
 
 # Choose the first Pwd, and suggest Scp
 
-: pushd ~ >/dev/null  # default at Mac
+pushd ~ >/dev/null  # default at Mac
 pushd ~/Desktop >/dev/null  # thus, at:  qp
+source-zprofiles
 pushd ~/Public/byoverbs >/dev/null  # thus, at:  ..
 
 cd demos/  # choose my $OLDPWD

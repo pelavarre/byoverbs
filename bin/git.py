@@ -9,6 +9,14 @@ $ git clean --help
        -n, --dry-run
            Don't actually remove anything, just show what would be done.
 
-$ git clean -fdx -e /env
+$
+
+git clean -fdx -e /env
+
+for X in 2022.11.22^{{tag,commit,tree}}; do
+    it show --name-only $X
+done |grep TaggerDate
+
+git tag -l --format='%(taggerdate)  %(refname:short)'  2022.11.22
 
 """

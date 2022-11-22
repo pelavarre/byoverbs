@@ -55,6 +55,11 @@ push: black flake8 shellcheck selftest
 	:
 
 
+#
+# Patch the source
+#
+
+
 # Restyle the commas, quotes, spaces, and tabs of the Python Source Files
 
 black:
@@ -77,7 +82,29 @@ shellcheck:
 	demos/shellcheck.bash
 
 
+# Publish many $HOME DotFiles
+
+.PHONY: bin
+bin:
+	: 'Press Control+D if you mean it, else Control+C' :
+	@cat - >/dev/null
+	cp -p bin/* ~/bin/.
+
+.PHONY: dotfiles
+dotfiles:
+	cp -p ~/.emacs dotfiles/dot.emacs
+	# cp -p ~/.gitconfig dotfiles/dot.gitconfig  # nope, '[user]' differs
+	cp -p ~/.hushlogin dotfiles/dot.hushlogin
+	cp -p ~/.vimrc dotfiles/dot.vimrc
+	cp -p ~/.zprofile dotfiles/dot.zprofile
+	cp -p ~/.zshrc dotfiles/dot.zshrc
+	git diff || :
+
+
+#
 # Test the source
+#
+
 
 selftest:
 	:

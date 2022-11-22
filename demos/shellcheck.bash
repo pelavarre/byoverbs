@@ -3,10 +3,14 @@
 mkdir -p tmp/
 
 if ! which shellcheck; then
+    ls /usr/bin/shellcheck ||:
+    echo 'and now running ahead, anyhow'
 
     exit
 
 fi
+
+echo "calling ShellCheck on $(echo demos/shellcheck.bash bin/* |wc -w) files"
 
 shellcheck demos/shellcheck.bash
 
