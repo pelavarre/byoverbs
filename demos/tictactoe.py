@@ -70,15 +70,20 @@ class Game:
 
         self.tui = tui
         self.n = n
+        self.board = None
 
-        self.start()
+        self.restart()
 
-    def start(self):
+    def restart(self):
         """Start over"""
 
+        board = self.board
         n = self.n
 
-        self.board = Board(n)
+        if not board:
+            self.board = Board(n)
+        else:
+            board.restart(n)
 
         self.key = None
         self.func_by_key = self.form_func_by_key()
@@ -153,7 +158,7 @@ class Game:
         tui.print("such as:  XC3 OB2 XA1 OC1 XB1 OC2 XA2 OA3  # is an O Win by Fork")
 
         tui.print()
-        board.tui_print(tui)
+        board.tui_print_cells(tui)
         tui.print()
 
         shunting = None
@@ -200,8 +205,8 @@ class Game:
 
         self.x = key
         if self.y:
-            self.move_onto_x_y()
-            self.turn = self.choose_next_turn(after=self.turn)
+            if self.move_onto_x_y():  # changes no Cell when repeating a Move
+                self.turn = self.choose_next_turn(after=self.turn)
 
     def choose_y(self):  # 1 2 3
         """Choose a Row of the Board to move onto"""
@@ -210,8 +215,8 @@ class Game:
 
         self.y = key
         if self.x:
-            self.move_onto_x_y()
-            self.turn = self.choose_next_turn(after=self.turn)
+            if self.move_onto_x_y():  # changes no Cell when repeating a Move
+                self.turn = self.choose_next_turn(after=self.turn)
 
     def choose_turn(self):  # . O X
         """Choose who moves next"""
@@ -244,61 +249,27 @@ class Game:
 
         board = self.board
         tui = self.tui
+
+        # Sample the choice of Turn and X and Y
+
         turn = self.turn
         x = self.x
         y = self.y
 
         assert x and y, (x, y)
 
-        # Restart the choosing of X and Y
+        # Restart the choice of X and Y, while trusting the caller to choose next Turn
 
         self.x = None
         self.y = None
 
-        #
-        # FIXME: refactor - move this work into Board
-        # FIXME: visibly decline Moves that don't change the Board
-        # FIXME: don't reprint Board when Move declined
-        # FIXME: do collect the Cells for each Tuple of Moves, including initial Empty
-        # FIXME: undo becomes rollback the collections and reprint the Board
-        #
+        # Move and print the resulting Board, else don't
 
-        # Mutate the chosen Cell, else leave it unchanged and return early
+        move = board.add_move(turn, x=x, y=y)
+        if move:
+            board.tui_print(tui)
 
-        before = list(board.cells)
-        board.x_y_mutate(x, y, turn)
-
-        if board.cells == before:
-
-            return
-
-        # FIXME: add the accepted Move
-
-        #
-        #
-        #
-
-        # Print the mutated Board as zero or more Handicaps, plus X O moves in turn
-
-        move = "{}{}{}".format(turn, x, y)
-        (handicaps, xo_moves) = board.add_move(move)
-
-        if handicaps:
-            tui.print(DENT + " ".join(handicaps))
-        if xo_moves:
-            tui.print(DENT + " ".join(xo_moves))
-        if not (handicaps or xo_moves):
-            tui.print(DENT + "Tab")
-
-        # Print the mutated Board
-
-        tui.print()
-        board.tui_print(tui)
-        tui.print()
-
-        # Say a Move was made
-
-        return
+        return move
 
     def choose_next_turn(self, after):  # . X O
         """Pick the next Mark in alternation, else X to above O, else O up to X"""
@@ -346,8 +317,8 @@ class Game:
 
         self.x = x
         self.y = y
+        _ = self.move_onto_x_y()  # changes no Cell when Turn of "."
 
-        self.move_onto_x_y()  # does nothing when:  self.turn == "."
         self.turn = self.choose_next_turn(after=self.turn)
 
     def move_onto_random(self):  # !
@@ -357,32 +328,34 @@ class Game:
 
         move = board.choose_random_mutate()
         (turn, x, y) = move
-
         self.turn = turn
+
         self.x = x
         self.y = y
-
-        self.move_onto_x_y()
+        if not self.move_onto_x_y():
+            assert False  # always changes 1 Cell, never returns None
         self.turn = self.choose_next_turn(after=".")
 
     def board_clear(self):  # - Tab
         """Clear the Board"""
 
+        board = self.board
         tui = self.tui
 
-        tui.print(DENT + "Tab")
+        self.restart()
 
-        self.start()
-
-        tui.print()
-        self.board.tui_print(tui)
-        tui.print()
+        board.tui_print(tui)
 
 
 class Board:
     """Lay out Cells in a square NxN Grid of '.', 'O', and 'X'"""
 
     def __init__(self, n):
+
+        self.restart(n)
+
+    def restart(self, n):
+        """Start over"""
 
         # Form the Cells
 
@@ -527,16 +500,31 @@ class Board:
     # Newell & Simon 1972
     # win, block, fork, block fork, center, opposite corner, empty corner, empty side
 
-    def add_move(self, move):
-        """Add a Move, but then separate the Handicaps from X O Moves in turn"""
+    def add_move(self, turn, x, y):
+        """Add a Move and return it, else decline the Move and return None"""
 
+        cells = self.cells
         moves = self.moves
 
-        # Add the one Move
+        # Try the Move, but decline the Move if it changes no Cells
 
+        before = list(cells)
+        self.x_y_mutate(x, y, turn)
+        if cells == before:
+
+            return None
+
+        # Add the Move
+
+        move = "{}{}{}".format(turn, x, y)
         moves.append(move)
 
-        # Split the Handicaps out of the X O Moves in turn
+        # Succeed
+
+        return move
+
+    def _moves_split(self):
+        """Split the Handicaps out of the X O Moves in turn"""
 
         uniques = self._moves_drop_cancelled()
 
@@ -583,6 +571,26 @@ class Board:
         return uniques
 
     def tui_print(self, tui):
+        """Print the Handicaps, the Moves, and the Cells"""
+
+        # Print the Handicaps and Moves
+
+        (handicaps, xo_moves) = self._moves_split()
+
+        if handicaps:
+            tui.print(DENT + " ".join(handicaps))
+        if xo_moves:
+            tui.print(DENT + " ".join(xo_moves))
+        if not (handicaps or xo_moves):
+            tui.print(DENT + "Tab")
+
+        # Print the Cells
+
+        tui.print()
+        self.tui_print_cells(tui)
+        tui.print()
+
+    def tui_print_cells(self, tui):
         """Print the Cells"""
 
         cells = self.cells
