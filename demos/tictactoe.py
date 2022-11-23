@@ -748,7 +748,7 @@ class Board:
         (x, y) = xy
         move = "{}{}{}".format(turn, x, y)
 
-        # print(shoves)
+        # print(shoves)  # last jittered Wed 23/Nov
         # breakpoint()
 
         return move
@@ -929,7 +929,7 @@ class Board:
             for (oxoy, streaks_of_oxoy) in oforks_by_oxoy.items():
                 if len(streaks_of_oxoy) >= omost:
 
-                    oforks.append(xy)
+                    oforks.append(oxoy)
 
         # Succeed
 
