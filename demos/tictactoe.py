@@ -449,6 +449,8 @@ class Board:
         self.xys = xys
 
         self.streaks = self.form_streaks()
+
+        self.center_xys = self.form_center_xys()
         self.corner_xys = self.form_corner_xys()
         self.side_xys = self.form_side_xys()
 
@@ -483,6 +485,20 @@ class Board:
         streaks.append(streak)  # diagonal - upper right to lower left
 
         return streaks
+
+    def form_center_xys(self):
+        """List the Center Cell as a List of 1 Cell"""
+
+        xs = self.xs
+        ys = self.ys
+
+        x = xs[len(xs) // 2]
+        y = ys[len(ys) // 2]
+
+        xy = (x, y)
+        center_xys = [xy]
+
+        return center_xys
 
     def form_corner_xys(self):
         """List the Corner Cells"""
@@ -645,137 +661,174 @@ class Board:
         return move
 
     def choose_shove_in(self, turn):
-        """Say how to max chance of winning, per Newell & Simon 1972"""
+        """Say how to max chance of winning"""
 
-        move = self._choose_to_win_else(turn)
-        if not move:
-            move = self._choose_to_block_win_else(turn)
-            if not move:
+        cells = self.cells
+        moves = self.moves
+        xys = self.xys
 
-                move = self._choose_to_fork_else(turn)
-                if not move:
-                    move = self._choose_to_block_fork_else(turn)
-                    if not move:
+        # Stop moving after moving into the last Cell
 
-                        move = self._choose_center_else(turn)
-                        if not move:
-                            move = self._choose_opposite_else(turn)
-                            if not move:
-                                move = self._choose_corner_else(turn)
-                                if not move:
-                                    move = self._choose_side_else(turn)
+        empty_xys = list(_ for _ in xys if cells[xys.index(_)] == ".")
+        if not empty_xys:
+
+            return None
+
+        # Rank goals, much in the way of Newell & Simon 1972
+        # as paraphrased by:  https://en.wikipedia.org/wiki/Tic-tac-toe
+
+        funcs = list()
+        funcs.append(self.find_side_xys)  # 0x1
+        funcs.append(self.find_corner_xys)  # 0x2
+        funcs.append(self.find_center_xys)  # 0x4
+        funcs.append(self.find_opposite_corner_xys)  # 0x8
+        funcs.append(self.find_threaten_win_xys)  # 0x10
+        funcs.append(self.find_block_fork_xys)  # 0x20
+        funcs.append(self.find_fork_xys)  # 0x40
+        funcs.append(self.find_block_win_xys)  # 0x80
+        funcs.append(self.find_win_xys)  # 0x100
+
+        if not moves:
+            funcs = [self.find_corner_xys]
+
+        # Trade off the goals
+
+        weight_by_xy = dict((_, 0) for _ in xys)
+
+        for xy in empty_xys:
+            weight = 0
+            for (index, func) in enumerate(funcs):
+                func_xys = func(turn)
+                if xy in func_xys:
+                    weight |= 1 << index
+            weight_by_xy[xy] |= weight
+
+        max_weight = max(weight_by_xy.values())
+
+        # Choose a move
+
+        shoves = list(_ for _ in empty_xys if weight_by_xy[_] == max_weight)
+        xy = random.choice(shoves)
+
+        (x, y) = xy
+        move = "{}{}{}".format(turn, x, y)
+
+        # print(shoves)
+        # breakpoint()
 
         return move
 
-    def _choose_to_win_else(self, turn):
-        """Say where to move onto an Empty Cell to make a Win"""
+    _ = """  # yea no, O doesn't want these Corners
 
-        (winners, _) = self._list_winners_blockers(turn)
-        if not winners:
+    XC1 OB2 XA3
 
-            return None
+       A B C
 
-        winner = random.choice(winners)
+    1  . . x
+    2  . o .
+    3  x . .
 
-        return winner
-
-    def _choose_to_block_win_else(self, turn):
-        """Say where to move onto an Empty Cell to block a Win"""
-
-        (_, blockers) = self._list_winners_blockers(turn)
-        if not blockers:
-
-            return None
-
-        blocker = random.choice(blockers)
-
-        return blocker
-
-    def _list_winners_blockers(self, turn):
-        """List the Moves onto Empty Cells that add Wins"""
-
-        assert turn in ".XO", repr(turn)
-        assert turn != ".", repr(turn)
-
-        cells = self.cells
-        xys = self.xys
-        streaks = self.streaks
-
-        # Visit each Streak left with just 1 Empty Cell in it
-
-        winners = list()
-        blockers = list()
-
-        for streak in streaks:
-            n_cells = list(cells[xys.index(xy)].upper() for xy in streak)
-
-            free_cells = list(_ for _ in n_cells if _ == ".")
-            if len(free_cells) == 1:
-                taken_set = set(_ for _ in n_cells if _ != ".")
-                if len(taken_set) == 1:
-                    taker = list(taken_set)[-1]
-
-                    # Find the 1 Empty Cell
-
-                    free_xys = list(xy for xy in streak if cells[xys.index(xy)] == ".")
-                    assert len(free_xys) == 1, (free_xys, streak)
-
-                    free_xy = free_xys[-1]
-                    (x, y) = free_xy
-
-                    move = "{}{}{}".format(turn, x, y)  # not the 'oturn'
-
-                    # Collect as a winning Move, or as blocking Move
-
-                    if taker == turn:
-                        winners.append(move)
-                    else:
-                        blockers.append(move)
-
-        # Succeed
-
-        return (winners, blockers)
-
-    def _choose_to_fork_else(self, turn):
-        """Say where to move onto an Empty Cell to make a Win"""
-
-        (forks, _) = self._list_forks_oforks(turn)
-        if not forks:
-
-            return None
-
-        fork = random.choice(forks)
-
-        return fork
-
-    def _choose_to_block_fork_else(self, turn):
-        """Say where to move onto an Empty Cell to block a Win"""
-
-        (_, oforks) = self._list_forks_oforks(turn)
-        if not oforks:
-
-            return None
-
-        ofork = random.choice(oforks)
-
-        return ofork
-
-        _ = """  # FIXME  # https://en.wikipedia.org/wiki/Tic-tac-toe
-
-Blocking an opponent's fork: If there is only one possible fork for
-the opponent, the player should block it. Otherwise, the player
-should block all forks in any way that simultaneously allows them
-to make two in a row. Otherwise, the player should make a two in a
-row to force the opponent into defending, as long as it does not
-result in them producing a fork. For example, if "X" has two opposite
-corners and "O" has the center, "O" must not play a corner move to
-win. (Playing a corner move in this scenario produces a fork for
-"X" to win.)
 
         """
 
-    def _list_forks_oforks(self, turn):  # noqa  # FIXME C901 too complex (15
-        """List the Moves onto Empty Cells that create Winning Moves"""
+    def find_side_xys(self, turn):
+        """Find the Sides"""
+
+        side_xys = self.side_xys
+
+        return side_xys
+
+    def find_corner_xys(self, turn):
+        """Find the Corners"""
+
+        corner_xys = self.corner_xys
+
+        return corner_xys
+
+    def find_center_xys(self, turn):
+        """Find the Center"""
+
+        center_xys = self.center_xys
+
+        return center_xys
+
+    def find_opposite_corner_xys(self, turn):
+        """Find the Corners opposite the Corners taken by Them"""
+
+        assert turn in "OX", repr(turn)
+
+        cells = self.cells
+        xs = self.xs
+        ys = self.ys
+        xys = self.xys
+
+        oturn = "X" if (turn != "X") else "O"
+
+        #
+
+        opposite_xys = list()
+
+        corner_xys = self.form_corner_xys()
+        for xy in corner_xys:
+            (x, y) = xy
+
+            ox = xs[len(xs) - 1 - xs.index(x)]
+            oy = ys[len(ys) - 1 - ys.index(y)]
+            oxoy = (ox, oy)
+
+            oxoy_cell = cells[xys.index(oxoy)]
+            if oxoy_cell == oturn:
+
+                opposite_xys.append(xy)
+
+        return opposite_xys
+
+    def find_threaten_win_xys(self, turn):
+        """Find the Empty Cells to take to bring a Streak within 1 Cell of Us Winning"""
+
+        cells = self.cells
+        streaks = self.streaks
+        xys = self.xys
+
+        threat_xys_set = set()
+
+        empty_xys = list(_ for _ in xys if cells[xys.index(_)] == ".")
+        for xy in empty_xys:
+            (x, y) = xy
+
+            for streak in streaks:
+                if xy in streak:
+                    n_cells = list(cells[xys.index(xy)].upper() for xy in streak)
+
+                    free_cells = list(_ for _ in n_cells if _ == ".")
+                    if len(free_cells) == 2:
+                        taken_set = set(_ for _ in n_cells if _ != ".")
+                        if len(taken_set) == 1:
+                            taker = list(taken_set)[-1]
+
+                            if taker == turn:
+                                threat_xys_set.add(xy)
+
+        threat_xys = sorted(threat_xys_set)
+
+        return threat_xys
+
+    def find_block_fork_xys(self, turn):
+        """Find the Empty Cells to take to Fork for Them"""
+
+        (_, ofork_xys) = self._find_fork_ofork_xys(turn)
+
+        return ofork_xys
+
+    def find_fork_xys(self, turn):
+        """Find the Empty Cells to take to Fork for Us"""
+
+        (fork_xys, _) = self._find_fork_ofork_xys(turn)
+
+        return fork_xys
+
+    def _find_fork_ofork_xys(self, turn):  # noqa  # FIXME C901 too complex (15
+        """List the Empty Cells to Take to Form or Block Forks"""
 
         cells = self.cells
         streaks = self.streaks
@@ -801,8 +854,6 @@ win. (Playing a corner move in this scenario produces a fork for
         oforks_by_oxoy = collections.defaultdict(list)
 
         for xy in empty_xys:
-            (x, y) = xy
-            move = "{}{}{}".format(turn, x, y)
 
             # Visit each Streak across the Empty Cell
 
@@ -835,23 +886,74 @@ win. (Playing a corner move in this scenario produces a fork for
         if most > 1:
             for (xy, streaks_of_xy) in forks_by_xy.items():
                 if len(streaks_of_xy) >= most:
-                    (x, y) = xy
-                    move = "{}{}{}".format(turn, x, y)
 
-                    forks.append(move)
+                    forks.append(xy)
 
         oforks = list()
         if omost > 1:
             for (oxoy, streaks_of_oxoy) in oforks_by_oxoy.items():
                 if len(streaks_of_oxoy) >= omost:
-                    (ox, oy) = oxoy
-                    move = "{}{}{}".format(turn, ox, oy)  # not the 'oturn'
 
-                    oforks.append(move)
+                    oforks.append(xy)
 
         # Succeed
 
         return (forks, oforks)
+
+    def find_block_win_xys(self, turn):
+        """Find the Empty Cells to take to Win for Them"""
+
+        (_, blocker_xys) = self._find_winner_blocker_xys(turn)
+
+        return blocker_xys
+
+    def find_win_xys(self, turn):
+        """Find the Empty Cells to take to Win for Us"""
+
+        (winner_xys, _) = self._find_winner_blocker_xys(turn)
+
+        return winner_xys
+
+    def _find_winner_blocker_xys(self, turn):
+        """Find the Empty Cells to take to Win for Us"""
+
+        assert turn in "OX", repr(turn)
+
+        cells = self.cells
+        xys = self.xys
+        streaks = self.streaks
+
+        # Visit each Streak left with just 1 Empty Cell in it
+
+        winner_xys = list()
+        blocker_xys = list()
+
+        for streak in streaks:
+            n_cells = list(cells[xys.index(xy)].upper() for xy in streak)
+
+            free_cells = list(_ for _ in n_cells if _ == ".")
+            if len(free_cells) == 1:
+                taken_set = set(_ for _ in n_cells if _ != ".")
+                if len(taken_set) == 1:
+                    taker = list(taken_set)[-1]
+
+                    # Find the 1 Empty Cell
+
+                    free_xys = list(xy for xy in streak if cells[xys.index(xy)] == ".")
+                    assert len(free_xys) == 1, (free_xys, streak)
+
+                    free_xy = free_xys[-1]
+
+                    # Collect as a winning Move, or as blocking Move
+
+                    if taker == turn:
+                        winner_xys.append(free_xy)
+                    else:
+                        blocker_xys.append(free_xy)
+
+        # Succeed
+
+        return (winner_xys, blocker_xys)
 
     def _choose_center_else(self, turn):
         """Say to move to Center"""
@@ -877,16 +979,13 @@ win. (Playing a corner move in this scenario produces a fork for
     def _choose_opposite_else(self, turn):
         """Say to move to an Opposite Corner"""
 
+        assert turn in "OX", repr(turn)
+
         cells = self.cells
         corner_xys = self.corner_xys
         xs = self.xs
         ys = self.ys
         xys = self.xys
-
-        # Calculate the Opposite Turn
-
-        assert turn in ".OX", repr(turn)
-        assert turn != ".", repr(turn)
 
         oturn = "X" if (turn != "X") else "O"
 
@@ -909,66 +1008,6 @@ win. (Playing a corner move in this scenario produces a fork for
                 empty_xys.append(xy)
 
         # Choose 1 Empty Oppposite Corner Cell to move onto
-
-        if not empty_xys:
-
-            return None
-
-        xy = random.choice(empty_xys)
-        (x, y) = xy
-
-        move = "{}{}{}".format(turn, x, y)
-
-        return move
-
-    def _choose_corner_else(self, turn):
-        """Say to move to a Corner"""
-
-        cells = self.cells
-        corner_xys = self.corner_xys
-        xys = self.xys
-
-        # List the Empty Corner Cells
-
-        empty_xys = list()
-
-        for xy in corner_xys:
-            cell = cells[xys.index(xy)]
-            if cell == ".":
-
-                empty_xys.append(xy)
-
-        # Choose 1 Empty Corner Cell to move onto
-
-        if not empty_xys:
-
-            return None
-
-        xy = random.choice(empty_xys)
-        (x, y) = xy
-
-        move = "{}{}{}".format(turn, x, y)
-
-        return move
-
-    def _choose_side_else(self, turn):
-        """Say to move to a Side"""
-
-        cells = self.cells
-        side_xys = self.side_xys
-        xys = self.xys
-
-        # List the Empty Side Cells
-
-        empty_xys = list()
-
-        for xy in side_xys:
-            cell = cells[xys.index(xy)]
-            if cell == ".":
-
-                empty_xys.append(xy)
-
-        # Choose an Empty Side Cell to move onto
 
         if not empty_xys:
 
