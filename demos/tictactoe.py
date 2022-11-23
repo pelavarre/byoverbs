@@ -76,6 +76,7 @@ class Game:
         self.tui = tui
         self.n = n
         self.board = None
+        self.chords = list()
 
         self.restart()
 
@@ -156,6 +157,7 @@ class Game:
         """Run till Quit"""
 
         board = self.board
+        chords = self.chords
         func_by_key = self.func_by_key
         tui = self.tui
 
@@ -177,19 +179,9 @@ class Game:
 
             template = "Press Q or Esc to quit, else some other key, after:  {}"
             prompt = DENT + template.format("".join(choices))
+            (chord_list, keys) = self.tui_read_keys(prompt)
 
-            tui.kbprompt_write(prompt)
-            stroke = tui.readline()
-            tui.kbprompt_erase(prompt)
-
-            chars = stroke.decode()
-
-            str_list = [chars]
-            if not chars.startswith("\x1B"):
-                str_list = list(chars)
-            str_list = list((_.upper() if (len(_) == 1) else _) for _ in str_list)
-
-            for key in str_list:  # like for when multiple Chars pasted together
+            for key in keys:
 
                 if key == "#":
                     shunting = True
@@ -198,6 +190,8 @@ class Game:
 
                 if not shunting:
                     if key in func_by_key.keys():
+                        if not chord_list:
+                            chords.append(key)
 
                         func = func_by_key[key]
 
@@ -206,13 +200,46 @@ class Game:
 
                         self.key = None
 
+    def tui_read_keys(self, prompt):
+        """Block till next Keystroke, or till next Paste of Keystrokes"""
+
+        chords = self.chords
+        tui = self.tui
+
+        tui.kbprompt_write(prompt)
+        stroke = tui.readline()
+        tui.kbprompt_erase(prompt)
+
+        chars = stroke.decode()
+
+        default_empty = []  # FIXME: excessive coupling between modules
+        chord_list = keycaps.KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
+        if chord_list:
+            chord = "".join(chord_list[0].split())
+            if chord == "\N{Up Arrowhead}I":  # "⌃I"
+                chords.append("Tab")
+            elif chord == "\N{Up Arrowhead}[":  # "⌃["
+                chords.append("Esc")
+            else:
+                chords.append(chord)
+
+        keys = [chars]
+        if not chars.startswith("\x1B"):
+            keys = list(chars)
+        keys = list((_.upper() if (len(_) == 1) else _) for _ in keys)
+
+        return (chord_list, keys)
+
     def quit_game(self):  # Q Esc
         """Quit the Game"""
 
+        chords = self.chords
         tui = self.tui
 
-        tui.print(DENT + "Q")
+        tui.print(DENT + " ".join(chords))
         tui.print()
+
+        chords.clear()
 
         WAR_GAMES_QUOTE = "A strange game"  # from "War Games" 1983
         WAR_GAMES_QUOTE += ". The only winning move is not to play"
@@ -283,6 +310,7 @@ class Game:
         """Mutate the chosen Cell, print the Board, pick next Player"""
 
         board = self.board
+        chords = self.chords
         tui = self.tui
 
         # Sample the choice of Turn and X and Y
@@ -302,7 +330,8 @@ class Game:
 
         move = board.add_move(turn, x=x, y=y)
         if move:
-            board.tui_print(tui)
+            board.tui_chords_print(tui, chords=chords)
+            chords.clear()
 
         return move
 
@@ -375,6 +404,7 @@ class Game:
         """Undo the Last Move"""
 
         board = self.board
+        chords = self.chords
         tui = self.tui
 
         move = board.moves_undo_one()
@@ -385,12 +415,14 @@ class Game:
             (turn, x, y) = move
             self.turn = turn
 
-            board.tui_print(tui)
+            board.tui_chords_print(tui, chords=chords)
+            chords.clear()
 
     def moves_redo_one(self):  # L → RightwardsArrow
         """Redo the Last Undone"""
 
         board = self.board
+        chords = self.chords
         tui = self.tui
 
         move = board.moves_redo_one()
@@ -399,17 +431,20 @@ class Game:
             (turn, x, y) = move
             self.turn = turn
 
-            board.tui_print(tui)
+            board.tui_chords_print(tui, chords=chords)
+            chords.clear()
 
     def board_clear(self):  # - Tab
         """Clear the Board"""
 
         board = self.board
+        chords = self.chords
         tui = self.tui
 
         self.restart()
 
-        board.tui_print(tui)
+        board.tui_chords_print(tui, chords=chords)
+        chords.clear()
 
 
 class Board:
@@ -1098,19 +1133,20 @@ class Board:
 
         return uniques
 
-    def tui_print(self, tui):
-        """Print the Handicaps, the Moves, and the Cells"""
+    def tui_chords_print(self, tui, chords):
+        """Print the Chords, the Handicaps, the Moves, and the Cells"""
 
-        # Print the Handicaps and Moves
+        # Print the Chords, the Handicaps, and the Moves
+
+        str_chords_plus = " ".join(chords) + " "
 
         (handicaps, xo_moves) = self._moves_split()
 
+        tui.print(DENT + "input " + str_chords_plus)
         if handicaps:
-            tui.print(DENT + " ".join(handicaps))
+            tui.print(DENT + "handicaps " + " ".join(handicaps))
         if xo_moves:
-            tui.print(DENT + " ".join(xo_moves))
-        if not (handicaps or xo_moves):
-            tui.print(DENT + "Tab")
+            tui.print(DENT + "gameboard " + " ".join(xo_moves))
 
         # Print the Cells
 
