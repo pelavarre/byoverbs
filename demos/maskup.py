@@ -161,5 +161,9 @@ if __name__ == "__main__":
     main()
 
 
+# todo: 1 doesn't show what kinds of Characters it sees you gave it
+# todo: 2 it doesn't invite you to override its choices of what kinds to see
+
+
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/tictactoe.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

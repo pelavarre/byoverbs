@@ -79,7 +79,23 @@ flake8:
 
 shellcheck:
 	mkdir -p tmp/
-	demos/shellcheck.bash
+	bin/shellcheck.bash
+
+
+# Python M Pdb vs Syntax, Black to Style, Flake8 vs Typos
+
+py=p.py
+
+python3:  # example usage:  make python3 py=bin/byotools.py
+	:
+	echo |python3 -m pdb $(py)
+	:
+	black $(py)
+	:
+	flake8 $(py)
+	:
+	:
+	python3 $(py)
 
 
 # Publish many $HOME DotFiles

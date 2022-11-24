@@ -4,15 +4,15 @@ mkdir -p tmp/
 
 if ! which shellcheck; then
     ls /usr/bin/shellcheck ||:
-    echo 'and now running ahead, anyhow'
+    echo 'ok by you? or do you want:  sudo apt install shellcheck'
 
     exit
 
 fi
 
-echo "calling ShellCheck on $(echo demos/shellcheck.bash bin/* |wc -w) files"
+echo "calling ShellCheck on $(echo bin/shellcheck.bash bin/* |wc -w) files"
 
-shellcheck demos/shellcheck.bash
+shellcheck bin/shellcheck.bash
 
 function _shellcheck_bin_file () {
 

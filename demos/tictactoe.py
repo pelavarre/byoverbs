@@ -1219,6 +1219,16 @@ if __name__ == "__main__":
     main(sys.argv)
 
 
+# todo: 1 doesn't speak words at Win/ Draw
+# todo: 2 doesn't say what fraction of the moves you chose yourself
+# todo: 3 doesn't forecast to say when a Draw or Win is inevitable
+# todo: 4 doesn't undo clearing the Board
+# todo: 5 doesn't quit for Control C and Control \
+# todo: 6 understands only HKJL arrows, not also AWSD arrows
+# todo: 7 doesn't reprompt the list of magic keys when clearing Board
+# todo: 8 doesn't reprompt on demand by pressing some such key as ⇧ / or /
+
+
 # todo: color the Board as (0 or more X or O Handicaps, X O Move Pairs, X Move)
 # todo: color the Pairs from bright to dim, with no color for Handicaps
 
