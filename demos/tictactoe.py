@@ -76,11 +76,14 @@ class Game:
         self.tui = tui
         self.n = n
         self.board = None
+
+        self.keyhelp = ".XO ABC 123 ! ←↑↓→ - Tab # Return / ? Q Esc"  # AWSD HKJL
         self.chords = list()
+        self.helps = list()
 
-        self.restart()
+        self.restart_game()
 
-    def restart(self):
+    def restart_game(self):
         """Start over"""
 
         board = self.board
@@ -89,7 +92,7 @@ class Game:
         if not board:
             self.board = Board(n)
         else:
-            board.restart(n)
+            board.restart_board(n)
 
         self.key = None
         self.func_by_key = self.form_func_by_key()
@@ -98,10 +101,54 @@ class Game:
         self.x = None
         self.y = None
 
+        self.chords_helps_clear()
+
+    def chords_helps_clear(self):
+        """Restart collecting input, like after each Move"""
+
+        self.chords.clear()
+        self.helps.clear()
+
     def form_func_by_key(self):
         """Choose which Keystroke calls for what action"""
 
         func_by_key = dict()
+
+        func_by_key.update(
+            {
+                "\x03": self.quit_game,  # ⌃C SIGINT KeyboardInterrupt
+                "\x1C": self.quit_game,  # ⌃\ SIGQUIT
+                "\x08": self.moves_undo_one,  # Backspace ⌃H
+                "\x0A": self.move_onto_empty,  # Enter ⌃J
+                "\x0D": self.move_onto_empty,  # Return ⌃M
+                "\t": self.game_board_clear,  # Tab ⌃I
+                "\x1B": self.quit_game,  # Esc ⌃[
+                "!": self.move_onto_random,
+                "Q": self.quit_game,
+                "\x7F": self.moves_undo_one,  # Delete  # classic ⌃? but not at Mac
+                "\x1B[A": self.move_to_win,  # UpwardsArrow ↑
+                "\x1B[B": self.move_onto_empty,  # DownwardsArrow ↓
+                "\x1B[C": self.moves_redo_one,  # RightwardsArrow →
+                "\x1B[D": self.moves_undo_one,  # LeftwardsArrow ←
+                "\N{Downwards Arrow}": self.move_onto_empty,  # ↓
+                "\N{Leftwards Arrow}": self.moves_undo_one,  # ←
+                "\N{Rightwards Arrow}": self.moves_undo_one,  # →
+                "\N{Upwards Arrow}": self.move_to_win,  # ↑
+            }
+        )
+
+        func_by_key["-"] = func_by_key["\t"]
+        func_by_key["Q"] = func_by_key["\x1B"]
+
+        func_by_key["H"] = func_by_key["\N{Leftwards Arrow}"]  # H mutated by 8x8 games
+        func_by_key["K"] = func_by_key["\N{Upwards Arrow}"]
+        func_by_key["J"] = func_by_key["\N{Downwards Arrow}"]
+        func_by_key["L"] = func_by_key["\N{Rightwards Arrow}"]
+
+        func_by_key["A"] = func_by_key["\N{Leftwards Arrow}"]  # A mutated below
+        func_by_key["W"] = func_by_key["\N{Upwards Arrow}"]
+        func_by_key["S"] = func_by_key["\N{Downwards Arrow}"]
+        func_by_key["D"] = func_by_key["\N{Rightwards Arrow}"]  # D mutated by 4x4 games
 
         func_by_key.update(
             {
@@ -113,7 +160,7 @@ class Game:
 
         func_by_key.update(
             {
-                "A": self.choose_x,
+                "A": self.choose_x,  # mutates ["A"] above
                 "B": self.choose_x,
                 "C": self.choose_x,
             }
@@ -127,83 +174,77 @@ class Game:
             }
         )
 
-        func_by_key.update(
-            {
-                "\t": self.board_clear,  # Tab
-                "\x1B": self.quit_game,  # Esc
-                "!": self.move_onto_random,
-                "-": self.board_clear,
-                "\x08": self.moves_undo_one,  # Backspace  # Control+H
-                "H": self.moves_undo_one,
-                "J": self.move_onto_empty,
-                "K": self.move_to_win,
-                "L": self.moves_redo_one,
-                "Q": self.quit_game,
-                "\x7F": self.moves_undo_one,  # Delete  # Control+?
-                "\x1B[A": self.move_to_win,  # UpwardsArrow ↑
-                "\x1B[B": self.move_onto_empty,  # DownwardsArrow ↓
-                "\x1B[C": self.moves_redo_one,  # RightwardsArrow →
-                "\x1B[D": self.moves_undo_one,  # LeftwardsArrow ←
-                "\N{Downwards Arrow}": self.move_onto_empty,  # ↓
-                "\N{Leftwards Arrow}": self.moves_undo_one,  # ←
-                "\N{Rightwards Arrow}": self.moves_undo_one,  # →
-                "\N{Upwards Arrow}": self.move_to_win,  # ↑
-            }
-        )
-
         return func_by_key
 
-    def run_till_quit(self):
+    def run_till_quit(self):  # noqa  # FIXME C901 too complex (11
         """Run till Quit"""
 
         board = self.board
         chords = self.chords
+        helps = self.helps
         func_by_key = self.func_by_key
         tui = self.tui
 
-        keymap = "123 ABC .XO ! ←↓↑→ HJKL - Tab Q Esc"
+        tui.print()
+        tui.print(DENT + "# an O Win By Fork is:  XC3 OB2 XA1 OC1 XB1 OC2 XA2 OA3")
 
         tui.print()
-        tui.print("Press the '#' or Return key, else one of:  {}".format(keymap))
-        tui.print("such as:  XC3 OB2 XA1 OC1 XB1 OC2 XA2 OA3  # is an O Win by Fork")
-
+        self.help_game()
         tui.print()
+
         board.tui_print_cells(tui)
         tui.print()
 
-        shunting = None
+        shunting = False
         while True:
 
             choices = [self.turn, self.x, self.y]
             choices = list(_ for _ in choices if _)
 
-            template = "Press Q or Esc to quit, else some other key, after:  {}"
-            prompt = DENT + template.format("".join(choices))
-            (chord_list, keys) = self.tui_read_keys(prompt)
+            template = "Got {} so next press ABC or Q or ? or some other key"
+            if self.x:
+                template = "Got {} so next press 123 or Q or ? or some other key"
+
+            prompt = DENT + template.format("".join(choices)) + " "
+            (keys, chord) = self.tui_read_keys(prompt)
 
             for key in keys:
 
                 if key == "#":
                     shunting = True
-                elif key in ("\r", "\n"):
+                elif shunting and (key in ("\r", "\n")):
                     shunting = False
+                elif not shunting:
 
-                if not shunting:
-                    if key in func_by_key.keys():
-                        if not chord_list:
-                            chords.append(key)
+                    if key in ("/", "?"):  # '/' because '?' at ⇧ /
+                        if not helps:
+                            if chord and (len(keys) == 1):
+                                tui.print(DENT + "input " + chord)
+                            else:
+                                tui.print(DENT + "input " + key)
+                            tui.print()
+                            self.help_game()
+                            tui.print()
+                            helps.append(1)
+                    else:
 
-                        func = func_by_key[key]
+                        alt_key = key.upper()
+                        if alt_key in func_by_key.keys():
+                            if chord and (len(keys) == 1):
+                                chords.append(chord)
+                            else:
+                                chords.append(alt_key)
 
-                        self.key = key
-                        func()
+                            func = func_by_key[alt_key]
 
-                        self.key = None
+                            self.key = alt_key
+                            func()
+
+                            self.key = None
 
     def tui_read_keys(self, prompt):
         """Block till next Keystroke, or till next Paste of Keystrokes"""
 
-        chords = self.chords
         tui = self.tui
 
         tui.kbprompt_write(prompt)
@@ -212,23 +253,41 @@ class Game:
 
         chars = stroke.decode()
 
-        default_empty = []  # FIXME: excessive coupling between modules
-        chord_list = keycaps.KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
-        if chord_list:
-            chord = "".join(chord_list[0].split())
-            if chord == "\N{Up Arrowhead}I":  # "⌃I"
-                chords.append("Tab")
-            elif chord == "\N{Up Arrowhead}[":  # "⌃["
-                chords.append("Esc")
-            else:
-                chords.append(chord)
+        default_empty = []
+        keycap_lists = keycaps.KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
+
+        chord = None
+        if keycap_lists:
+
+            chord = "".join(keycap_lists[0].split())
+            if chord == "⇧1":
+                chord = "!"
+            elif chord == "⇧/":
+                chord = "?"
+            elif chord == "\N{Up Arrowhead}" "[":  # "⌃["
+                chord = "Esc"
+            elif chord == "\N{Up Arrowhead}" "I":  # "⌃I"
+                chord = "Tab"
+            elif chord == "\N{Up Arrowhead}" "J":  # "⌃J"
+                chord = "Enter"
+            elif chord == "\N{Up Arrowhead}" "M":  # "⌃M"
+                chord = "Return"
 
         keys = [chars]
         if not chars.startswith("\x1B"):
             keys = list(chars)
-        keys = list((_.upper() if (len(_) == 1) else _) for _ in keys)
 
-        return (chord_list, keys)
+        return (keys, chord)
+
+        # <= FIXME: excessive coupling with 'import keycaps'
+
+    def help_game(self):  # / ?
+        """Help the Game"""
+
+        keyhelp = self.keyhelp
+        tui = self.tui
+
+        tui.print(DENT + "Press one of", keyhelp)
 
     def quit_game(self):  # Q Esc
         """Quit the Game"""
@@ -239,7 +298,7 @@ class Game:
         tui.print(DENT + " ".join(chords))
         tui.print()
 
-        chords.clear()
+        self.chords_helps_clear()
 
         WAR_GAMES_QUOTE = "A strange game"  # from "War Games" 1983
         WAR_GAMES_QUOTE += ". The only winning move is not to play"
@@ -289,7 +348,7 @@ class Game:
 
         if turn == ".":
 
-            self.board_clear()
+            self.game_board_clear()
 
             return
 
@@ -331,7 +390,7 @@ class Game:
         move = board.add_move(turn, x=x, y=y)
         if move:
             board.tui_chords_print(tui, chords=chords)
-            chords.clear()
+            self.chords_helps_clear()
 
         return move
 
@@ -371,7 +430,7 @@ class Game:
         move = board.choose_random_empty_else()
         if wins or not move:
 
-            self.board_clear()
+            self.game_board_clear()
 
             return
 
@@ -416,7 +475,7 @@ class Game:
             self.turn = turn
 
             board.tui_chords_print(tui, chords=chords)
-            chords.clear()
+            self.chords_helps_clear()
 
     def moves_redo_one(self):  # L → RightwardsArrow
         """Redo the Last Undone"""
@@ -432,19 +491,22 @@ class Game:
             self.turn = turn
 
             board.tui_chords_print(tui, chords=chords)
-            chords.clear()
+            self.chords_helps_clear()
 
-    def board_clear(self):  # - Tab
+    def game_board_clear(self):  # - Tab
         """Clear the Board"""
 
         board = self.board
         chords = self.chords
         tui = self.tui
 
-        self.restart()
-
+        tui.print(DENT + "input " + " ".join(chords))
+        tui.print()
+        tui.print()
+        self.help_game()
+        self.restart_game()
         board.tui_chords_print(tui, chords=chords)
-        chords.clear()
+        self.chords_helps_clear()
 
 
 class Board:
@@ -452,9 +514,9 @@ class Board:
 
     def __init__(self, n):
 
-        self.restart(n)
+        self.restart_board(n)
 
-    def restart(self, n):
+    def restart_board(self, n):
         """Start over"""
 
         # Form the Cells
@@ -1136,13 +1198,26 @@ class Board:
     def tui_chords_print(self, tui, chords):
         """Print the Chords, the Handicaps, the Moves, and the Cells"""
 
-        # Print the Chords, the Handicaps, and the Moves
+        assert "←" == "\N{Leftwards Arrow}"
+        assert "↑" == "\N{Upwards Arrow}"
+        assert "↓" == "\N{Downwards Arrow}"
+        assert "→" == "\N{Rightwards Arrow}"
+
+        # Format the Chords
 
         str_chords_plus = " ".join(chords) + " "
+        if len(chords) == 1:
+            chord = chords[-1]
+            if chord in "AWSD" "HKJL":
+                arrow = "←↑↓→←↑↓→"["AWSDHKJL".index(chord)]
+                str_chords_plus = "{} like {}".format(chord, arrow)
+
+        # Print the Chords, the Handicaps, and the Moves
 
         (handicaps, xo_moves) = self._moves_split()
 
-        tui.print(DENT + "input " + str_chords_plus)
+        if chords:
+            tui.print(DENT + "input " + str_chords_plus)
         if handicaps:
             tui.print(DENT + "handicaps " + " ".join(handicaps))
         if xo_moves:
@@ -1222,11 +1297,7 @@ if __name__ == "__main__":
 # todo: 1 doesn't speak words at Win/ Draw
 # todo: 2 doesn't say what fraction of the moves you chose yourself
 # todo: 3 doesn't forecast to say when a Draw or Win is inevitable
-# todo: 4 doesn't undo clearing the Board
-# todo: 5 doesn't quit for Control C and Control \
-# todo: 6 understands only HKJL arrows, not also AWSD arrows
-# todo: 7 doesn't reprompt the list of magic keys when clearing Board
-# todo: 8 doesn't reprompt on demand by pressing some such key as ⇧ / or /
+# todo: 4 doesn't undo clearing the Board - could resist Undo of Clear, not refuse it
 
 
 # todo: color the Board as (0 or more X or O Handicaps, X O Move Pairs, X Move)
@@ -1241,8 +1312,10 @@ if __name__ == "__main__":
 # todo: sketch how many X wins vs O wins still possible
 
 # todo: lean more into always doing something in reply to input
+# todo: could echo each char of each # ... Return comment
 # todo: could toggle start with X vs O
 # todo: could mark the Board somehow for next X or next O
+# todo: could resist Tab after Tab
 
 # todo: 'def run_till_quit' prompts for n != 3
 
