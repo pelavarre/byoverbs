@@ -794,8 +794,8 @@ class Board:
         voters.append(self.corner_xys)  # 0x2
         voters.append(self.center_xys)  # 0x4
         voters.append(self.find_opposite_corner_xys)  # 0x8
-        voters.append(self.find_threaten_win_xys)  # 0x10
-        voters.append(self.find_block_fork_xys)  # 0x20
+        voters.append(self.find_block_fork_xys)  # 0x10
+        voters.append(self.find_threaten_win_xys)  # 0x20
         voters.append(self.find_fork_xys)  # 0x40
         voters.append(self.find_block_win_xys)  # 0x80
         voters.append(self.find_win_xys)  # 0x100
@@ -828,19 +828,6 @@ class Board:
         move = "{}{}{}".format(turn, x, y)
 
         return move
-
-    _ = """  # FIXME: O shouldn't want these Corners
-
-    XC1 OB2 XA3
-
-       A B C
-
-    1  . . x
-    2  . o .
-    3  x . .
-
-
-        """
 
     def find_empty_xys(self):
         """Find the Empty Cells"""
@@ -890,6 +877,8 @@ class Board:
         streaks = self.streaks
         xys = self.xys
 
+        ofork_xys = self.find_block_fork_xys(turn)
+
         threat_xys_set = set()
 
         empty_xys = self.find_empty_xys()
@@ -907,6 +896,21 @@ class Board:
                             taker = list(taken_set)[-1]
 
                             if taker == turn:
+
+                                next_xys = list(
+                                    nxy
+                                    for nxy in streak
+                                    if cells[xys.index(nxy)] == "."
+                                )
+                                next_xys = list(nxy for nxy in next_xys if nxy != xy)
+
+                                assert len(next_xys) == 1, next_xys
+
+                                next_xy = next_xys[-1]
+                                if next_xy in ofork_xys:
+
+                                    continue  # such as O in diagonals after XA1 OB2 XC3
+
                                 threat_xys_set.add(xy)
 
         threat_xys = sorted(threat_xys_set)
@@ -1339,19 +1343,18 @@ if __name__ == "__main__":
     main(sys.argv)
 
 
-# todo: 2 doesn't say what fraction of the moves you chose yourself
-# todo: 3 doesn't forecast to say when a Draw or Win is inevitable
-# todo: 4 doesn't undo clearing the Board - could resist Undo of Clear, not refuse it
-
 # todo: color the Board as (0 or more X or O Handicaps, X O Move Pairs, X Move)
 # todo: color the Pairs from bright to dim, with no color for Handicaps
 
 # todo: sort uniq to reduce flips and rotations, print what remains
 
-# todo: draw counters not yet placed to fill the empty cells
-# todo: count the handicaps
 
+# todo: 2 doesn't say what fraction of the moves you chose yourself
+# todo: 3 doesn't forecast to say when a Draw or Win is inevitable
 # todo: sketch how many X wins vs O wins still possible
+# todo: 4 doesn't undo clearing the Board - could resist Undo of Clear, not refuse it
+
+# todo: draw counters not yet placed to fill the empty cells
 
 # todo: lean more into always doing something in reply to input
 # todo: could echo each char of each # ... Return comment
