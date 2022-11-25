@@ -176,20 +176,18 @@ class Game:
 
         return func_by_key
 
-    def run_till_quit(self):  # noqa  # FIXME C901 too complex (11
+    def run_till_quit(self):
         """Run till Quit"""
 
         board = self.board
-        chords = self.chords
         helps = self.helps
-        func_by_key = self.func_by_key
         tui = self.tui
 
         tui.print()
         tui.print(DENT + "# an O Win By Fork is:  XC3 OB2 XA1 OC1 XB1 OC2 XA2 OA3")
 
         tui.print()
-        self.help_game()
+        self.tui_print_keyhelp()
         tui.print()
 
         board.tui_print_cells(tui)
@@ -201,9 +199,9 @@ class Game:
             choices = [self.turn, self.x, self.y]
             choices = list(_ for _ in choices if _)
 
-            template = "Got {} so next press ABC or Q or ? or some other key"
+            template = "Got {} so next press ABC or Tab or Q or ? or some other key"
             if self.x:
-                template = "Got {} so next press 123 or Q or ? or some other key"
+                template = "Got {} so next press 123 or Tab or Q or ? or some other key"
 
             prompt = DENT + template.format("".join(choices)) + " "
             (keys, chord) = self.tui_read_keys(prompt)
@@ -218,29 +216,33 @@ class Game:
 
                     if key in ("/", "?"):  # '/' because '?' at ⇧ /
                         if not helps:
-                            if chord and (len(keys) == 1):
-                                tui.print(DENT + "input " + chord)
-                            else:
-                                tui.print(DENT + "input " + key)
-                            tui.print()
-                            self.help_game()
-                            tui.print()
+                            self.help_game(keys, key=key, chord=chord)
                             helps.append(1)
                     else:
+                        self.run_one_key(keys, key=key, chord=chord)
 
-                        alt_key = key.upper()
-                        if alt_key in func_by_key.keys():
-                            if chord and (len(keys) == 1):
-                                chords.append(chord)
-                            else:
-                                chords.append(alt_key)
+    def run_one_key(self, keys, key, chord):
+        """Run one Key"""
 
-                            func = func_by_key[alt_key]
+        chords = self.chords
+        func_by_key = self.func_by_key
 
-                            self.key = alt_key
-                            func()
+        alt_key = key.upper()
+        if alt_key not in func_by_key.keys():
 
-                            self.key = None
+            return
+
+        if chord and (len(keys) == 1):
+            chords.append(chord)
+        else:
+            chords.append(alt_key)
+
+        func = func_by_key[alt_key]
+
+        self.key = alt_key
+        func()
+
+        self.key = None
 
     def tui_read_keys(self, prompt):
         """Block till next Keystroke, or till next Paste of Keystrokes"""
@@ -281,8 +283,23 @@ class Game:
 
         # <= FIXME: excessive coupling with 'import keycaps'
 
-    def help_game(self):  # / ?
+    def help_game(self, keys, key, chord):  # / ?
         """Help the Game"""
+
+        tui = self.tui
+
+        echo = key
+        if chord and (len(keys) == 1):
+            echo = chord
+
+        tui.print(DENT + "input " + echo)
+        tui.print()
+
+        self.tui_print_keyhelp()
+        tui.print()
+
+    def tui_print_keyhelp(self):
+        """Print the Key Help at Launch, Restart, Quit or on demand"""
 
         keyhelp = self.keyhelp
         tui = self.tui
@@ -401,7 +418,7 @@ class Game:
         turn = self.turn
 
         cells = board.cells
-        wins = board.wins
+        streaks_by_winner = board.streaks_by_winner
 
         x_cells = list(_ for _ in cells if _.upper() == "X")
         o_cells = list(_ for _ in cells if _.upper() == "O")
@@ -415,7 +432,7 @@ class Game:
             turn = "X" if (len(x_cells) <= len(o_cells)) else "O"
 
         move = board.choose_random_empty_else()
-        if wins or not move:
+        if streaks_by_winner or not move:
             turn = "."
 
         return turn
@@ -425,10 +442,10 @@ class Game:
 
         board = self.board
         turn = self.turn
-        wins = board.wins
+        streaks_by_winner = board.streaks_by_winner
 
         move = board.choose_random_empty_else()
-        if wins or not move:
+        if streaks_by_winner or not move:
 
             self.game_board_clear()
 
@@ -503,7 +520,7 @@ class Game:
         tui.print(DENT + "input " + " ".join(chords))
         tui.print()
         tui.print()
-        self.help_game()
+        self.tui_print_keyhelp()
         self.restart_game()
         board.tui_chords_print(tui, chords=chords)
         self.chords_helps_clear()
@@ -556,7 +573,7 @@ class Board:
         self.cells = cells
         self.moves = list()
         self.undos = list()
-        self.wins = list()
+        self.streaks_by_winner = dict()
 
     def form_streaks(self):
         """List the ways to win"""
@@ -697,9 +714,9 @@ class Board:
         cells = self.cells
         xys = self.xys
         streaks = self.streaks
-        wins = self.wins
+        streaks_by_winner = self.streaks_by_winner
 
-        wins.clear()
+        streaks_by_winner.clear()
 
         for xy in xys:
             index = xys.index(xy)
@@ -710,8 +727,10 @@ class Board:
             if len(streak_set) == 1:
                 cell = list(streak_set)[-1]
                 if cell != ".":
+                    if cell not in streaks_by_winner.keys():
+                        streaks_by_winner[cell] = list()
 
-                    wins.append(streak)
+                    streaks_by_winner[cell].append(streak)
 
                     for xy in streak:
                         index = xys.index(xy)
@@ -720,10 +739,7 @@ class Board:
     def choose_random_empty_else(self):
         """Choose one empty Cell at random"""
 
-        cells = self.cells
-        xys = self.xys
-
-        empty_xys = list(_ for _ in xys if cells[xys.index(_)] == ".")
+        empty_xys = self.find_empty_xys()
         if not empty_xys:
 
             return None
@@ -760,13 +776,12 @@ class Board:
     def choose_shove_in(self, turn):
         """Say how to max chance of winning"""
 
-        cells = self.cells
         moves = self.moves
         xys = self.xys
 
         # Stop moving after moving into the last Cell
 
-        empty_xys = list(_ for _ in xys if cells[xys.index(_)] == ".")
+        empty_xys = self.find_empty_xys()
         if not empty_xys:
 
             return None
@@ -774,19 +789,19 @@ class Board:
         # Rank goals, much in the way of Newell & Simon 1972
         # as paraphrased by:  https://en.wikipedia.org/wiki/Tic-tac-toe
 
-        funcs = list()
-        funcs.append(self.find_side_xys)  # 0x1
-        funcs.append(self.find_corner_xys)  # 0x2
-        funcs.append(self.find_center_xys)  # 0x4
-        funcs.append(self.find_opposite_corner_xys)  # 0x8
-        funcs.append(self.find_threaten_win_xys)  # 0x10
-        funcs.append(self.find_block_fork_xys)  # 0x20
-        funcs.append(self.find_fork_xys)  # 0x40
-        funcs.append(self.find_block_win_xys)  # 0x80
-        funcs.append(self.find_win_xys)  # 0x100
+        voters = list()
+        voters.append(self.side_xys)  # 0x1
+        voters.append(self.corner_xys)  # 0x2
+        voters.append(self.center_xys)  # 0x4
+        voters.append(self.find_opposite_corner_xys)  # 0x8
+        voters.append(self.find_threaten_win_xys)  # 0x10
+        voters.append(self.find_block_fork_xys)  # 0x20
+        voters.append(self.find_fork_xys)  # 0x40
+        voters.append(self.find_block_win_xys)  # 0x80
+        voters.append(self.find_win_xys)  # 0x100
 
         if not moves:
-            funcs = [self.find_corner_xys]
+            voters = [self.corner_xys]
 
         # Trade off the goals
 
@@ -794,9 +809,11 @@ class Board:
 
         for xy in empty_xys:
             weight = 0
-            for (index, func) in enumerate(funcs):
-                func_xys = func(turn)
-                if xy in func_xys:
+            for (index, voter) in enumerate(voters):
+                voter_xys = voter
+                if not isinstance(voter, list):
+                    voter_xys = voter(turn)
+                if xy in voter_xys:
                     weight |= 1 << index
             weight_by_xy[xy] |= weight
 
@@ -810,12 +827,9 @@ class Board:
         (x, y) = xy
         move = "{}{}{}".format(turn, x, y)
 
-        # print(shoves)  # last jittered Wed 23/Nov
-        # breakpoint()
-
         return move
 
-    _ = """  # yea no, O doesn't want these Corners
+    _ = """  # FIXME: O shouldn't want these Corners
 
     XC1 OB2 XA3
 
@@ -828,26 +842,15 @@ class Board:
 
         """
 
-    def find_side_xys(self, turn):
-        """Find the Sides"""
+    def find_empty_xys(self):
+        """Find the Empty Cells"""
 
-        side_xys = self.side_xys
+        cells = self.cells
+        xys = self.xys
 
-        return side_xys
+        empty_xys = list(_ for _ in xys if cells[xys.index(_)] == ".")
 
-    def find_corner_xys(self, turn):
-        """Find the Corners"""
-
-        corner_xys = self.corner_xys
-
-        return corner_xys
-
-    def find_center_xys(self, turn):
-        """Find the Center"""
-
-        center_xys = self.center_xys
-
-        return center_xys
+        return empty_xys
 
     def find_opposite_corner_xys(self, turn):
         """Find the Corners opposite the Corners taken by Them"""
@@ -855,6 +858,7 @@ class Board:
         assert turn in "OX", repr(turn)
 
         cells = self.cells
+        corner_xys = self.corner_xys
         xs = self.xs
         ys = self.ys
         xys = self.xys
@@ -865,7 +869,6 @@ class Board:
 
         opposite_xys = list()
 
-        corner_xys = self.form_corner_xys()
         for xy in corner_xys:
             (x, y) = xy
 
@@ -889,7 +892,7 @@ class Board:
 
         threat_xys_set = set()
 
-        empty_xys = list(_ for _ in xys if cells[xys.index(_)] == ".")
+        empty_xys = self.find_empty_xys()
         for xy in empty_xys:
             (x, y) = xy
 
@@ -924,28 +927,46 @@ class Board:
 
         return fork_xys
 
-    def _find_fork_ofork_xys(self, turn):  # noqa  # FIXME C901 too complex (15
+    def _find_fork_ofork_xys(self, turn):
         """List the Empty Cells to Take to Form or Block Forks"""
+
+        # List all the Empty Cells that do Form or Block Forks
+
+        (forks_by_xy, oforks_by_oxoy) = self._find_fork_ofork_by_xy(turn)
+
+        # Drop the Empty Cells that don't create the most Winning Moves
+
+        most = max(len(_) for _ in forks_by_xy.values()) if forks_by_xy else 0
+        omost = max(len(_) for _ in oforks_by_oxoy.values()) if oforks_by_oxoy else 0
+
+        forks = list()
+        if most > 1:
+            for (xy, streaks_of_xy) in forks_by_xy.items():
+                if len(streaks_of_xy) >= most:
+
+                    forks.append(xy)
+
+        oforks = list()
+        if omost > 1:
+            for (oxoy, streaks_of_oxoy) in oforks_by_oxoy.items():
+                if len(streaks_of_oxoy) >= omost:
+
+                    oforks.append(oxoy)
+
+        # Succeed
+
+        return (forks, oforks)
+
+    def _find_fork_ofork_by_xy(self, turn):
+        """List all the Empty Cells that do Form or Block Forks"""
 
         cells = self.cells
         streaks = self.streaks
-        xs = self.xs
-        ys = self.ys
         xys = self.xys
 
-        # List each Empty Cell
-
-        empty_xys = list()
-
-        for x in xs:
-            for y in ys:
-                xy = (x, y)
-                xy_cell = cells[xys.index(xy)]
-                if xy_cell == ".":
-
-                    empty_xys.append(xy)
-
         # Visit each Empty Cell
+
+        empty_xys = self.find_empty_xys()
 
         forks_by_xy = collections.defaultdict(list)
         oforks_by_oxoy = collections.defaultdict(list)
@@ -974,28 +995,10 @@ class Board:
                         else:
                             oforks_by_oxoy[xy].append(streak)
 
-        # Drop the Empty Cells that don't create the most Winning Moves
+        forks_by_xy = dict(forks_by_xy)
+        oforks_by_oxoy = dict(oforks_by_oxoy)
 
-        most = max(len(_) for _ in forks_by_xy.values()) if forks_by_xy else 0
-        omost = max(len(_) for _ in oforks_by_oxoy.values()) if oforks_by_oxoy else 0
-
-        forks = list()
-        if most > 1:
-            for (xy, streaks_of_xy) in forks_by_xy.items():
-                if len(streaks_of_xy) >= most:
-
-                    forks.append(xy)
-
-        oforks = list()
-        if omost > 1:
-            for (oxoy, streaks_of_oxoy) in oforks_by_oxoy.items():
-                if len(streaks_of_oxoy) >= omost:
-
-                    oforks.append(oxoy)
-
-        # Succeed
-
-        return (forks, oforks)
+        return (forks_by_xy, oforks_by_oxoy)
 
     def find_block_win_xys(self, turn):
         """Find the Empty Cells to take to Win for Them"""
@@ -1088,7 +1091,7 @@ class Board:
 
         # List the Empty Opposite Corner Cells
 
-        empty_xys = list()
+        empty_opposite_xys = list()
 
         for xy in corner_xys:
             (x, y) = xy
@@ -1102,15 +1105,15 @@ class Board:
 
             if (xy_cell == ".") and (oxoy_cell == oturn):
 
-                empty_xys.append(xy)
+                empty_opposite_xys.append(xy)
 
         # Choose 1 Empty Oppposite Corner Cell to move onto
 
-        if not empty_xys:
+        if not empty_opposite_xys:
 
             return None
 
-        xy = random.choice(empty_xys)
+        xy = random.choice(empty_opposite_xys)
         (x, y) = xy
 
         move = "{}{}{}".format(turn, x, y)
@@ -1229,6 +1232,45 @@ class Board:
         self.tui_print_cells(tui)
         tui.print()
 
+        # Print the News of a Win or Draw
+
+        self.tui_print_winners(tui)
+
+    def tui_print_winners(self, tui):
+        """Print the News of a Win or Draw"""
+
+        streaks_by_winner = self.streaks_by_winner
+
+        # Print the News of a Win
+
+        winners = list(streaks_by_winner.keys())
+        if winners:
+            if len(set(winners)) == 1:
+                winner = winners[-1]
+                news = "{} won".format(winner)
+
+                streaks = streaks_by_winner[winner]
+                if len(streaks) != 1:
+                    news = "{} won {} times".format(winner, len(streaks))
+
+            else:
+
+                news = "{} won {} times, {} won {} times".format(
+                    "X", len(streaks_by_winner["X"]), "O", len(streaks_by_winner["O"])
+                )
+
+            tui.print(DENT + news)
+            tui.print()
+
+            return
+
+        # Print the News of a Draw
+
+        empty_xys = self.find_empty_xys()
+        if not empty_xys:
+            tui.print(DENT + "Game over, nobody won")
+            tui.print()
+
     def tui_print_cells(self, tui):
         """Print the Cells"""
 
@@ -1279,6 +1321,9 @@ _ = """
     # x fork win
     - XB2 OB1 XA1 OC3 XA2 OC2 XA3
 
+    # o fork win
+    - XC3 OB2 XA1 OC1 XB1 OC2 XA2 OA3
+
     # quit
     Q
 
@@ -1294,21 +1339,18 @@ if __name__ == "__main__":
     main(sys.argv)
 
 
-# todo: 1 doesn't speak words at Win/ Draw
 # todo: 2 doesn't say what fraction of the moves you chose yourself
 # todo: 3 doesn't forecast to say when a Draw or Win is inevitable
 # todo: 4 doesn't undo clearing the Board - could resist Undo of Clear, not refuse it
 
-
 # todo: color the Board as (0 or more X or O Handicaps, X O Move Pairs, X Move)
 # todo: color the Pairs from bright to dim, with no color for Handicaps
 
-# todo: draw counters not yet placed to fill the empty cells
-
 # todo: sort uniq to reduce flips and rotations, print what remains
 
-# todo: count the wins
+# todo: draw counters not yet placed to fill the empty cells
 # todo: count the handicaps
+
 # todo: sketch how many X wins vs O wins still possible
 
 # todo: lean more into always doing something in reply to input
