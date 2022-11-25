@@ -1286,15 +1286,34 @@ class Board:
 
         dminus = DENT[:-1]
 
+        (handicaps, xo_moves) = self._moves_split()
+
         tui.print(dminus, "", "", "", " ".join(self.xs))
         tui.print()
         for y in ys:
             tui.print(dminus, y, "", end=" ")
+
             for x in xs:
                 xy = (x, y)
-                index = xys.index(xy)
-                cell = cells[index]
-                tui.print(cell, end=" ")
+                cell = cells[xys.index(xy)]
+                move = "{}{}{}".format(cell.upper(), x, y)
+
+                if cell == ".":
+                    tui.print(cell, end=" ")
+                elif move in handicaps:
+                    assert move not in xo_moves, move
+                    tui.print(cell, end=" ")
+                else:
+                    assert move not in handicaps, move
+
+                    index = xo_moves.index(move)
+                    # rindex = len(xo_moves) - 1 - index
+
+                    assert self.n == 3
+                    color = keycaps.COLOR_BY_AGE[((3 * 3) // 2) - (index // 2)]
+                    chars = keycaps.COLOR_CHARS_FORMAT.format(color, cell)
+                    tui.print(chars, end=" ")
+
             tui.print()
 
 
@@ -1342,9 +1361,6 @@ _ = """
 if __name__ == "__main__":
     main(sys.argv)
 
-
-# todo: color the Board as (0 or more X or O Handicaps, X O Move Pairs, X Move)
-# todo: color the Pairs from bright to dim, with no color for Handicaps
 
 # todo: sort uniq to reduce flips and rotations, print what remains
 
