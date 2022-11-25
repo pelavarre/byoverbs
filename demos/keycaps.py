@@ -66,7 +66,16 @@ MAC_PASTE_125MS = 125e-3
 NO_COLOR = 0
 
 COLOR_CHARS_FORMAT = "\x1B[{}m{}\x1B[0m"  # .format(color, chars)
-# todo: might should color spaces
+# todo: might should color "\x20" Spaces
+
+_36_CYAN = 36
+_32_GREEN = 32
+_33_YELLOW = 33
+_35_MAGENTA = 35  # a Pink, if you ask me
+_31_RED = 31
+_34_BLUE = 34
+_30_BLACK = 30
+_37_WHITE = 37  # a White so Off that you might should call it Grey
 
 COLOR_BY_AGE = (36, 32, 33, 35, 31, 34, 30, 37)
 # Ansi Colors = Cyan, Green, Yellow, Magenta, Red, Blue, Black, White
@@ -75,12 +84,17 @@ COLOR_BY_AGE = (36, 32, 33, 35, 31, 34, 30, 37)
 COLORS = list(COLOR_BY_AGE)
 STR_COLORS = ", ".join("\x1B[{}m#{}\x1B[0m".format(_, _) for _ in COLOR_BY_AGE)
 
-COLOR_AS = "".join((" " "\x1B[" + str(_) + "m" "color" "\x1B[0m") for _ in COLOR_BY_AGE)
-
 COLOR_500MS = 500e-3  # milliseconds of Key Cap life per color
 
-
+assert len(COLOR_BY_AGE) == 8, len(COLOR_BY_AGE)
+COLOR_AS = " ".join("\x1B[{}m{}\x1B[0m".format(_, "color") for _ in COLOR_BY_AGE)
 __main__.__doc__ = __main__.__doc__.replace(8 * " color", " " + COLOR_AS)
+
+BRIGHT_COLORS = (37, 36, 32, 33, 35, 31, 34, 30)
+BRIGHT_THEME_COLOR_BY_AGE = tuple(_ for _ in COLOR_BY_AGE if _ not in BRIGHT_COLORS)
+
+DARK_COLORS = (30, 35, 34, 31, 36, 32, 33, 37)  # esp Magenta in Browsers
+DARK_THEME_COLOR_BY_AGE = tuple(_ for _ in COLOR_BY_AGE if _ not in DARK_COLORS)
 
 
 #

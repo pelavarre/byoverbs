@@ -23,12 +23,15 @@ examples:
   git clone https://github.com/pelavarre/byoverb.git
   demos/tictactoe.py  # show these examples
   demos/tictactoe.py --  # draw a Tic-Tac-Toe Board more vividly than we do by hand
+  # colors X O . moves into Cells as:   color color color color color
 """
+
 
 # code reviewed by people, and by Black and Flake8
 # developed by:  cls && F=demos/tictactoe.py && black $F && flake8 $F && $F --
 
 
+import __main__
 import collections
 import pdb
 import random
@@ -50,6 +53,24 @@ ESC_STROKES.append("\x1B[C")  # alt encoding of "\N{Upwards Arrow}" ↓
 ESC_STROKES.append("\x1B[D")  # alt encoding of "\N{Leftwards Arrow}" ←
 
 TURNS = "XO."
+
+
+COLOR_CHARS_FORMAT = "\x1B[{}m{}\x1B[0m"
+assert keycaps.COLOR_CHARS_FORMAT == COLOR_CHARS_FORMAT
+
+TOO_BRIGHT_COLORS = keycaps.BRIGHT_COLORS[:1]
+TOO_DARK_COLORS = keycaps.DARK_COLORS[:2]
+
+COLOR_BY_MOVE = list(reversed(keycaps.COLOR_BY_AGE))
+COLOR_BY_MOVE = list(_ for _ in COLOR_BY_MOVE if _ not in TOO_BRIGHT_COLORS)
+COLOR_BY_MOVE = list(_ for _ in COLOR_BY_MOVE if _ not in TOO_DARK_COLORS)
+
+N = 3
+assert len(COLOR_BY_MOVE) >= ((N * N + 1) // 2), (len(COLOR_BY_MOVE), N)
+
+assert len(COLOR_BY_MOVE) == 5, len(COLOR_BY_MOVE)
+COLOR_AS = " ".join(COLOR_CHARS_FORMAT.format(_, "color") for _ in COLOR_BY_MOVE)
+__main__.__doc__ = __main__.__doc__.replace(5 * " color", " " + COLOR_AS)
 
 
 #
@@ -77,13 +98,13 @@ class Game:
         self.n = n
         self.board = None
 
-        self.keyhelp = ".XO ABC 123 ! ←↑↓→ - Tab # Return / ? Q Esc"  # AWSD HKJL
+        self.keyhelp = ".XO ABC 123 ! ←↑↓→ - Tab # Return ? / Q Esc"  # AWSD HKJL
         self.chords = list()
         self.helps = list()
 
         self.restart_game()
 
-    def restart_game(self):
+    def restart_game(self):  # FIXME: fuzzy thinking near suspend/ resume/ clear
         """Start over"""
 
         board = self.board
@@ -183,8 +204,17 @@ class Game:
         helps = self.helps
         tui = self.tui
 
+        color_chars_format = "\x1B[{}m{}\x1B[0m"
+        assert keycaps.COLOR_CHARS_FORMAT == color_chars_format
+
+        str_moves = list()
+        for (index, move) in enumerate("XC3 OB2 XA1 OC1 XB1 OC2 XA2 OA3".split()):
+            color = COLOR_BY_MOVE[index // 2]
+            str_move = color_chars_format.format(color, move)
+            str_moves.append(str_move)
+
         tui.print()
-        tui.print(DENT + "# an O Win By Fork is:  XC3 OB2 XA1 OC1 XB1 OC2 XA2 OA3")
+        tui.print(DENT + "An O Win By Fork is:  " + " ".join(str_moves))
 
         tui.print()
         self.tui_print_keyhelp()
@@ -283,7 +313,7 @@ class Game:
 
         # <= FIXME: excessive coupling with 'import keycaps'
 
-    def help_game(self, keys, key, chord):  # / ?
+    def help_game(self, keys, key, chord):  # ? /
         """Help the Game"""
 
         tui = self.tui
@@ -1296,11 +1326,19 @@ class Board:
 
         cells = self.cells
 
+        n = self.n
         xs = self.xs
         ys = self.ys
         xys = self.xys
 
         dminus = DENT[:-1]
+
+        color_chars_format = "\x1B[{}m{}\x1B[0m"
+        assert keycaps.COLOR_CHARS_FORMAT == color_chars_format
+
+        assert len(COLOR_BY_MOVE) >= ((n * n + 1) // 2), (len(COLOR_BY_MOVE), n)
+
+        #
 
         (handicaps, xo_moves) = self._moves_split()
 
@@ -1325,9 +1363,8 @@ class Board:
                     index = xo_moves.index(move)
                     # rindex = len(xo_moves) - 1 - index
 
-                    assert self.n == 3
-                    color = keycaps.COLOR_BY_AGE[((3 * 3) // 2) - (index // 2)]
-                    chars = keycaps.COLOR_CHARS_FORMAT.format(color, cell)
+                    color = COLOR_BY_MOVE[index // 2]
+                    chars = color_chars_format.format(color, cell)
                     tui.print(chars, end=" ")
 
             tui.print()
@@ -1464,7 +1501,32 @@ if __name__ == "__main__":
 
 # todo: sort uniq to reduce flips and rotations, print what remains
 
+
+# todo: Y for analysis - advise the moves without taking them: win, block win, etc
+
+# todo: stop with the Got Choices, instead trace the Chords
+# todo: Press ABC or ? or some other key, to choose Row for X
+# todo: Press 123 or ? or some other key, to choose Column in Row A for X
+
+# todo: = X gives you O after your every X, = O gives you X after O, = . is default
+# todo: > auto plays to end of game in the ↑ ↓ → style only (or end of → input)
+# todo: < auto plays to star of game in the ← style only
+
+# todo: input > taken as ↑
+# todo: input > taken as 2 ↑
+# todo: input B 2 taken as X B 2
+# todo: input B 2 taken as X B 2, then also O ↑, thus O C 3
+
+# todo: take digits 0..9 as multiplier before ! ←↑↓→
+# todo: take ⌃C as cancelling input preceding it
 # todo: empty the keyboard when not keeping up
+
+# todo: echo all input, have most of it work like ? /
+# todo: say input: !, taken as X B 3
+# todo: allow 3 of ? / etc before limiting
+# todo: quit at 2 of Q Esc ⌃C ⌃\ vs Windows Chrome Linux ⌃C ⌃V
+
+# todo: export/ import Game & Board into __pycache__/tictactoe.json
 
 
 # todo: 2 doesn't say what fraction of the moves you chose yourself

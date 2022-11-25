@@ -205,6 +205,10 @@ default to whence -a including Aliases & Funcs of Bash & Zsh
 
 it's got an early index of source code in it, i might should catch that up
 
+## Quickly Now
+
+i gather notes here when they reach me, then later i spread them out above
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md
