@@ -203,7 +203,7 @@ class Game:
             if self.x:
                 template = "Got {} so next press 123 or Tab or Q or ? or some other key"
 
-            prompt = DENT + template.format("".join(choices)) + " "
+            prompt = DENT + template.format(" ".join(choices)) + " "
             (keys, chord) = self.tui_read_keys(prompt)
 
             for key in keys:
@@ -334,8 +334,7 @@ class Game:
 
         self.x = key
         if self.y:
-            if self.move_onto_x_y():  # changes no Cell when repeating a Move
-                self.turn = self.choose_next_turn(after=turn)
+            self.move_onto_x_y(after=turn)  # changes no Cell when repeating a Move
 
     def choose_y(self):  # 1 2 3
         """Choose a Row of the Board to move onto"""
@@ -345,8 +344,7 @@ class Game:
 
         self.y = key
         if self.x:
-            if self.move_onto_x_y():  # changes no Cell when repeating a Move
-                self.turn = self.choose_next_turn(after=turn)
+            self.move_onto_x_y(after=turn)  # changes no Cell when repeating a Move
 
     def choose_turn(self):  # . O X
         """Choose who moves next"""
@@ -378,11 +376,9 @@ class Game:
             self.x = x
             self.y = y
 
-            if not self.move_onto_x_y():
-                assert False  # always changes 1 Cell, never returns None
-            self.turn = self.choose_next_turn(after=turn)
+            self.move_onto_x_y(after=turn)  # always changes 1 Cell
 
-    def move_onto_x_y(self):  # A B C 1 2 3
+    def move_onto_x_y(self, after):  # called by A B C 1 2 3, but also by# ! ↑ ↓
         """Mutate the chosen Cell, print the Board, pick next Player"""
 
         board = self.board
@@ -402,11 +398,13 @@ class Game:
         self.x = None
         self.y = None
 
-        # Move and print the resulting Board, else don't
+        # Move, pick the next mark, and print the resulting Board, else don't
 
         move = board.add_move(turn, x=x, y=y)
         if move:
-            board.tui_chords_print(tui, chords=chords)
+            self.turn = self.choose_next_turn(after=after)
+
+            board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
             self.chords_helps_clear()
 
         return move
@@ -457,9 +455,7 @@ class Game:
 
         self.x = x
         self.y = y
-        _ = self.move_onto_x_y()  # changes no Cell when Turn of "."
-
-        self.turn = self.choose_next_turn(after=turn)
+        self.move_onto_x_y(after=turn)  # changes no Cell when Turn of "."
 
     def move_onto_random(self):  # !
         """Mutate one Cell chosen at random, print the Board, pick next Player"""
@@ -472,9 +468,7 @@ class Game:
 
         self.x = x
         self.y = y
-        if not self.move_onto_x_y():
-            assert False  # always changes 1 Cell, never returns None
-        self.turn = self.choose_next_turn(after=".")
+        self.move_onto_x_y(after=".")  # always changes 1 Cell
 
     def moves_undo_one(self):  # Backspace H Delete ← LeftwardsArrow
         """Undo the Last Move"""
@@ -491,7 +485,7 @@ class Game:
             (turn, x, y) = move
             self.turn = turn
 
-            board.tui_chords_print(tui, chords=chords)
+            board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
             self.chords_helps_clear()
 
     def moves_redo_one(self):  # L → RightwardsArrow
@@ -507,7 +501,7 @@ class Game:
             (turn, x, y) = move
             self.turn = turn
 
-            board.tui_chords_print(tui, chords=chords)
+            board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
             self.chords_helps_clear()
 
     def game_board_clear(self):  # - Tab
@@ -522,7 +516,7 @@ class Game:
         tui.print()
         self.tui_print_keyhelp()
         self.restart_game()
-        board.tui_chords_print(tui, chords=chords)
+        board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
         self.chords_helps_clear()
 
 
@@ -1202,7 +1196,7 @@ class Board:
 
         return uniques
 
-    def tui_chords_print(self, tui, chords):
+    def tui_turn_chords_print(self, tui, turn, chords):
         """Print the Chords, the Handicaps, the Moves, and the Cells"""
 
         assert "←" == "\N{Leftwards Arrow}"
@@ -1238,9 +1232,9 @@ class Board:
 
         # Print the News of a Win or Draw
 
-        self.tui_print_winners(tui)
+        self.tui_print_winners(tui, turn=turn)
 
-    def tui_print_winners(self, tui):
+    def tui_print_winners(self, tui, turn):
         """Print the News of a Win or Draw"""
 
         streaks_by_winner = self.streaks_by_winner
@@ -1273,6 +1267,28 @@ class Board:
         empty_xys = self.find_empty_xys()
         if not empty_xys:
             tui.print(DENT + "Game over, nobody won")
+            tui.print()
+
+            return
+
+        # Print a Forecast of who could win
+
+        if False:  # len(empty_xys) <= 9:  # FIXME: run fast
+
+            (x, o, z) = self.forecast_x_o_wins(tui, turn=turn)
+
+            str_x = "{:,}".format(x).replace(",", "_")
+            str_o = "{:,}".format(o).replace(",", "_")
+            str_z = "{:,}".format(z).replace(",", "_")
+
+            news = "{} ways for X to win".format(str_x)
+            news += ", {} ways for O to win".format(str_o)
+            news += ", {} ways for Nobody to win".format(str_z)
+
+            if x == o == 0:
+                news = "Game nearly over, nobody wins"
+
+            tui.print(DENT + news)
             tui.print()
 
     def tui_print_cells(self, tui):
@@ -1315,6 +1331,90 @@ class Board:
                     tui.print(chars, end=" ")
 
             tui.print()
+
+    def forecast_x_o_wins(self, tui, turn):
+
+        cells = self.cells
+
+        # Forecast for X Next or O Next
+
+        if turn == ".":
+            (xx, xo) = self.forecast("X")
+            (ox, oo) = self.forecast("O")
+
+            x_ = xx + ox
+            o_ = xo + oo
+
+            return (x_, o_)
+
+        # Collect Boards of Cells to score
+
+        scoreables = list()
+
+        scoreable = (turn, cells)
+        scoreables.append(scoreable)
+
+        x_ = 0
+        o_ = 0
+        z_ = 0
+        while scoreables:
+            scoreable = scoreables.pop(0)
+            (turn_, cells_) = scoreable
+
+            turn__ = "X" if (turn_ != "X") else "O"
+
+            (x, o, z) = self.score_x_o_wins(tui, cells=cells_)
+
+            if z and ("." in cells_):
+
+                for (index, cell_) in enumerate(cells_):
+                    if cell_ == ".":
+                        cells__ = list(cells_)
+                        cells__[index] = turn_
+
+                        scoreable__ = (turn__, cells__)
+                        # tui.print(scoreable__)
+                        scoreables.append(scoreable__)
+
+            else:
+
+                (x, o, z) = self.score_x_o_wins(tui, cells=cells_)
+                x_ += x
+                o_ += o
+                z_ += z
+
+        return (x_, o_, z_)
+
+    def score_x_o_wins(self, tui, cells):
+
+        xys = self.xys
+        streaks = self.streaks
+
+        streaks_by_winner = dict()
+
+        for streak in streaks:
+            streak_set = set(cells[xys.index(xy)].upper() for xy in streak)
+            if len(streak_set) == 1:
+                cell = list(streak_set)[-1]
+                if cell != ".":
+                    if cell not in streaks_by_winner.keys():
+                        streaks_by_winner[cell] = list()
+
+                    streaks_by_winner[cell].append(streak)
+
+        len_x = len(streaks_by_winner["X"]) if ("X" in streaks_by_winner.keys()) else 0
+        len_o = len(streaks_by_winner["O"]) if ("O" in streaks_by_winner.keys()) else 0
+
+        x = 1 if (len_x > len_o) else 0
+        o = 1 if (len_o > len_x) else 0
+        z = 0 if (x or o) else 1
+
+        # str_cells = "{}{}{} {}{}{} {}{}{}".format(*cells)
+        # if str_cells == "XoX xoo xOx":
+        #     breakpoint()
+        # tui.print("Z" if z else ("X" if x else "O"), str_cells)
+
+        return (x, o, z)
 
 
 #
@@ -1364,6 +1464,8 @@ if __name__ == "__main__":
 
 # todo: sort uniq to reduce flips and rotations, print what remains
 
+# todo: empty the keyboard when not keeping up
+
 
 # todo: 2 doesn't say what fraction of the moves you chose yourself
 # todo: 3 doesn't forecast to say when a Draw or Win is inevitable
@@ -1373,6 +1475,7 @@ if __name__ == "__main__":
 # todo: draw counters not yet placed to fill the empty cells
 
 # todo: lean more into always doing something in reply to input
+# todo: could make the meanings of ! ←↑↓→ - Return more visible
 # todo: could echo each char of each # ... Return comment
 # todo: could toggle start with X vs O
 # todo: could mark the Board somehow for next X or next O
