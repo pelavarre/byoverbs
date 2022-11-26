@@ -123,6 +123,7 @@ class Game:
         self.turn = "X"
         self.x = None
         self.y = None
+        self.taken_as = None
 
         self.chords_helps_clear()
 
@@ -211,6 +212,7 @@ class Game:
         """Run till Quit"""
 
         board = self.board
+        func_by_key = self.func_by_key
         helps = self.helps
         tui = self.tui
 
@@ -246,8 +248,9 @@ class Game:
                     shunting = False
                 elif not shunting:
 
-                    if key in ("/", "?"):  # '/' because '?' at ⇧ /
-                        if not helps:
+                    alt_key = key.upper()  # the '?' at ⇧ /, the '/', etc
+                    if alt_key not in func_by_key.keys():
+                        if len(helps) < 3:
                             self.help_game(keys, key=key, chord=chord)
                             helps.append(1)
                     else:
@@ -323,9 +326,7 @@ class Game:
         chords = self.chords
         func_by_key = self.func_by_key
 
-        if key not in func_by_key.keys():
-
-            return None
+        assert key in func_by_key.keys()
 
         if chord and (len(keys) == 1):
             chords.append(chord)
@@ -530,9 +531,12 @@ class Game:
 
         move = board.add_move(turn, x=x, y=y)
         if move:
+            self.taken_as = " ".join(move)
             self.turn = self.choose_next_turn(after=after)
 
-            winners = board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
+            winners = board.board_tui_print(
+                tui, turn=self.turn, chords=chords, taken_as=self.taken_as
+            )
             if winners is not None:
                 self.call_count = 0
             self.chords_helps_clear()
@@ -617,7 +621,9 @@ class Game:
             (turn, x, y) = move
             self.turn = turn
 
-            winners = board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
+            winners = board.board_tui_print(
+                tui, turn=self.turn, chords=chords, taken_as=self.taken_as
+            )
             if winners is not None:
                 self.call_count = 0
             self.chords_helps_clear()
@@ -638,7 +644,9 @@ class Game:
             (turn, x, y) = move
             self.turn = turn
 
-            winners = board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
+            winners = board.board_tui_print(
+                tui, turn=self.turn, chords=chords, taken_as=self.taken_as
+            )
             if winners is not None:
                 self.call_count = 0
             self.chords_helps_clear()
@@ -662,7 +670,9 @@ class Game:
 
         self.restart_game()
 
-        board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
+        board.board_tui_print(
+            tui, turn=self.turn, chords=chords, taken_as=self.taken_as
+        )
 
 
 class Board:
@@ -1341,7 +1351,7 @@ class Board:
 
         return uniques
 
-    def tui_turn_chords_print(self, tui, turn, chords):
+    def board_tui_print(self, tui, turn, chords, taken_as):
         """Print the Chords, the Handicaps, the Moves, and the Cells"""
 
         assert "←" == "\N{Leftwards Arrow}"
@@ -1351,7 +1361,7 @@ class Board:
 
         # Format the Chords
 
-        chords_echo = self.format_echo(chords)
+        chords_echo = self.format_echo(chords, taken_as=taken_as)
 
         # Print the Chords, the Handicaps, and the Moves
 
@@ -1376,12 +1386,33 @@ class Board:
 
         return winners
 
-    def format_echo(self, chords):
+    def format_echo(self, chords, taken_as):
         """Format the Echo of the Chords"""
 
-        echo = " ".join(chords) + " "
+        echo = self.format_echo_x_y(chords, taken_as=taken_as)
+        if not echo:
+            echo = self.format_echo_single_letter_arrow(chords, taken_as=taken_as)
+        if not echo:
+            echo = self.format_echo_repeated_arrow(chords, taken_as=taken_as)
+        if not echo:
+            echo = " ".join(chords) + " "
 
-        # Compress the Echo of 2 or more Repeats of an Arrow
+        return echo
+
+    def format_echo_x_y(self, chords, taken_as):
+        """Explain the Echo of an X and Y"""
+
+        if len(chords) == 2:
+            c0 = chords[0]
+            c1 = chords[1]
+
+            if (c0 in "ABC123") and (c1 in "123ABC"):
+                echo = "{} {}, taken as {}".format(c0, c1, taken_as)
+
+                return echo
+
+    def format_echo_repeated_arrow(self, chords, taken_as):
+        """Compress the Echo of 2 or more Repeats of an Arrow"""
 
         if len(chords) > 1:
             c0 = chords[0]
@@ -1402,20 +1433,28 @@ class Board:
 
                     return echo
 
-        # Explain the Echo of a single Letter working as a single Arrow
+    def format_echo_single_letter_arrow(self, chords, taken_as):
+        """Explain the Echo of a single Letter working as a single Arrow"""
 
         if len(chords) == 1:
-            chord = chords[-1]
-            if chord in "AWSD" "HKJL":
-                arrow = "←↑↓→←↑↓→"["AWSDHKJL".index(chord)]
 
-                echo = "{}, taken as {}".format(chord, arrow)
+            chord = chords[-1]
+            if chord in "!←↑↓→":
+                echo = "{}, taken as {}".format(chord, taken_as)
 
                 return echo
 
-        # Succeed
+            arrow_by_chord = dict((k, "←↑↓→"["AWSD".index(k)]) for k in "AWSD")
+            arrow_by_chord.update(dict((k, "←↑↓→"["HKJL".index(k)]) for k in "HKJL"))
+            arrow_by_chord["Enter"] = "↓"
+            arrow_by_chord["Return"] = "↓"
 
-        return echo
+            if chord in arrow_by_chord.keys():
+                arrow = arrow_by_chord[chord]
+
+                echo = "{}, taken as {} to mean {}".format(chord, arrow, taken_as)
+
+                return echo
 
     def tui_print_winners(self, tui, turn):
         """Print the News of a Win or Draw"""
@@ -1661,16 +1700,10 @@ if __name__ == "__main__":
 # todo: Y for analysis - advise the moves without taking them: win, block win, etc
 
 
-# todo: say input: !, taken as X B 3
-
-# todo: echo all input, have most of it work like ? /
-# todo: allow 3 of ? / etc before limiting
-
-# todo: = X gives you O after your every X, = O gives you X after O, = . is default
 # todo: > auto repeats till close of game after any one of ! ↑ ↓ →
 # todo: < auto repeats till close of game by way of ←
 
-# todo: input B 2 taken as X B 2
+# todo: = X gives you O after your every X, = O gives you X after O, = . is default
 # todo: input B 2 taken as X B 2, then also O ↑, thus O C 3
 # todo: input > taken as ↑
 # todo: input > taken as 2 ↑
