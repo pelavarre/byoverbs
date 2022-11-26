@@ -1,51 +1,62 @@
 # byoverbs
-Competently welcome you into Sh Terminal work,
-  by making three moves in particular here now
+Competently welcome you into Sh Terminal work
+
+Three moves =>
 
 i ) Break you free to Bring-Your-Own (BYO) Verbs into Sh Terminal work, on the cheap
 
-ii ) Invite you to copy-edit and fork all of what comes to meet with you here
+ii ) Invite you to copy-edit and fork what meets you here
 
 ii ) Help you write enough and not too much Code as simple small Sh Scripts,
-  so you can read, keep up, and write the less simple Code in Python
+  so you can switch into Python to read, keep up, and write less simple Code
 
 ## Examples, Explanations, Guesses, Options, Args, and Code
 
 Odds on your Sh Terminal has been inviting you to press Dot Tab Return,
   in place of just Return, as often as you type out the first Word of a Command Line
 
-For example, when you place both 'touch' and 'touch.py' in your Sh Path,
-  then typing out 'touch' and pressing Dot Tab will fill out the Dot P Y part for you
+For example, when you drop both 'echo' and 'echo.py' into your Sh Path,
+  then typing out E C H O and pressing Dot Tab will fill out the Dot P Y part for you
 
-This move then gives the choice on what happens next to you
+That obscure move of yours then gives you all the choices of what happens next
 
-Our work here gives you **examples** first,
-  but gives you longer **explanations**
+Our conventions here help you remember what you've learned of the Sh Verb involved
+
+We give you your own **examples** first,
+  but we'll give you your longer **explanations**
     if you type Space Dash Dash H before you press Return, and
-  jumps out into **guessing** what you want
-    if you type all of Space Dash Dash before you press Return
+  we jump up to flat **guess** what you want
+    if you type out all of Space Dash Dash before you press Return
 
-    touch.py  # show these examples and exit
-    touch.py --h  # show help lines and exit (more reliable than -h)
-    touch.py --  # create a file named for now, such as 't.touch~1231jqd2359~'
+    echo.py  # show these examples and exit
+    echo.py --h  # show help lines and exit (more reliable than -h)
+    echo.py -- a 'b c'  # number and print these args
 
-Its guesses are correct, because you chose them
+You pressing Space Dash Dash Return authorizes the guess,
+  and then this guess of what you meant come out astonishingly correct,
+  merely because you chose it, you put this guess exactly here,
+  you planted this Easter Egg to come work with you as needed
 
-Linux and Python conventions spell out how to send these marks,
-  but no so very much what they mean -
+The Sh and Python and Linux conventions spell out how you type these Dot P Y Dash Dash H marks,
+  but don't so very much nail down what they mean - technically speaking,
   pressing Return means no argument,
   the Space Dash Dash H Return is short
     for a '--help' option calling for help lines, and
-  the Space Double Dash Return is a way for you to type more than you have to type
+  the Space Double Dash Return is a way for you to type more than you must type
     just to more explicitly say you chose no argument
 
-The walk you walk through the Examples, Explanations, and Guesses,
-  will give you the feel for what you want next to go do
-    with the **Options** and **Args**
-      demoed in the Examples and declared in the Explanations,
-and also how you want to change and grow the **Code** in the Py File
+You choosing to type more than you know you must is a convenient address to plant an Easter Egg at
 
-Linux mostly ships only Verbs that don't end in Dot P Y,
+Over time, your process of having written out your own Examples and Explanations
+  will build a feel in you for what you want the guesses of what you mean to be
+
+Your mere choice to work with
+  your own Notes of Examples and Explanations - your own Lab Notebook,
+will give you the feel
+  for what missing **Options** and **Args** you can bring in to work with you,
+by changing and growing the **Code** in the Py File
+
+Linux mostly ships only Sh Verbs that don't end in Dot P Y, don't end in Dot Anything,
   so you showing up to add the first Dot P Y variation
     **hijacks Autocomplete to give you a separate Lab Notebook for each Verb**,
       an indexed Py File you can easily search out that comes to record
@@ -54,15 +65,17 @@ Linux mostly ships only Verbs that don't end in Dot P Y,
 
 ## Placing Files into your Sh Path
 
-How you place Files into your Sh Path can vary wildly
+How you drop Files into your Sh Path can vary wildly
 
-A quick test is
+A quick test is to drop a copy of my Files onto the back of your Sh Path,
+  where they're more mostly harmless,
+  because out there they don't redefine any Sh Verb you already have installed
 
     git clone https://github.com/pelavarre/byoverbs.git
     cd byoverbs/bin/
     export PATH="${PATH:+$PATH:}$PWD"
 
-My technique is
+Me, I reconfigure my Sh to do this for me always
 
     mkdir -p ~/bin
     export PATH=$PATH:$HOME/bin
@@ -75,7 +88,8 @@ My technique is
 Nearly all our Sh Scripts show you what they're doing as they do it,
   to help you learn how to do the same work without them
 
-For example, our 'ls |n' will show you its '|cat -n -' and its '|expand'
+For example, our 'n' Script
+  inside 'ls |n' will show you its '|cat -n -' and its '|expand'
 
 Our most destructive scripts even show you what they will do and halt,
   waiting for your permission to proceed,
@@ -91,7 +105,7 @@ To trace that work, you have to look at the source, or capture its output
 
 ## Dirs of Dirs of Files
 
-3 dirs of 30 files
+5 dirs of 108 files
 
 > Makefile - define what 'make' means here
 
