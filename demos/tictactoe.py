@@ -102,6 +102,8 @@ class Game:
         self.chords = list()
         self.helps = list()
 
+        self.call_count = 0
+
         self.restart_game()
 
     def restart_game(self):  # FIXME: fuzzy thinking near suspend/ resume/ clear
@@ -126,6 +128,8 @@ class Game:
 
     def chords_helps_clear(self):
         """Restart collecting input, like after each Move"""
+
+        self.digit = None
 
         self.chords.clear()
         self.helps.clear()
@@ -153,7 +157,7 @@ class Game:
                 "\x1B[D": self.moves_undo_one,  # LeftwardsArrow ←
                 "\N{Downwards Arrow}": self.move_onto_empty,  # ↓
                 "\N{Leftwards Arrow}": self.moves_undo_one,  # ←
-                "\N{Rightwards Arrow}": self.moves_undo_one,  # →
+                "\N{Rightwards Arrow}": self.moves_redo_one,  # →
                 "\N{Upwards Arrow}": self.move_to_win,  # ↑
             }
         )
@@ -192,6 +196,12 @@ class Game:
                 "1": self.choose_y,
                 "2": self.choose_y,
                 "3": self.choose_y,
+                "4": self.take_digit,
+                "5": self.take_digit,
+                "6": self.take_digit,
+                "7": self.take_digit,
+                "8": self.take_digit,
+                "9": self.take_digit,
             }
         )
 
@@ -225,16 +235,8 @@ class Game:
 
         shunting = False
         while True:
-
-            choices = [self.turn, self.x, self.y]
-            choices = list(_ for _ in choices if _)
-
-            template = "Got {} so next press ABC or Tab or Q or ? or some other key"
-            if self.x:
-                template = "Got {} so next press 123 or Tab or Q or ? or some other key"
-
-            prompt = DENT + template.format(" ".join(choices)) + " "
-            (keys, chord) = self.tui_read_keys(prompt)
+            prompt = self.format_prompt()
+            (keys, chord) = self.tui_read_keys(tui, prompt=(DENT + prompt + " ... "))
 
             for key in keys:
 
@@ -254,27 +256,118 @@ class Game:
     def run_one_key(self, keys, key, chord):
         """Run one Key"""
 
+        alt_key = key.upper()
+
         chords = self.chords
         func_by_key = self.func_by_key
 
-        alt_key = key.upper()
-        if alt_key not in func_by_key.keys():
+        # List the Funcs that know how to run after themselves, meaningfully
 
-            return
+        arrows = ""
+        arrows += "\N{Downwards Arrow}"  # ↓
+        arrows += "\N{Leftwards Arrow}"  # ←
+        arrows += "\N{Rightwards Arrow}"  # →
+        arrows += "\N{Upwards Arrow}"  # ↑
+
+        repeatable_funcs = list(func_by_key[arrow] for arrow in arrows)
+        repeatable_funcs.append(func_by_key["!"])
+
+        # Count out how many times to call the Func
+
+        digit = self.digit
+        y = self.y
+
+        call_count = 1
+        if y:
+            call_count = int(y)
+        elif digit:
+            call_count = int(digit)
+
+        self.call_count = call_count
+
+        # Call once or more
+
+        while True:
+            before_chords = list(chords)
+            func = self.run_one_key_once(keys, key=alt_key, chord=chord)
+
+            # tui = self.tui
+            # tui.__exit__(*sys.exc_info())
+            # print(alt_key)
+            # breakpoint()
+            # tui.__enter__()
+
+            fresh_call_count = self.call_count
+            if func in repeatable_funcs:
+                if fresh_call_count and (fresh_call_count > 1):
+                    self.call_count = fresh_call_count - 1
+
+                    chords.clear()
+                    chords.extend(before_chords)
+                    if chord and (len(keys) == 1):
+                        chords.append(chord)
+                    else:
+                        chords.append(alt_key)
+
+                    continue
+
+            break
+
+        self.call_count = 0
+        if alt_key not in "0123456789":
+            self.digit = None
+
+    def run_one_key_once(self, keys, key, chord):
+        """Run one Key once"""
+
+        chords = self.chords
+        func_by_key = self.func_by_key
+
+        if key not in func_by_key.keys():
+
+            return None
 
         if chord and (len(keys) == 1):
             chords.append(chord)
         else:
-            chords.append(alt_key)
+            chords.append(key)
 
-        func = func_by_key[alt_key]
+        func = func_by_key[key]
 
-        self.key = alt_key
+        self.key = key
         func()
+
+        if key not in "123" "ABC":  # todo: mention discarding this input
+            self.x = None
+            self.y = None
 
         self.key = None
 
-    def tui_read_keys(self, prompt):
+        return func
+
+    def format_prompt(self):
+        """Format the Prompt"""
+
+        digit = self.digit
+        turn = self.turn
+        x = self.x
+        y = self.y
+
+        prompt = "Press ABC or ? or some other key"
+        prompt += ", to choose Row for {}".format(turn)
+        if x:
+            prompt = "Press 123 or ? or some other key"
+            prompt += ", to choose Row in Column {} for {}".format(x, turn)
+        elif y:
+            prompt = "Press ABC or ? or some other key"
+            prompt += ", to choose Column in Row {} for {}".format(y, turn)
+        elif digit:
+            prompt = "Press one of ! ← ↑ ↓ →"
+            prompt += ", to repeat {} times, or 1 to undo".format(digit)
+
+        return prompt
+
+    def tui_read_keys(self, tui, prompt):
         """Block till next Keystroke, or till next Paste of Keystrokes"""
 
         tui = self.tui
@@ -318,11 +411,11 @@ class Game:
 
         tui = self.tui
 
-        echo = key
+        chords_echo = key
         if chord and (len(keys) == 1):
-            echo = chord
+            chords_echo = chord
 
-        tui.print(DENT + "input " + echo)
+        tui.print(DENT + "input " + chords_echo)
         tui.print()
 
         self.tui_print_keyhelp()
@@ -375,6 +468,11 @@ class Game:
         self.y = key
         if self.x:
             self.move_onto_x_y(after=turn)  # changes no Cell when repeating a Move
+
+    def take_digit(self):  # 4 5 6 7 8 9
+        """Say how many times to call a Key Arrow Func"""
+
+        self.digit = self.key
 
     def choose_turn(self):  # . O X
         """Choose who moves next"""
@@ -434,7 +532,9 @@ class Game:
         if move:
             self.turn = self.choose_next_turn(after=after)
 
-            board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
+            winners = board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
+            if winners is not None:
+                self.call_count = 0
             self.chords_helps_clear()
 
         return move
@@ -511,11 +611,15 @@ class Game:
 
         if not move:
             self.turn = "X"
+            self.call_count = 0
+            self.chords_helps_clear()
         else:
             (turn, x, y) = move
             self.turn = turn
 
-            board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
+            winners = board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
+            if winners is not None:
+                self.call_count = 0
             self.chords_helps_clear()
 
     def moves_redo_one(self):  # L → RightwardsArrow
@@ -527,11 +631,16 @@ class Game:
 
         move = board.moves_redo_one()
 
-        if move:
+        if not move:
+            self.call_count = 0
+            self.chords_helps_clear()
+        else:
             (turn, x, y) = move
             self.turn = turn
 
-            board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
+            winners = board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
+            if winners is not None:
+                self.call_count = 0
             self.chords_helps_clear()
 
     def game_board_clear(self):  # - Tab
@@ -541,13 +650,19 @@ class Game:
         chords = self.chords
         tui = self.tui
 
-        tui.print(DENT + "input " + " ".join(chords))
-        tui.print()
-        tui.print()
+        if self.key == "\t":
+            tui.print()
+
         self.tui_print_keyhelp()
+
+        chords_echo = " ".join(chords)
+
+        tui.print()
+        tui.print(DENT + "input " + chords_echo)
+
         self.restart_game()
+
         board.tui_turn_chords_print(tui, turn=self.turn, chords=chords)
-        self.chords_helps_clear()
 
 
 class Board:
@@ -1236,19 +1351,14 @@ class Board:
 
         # Format the Chords
 
-        str_chords_plus = " ".join(chords) + " "
-        if len(chords) == 1:
-            chord = chords[-1]
-            if chord in "AWSD" "HKJL":
-                arrow = "←↑↓→←↑↓→"["AWSDHKJL".index(chord)]
-                str_chords_plus = "{} like {}".format(chord, arrow)
+        chords_echo = self.format_echo(chords)
 
         # Print the Chords, the Handicaps, and the Moves
 
         (handicaps, xo_moves) = self._moves_split()
 
         if chords:
-            tui.print(DENT + "input " + str_chords_plus)
+            tui.print(DENT + "input " + chords_echo)
         if handicaps:
             tui.print(DENT + "handicaps " + " ".join(handicaps))
         if xo_moves:
@@ -1262,7 +1372,50 @@ class Board:
 
         # Print the News of a Win or Draw
 
-        self.tui_print_winners(tui, turn=turn)
+        winners = self.tui_print_winners(tui, turn=turn)
+
+        return winners
+
+    def format_echo(self, chords):
+        """Format the Echo of the Chords"""
+
+        echo = " ".join(chords) + " "
+
+        # Compress the Echo of 2 or more Repeats of an Arrow
+
+        if len(chords) > 1:
+            c0 = chords[0]
+            if c0 in "123456789":
+                c1 = chords[1]
+
+                reps = chords[1:]
+                if c1 in "AWSD" "HKJL":
+                    arrow = "←↑↓→←↑↓→"["AWSDHKJL".index(c1)]
+                    reps = len(reps) * [arrow]
+
+                if len(set(reps)) == 1:
+                    r0 = reps[0]
+                    if len(reps) <= 3:
+                        echo = "{} {}, taken as {}".format(c0, c1, " ".join(reps))
+                    else:
+                        echo = "{} {}, taken as {} of {}".format(c0, c1, len(reps), r0)
+
+                    return echo
+
+        # Explain the Echo of a single Letter working as a single Arrow
+
+        if len(chords) == 1:
+            chord = chords[-1]
+            if chord in "AWSD" "HKJL":
+                arrow = "←↑↓→←↑↓→"["AWSDHKJL".index(chord)]
+
+                echo = "{}, taken as {}".format(chord, arrow)
+
+                return echo
+
+        # Succeed
+
+        return echo
 
     def tui_print_winners(self, tui, turn):
         """Print the News of a Win or Draw"""
@@ -1289,8 +1442,9 @@ class Board:
 
             tui.print(DENT + news)
             tui.print()
+            tui.print()
 
-            return
+            return winners
 
         # Print the News of a Draw
 
@@ -1298,8 +1452,9 @@ class Board:
         if not empty_xys:
             tui.print(DENT + "Game over, nobody won")
             tui.print()
+            tui.print()
 
-            return
+            return list()
 
         # Print a Forecast of who could win
 
@@ -1320,6 +1475,10 @@ class Board:
 
             tui.print(DENT + news)
             tui.print()
+
+        # Let the game continue
+
+        return None
 
     def tui_print_cells(self, tui):
         """Print the Cells"""
@@ -1499,39 +1658,39 @@ if __name__ == "__main__":
     main(sys.argv)
 
 
-# todo: sort uniq to reduce flips and rotations, print what remains
-
-
 # todo: Y for analysis - advise the moves without taking them: win, block win, etc
 
-# todo: stop with the Got Choices, instead trace the Chords
-# todo: Press ABC or ? or some other key, to choose Row for X
-# todo: Press 123 or ? or some other key, to choose Column in Row A for X
+
+# todo: say input: !, taken as X B 3
+
+# todo: echo all input, have most of it work like ? /
+# todo: allow 3 of ? / etc before limiting
 
 # todo: = X gives you O after your every X, = O gives you X after O, = . is default
-# todo: > auto plays to end of game in the ↑ ↓ → style only (or end of → input)
-# todo: < auto plays to star of game in the ← style only
+# todo: > auto repeats till close of game after any one of ! ↑ ↓ →
+# todo: < auto repeats till close of game by way of ←
 
-# todo: input > taken as ↑
-# todo: input > taken as 2 ↑
 # todo: input B 2 taken as X B 2
 # todo: input B 2 taken as X B 2, then also O ↑, thus O C 3
+# todo: input > taken as ↑
+# todo: input > taken as 2 ↑
 
-# todo: take digits 0..9 as multiplier before ! ←↑↓→
+
+# todo: quit at 2 of Q Esc ⌃C ⌃\ vs Windows Chrome Linux ⌃C ⌃V
 # todo: take ⌃C as cancelling input preceding it
 # todo: empty the keyboard when not keeping up
 
-# todo: echo all input, have most of it work like ? /
-# todo: say input: !, taken as X B 3
-# todo: allow 3 of ? / etc before limiting
-# todo: quit at 2 of Q Esc ⌃C ⌃\ vs Windows Chrome Linux ⌃C ⌃V
 
 # todo: export/ import Game & Board into __pycache__/tictactoe.json
 
 
+# todo: sort uniq to reduce flips and rotations, print what remains
+
+
+# todo: sketch how many X wins vs O wins still possible
 # todo: 2 doesn't say what fraction of the moves you chose yourself
 # todo: 3 doesn't forecast to say when a Draw or Win is inevitable
-# todo: sketch how many X wins vs O wins still possible
+
 # todo: 4 doesn't undo clearing the Board - could resist Undo of Clear, not refuse it
 
 # todo: draw counters not yet placed to fill the empty cells
@@ -1542,6 +1701,7 @@ if __name__ == "__main__":
 # todo: could toggle start with X vs O
 # todo: could mark the Board somehow for next X or next O
 # todo: could resist Tab after Tab
+
 
 # todo: 'def run_till_quit' prompts for n != 3
 
