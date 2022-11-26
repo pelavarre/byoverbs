@@ -130,7 +130,7 @@ class Game:
     def chords_helps_clear(self):
         """Restart collecting input, like after each Move"""
 
-        self.digit = None
+        self.digits = ""
 
         self.chords.clear()
         self.helps.clear()
@@ -194,6 +194,7 @@ class Game:
 
         func_by_key.update(
             {
+                "0": self.choose_y,
                 "1": self.choose_y,
                 "2": self.choose_y,
                 "3": self.choose_y,
@@ -249,6 +250,8 @@ class Game:
                 elif not shunting:
 
                     alt_key = key.upper()  # the '?' at ⇧ /, the '/', etc
+                    if not self.digits and (key == "0"):
+                        alt_key = None
                     if alt_key not in func_by_key.keys():
                         if len(helps) < 3:
                             self.help_game(keys, key=key, chord=chord)
@@ -277,14 +280,14 @@ class Game:
 
         # Count out how many times to call the Func
 
-        digit = self.digit
+        digits = self.digits
         y = self.y
 
         call_count = 1
         if y:
             call_count = int(y)
-        elif digit:
-            call_count = int(digit)
+        elif digits:
+            call_count = int(digits)
 
         self.call_count = call_count
 
@@ -318,7 +321,7 @@ class Game:
 
         self.call_count = 0
         if alt_key not in "0123456789":
-            self.digit = None
+            self.digits = ""
 
     def run_one_key_once(self, keys, key, chord):
         """Run one Key once"""
@@ -349,7 +352,7 @@ class Game:
     def format_prompt(self):
         """Format the Prompt"""
 
-        digit = self.digit
+        digits = self.digits
         turn = self.turn
         x = self.x
         y = self.y
@@ -362,9 +365,9 @@ class Game:
         elif y:
             prompt = "Press ABC or ? or some other key"
             prompt += ", to choose Column in Row {} for {}".format(y, turn)
-        elif digit:
+        elif digits:
             prompt = "Press one of ! ← ↑ ↓ →"
-            prompt += ", to repeat {} times, or 1 to undo".format(digit)
+            prompt += ", to repeat {} times, or 1 to undo".format(digits)
 
         return prompt
 
@@ -453,27 +456,41 @@ class Game:
     def choose_x(self):  # A B C
         """Choose a Column of the Board to move onto"""
 
+        digits = self.digits
         key = self.key
         turn = self.turn
 
-        self.x = key
-        if self.y:
-            self.move_onto_x_y(after=turn)  # changes no Cell when repeating a Move
+        if not digits:
+            self.x = key
+            if self.y:
+                self.move_onto_x_y(after=turn)  # changes no Cell when repeating a Move
+
+            self.digits = ""
+
+        self.take_digit()
 
     def choose_y(self):  # 1 2 3
         """Choose a Row of the Board to move onto"""
 
+        digits = self.digits
         key = self.key
         turn = self.turn
 
-        self.y = key
-        if self.x:
-            self.move_onto_x_y(after=turn)  # changes no Cell when repeating a Move
+        if not digits:
+            self.y = key
+            if self.x:
+                self.move_onto_x_y(after=turn)  # changes no Cell when repeating a Move
 
-    def take_digit(self):  # 4 5 6 7 8 9
+            self.digits = ""
+
+        self.take_digit()
+
+    def take_digit(self):  # 0 4 5 6 7 8 9 directly, or 1 2 3 indirectly
         """Say how many times to call a Key Arrow Func"""
 
-        self.digit = self.key
+        digits = self.digits
+
+        self.digits = (digits + self.key).lstrip("0")
 
     def choose_turn(self):  # . O X
         """Choose who moves next"""
@@ -1416,10 +1433,18 @@ class Board:
 
         if len(chords) > 1:
             c0 = chords[0]
-            if c0 in "123456789":
-                c1 = chords[1]
+            if c0 in "0123456789":
 
-                reps = chords[1:]
+                for index in range(1, len(chords)):
+                    if chords[index] in "0123456789":
+                        c0 = c0 + chords[index]
+                    else:
+
+                        break
+
+                reps = chords[index:]
+
+                c1 = chords[index]
                 if c1 in "AWSD" "HKJL":
                     arrow = "←↑↓→←↑↓→"["AWSDHKJL".index(c1)]
                     reps = len(reps) * [arrow]
@@ -1700,15 +1725,6 @@ if __name__ == "__main__":
 # todo: Y for analysis - advise the moves without taking them: win, block win, etc
 
 
-# todo: > auto repeats till close of game after any one of ! ↑ ↓ →
-# todo: < auto repeats till close of game by way of ←
-
-# todo: = X gives you O after your every X, = O gives you X after O, = . is default
-# todo: input B 2 taken as X B 2, then also O ↑, thus O C 3
-# todo: input > taken as ↑
-# todo: input > taken as 2 ↑
-
-
 # todo: quit at 2 of Q Esc ⌃C ⌃\ vs Windows Chrome Linux ⌃C ⌃V
 # todo: take ⌃C as cancelling input preceding it
 # todo: empty the keyboard when not keeping up
@@ -1720,13 +1736,15 @@ if __name__ == "__main__":
 # todo: sort uniq to reduce flips and rotations, print what remains
 
 
+# todo: draw counters not yet placed to fill the empty cells
+
 # todo: sketch how many X wins vs O wins still possible
 # todo: 2 doesn't say what fraction of the moves you chose yourself
 # todo: 3 doesn't forecast to say when a Draw or Win is inevitable
 
 # todo: 4 doesn't undo clearing the Board - could resist Undo of Clear, not refuse it
 
-# todo: draw counters not yet placed to fill the empty cells
+# todo: = X gives you O after your every X, = O gives you X after O, = . is default
 
 # todo: lean more into always doing something in reply to input
 # todo: could make the meanings of ! ←↑↓→ - Return more visible
