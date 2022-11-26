@@ -102,8 +102,7 @@ python3:  # example usage:  make python3 py=bin/byotools.py
 
 .PHONY: bin
 bin:
-	: 'Press Control+D if you mean it, else Control+C' :
-	@cat - >/dev/null
+	rm -fr bin/__pycache__/
 	cp -p bin/* ~/bin/.
 
 .PHONY: dotfiles
