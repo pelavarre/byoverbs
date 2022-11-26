@@ -1,5 +1,9 @@
 _ = """
 
+    "lgg": "git log --oneline --no-decorate -G {}",  # touches, aka Grep Source
+
+    "lgs": "git log --oneline --no-decorate -S {}",  # changes, aka Pickaxe
+
 $ git clean --help
 
        -e <pattern>, --exclude=<pattern>

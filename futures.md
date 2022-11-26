@@ -209,6 +209,23 @@ it's got an early index of source code in it, i might should catch that up
 
 i gather notes here when they reach me, then later i spread them out above
 
++ o=$OLDPWD  # for the sake of $o in command lines
++ open.py session should stay open till Tty Eof, and log its work
+
++ cache requests get/post & subprocess run
++ dump & py grep & delete chosen sets of cache keys
++ grep cache keys by key or by value or by date/time stamp
++ grep.py for classic regex vs pygrep.py for py regex
+
++ keep more Terminal Windows in synch across input histories
++ stop losing timestamps on the first input lines of the morning
+
++ 'def unicode\_name' should find "EM" in place of "EOM"
++ eqgol qgiol qgol vqgol -> eol qoil vol, but only 'qoil' exists as yet
++ '|t 3' could mean '|tail -3'
++ 'dotfiles/bash\_profile'
++ screen for SyntaxErrors, and auto-repair needs 1 trailing ':' or a few '))'
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md

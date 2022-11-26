@@ -14,6 +14,9 @@ default:
 	@echo 'make help  # shows more help lines and exits'
 	@echo 'make push  # restyles & tests the source, then tells me to push it'
 	@echo
+	@echo 'make bin  # put bin dir files under test at home bin dir'
+	@echo 'make dotfiles  # publish many home dot files'
+	@echo
 	@echo 'open https://twitter.com/intent/tweet?text=.@PELaVarre'
 	@echo
 
@@ -32,6 +35,9 @@ help:
 	@echo '  make  # shows examples and exits'
 	@echo '  make help  # shows these help lines and exits'
 	@echo '  make push  # restyles & tests the source, then tells me to push it'
+	@echo
+	@echo '  make bin  # put bin dir files under test at home bin dir'
+	@echo '  make dotfiles  # publish many home dot files'
 	@echo
 	@echo '  open https://twitter.com/intent/tweet?text=.@PELaVarre'
 	@echo
@@ -98,12 +104,15 @@ python3:  # example usage:  make python3 py=bin/byotools.py
 	python3 $(py)
 
 
-# Publish many $HOME DotFiles
+# Put Bin Dir Files under test at Home Bin Dir
 
 .PHONY: bin
 bin:
 	rm -fr bin/__pycache__/
 	cp -p bin/* ~/bin/.
+
+
+# Publish many $HOME DotFiles
 
 .PHONY: dotfiles
 dotfiles:
