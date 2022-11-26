@@ -33,6 +33,8 @@ examples:
 
 import __main__
 import collections
+import datetime as dt
+import functools
 import pdb
 import random
 import sys
@@ -1588,8 +1590,13 @@ class Board:
         # Print a Forecast of who could win
 
         if False:  # len(empty_xys) <= 9:  # FIXME: run fast
+            # if len(empty_xys) <= 9:
 
-            (x, o, z) = self.forecast_x_o_wins(tui, turn=turn)
+            t0 = dt.datetime.now()
+            (x, o, z) = self.forecast_x_o_wins(turn=turn)
+            t1 = dt.datetime.now()
+
+            str_td = dt_timedelta_strftime(t1 - t0)
 
             str_x = "{:,}".format(x).replace(",", "_")
             str_o = "{:,}".format(o).replace(",", "_")
@@ -1603,6 +1610,7 @@ class Board:
                 news = "Game nearly over, nobody wins"
 
             tui.print(DENT + news)
+            tui.print(DENT + "calculated in", str_td)
             tui.print()
 
         # Let the game continue
@@ -1657,7 +1665,7 @@ class Board:
 
             tui.print()
 
-    def forecast_x_o_wins(self, tui, turn):
+    def forecast_x_o_wins(self, turn):
 
         cells = self.cells
 
@@ -1676,7 +1684,7 @@ class Board:
 
         scoreables = list()
 
-        scoreable = (turn, cells)
+        scoreable = (turn, tuple(cells))
         scoreables.append(scoreable)
 
         x_ = 0
@@ -1688,7 +1696,7 @@ class Board:
 
             turn__ = "X" if (turn_ != "X") else "O"
 
-            (x, o, z) = self.score_x_o_wins(tui, cells=cells_)
+            (x, o, z) = self.score_x_o_wins(cells=cells_)
 
             if z and ("." in cells_):
 
@@ -1697,20 +1705,22 @@ class Board:
                         cells__ = list(cells_)
                         cells__[index] = turn_
 
-                        scoreable__ = (turn__, cells__)
-                        # tui.print(scoreable__)
+                        scoreable__ = (turn__, tuple(cells__))
                         scoreables.append(scoreable__)
 
             else:
 
-                (x, o, z) = self.score_x_o_wins(tui, cells=cells_)
+                (x, o, z) = self.score_x_o_wins(cells=cells_)
                 x_ += x
                 o_ += o
                 z_ += z
 
         return (x_, o_, z_)
 
-    def score_x_o_wins(self, tui, cells):
+    _ = functools
+
+    # @functools.cache
+    def score_x_o_wins(self, cells):
 
         xys = self.xys
         streaks = self.streaks
@@ -1734,12 +1744,49 @@ class Board:
         o = 1 if (len_o > len_x) else 0
         z = 0 if (x or o) else 1
 
-        # str_cells = "{}{}{} {}{}{} {}{}{}".format(*cells)
-        # if str_cells == "XoX xoo xOx":
-        #     breakpoint()
-        # tui.print("Z" if z else ("X" if x else "O"), str_cells)
-
         return (x, o, z)
+
+
+#
+# Add some Def's to Import DateTime
+#
+
+
+def dt_timedelta_strftime(td, str_zero="0s"):
+    """Give 'w d h m s ms us ms' to mean 'weeks=', 'days=', etc"""
+
+    # Pick Weeks out of Days, Minutes out of Seconds, and Millis out of Micros
+
+    w = td.days // 7
+    d = td.days % 7
+
+    h = td.seconds // 3600
+    h_s = td.seconds % 3600
+    m = h_s // 60
+    s = h_s % 60
+
+    ms = td.microseconds // 1000
+    us = td.microseconds % 1000
+
+    # Catenate Value-Key Pairs in order, but strip leading and trailing Zeroes,
+    # and choose one unit arbitrarily when speaking of any zeroed TimeDelta
+
+    keys = "w d h m s ms us".split()
+    values = (w, d, h, m, s, ms, us)
+
+    chars = ""
+    for (index, (k, v)) in enumerate(zip(keys, values)):
+        if (chars or v) and any(values[index:]):
+            chars += "{}{}".format(v, k)
+
+    str_zeroes = list((str(0) + _) for _ in keys)
+    if not chars:
+        assert str_zero in str_zeroes, (str_zero, str_zeroes)
+        chars = str_zero
+
+    # Succeed
+
+    return chars  # such as '4m29s334ms'
 
 
 #
@@ -1788,6 +1835,10 @@ if __name__ == "__main__":
 
 
 # todo: rapid lookahead
+
+# todo: rewrite forecast as listing which boards do have wins
+# todo: flip X wins as O wins, across all possible boards
+
 # todo: sketch how many X wins vs O wins still possible
 # todo: 3 doesn't forecast to say when a Draw or Win is inevitable
 
