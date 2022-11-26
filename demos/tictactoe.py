@@ -98,9 +98,10 @@ class Game:
         self.n = n
         self.board = None
 
-        self.keyhelp = ".XO ABC 123 ! ←↑↓→ - Tab # Return ? / Q Esc"  # AWSD HKJL
+        self.keyhelp = ".XO ABC 123 ! ←↑↓→ Y - Tab # Return ? / Q Esc"  # AWSD HKJL
         self.chords = list()
         self.helps = list()
+        self.whys = list()
 
         self.call_count = 0
 
@@ -125,15 +126,16 @@ class Game:
         self.y = None
         self.taken_as = None
 
-        self.chords_helps_clear()
+        self.chords_helps_whys_clear()
 
-    def chords_helps_clear(self):
+    def chords_helps_whys_clear(self):
         """Restart collecting input, like after each Move"""
 
         self.digits = ""
 
         self.chords.clear()
         self.helps.clear()
+        self.whys.clear()
 
     def form_func_by_key(self):
         """Choose which Keystroke calls for what action"""
@@ -151,6 +153,7 @@ class Game:
                 "\x1B": self.quit_game,  # Esc ⌃[
                 "!": self.move_onto_random,
                 "Q": self.quit_game,
+                "Y": self.sketch_game,
                 "\x7F": self.moves_undo_one,  # Delete  # classic ⌃? but not at Mac
                 "\x1B[A": self.move_to_win,  # UpwardsArrow ↑
                 "\x1B[B": self.move_onto_empty,  # DownwardsArrow ↓
@@ -425,6 +428,20 @@ class Game:
         self.tui_print_keyhelp()
         tui.print()
 
+    def sketch_game(self):  # Y
+        """Print Votes from each Party towards choosing the next Move"""
+
+        board = self.board
+        tui = self.tui
+        turn = self.turn
+        whys = self.whys
+
+        if not whys:
+            whys.append(1)
+
+            board.explain_shove_in(tui, turn)
+            self.tui.print()
+
     def tui_print_keyhelp(self):
         """Print the Key Help at Launch, Restart, Quit or on demand"""
 
@@ -442,7 +459,7 @@ class Game:
         tui.print(DENT + " ".join(chords))
         tui.print()
 
-        self.chords_helps_clear()
+        self.chords_helps_whys_clear()
 
         WAR_GAMES_QUOTE = "A strange game"  # from "War Games" 1983
         WAR_GAMES_QUOTE += ". The only winning move is not to play"
@@ -556,7 +573,7 @@ class Game:
             )
             if winners is not None:
                 self.call_count = 0
-            self.chords_helps_clear()
+            self.chords_helps_whys_clear()
 
         return move
 
@@ -633,7 +650,7 @@ class Game:
         if not move:
             self.turn = "X"
             self.call_count = 0
-            self.chords_helps_clear()
+            self.chords_helps_whys_clear()
         else:
             (turn, x, y) = move
             self.turn = turn
@@ -643,7 +660,7 @@ class Game:
             )
             if winners is not None:
                 self.call_count = 0
-            self.chords_helps_clear()
+            self.chords_helps_whys_clear()
 
     def moves_redo_one(self):  # L → RightwardsArrow
         """Redo the Last Undone"""
@@ -656,7 +673,7 @@ class Game:
 
         if not move:
             self.call_count = 0
-            self.chords_helps_clear()
+            self.chords_helps_whys_clear()
         else:
             (turn, x, y) = move
             self.turn = turn
@@ -666,7 +683,7 @@ class Game:
             )
             if winners is not None:
                 self.call_count = 0
-            self.chords_helps_clear()
+            self.chords_helps_whys_clear()
 
     def game_board_clear(self):  # - Tab
         """Clear the Board"""
@@ -939,8 +956,53 @@ class Board:
 
         return move
 
+    def explain_shove_in(self, tui, turn):
+        """Explain how to max chance of winning"""
+
+        moves = self.moves
+
+        # Explain goals, much in the way of Newell & Simon 1972
+        # as paraphrased by:  https://en.wikipedia.org/wiki/Tic-tac-toe
+
+        empty_xys = self.find_empty_xys()
+        if not empty_xys:
+            tui.print("No Empty Cells - Press ← to undo, or Tab to start over")
+
+            return
+
+        goals = [
+            (self.find_win_xys, "Win"),
+            (self.find_block_win_xys, "Block Win"),
+            (self.find_fork_xys, "Fork"),
+            (self.find_threaten_win_xys, "Threaten Win Cell"),
+            (self.find_block_fork_xys, "Block Fork Cell"),
+            (self.find_opposite_corner_xys, "Opposite Corner Cell"),
+            (self.center_xys, "Center Cell"),
+            (self.corner_xys, "Corner Cell"),
+            (self.side_xys, "Side Cell"),
+        ]
+
+        if not moves:
+            goals = [
+                (self.corner_xys, "Corner Cell"),
+                (self.center_xys, "Center Cell"),
+                (self.side_xys, "Side Cell"),
+            ]
+
+        for goal in goals:
+            (voter, party) = goal
+
+            voter_xys = voter
+            if not isinstance(voter, list):
+                voter_xys = voter(turn)
+            voter_xys = list(_ for _ in voter_xys if _ in empty_xys)
+
+            if voter_xys:
+                str_votes = " ".join((turn + "".join(_)) for _ in voter_xys)
+                tui.print(DENT + "{} = {}".format(party, str_votes))
+
     def choose_shove_in(self, turn):
-        """Say how to max chance of winning"""
+        """Choose how to max chance of winning"""
 
         moves = self.moves
         xys = self.xys
@@ -976,11 +1038,14 @@ class Board:
         for xy in empty_xys:
             weight = 0
             for (index, voter) in enumerate(voters):
+
                 voter_xys = voter
                 if not isinstance(voter, list):
                     voter_xys = voter(turn)
                 if xy in voter_xys:
+
                     weight |= 1 << index
+
             weight_by_xy[xy] |= weight
 
         max_weight = max(weight_by_xy.values())
@@ -1722,29 +1787,25 @@ if __name__ == "__main__":
     main(sys.argv)
 
 
-# todo: Y for analysis - advise the moves without taking them: win, block win, etc
+# todo: rapid lookahead
+# todo: sketch how many X wins vs O wins still possible
+# todo: 3 doesn't forecast to say when a Draw or Win is inevitable
+
+# todo: sort uniq to reduce flips and rotations, print what remains
 
 
 # todo: quit at 2 of Q Esc ⌃C ⌃\ vs Windows Chrome Linux ⌃C ⌃V
 # todo: take ⌃C as cancelling input preceding it
 # todo: empty the keyboard when not keeping up
 
-
 # todo: export/ import Game & Board into __pycache__/tictactoe.json
+# todo: 4 doesn't undo clearing the Board - could resist Undo of Clear, not refuse it
 
-
-# todo: sort uniq to reduce flips and rotations, print what remains
+# todo: X = gives you O after your every X, O = gives you X after O, . = is default
 
 
 # todo: draw counters not yet placed to fill the empty cells
-
-# todo: sketch how many X wins vs O wins still possible
 # todo: 2 doesn't say what fraction of the moves you chose yourself
-# todo: 3 doesn't forecast to say when a Draw or Win is inevitable
-
-# todo: 4 doesn't undo clearing the Board - could resist Undo of Clear, not refuse it
-
-# todo: = X gives you O after your every X, = O gives you X after O, = . is default
 
 # todo: lean more into always doing something in reply to input
 # todo: could make the meanings of ! ←↑↓→ - Return more visible
