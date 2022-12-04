@@ -10,7 +10,9 @@ examples:
 """
 
 import __main__
+import argparse
 import datetime as dt
+import difflib
 import os
 import pdb
 import shlex
@@ -29,6 +31,87 @@ _ = dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6
 # _ = shlex.join  # new since Oct/2019 Python 3.8
 # _ = str.removesuffix  # new since Oct/2020 Python 3.9
 # _  = list(zip([], [], strict=True))  # since Oct/2021 Python 3.10
+
+
+#
+# Add some Def's to Import ArgParse
+#
+
+
+def compile_argdoc(epi, drop_help=None):
+    """Construct an ArgumentParser, from ArgDoc, without Positional Args and Options"""
+
+    doc = __main__.__doc__
+
+    doc_lines = doc.strip().splitlines()
+    prog = doc_lines[0].split()[1]  # first word of first line
+
+    doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
+    description = doc_firstlines[1]  # first line of second paragraph
+
+    add_help = not drop_help
+
+    epilog_at = doc.index(epi)
+    epilog = doc[epilog_at:]
+
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        description=description,
+        add_help=add_help,
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=epilog,
+    )
+
+    return parser
+
+
+def exit_unless_doc_eq(parser):
+    """Exit nonzero, unless __main__.__doc__ equals "parser.format_help()" """
+
+    # Fetch the Parser Doc from a fitting virtual Terminal
+    # Fetch from a Black Terminal of 89 columns, not current Terminal width
+    # Fetch from later Python of "options:", not earlier Python of "optional arguments:"
+
+    with_columns = os.getenv("COLUMNS")
+    os.environ["COLUMNS"] = str(89)
+    try:
+
+        parser_doc = parser.format_help()
+
+    finally:
+        if with_columns is None:
+            os.environ.pop("COLUMNS")
+        else:
+            os.environ["COLUMNS"] = with_columns
+
+    parser_doc = parser_doc.replace("optional arguments:", "options:")
+
+    # Fetch the Main Doc
+
+    file_filename = os.path.split(__file__)[-1]
+
+    main_doc = __main__.__doc__.strip()
+
+    got = main_doc
+    got_filename = "./{} --help".format(file_filename)
+    want = parser_doc
+    want_filename = "argparse.ArgumentParser(..."
+
+    # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
+
+    diff_lines = list(
+        difflib.unified_diff(
+            a=got.splitlines(),
+            b=want.splitlines(),
+            fromfile=got_filename,
+            tofile=want_filename,
+        )
+    )
+
+    if diff_lines:
+        print("\n".join(diff_lines))
+
+        sys.exit(1)  # trust caller to log SystemExit exceptions well
 
 
 #
@@ -105,11 +188,6 @@ def ast_fetch_testdoc():
         return main_doc
 
     return doc
-
-
-#
-# Add some Def's to Import Os
-#
 
 
 #
