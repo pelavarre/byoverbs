@@ -1,0 +1,2 @@
+set -xe
+git log --pretty=fuller --no-decorate --author="$(git config user.email)" "$@"

@@ -210,6 +210,7 @@ it's got an early index of source code in it, i might should catch that up
 i gather notes here when they reach me, then later i spread them out above
 
 + o=$OLDPWD  # for the sake of $o in command lines
++ compositional - o for run it in or on the $OLDPWD
 + open.py session should stay open till Tty Eof, and log its work
 
 + cache requests get/post & subprocess run
