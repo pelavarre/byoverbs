@@ -105,7 +105,7 @@ DARK_THEME_COLOR_BY_AGE = tuple(_ for _ in COLOR_BY_AGE if _ not in DARK_COLORS)
 def main(sys_argv=None):
     """Run from the Sh command line"""
 
-    parse_keycaps_args(sys_argv)  # exits if no args, etc
+    parse_keycaps_py_args_else(sys_argv)  # prints helps and exits, else returns args
 
     require_tui()
 
@@ -760,8 +760,8 @@ assert MAX_LEN_KEY_CAPS_STROKE_6 == 6, MAX_LEN_KEY_CAPS_STROKE_6
 #
 
 
-def parse_keycaps_args(sys_argv):
-    """Take Words from the Sh Command Line into KeyCaps Py"""
+def parse_keycaps_py_args_else(sys_argv):
+    """Print helps for Keycaps Py and exit zero or nonzero, else return args"""
 
     as_sys_argv = sys_argv if sys_argv else [None, "--"]
 
@@ -773,8 +773,8 @@ def parse_keycaps_args(sys_argv):
 
     # Parse the Sh Command Line, or show Help
 
-    parser = compile_keycaps_argdoc()
-    args = parser.parse_args(sys_parms)  # exits if "-h", "--h", "--he", ... "--help"
+    argparser = compile_keycaps_argdoc_else()
+    args = argparser.parse_args(sys_parms)  # prints helps and exits, else returns args
     if not as_sys_argv[1:]:
         doc = __main__.__doc__
 
@@ -785,19 +785,19 @@ def parse_keycaps_args(sys_argv):
     return args
 
 
-def compile_keycaps_argdoc():
+def compile_keycaps_argdoc_else():
     """Form an ArgumentParser for KeyCaps Py"""
 
     doc = __main__.__doc__
-    parser = compile_argdoc(doc, epi="quirks")
+    argparser = compile_argdoc(doc, epi="quirks")
     try:
-        exit_unless_doc_eq(doc, parser)
+        exit_unless_doc_eq(doc, argparser)
     except SystemExit:
         sys_stderr_print("keycaps.py: ERROR: main doc and argparse parser disagree")
 
         raise
 
-    return parser
+    return argparser
 
 
 #
@@ -817,7 +817,7 @@ def compile_argdoc(doc, epi):
     epilog_at = doc.index(epi)
     epilog = doc[epilog_at:]
 
-    parser = argparse.ArgumentParser(
+    argparser = argparse.ArgumentParser(
         prog=prog,
         description=description,
         add_help=True,
@@ -825,11 +825,17 @@ def compile_argdoc(doc, epi):
         epilog=epilog,
     )
 
-    return parser
+    return argparser
 
 
 def exit_unless_doc_eq(doc, parser):
-    """Exit nonzero, unless Doc equals Parser Format_Help"""
+    """Complain and exit nonzero, unless Arg Doc equals Parser Format_Help"""
+
+    # Fetch the Main Doc, and note where from
+
+    main_doc = __main__.__doc__.strip()
+    main_filename = os.path.split(__file__)[-1]
+    got_filename = "./{} --help".format(main_filename)
 
     # Fetch the Parser Doc from a fitting virtual Terminal
     # Fetch from a Black Terminal of 89 columns, not current Terminal width
@@ -849,18 +855,13 @@ def exit_unless_doc_eq(doc, parser):
 
     parser_doc = parser_doc.replace("optional arguments:", "options:")
 
-    # Fetch the Main Doc
-
-    file_filename = os.path.split(__file__)[-1]
-
-    main_doc_strip = doc.strip()
-
-    got = main_doc_strip
-    got_filename = "{} --help".format(file_filename)
-    want = parser_doc
-    want_filename = "argparse.ArgumentParser(..."
+    parser_filename = "ArgumentParser(...)"
+    want_filename = parser_filename
 
     # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
+
+    got = main_doc
+    want = parser_doc
 
     diff_lines = list(
         difflib.unified_diff(
@@ -874,7 +875,7 @@ def exit_unless_doc_eq(doc, parser):
     if diff_lines:
         sys_stderr_print("\n".join(diff_lines))
 
-        sys.exit(1)  # trust caller to log SystemExit exceptions well
+        sys.exit(2)  # trust caller to log SystemExit exceptions well
 
 
 def exit_via_testdoc(doc, epi):

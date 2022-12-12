@@ -108,8 +108,6 @@ def exit_if():
     testdoc = testdoc[testdoc.index("examples") :]
     testdoc = textwrap.dedent("\n".join(testdoc.splitlines()[1:])).strip()
 
-    breakpoint()
-
     sys_parms = sys.argv[1:]
     if not sys_parms:
         print(testdoc)

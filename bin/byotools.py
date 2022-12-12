@@ -16,6 +16,7 @@ import difflib
 import os
 import pdb
 import shlex
+import signal
 import subprocess
 import sys
 import textwrap
@@ -41,9 +42,9 @@ _ = dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6
 def compile_argdoc(epi, drop_help=None):
     """Construct an ArgumentParser, from ArgDoc, without Positional Args and Options"""
 
-    doc = __main__.__doc__
+    argdoc = __main__.__doc__  # could be:  argdoc = doc if doc else __main__.__doc__
 
-    doc_lines = doc.strip().splitlines()
+    doc_lines = argdoc.strip().splitlines()
     prog = doc_lines[0].split()[1]  # first word of first line
 
     doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
@@ -51,8 +52,8 @@ def compile_argdoc(epi, drop_help=None):
 
     add_help = not drop_help
 
-    epilog_at = doc.index(epi)
-    epilog = doc[epilog_at:]
+    epilog_at = argdoc.index(epi)
+    epilog = argdoc[epilog_at:]
 
     parser = argparse.ArgumentParser(
         prog=prog,
@@ -66,7 +67,13 @@ def compile_argdoc(epi, drop_help=None):
 
 
 def exit_unless_doc_eq(parser):
-    """Exit nonzero, unless __main__.__doc__ equals "parser.format_help()" """
+    """Complain and exit nonzero, unless Arg Doc equals Parser Format_Help"""
+
+    # Fetch the Main Doc, and note where from
+
+    main_doc = __main__.__doc__.strip()
+    main_filename = os.path.split(__file__)[-1]
+    got_filename = "./{} --help".format(main_filename)
 
     # Fetch the Parser Doc from a fitting virtual Terminal
     # Fetch from a Black Terminal of 89 columns, not current Terminal width
@@ -86,23 +93,18 @@ def exit_unless_doc_eq(parser):
 
     parser_doc = parser_doc.replace("optional arguments:", "options:")
 
-    # Fetch the Main Doc
-
-    file_filename = os.path.split(__file__)[-1]
-
-    main_doc = __main__.__doc__.strip()
-
-    got = main_doc
-    got_filename = "./{} --help".format(file_filename)
-    want = parser_doc
-    want_filename = "argparse.ArgumentParser(..."
+    parser_filename = "ArgumentParser(...)"
+    want_filename = parser_filename
 
     # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
 
+    got_doc = main_doc
+    want_doc = parser_doc
+
     diff_lines = list(
         difflib.unified_diff(
-            a=got.splitlines(),
-            b=want.splitlines(),
+            a=got_doc.splitlines(),
+            b=want_doc.splitlines(),
             fromfile=got_filename,
             tofile=want_filename,
         )
@@ -111,7 +113,7 @@ def exit_unless_doc_eq(parser):
     if diff_lines:
         print("\n".join(diff_lines))
 
-        sys.exit(1)  # trust caller to log SystemExit exceptions well
+        sys.exit(2)  # trust caller to log SystemExit exceptions well
 
 
 #
@@ -225,6 +227,31 @@ def shlex_parms_one_posarg():
 
 
 #
+# Add some Def's to Type Str
+#
+
+
+def str_removeprefix(chars, prefix):
+    """Remove Prefix from Chars if present, till Oct/2020 Python 3.9 str.removeprefix"""
+
+    result = chars
+    if prefix and chars.startswith(prefix):
+        result = chars[len(prefix) :]
+
+    return result
+
+
+def str_removesuffix(chars, suffix):
+    """Remove Suffix from Chars if present, till Oct/2020 Python 3.9 str.removesuffix"""
+
+    result = chars
+    if suffix and chars.endswith(suffix):
+        result = chars[: -len(suffix)]
+
+    return result
+
+
+#
 # Add some Def's to Import SubProcess
 #
 
@@ -332,6 +359,37 @@ def sys_exit_if_testdoc():
         print()
 
         sys.exit()
+
+
+def sys_stdin_prompt_if():
+    """Prompt for TTY EOF before blocking to read more of it"""
+
+    CONTROL_KEYCAP = "\N{Up Arrowhead}"  # ⌃
+    if sys.stdin.isatty():
+        sys_stderr_print("Press {}D TTY EOF to quit".format(CONTROL_KEYCAP))
+
+
+def sys_stdin_readline_else():
+    """Take a Line from Sys StdIn, else exit zero or nonzero"""
+
+    SIGINT_RETURNCODE_130 = 0x80 | signal.SIGINT
+    assert SIGINT_RETURNCODE_130 == 130, SIGINT_RETURNCODE_130
+
+    try:
+        line = sys.stdin.readline()
+    except KeyboardInterrupt:
+        sys.stderr.write("\n")
+        sys.stderr.write("KeyboardInterrupt\n")
+
+        sys.exit(SIGINT_RETURNCODE_130)  # exits 130 to say KeyboardInterrupt SIGINT
+
+    if not line:  # already echoed as "^D\n" at Mac, already echoed as "\n" at Linux
+
+        sys.exit()  # exits None to say Stdin Closed
+
+    chars = line.splitlines()[0]  # picks out Chars of Line, apart from Line End
+
+    return chars
 
 
 def sys_stderr_print(*args, **kwargs):

@@ -54,7 +54,7 @@ def main():
 
     # Take in Words from the Sh Command Line
 
-    args = parse_cal_args()  # prints help & exits if no args, if '--h', if bad syntax
+    args = parse_cal_py_args_else()  # prints helps and exits, else returns args
 
     # Work up some context
 
@@ -232,18 +232,18 @@ def argv_append_args_Y(argv, args, when):
     argv.append(arg)
 
 
-def parse_cal_args():
-    """Take in Words from the Sh Command Line"""
+def parse_cal_py_args_else():
+    """Print helps for Cal Py and exit zero or nonzero, else return args"""
 
     # Take Words
 
-    parser = compile_cal_argdoc()
+    argparser = compile_cal_py_argdoc_else()
 
     byo.sys_exit_if_testdoc()  # prints examples & exits if no args
 
     byo.sys_exit_if_argdoc()  # prints help lines & exits if "--h" arg, but ignores "-h"
 
-    args = parser.parse_args()
+    args = argparser.parse_args()  # prints helps and exits, else returns args
     assert not args.help, args
     del args.help
 
@@ -335,7 +335,7 @@ def parse_cal_when(str_when, now):
     return when
 
 
-def compile_cal_argdoc():
+def compile_cal_py_argdoc_else():
     """Construct an ArgumentParser from the Main ArgDoc"""
 
     parser = byo.compile_argdoc(drop_help=True, epi="quirks:")

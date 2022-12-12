@@ -209,9 +209,24 @@ it's got an early index of source code in it, i might should catch that up
 
 i gather notes here when they reach me, then later i spread them out above
 
++ tty stdin g should mean qo, else g -R $PWD
+
++ open.py of a thin decimal number should put that number into a recent web address
++ open.py session should stay open till Tty Eof, and log its work
+
++ give me a 'time.sleep' that invites me to quit it, like by pressing Return
+
++ 3 qp should work like qp && qp && qp
+
++ make remote 'cv' work - like push/pull 'scp.py --' from last Host found by Ssh
+
++ repeat 'mv.py --' to undo it, not to deepen it
++ loosen up 'ls.py' - look across last few days, and across top few of 'dir -p'
+
++ bin/md5sum vs bin/md5sum.bash
+
 + o=$OLDPWD  # for the sake of $o in command lines
 + compositional - o for run it in or on the $OLDPWD
-+ open.py session should stay open till Tty Eof, and log its work
 
 + cache requests get/post & subprocess run
 + dump & py grep & delete chosen sets of cache keys
