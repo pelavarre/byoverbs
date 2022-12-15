@@ -69,13 +69,13 @@ def main():
 def parse_open_py_args_else():
     """Print helps for Open Py and exit zero or nonzero, else return args"""
 
-    argparser = compile_open_py_argdoc_else()
+    parser = compile_open_py_argdoc_else()
 
     byo.sys_exit_if_testdoc()  # prints examples & exits if no args
 
     byo.sys_exit_if_argdoc()  # prints help lines & exits if "--h" arg, but ignores "-h"
 
-    args = argparser.parse_args()  # prints helps and exits, else returns
+    args = parser.parse_args()  # prints helps and exits, else returns
 
     return args
 
@@ -83,9 +83,9 @@ def parse_open_py_args_else():
 def compile_open_py_argdoc_else():
     """Print helps for Open Py and exit zero or nonzero, else return args"""
 
-    argparser = byo.compile_argdoc(epi="quirks:", drop_help=None)
+    parser = byo.compile_argdoc(epi="quirks:", drop_help=None)
 
-    argparser.add_argument(
+    parser.add_argument(
         "address",
         metavar="ADDRESS",
         nargs="?",
@@ -93,13 +93,13 @@ def compile_open_py_argdoc_else():
     )
 
     try:
-        byo.exit_unless_doc_eq(parser=argparser)
+        byo.exit_if_argdoc_ne(parser)
     except SystemExit:
         print("jvsketch.py: ERROR: Main Doc and ArgParse Parser disagree")
 
         raise
 
-    return argparser
+    return parser
 
 
 def address_print_nears(address):

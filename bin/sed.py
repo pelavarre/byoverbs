@@ -3,13 +3,14 @@
 """
 usage: sed.py [--h] ...
 
-copy input to output but edit it along the way
+copy input to buffer to output, while running Sed Code to edit the buffer
 
 options:
   --help  show this help message and exit
 
 quirks:
   macOs Sh defines PbPaste & PbCopy, life is harder elsewhere
+  abbreviates Stream Editor as S E D
 
 examples:
 

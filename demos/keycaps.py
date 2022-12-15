@@ -773,8 +773,8 @@ def parse_keycaps_py_args_else(sys_argv):
 
     # Parse the Sh Command Line, or show Help
 
-    argparser = compile_keycaps_argdoc_else()
-    args = argparser.parse_args(sys_parms)  # prints helps and exits, else returns args
+    parser = compile_keycaps_argdoc_else()
+    args = parser.parse_args(sys_parms)  # prints helps and exits, else returns args
     if not as_sys_argv[1:]:
         doc = __main__.__doc__
 
@@ -789,15 +789,15 @@ def compile_keycaps_argdoc_else():
     """Form an ArgumentParser for KeyCaps Py"""
 
     doc = __main__.__doc__
-    argparser = compile_argdoc(doc, epi="quirks")
+    parser = compile_argdoc(doc, epi="quirks")
     try:
-        exit_unless_doc_eq(doc, argparser)
+        exit_if_argdoc_ne(doc, parser=parser)
     except SystemExit:
         sys_stderr_print("keycaps.py: ERROR: main doc and argparse parser disagree")
 
         raise
 
-    return argparser
+    return parser
 
 
 #
@@ -817,7 +817,7 @@ def compile_argdoc(doc, epi):
     epilog_at = doc.index(epi)
     epilog = doc[epilog_at:]
 
-    argparser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         prog=prog,
         description=description,
         add_help=True,
@@ -825,10 +825,10 @@ def compile_argdoc(doc, epi):
         epilog=epilog,
     )
 
-    return argparser
+    return parser
 
 
-def exit_unless_doc_eq(doc, parser):
+def exit_if_argdoc_ne(doc, parser):
     """Complain and exit nonzero, unless Arg Doc equals Parser Format_Help"""
 
     # Fetch the Main Doc, and note where from

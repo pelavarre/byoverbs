@@ -237,13 +237,13 @@ def parse_cal_py_args_else():
 
     # Take Words
 
-    argparser = compile_cal_py_argdoc_else()
+    parser = compile_cal_py_argdoc_else()
 
     byo.sys_exit_if_testdoc()  # prints examples & exits if no args
 
     byo.sys_exit_if_argdoc()  # prints help lines & exits if "--h" arg, but ignores "-h"
 
-    args = argparser.parse_args()  # prints helps and exits, else returns args
+    args = parser.parse_args()  # prints helps and exits, else returns args
     assert not args.help, args
     del args.help
 
@@ -373,7 +373,7 @@ def compile_cal_py_argdoc_else():
     )
 
     try:
-        byo.exit_unless_doc_eq(parser=parser)
+        byo.exit_if_argdoc_ne(parser)
     except SystemExit:
         print("jvsketch.py: ERROR: Main Doc and ArgParse Parser disagree")
 

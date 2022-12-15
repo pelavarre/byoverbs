@@ -66,8 +66,8 @@ def compile_argdoc(epi, drop_help=None):
     return parser
 
 
-def exit_unless_doc_eq(parser):
-    """Complain and exit nonzero, unless Arg Doc equals Parser Format_Help"""
+def exit_if_argdoc_ne(parser):
+    """Print Diff and exit nonzero, unless Arg Doc equals Parser Format_Help"""
 
     # Fetch the Main Doc, and note where from
 
@@ -114,6 +114,9 @@ def exit_unless_doc_eq(parser):
         print("\n".join(diff_lines))
 
         sys.exit(2)  # trust caller to log SystemExit exceptions well
+
+    # https://github.com/python/cpython/issues/53903  <= options: / optional arguments:
+    # https://bugs.python.org/issue38438  <= usage: [WORD ... ] / [WORD [WORD ...]]
 
 
 #
