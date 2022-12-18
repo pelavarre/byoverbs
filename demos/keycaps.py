@@ -17,7 +17,7 @@ quirks:
   + pressing Key Caps that work outside, such as ⇧ by itself, or F11 in place of ⌥ F6
 
 examples:
-  git clone https://github.com/pelavarre/byoverb.git
+  git clone https://github.com/pelavarre/byoverbs.git
   demos/keycaps.py  # show these examples
   demos/keycaps.py --  # show a fireplace of key caps bright when struck, then fading
   for C in 36 32 33 35 31 34 30 37; do printf "\e[${C}m""color""\e[0m\n"; done

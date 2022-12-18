@@ -20,7 +20,7 @@ quirks:
   quits the Game when you press Q or Esc
 
 examples:
-  git clone https://github.com/pelavarre/byoverb.git
+  git clone https://github.com/pelavarre/byoverbs.git
   demos/tictactoe.py  # show these examples
   demos/tictactoe.py --  # draw a Tic-Tac-Toe Board more vividly than we do by hand
   # colors X O . moves into Cells as:   color color color color color
