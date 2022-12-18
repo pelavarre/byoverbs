@@ -359,10 +359,6 @@ class ShPongGame:
 
             self.ball_step(cap)
 
-            # Win a point when Ball leaves the Board at left or at right
-
-            self.score_ball(cap)
-
         status = "".center(self.status_width)
         tui.print(CUP_Y_X.format(self.status_y, self.status_x) + status, end="")
 
@@ -497,20 +493,15 @@ class ShPongGame:
             if not (self.ball_x_min <= x_next <= self.ball_x_max):
                 assert False, (self.ball_x_min, x_next, self.ball_x_max)
 
+            if x_next == self.ball_x_min:
+                self.scores[-1] += 1
+                assert self.scores[-1] <= 9, self.scores[0]
+            elif x_next == self.ball_x_max:
+                self.scores[0] += 1
+                assert self.scores[0] <= 9, self.scores[0]
+
         self.ball_yx = (y_next, x_next)
         self.ball_vector_yx = (vector_y_next, vector_x_next)
-
-    def score_ball(self, cap):
-        """Win a point when Ball leaves the Board at left or at right"""
-
-        (_, x) = self.ball_yx
-
-        if x == self.ball_x_min:
-            self.scores[-1] += 1
-            assert self.scores[-1] <= 9, self.scores[0]
-        elif x == self.ball_x_max:
-            self.scores[0] += 1
-            assert self.scores[0] <= 9, self.scores[0]
 
 
 #
