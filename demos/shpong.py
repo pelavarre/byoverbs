@@ -11,6 +11,7 @@ options:
 quirks:
   $UP and $DOWN or W and S move the Left Paddle
   $DOWN and $UP or J and K move the Right Paddle
+  $LEFT or A or H and $RIGHT or D or L shove the Ball left or right
   other keys, such as Q or Esc, end the game if pressed 3 times
 
 examples:
@@ -27,16 +28,26 @@ import __main__
 import argparse
 import difflib
 import os
+import pdb
 import random
 import shutil
+import string
 import sys
 import textwrap
 
+
 import keycaps
 
-__main__.__doc__ = __main__.__doc__.replace("$UP", "\N{Upwards Arrow}")  # U+2191
-__main__.__doc__ = __main__.__doc__.replace("$DOWN", "\N{Downwards Arrow}")  # U+2193
+
+if not hasattr(__builtins__, "breakpoint"):
+    breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
+
+
 __main__.__doc__ = __main__.__doc__.replace("$BALL", "\N{Black Square}")  # U+25A0
+__main__.__doc__ = __main__.__doc__.replace("$DOWN", "\N{Downwards Arrow}")  # U+2193
+__main__.__doc__ = __main__.__doc__.replace("$LEFT", "\N{Leftwards Arrow}")  # U+2190
+__main__.__doc__ = __main__.__doc__.replace("$RIGHT", "\N{Rightwards Arrow}")  # U+2192
+__main__.__doc__ = __main__.__doc__.replace("$UP", "\N{Upwards Arrow}")  # U+2191
 
 
 BALL = "\N{Black Square}"
@@ -61,7 +72,40 @@ PADDLE_Y = (BOARD_ROWS - PADDLE_ROWS) // 2
 PADDLE_LEFT_Y_X = [PADDLE_Y, 1 + 1]
 PADDLE_RIGHT_Y_X = [PADDLE_Y, SCREEN_COLUMNS - 2]
 
+MID_BOARD_X = 1 + (BOARD_COLUMNS // 2)
+
 BALL_Y_X = [(BOARD_ROWS // 2) - 1, 1 + (BOARD_COLUMNS // 2)]
+
+
+SCORE_LEFT_X = BALL_Y_X[-1] - 3 - 5
+SCORE_RIGHT_X = BALL_Y_X[-1] + 3 + 1
+SCORE_XS = [SCORE_LEFT_X, SCORE_RIGHT_X]
+
+SCORES = [0, 0]
+
+DIGITS = """
+
+    ■ ■ ■       ■   ■ ■ ■   ■ ■ ■   ■   ■   ■ ■ ■   ■       ■ ■ ■   ■ ■ ■   ■ ■ ■
+    ■   ■       ■       ■       ■   ■   ■   ■       ■           ■   ■   ■   ■   ■
+    ■   ■       ■    ■ ■    ■ ■ ■   ■ ■ ■    ■ ■    ■ ■ ■       ■   ■ ■ ■   ■ ■ ■
+    ■   ■       ■   ■           ■       ■       ■   ■   ■       ■   ■   ■       ■
+    ■ ■ ■       ■   ■ ■ ■   ■ ■ ■       ■   ■ ■ ■   ■ ■ ■       ■   ■ ■ ■   ■ ■ ■
+
+"""  # .... 12345 . 12345 . 12345 . 12345 . 12345 . 12345 . 12345 . 12345 . 12345
+
+DIGITS = textwrap.dedent(DIGITS).strip()
+
+CHARS_BY_DIGIT = dict()
+
+_LINES = DIGITS.splitlines()
+for _DIGIT in range(10):
+    _CHARS = ""
+    for _LINE in _LINES:
+        if _CHARS:
+            _CHARS += "\n"
+        _CHARS += _LINE[(_DIGIT * 8) :][:5]
+
+    CHARS_BY_DIGIT[_DIGIT] = _CHARS
 
 
 #
@@ -149,19 +193,35 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
 
     while True:
 
-        #
+        # Draw one Ball
+
+        (y, x) = BALL_Y_X
+        tui.print(CUP_Y_X.format(1 + y, x) + BALL, end="")
+
+        # Draw two Paddles
 
         for paddle_y_x in (PADDLE_LEFT_Y_X, PADDLE_RIGHT_Y_X):
             (y, x) = paddle_y_x
             for row in range(PADDLE_ROWS):
                 tui.print(CUP_Y_X.format(1 + y + row, x) + BALL, end="")
 
-        (y, x) = BALL_Y_X
-        tui.print(CUP_Y_X.format(1 + y, x) + BALL, end="")
+        # Draw two single digit Scores
 
-        #
+        for (x, score) in zip(SCORE_XS, SCORES):
+            chars = CHARS_BY_DIGIT[score]
+            for (index, line) in enumerate(chars.splitlines()):
+                tui.print(CUP_Y_X.format(2 + index, x) + line, end="")
+
+        tui.print(CUP_Y_X.format(4, MID_BOARD_X) + BALL, end="")
+        tui.print(CUP_Y_X.format(5, MID_BOARD_X) + BALL, end="")
+
+        # Block till Keystroke
 
         sys.stdout.flush()
+
+        if (SCORES[0] >= 9) or (SCORES[-1] >= 9):
+
+            break
 
         stroke = tui.readline()
 
@@ -169,6 +229,8 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
         if quit_strokes[-3:] == (3 * [stroke]):
 
             break
+
+        # Convert to Keycap
 
         default_empty = list()
         caps = keycaps.KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
@@ -182,7 +244,19 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
         if cap in arrow_by_cap.keys():
             alt_cap = arrow_by_cap[cap]
 
-        #
+        # Clear two Paddles
+
+        for paddle_y_x in (PADDLE_LEFT_Y_X, PADDLE_RIGHT_Y_X):
+            (y, x) = paddle_y_x
+            for row in range(PADDLE_ROWS):
+                tui.print(CUP_Y_X.format(1 + y + row, x) + " ", end="")
+
+        # Clear one Ball
+
+        (y, x) = BALL_Y_X
+        tui.print(CUP_Y_X.format(1 + y, x) + " ", end="")
+
+        # Pick which Paddle the shared Arrow Keys would move
 
         paddle_index = inertia_y_x[-1] > 0
         if cap in "AWSD":
@@ -195,46 +269,37 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
         else:
             paddle = PADDLE_RIGHT_Y_X
 
-        #
-
-        for paddle_y_x in (PADDLE_LEFT_Y_X, PADDLE_RIGHT_Y_X):
-            (y, x) = paddle_y_x
-            for row in range(PADDLE_ROWS):
-                tui.print(CUP_Y_X.format(1 + y + row, x) + " ", end="")
-
-        (y, x) = BALL_Y_X
-        tui.print(CUP_Y_X.format(1 + y, x) + " ", end="")
-
-        #
+        # Interpret the Keycap
 
         if alt_cap == Up:
             quit_strokes.clear()
-
             if paddle[0] > 1:
                 paddle[0] -= 1
 
         elif alt_cap == Down:
             quit_strokes.clear()
-
             if paddle[0] < (BOARD_ROWS + 1 - PADDLE_ROWS):
                 paddle[0] += 1
 
         elif alt_cap == Left:
             quit_strokes.clear()
-
             inertia_y_x[-1] = -1
 
         elif alt_cap == Right:
             quit_strokes.clear()
-
             inertia_y_x[-1] = +1
 
-        elif cap == Space:
+        elif alt_cap == "Q":
+
+            continue
+
+        elif alt_cap == Space:
             quit_strokes.clear()
 
-            pass
+        elif alt_cap in string.ascii_uppercase:
+            quit_strokes.clear()
 
-        #
+        # Step forward in Time
 
         for tries in range(3):
             assert tries < 2, tries
@@ -254,6 +319,12 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
 
                 break
 
+            score_index = inertia_y_x[-1] > 0
+            SCORES[score_index] += 1
+
+            score = SCORES[score_index]
+            assert score in CHARS_BY_DIGIT.keys(), score
+
             inertia_y_x[-1] = -inertia_y_x[-1]
 
         if False:
@@ -264,7 +335,7 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
 
     #
 
-    tui.print(CUP_Y_X.format(SCREEN_ROWS + 1, 1), end="")
+    tui.print(CUP_Y_X.format(SCREEN_ROWS - 1, 1), end="")
 
 
 def tui_print_blank_screen(self):
