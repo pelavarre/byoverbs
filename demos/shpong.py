@@ -32,14 +32,10 @@ import argparse
 import difflib
 import os
 import pdb
-import random
-import string
 import sys
 import textwrap
 
-
 import keycaps
-
 
 if not hasattr(__builtins__, "breakpoint"):
     breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
@@ -122,7 +118,10 @@ DIGITS_CHARS = """
 DIGITS_CHARS = textwrap.dedent(DIGITS_CHARS).strip()
 
 
-BALL = "\N{Black Square}"  # ■  # Black in Light Mode, White in Dark Mode
+BALL = "\N{Black Square}"  # ■ U+25A0  # Black in Light Mode, White in Dark Mode
+
+
+PADDLE_ROWS = 5  # a vertical line segment of Five "\N{Black Square}"  # ■ U+25A0
 
 
 def form_chars_by_digit():
@@ -147,6 +146,8 @@ def form_chars_by_digit():
 
 CHARS_BY_DIGIT = form_chars_by_digit()
 
+DIGIT_WIDTH_5 = 5
+
 
 #
 # Bind some Letter Keycaps to Code
@@ -157,21 +158,39 @@ CHARS_BY_DIGIT = form_chars_by_digit()
 #
 
 
-ARROW_BY_CAP = dict()
+HOT_CAPS = "← ↑ ↓ → W A S D H J K L Space".split()
 
-ARROW_BY_CAP["A"] = "\N{Leftwards Arrow}"
-ARROW_BY_CAP["W"] = "\N{Upwards Arrow}"
-ARROW_BY_CAP["S"] = "\N{Downwards Arrow}"
-ARROW_BY_CAP["D"] = "\N{Rightwards Arrow}"
 
-ARROW_BY_CAP["H"] = "\N{Leftwards Arrow}"
-ARROW_BY_CAP["K"] = "\N{Upwards Arrow}"
-ARROW_BY_CAP["J"] = "\N{Downwards Arrow}"
-ARROW_BY_CAP["L"] = "\N{Rightwards Arrow}"
+PADDLE_INDEX_BY_CAP = dict()
+PADDLE_VECTOR_BY_CAP = dict()
 
-Q_CAP = "Q"
+PADDLE_INDEX_BY_CAP["A"] = 0  # Left Paddle
+PADDLE_INDEX_BY_CAP["W"] = 0
+PADDLE_INDEX_BY_CAP["S"] = 0
+PADDLE_INDEX_BY_CAP["D"] = 0
 
-ESC_CAP = "Esc"  # tested by default, not explicitly
+PADDLE_VECTOR_BY_CAP["A"] = -1  # Up
+PADDLE_VECTOR_BY_CAP["W"] = -1
+PADDLE_VECTOR_BY_CAP["S"] = +1  # Down
+PADDLE_VECTOR_BY_CAP["D"] = +1
+
+PADDLE_INDEX_BY_CAP["H"] = -1  # Right Paddle
+PADDLE_INDEX_BY_CAP["K"] = -1
+PADDLE_INDEX_BY_CAP["J"] = -1
+PADDLE_INDEX_BY_CAP["L"] = -1
+
+PADDLE_VECTOR_BY_CAP["H"] = -1  # Up
+PADDLE_VECTOR_BY_CAP["K"] = -1
+PADDLE_VECTOR_BY_CAP["J"] = +1  # Down
+PADDLE_VECTOR_BY_CAP["L"] = +1
+
+
+VECTOR_YX_BY_CAP = dict()
+
+VECTOR_YX_BY_CAP["←"] = (0, -1)
+VECTOR_YX_BY_CAP["↑"] = (-1, 0)
+VECTOR_YX_BY_CAP["↓"] = (+1, 0)
+VECTOR_YX_BY_CAP["→"] = (0, +1)
 
 
 #
@@ -193,219 +212,305 @@ def run_shpong():
 
     stdio = sys.stderr
 
-    if False:
-        flat_up = os.terminal_size(SCREEN_ROWS, SCREEN_COLUMNS)
+    if True:
+        flat_up = os.terminal_size((80, 24))
         keycaps.try_put_terminal_size(stdio, size=flat_up)
 
     with keycaps.tui_open(stdio) as tui:
+
+        game = ShPongGame(tui)
+
         tui.print(DECTCEM_CURSOR_HIDE)
         try:
             tui.screen_wipe_below()
-            try_shpong(tui)
+            game.run_till_quit()
         finally:
             tui.print(DECTCEM_CURSOR_SHOW)
 
 
-def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
-    """Bounce a Ball back & forth between 2 Paddles"""
+class ShPongGame:
 
-    inertia_y_x = [0, 0]
-    inertia_y_x[0] = random.randint(-3, 3)  # FIXME
-    inertia_y_x[0] = 0
-    inertia_y_x[-1] = +1
+    selves = list()
 
-    quit_strokes = list()
-    while True:
+    def __init__(self, tui):
+        ShPongGame.selves.append(self)
+
+        self.tui = tui
+        self.caps = []  # trace of 'tui.readcap()'
+
+        self.ball_vector_yx = (0, +3)
+        self.scores = [0, 0]
+
+        self.mutate_size()
+
+    def mutate_size(self):
+        """Resize to fit Terminal now"""
+
+        tui = self.tui
+
+        # Measure the Screen and the Board inside it
+
+        size = tui.shutil_get_terminal_size()
+        (columns, rows) = (size.columns, size.lines)
+
+        board_rows = rows - 2  # top margin, bottom margin
+        board_columns = columns - 2  # left margin, right margin
+
+        # Place one Ball
+
+        board_mid_y = 1 + (board_rows // 2)
+        board_mid_x = 1 + (board_columns // 2)  # todo: why 1 extra column on right ??
+
+        ball_yx = (board_mid_y, board_mid_x)
+
+        ball_y_min = 2
+        ball_y_max = ball_y_min + board_rows - 1
+        ball_x_min = 2
+        ball_x_max = ball_x_min + board_columns - 1
+
+        # Place two Paddles
+
+        paddle_y = (board_rows // 2) - (PADDLE_ROWS // 2) + 1
+        paddle_ys = [paddle_y, paddle_y]
+        paddle_xs = [2, columns - 1]
+
+        paddle_y_min = 2
+        paddle_y_max = (paddle_y_min + board_rows - 1) - (PADDLE_ROWS - 1)
+
+        # Place two single-digit decimal Scores
+
+        colon_y = 4
+        colon_x = board_mid_x
+
+        score_left_x = board_mid_x - 3 - DIGIT_WIDTH_5  # 3 columns left of middle
+        score_right_x = board_mid_x + 3 + 1  # 3 columns right of middle
+        score_xs = [score_left_x, score_right_x]
+
+        # Place Status
+
+        # Mutate Self
+
+        self.rows = rows
+        self.columns = columns
+
+        self.ball_y_min = ball_y_min
+        self.ball_y_max = ball_y_max
+        self.ball_x_min = ball_x_min
+        self.ball_x_max = ball_x_max
+        self.ball_yx = ball_yx
+
+        self.paddle_y_min = paddle_y_min
+        self.paddle_y_max = paddle_y_max
+        self.paddle_ys = paddle_ys
+        self.paddle_xs = paddle_xs
+
+        self.colon_y = colon_y
+        self.colon_x = colon_x
+
+        self.score_xs = score_xs
+
+        self.status_y = rows
+        self.status_x = 1
+        self.status_width = columns - 1
+
+    def run_till_quit(self):
+
+        tui = self.tui
+
+        caps = self.caps
+        scores = self.scores
+
+        while True:
+
+            # Draw one Ball, two Paddles, one Colon, two Scores
+
+            self.board_draw()
+            if (scores[0] >= 9) or (scores[-1] >= 9):
+
+                break
+
+            # Read the next Keystroke
+
+            sys.stdout.flush()
+
+            cap = tui.readcap()
+
+            caps.append(cap)
+            if caps[-3:] == (3 * [cap]):
+                if cap not in HOT_CAPS:
+
+                    break
+
+            # Erase one moving Ball and two moving Paddles
+
+            self.board_erase()
+
+            # Move the Paddles on demand
+
+            if cap in PADDLE_INDEX_BY_CAP.keys():
+                self.paddle_move(cap)
+
+            # Speed up the Ball, slow it down, or hold it still
+
+            if cap in VECTOR_YX_BY_CAP.keys():
+                self.ball_shove(cap)
+
+            # Step the Ball along
+
+            self.ball_step(cap)
+
+            # Win a point when Ball leaves the Board at left or at right
+
+            self.score_ball(cap)
+
+        status = "".center(self.status_width)
+        tui.print(CUP_Y_X.format(self.status_y, self.status_x) + status, end="")
+
+        tui.print(CUP_Y_X.format(self.rows - 2, 1))
+
+    def board_draw(self):
+        """Draw one Ball, two Paddles, one Colon, two Scores"""
+
+        caps = self.caps
+        tui = self.tui
 
         # Draw one Ball
 
-        (y, x) = BALL_Y_X
-        tui.print(CUP_Y_X.format(1 + y, x) + BALL, end="")
+        (y, x) = self.ball_yx
+        tui.print(CUP_Y_X.format(y, x) + BALL, end="")
 
         # Draw two Paddles
 
-        for paddle_y_x in (PADDLE_LEFT_Y_X, PADDLE_RIGHT_Y_X):
-            (y, x) = paddle_y_x
+        for y_x in zip(self.paddle_ys, self.paddle_xs):
+            (y, x) = y_x
             for row in range(PADDLE_ROWS):
-                tui.print(CUP_Y_X.format(1 + y + row, x) + BALL, end="")
+                tui.print(CUP_Y_X.format(y + row, x) + BALL, end="")
+
+        # Draw the two Dots of one Colon
+
+        tui.print(CUP_Y_X.format(self.colon_y + 0, self.colon_x) + BALL, end="")
+        tui.print(CUP_Y_X.format(self.colon_y + 1, self.colon_x) + BALL, end="")
 
         # Draw two single digit Scores
 
-        for (x, score) in zip(SCORE_XS, SCORES):
+        for (x, score) in zip(self.score_xs, self.scores):
             chars = CHARS_BY_DIGIT[score]
             for (index, line) in enumerate(chars.splitlines()):
                 tui.print(CUP_Y_X.format(2 + index, x) + line, end="")
 
-        tui.print(CUP_Y_X.format(4, MID_BOARD_X) + BALL, end="")
-        tui.print(CUP_Y_X.format(5, MID_BOARD_X) + BALL, end="")
+        # Draw an echo of unwanted input, if any arrived lately
 
-        # Block till Keystroke
+        blank_caps = 3 * [" "]
 
-        sys.stdout.flush()
-
-        if (SCORES[0] >= 9) or (SCORES[-1] >= 9):
-
-            break
-
-        stroke = tui.readline()
-
-        quit_strokes.append(stroke)  # leaks
-        if quit_strokes[-3:] == (3 * [stroke]):
-
-            break
-
-        # Convert to Keycap
-
-        default_empty = list()
-        caps = keycaps.KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
-
-        cap = None
+        echo_caps = blank_caps
         if caps:
-            cap = caps[0]  # such as '←' from ('←', '⌃ ⌥ ←', '⌃ ⇧ ←')
-            cap = cap.split()[-1]  # such as 'H' from '⌃ ⌥ ⇧ H'
+            last_cap = caps[-1]
+            if last_cap not in HOT_CAPS:
+                echo_caps = (3 * [" "]) + caps[-3:]
+                echo_caps = echo_caps[-3:]
 
-        alt_cap = cap
-        if cap in ARROW_BY_CAP.keys():
-            alt_cap = ARROW_BY_CAP[cap]
+        echo = " ".join(echo_caps)
 
-        # Clear two Paddles
+        status = echo.center(self.status_width)
+        tui.print(CUP_Y_X.format(self.status_y, self.status_x) + status, end="")
 
-        for paddle_y_x in (PADDLE_LEFT_Y_X, PADDLE_RIGHT_Y_X):
+    def board_erase(self):
+        """Erase one moving Ball and two moving Paddles"""
+
+        tui = self.tui
+
+        # Erase two Paddles
+
+        for paddle_y_x in zip(self.paddle_ys, self.paddle_xs):
             (y, x) = paddle_y_x
             for row in range(PADDLE_ROWS):
-                tui.print(CUP_Y_X.format(1 + y + row, x) + " ", end="")
+                tui.print(CUP_Y_X.format(y + row, x) + " ", end="")
 
-        # Clear one Ball
+        # Erase one Ball
 
-        (y, x) = BALL_Y_X
-        tui.print(CUP_Y_X.format(1 + y, x) + " ", end="")
+        (y, x) = self.ball_yx
+        tui.print(CUP_Y_X.format(y, x) + " ", end="")
 
-        # Pick which Paddle the shared Arrow Keys would move
+    def paddle_move(self, cap):
+        """Move one Paddle up or down, inside its limits"""
 
-        paddle_index = inertia_y_x[-1] > 0
-        if cap in "AWSD":
-            paddle_index = False
-        elif cap in "HJKL":
-            paddle_index = True
+        index = PADDLE_INDEX_BY_CAP[cap]
+        vector = PADDLE_VECTOR_BY_CAP[cap]
 
-        if not paddle_index:
-            paddle = PADDLE_LEFT_Y_X
-        else:
-            paddle = PADDLE_RIGHT_Y_X
+        y = self.paddle_ys[index]
 
-        # Interpret the Keycap
+        # Do as told
 
-        if cap in "AWSD" "HJKL":
+        y_next = y + vector
+        if not (self.paddle_y_min <= y_next <= self.paddle_y_max):
 
-            if alt_cap in (Up, Left):
-                quit_strokes.clear()
-                if paddle[0] > 1:
-                    paddle[0] -= 1
+            # Else kick back from Min or Max
 
-            elif alt_cap in (Down, Right):
-                quit_strokes.clear()
-                if paddle[0] < (BOARD_ROWS + 1 - PADDLE_ROWS):
-                    paddle[0] += 1
+            y_next = y - vector
+            if not (self.paddle_y_min <= y_next <= self.paddle_y_max):
+                assert False, (self.paddle_y_min, y_next, self.paddle_y_max)
 
-        else:
+        self.paddle_ys[index] = y_next
 
-            if alt_cap == Down:
-                quit_strokes.clear()
-                inertia_y_x[0] += 1
+    def ball_shove(self, cap):
+        """Shove the Ball along"""
 
-            elif alt_cap == Left:
-                quit_strokes.clear()
-                inertia_y_x[-1] -= 1
+        vector_yx = VECTOR_YX_BY_CAP[cap]
 
-            elif alt_cap == Right:
-                quit_strokes.clear()
-                inertia_y_x[-1] += 1
+        (vector_y, vector_x) = self.ball_vector_yx
 
-            elif alt_cap == Up:
-                quit_strokes.clear()
-                inertia_y_x[0] -= 1
+        vector_y_next = vector_y + vector_yx[0]
+        if not (-2 <= vector_y_next <= +2):
+            vector_y_next = vector_y - vector_yx[0]
+            if not (-2 <= vector_y_next <= +2):
+                assert False, (-2, vector_y_next, +2)
 
-            elif alt_cap == Q_CAP:
+        vector_x_next = vector_x + vector_yx[-1]
+        if not (-3 <= vector_x_next <= +3):
+            vector_x_next = vector_x - vector_yx[-1]
+            if not (-3 <= vector_x_next <= +3):
+                assert False, (-3, vector_x_next, +3)
 
-                continue
+        self.ball_vector_yx = (vector_y_next, vector_x_next)
 
-            elif alt_cap == Space:
-                quit_strokes.clear()
+    def ball_step(self, cap):
+        """Step the Ball along"""
 
-            elif alt_cap in string.ascii_uppercase:
-                quit_strokes.clear()
+        (y, x) = self.ball_yx
 
-        # Limit Inertia
+        (vector_y, vector_x) = self.ball_vector_yx
+        (vector_y_next, vector_x_next) = (vector_y, vector_x)
 
-        inertia_y_x[0] = min(max(inertia_y_x[0], -2), +2)
-        inertia_y_x[-1] = min(max(inertia_y_x[-1], -3), +3)
+        y_next = y + vector_y_next
+        if not (self.ball_y_min <= y_next <= self.ball_y_max):
+            vector_y_next = -vector_y
 
-        # Step forward in Time
+            y_next = min(max(y_next, self.ball_y_min), self.ball_y_max)
+            if not (self.ball_y_min <= y_next <= self.ball_y_max):
+                assert False, (self.ball_y_min, y_next, self.ball_y_max)
 
-        for tries in range(3):
-            assert tries < 2, (tries, BALL_Y_X, inertia_y_x)
+        x_next = x + vector_x_next
+        if not (self.ball_x_min <= x_next <= self.ball_x_max):
+            vector_x_next = -vector_x
 
-            (y, x) = BALL_Y_X
+            x_next = min(max(x_next, self.ball_x_min), self.ball_x_max)
+            if not (self.ball_x_min <= x_next <= self.ball_x_max):
+                assert False, (self.ball_x_min, x_next, self.ball_x_max)
 
-            (y_min, y_max) = (1, 1 + BOARD_ROWS - 1)
-            (x_min, x_max) = (4, 4 + BOARD_COLUMNS - 2)
+        self.ball_yx = (y_next, x_next)
+        self.ball_vector_yx = (vector_y_next, vector_x_next)
 
-            y += inertia_y_x[0]
-            x += inertia_y_x[-1]
+    def score_ball(self, cap):
+        """Win a point when Ball leaves the Board at left or at right"""
 
-            y = min(max(y, y_min), y_max)
-            x = min(max(x, x_min), x_max)
+        (_, x) = self.ball_yx
 
-            if (y, x) != tuple(BALL_Y_X):
-
-                break
-
-            if inertia_y_x == [0, 0]:
-
-                break
-
-            score_index = inertia_y_x[-1] > 0
-            SCORES[score_index] += 1
-
-            score = SCORES[score_index]
-            assert score in CHARS_BY_DIGIT.keys(), score
-
-            inertia_y_x[-1] = -inertia_y_x[-1]
-
-        if False:
-            y = random.randint(y_min, y_max)
-            x = random.randint(x_min, x_max)
-
-        BALL_Y_X[::] = (y, x)
-
-    #
-
-    tui.print(CUP_Y_X.format(SCREEN_ROWS - 1, 1), end="")
-
-
-SCREEN_ROWS = 24
-SCREEN_COLUMNS = 80
-
-BOARD_ROWS = SCREEN_ROWS - 2
-BOARD_COLUMNS = SCREEN_COLUMNS - 6
-
-PADDLE_ROWS = 5
-
-PADDLE_Y = (BOARD_ROWS - PADDLE_ROWS) // 2
-
-PADDLE_LEFT_Y_X = [PADDLE_Y, 1 + 1]
-PADDLE_RIGHT_Y_X = [PADDLE_Y, SCREEN_COLUMNS - 2]
-
-MID_BOARD_X = 1 + (BOARD_COLUMNS // 2)
-
-BALL_Y_X = [(BOARD_ROWS // 2) - 1, 1 + (BOARD_COLUMNS // 2)]
-
-
-SCORE_LEFT_X = BALL_Y_X[-1] - 3 - 5
-SCORE_RIGHT_X = BALL_Y_X[-1] + 3 + 1
-SCORE_XS = [SCORE_LEFT_X, SCORE_RIGHT_X]
-
-SCORES = [0, 0]
+        if x == self.ball_x_min:
+            self.scores[-1] += 1
+            assert self.scores[-1] <= 9, self.scores[0]
+        elif x == self.ball_x_max:
+            self.scores[0] += 1
+            assert self.scores[0] <= 9, self.scores[0]
 
 
 #
@@ -569,13 +674,12 @@ if __name__ == "__main__":
     main()
 
 
-# record and replay the game, at 1X or some other X speed
-# take Return as Return, not as ⌃ M
-# score a point only if Paddle not present - when Ball hits the left edge or top edge
-# bounce, don't crash - when Ball hits the top edge or bottom edge
-# bounce more convincingly off each Paddle
-# bounce differently at each pixel of each Paddle
-# timeout Keycaps struck to keep the Ball moving even while no Keycaps struck
+# todo:  change the score for 1234567890 and - +
+# todo:  score a point only if Paddle not present when Ball exits Board left or right
+# todo:  recenter the Ball when Ball exits Board left or right
+# todo:  bounce differently at each pixel of each Paddle
+# todo:  timeout Keycaps struck to keep the Ball moving even while no Keycaps struck
+# todo:  record and replay the game, at 1X or some other X speed
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/keycaps.py

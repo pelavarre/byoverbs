@@ -86,12 +86,12 @@ def main(sys_argv=None):
     keycaps.parse_keycaps_py_args_else(sys_argv)  # prints and exits, else returns args
     keycaps.stdio_has_tui_else(sys.stderr)
     with keycaps.tui_open(sys.stderr) as tui:
-        g = Game(tui, n=3)
+        game = TicTacToeGame(tui, n=3)
 
-        g.run_till_quit()
+        game.run_till_quit()
 
 
-class Game:
+class TicTacToeGame:
     """Interpret Keystrokes"""
 
     def __init__(self, tui, n):
@@ -116,7 +116,7 @@ class Game:
         n = self.n
 
         if not board:
-            self.board = Board(n)
+            self.board = TicTacToeBoard(n)
         else:
             board.restart_board(n)
 
@@ -711,7 +711,7 @@ class Game:
         )
 
 
-class Board:
+class TicTacToeBoard:
     """Lay out Cells in a square NxN Grid of '.', 'O', and 'X'"""
 
     def __init__(self, n):

@@ -81,7 +81,7 @@ CLEAR = "\x1B[H" "\x1B[2J" "\x1B[3J"  # Like Home and Wipe, but also clear Scrol
 # some Terminals don't need the "\x1B[H" before "\x1B[2J"
 # some Linux Clear's echo $'\x1B[H\x1B[3J\x1B[2J', which doesn't always clear Scrollback
 
-OS_PUT_TERMINAL_SIZE = "\x1B[8;{};{}t"  # "CSI 8 t" to Resize Window in Monospace Chars
+OS_PUT_TERMINAL_SIZE_Y_X = "\x1B[8;{};{}t"  # "CSI 8 t" to Resize Chars per Window
 # such as "\x1B[8;50;89t" for a Black-styled Python Terminal
 
 
@@ -1014,9 +1014,7 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
     def __init__(self, stdio):
         """Work at Sys Stderr, or elsewhere"""
 
-        fd = stdio.fileno()
-
-        self.fd = fd  # File Descriptor of Keyboard, for Os Read
+        self.fd = stdio.fileno()  # File Descriptor of Keyboard, for Os Read
         self.stdio = stdio  # File Stream of Keyboard, for IsATty and Flush
         self.tcgetattr = None  # Configuration of Terminal at Entry
 
@@ -1099,7 +1097,29 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
         if "end" not in kwargs.keys():
             kwargs_["end"] = "\r\n"
 
-        print(*args, **kwargs_)
+        print(*args, **kwargs_)  # FIXME: write & flush Stderr, not Stdout?
+
+    def readcap(self):  # FIXME: goes wrong with Paste?
+        """Read the main Keycap of 1 Keystroke, or Paste"""
+
+        stroke = self.readline()
+
+        default_empty = list()
+        keycap_joins = KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
+
+        main_cap = None
+        if keycap_joins:
+            keycap_join = keycap_joins[0]  # such as '←' from ('←', '⌃ ⌥ ←', '⌃ ⇧ ←')
+            main_cap = keycap_join.split()[-1]  # such as 'H' from '⌃ ⌥ ⇧ H'
+
+        for keycap_join in keycap_joins:
+            words = list(_ for _ in keycap_join.split() if len(_) > 1)
+            if words:
+                main_cap = words[0]  # such as 'Return' past '⌃ M'
+
+                break
+
+        return main_cap
 
     def readline(self, prompt=""):
         """Read the Byte Encoding of 1 Keystroke, or Paste"""
@@ -1297,13 +1317,65 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
 
         sys.stdout.flush()
 
+    def shutil_get_terminal_size(self):
+        """Run much like 'shutil.get_terminal_size', but on our File Descriptor"""
+
+        def int_else(i, key, default):
+
+            if i > 0:
+
+                return i  # from 'os.get_terminal_size'
+
+            if key in os.environ.keys():
+                value = os.environ[key]
+                try:
+
+                    return int(value)  # from '123', '1_123.456', '0x80', etc
+
+                except Exception:
+
+                    pass
+
+            return default
+
+        try:
+            size = os.get_terminal_size(self.fd)
+        except Exception:
+            size = os.terminal_size(columns=0, lines=0)
+
+            # such as OSError: [Errno 19] Operation not supported by device
+
+        columns = int_else(size.columns, key="COLUMNS", default=80)
+        lines = int_else(size.lines, key="LINES", default=24)
+
+        t = (columns, lines)
+        size = os.terminal_size(t)
+
+        assert size.columns == columns, (t, size)
+        assert size.lines == lines, (t, size)
+
+        return size
+
+        # note: Python's ShUtil jumped to Not IsATty when just Stdout redirected
+
+        _ = """
+
+COLUMNS=1_123.456 LINES=0x80 python3 -c '''
+
+import os, shutil, sys
+sys.stderr.write(str(shutil.get_terminal_size()) + "\n")
+
+''' >/dev/null
+
+        """  # os.terminal_size(columns=1123, lines=128)
+
 
 def try_put_terminal_size(stdio, size):
     """Write "CSI 8 t" to Resize Window in Monospace Chars"""
 
     flat_up = os.terminal_size(size)
 
-    print(OS_PUT_TERMINAL_SIZE(flat_up.lines, flat_up.columns), end="")
+    print(OS_PUT_TERMINAL_SIZE_Y_X.format(flat_up.lines, flat_up.columns), end="")
 
     sys.stdout.flush()
 
