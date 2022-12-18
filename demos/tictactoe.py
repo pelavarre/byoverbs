@@ -83,8 +83,8 @@ __main__.__doc__ = __main__.__doc__.replace(5 * " color", " " + COLOR_AS)
 def main(sys_argv=None):
     """Run from the Sh command line"""
 
-    keycaps.parse_keycaps_args(sys_argv)  # exits if no args, etc
-    keycaps.require_tui()
+    keycaps.parse_keycaps_py_args_else(sys_argv)  # prints and exits, else returns args
+    keycaps.stdio_has_tui_else(sys.stderr)
     with keycaps.tui_open(sys.stderr) as tui:
         g = Game(tui, n=3)
 

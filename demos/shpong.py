@@ -3,24 +3,25 @@
 r"""
 usage: shpong.py [-h]
 
-bounce a U+25A0 $BALL Ping-Pong Ball back & forth between 2 Paddles
+bounce a U+25A0 $B Ping-Pong Ball back & forth between 2 Paddles
 
 options:
   -h, --help  show this help message and exit
 
 quirks:
   hold down the Spacebar to keep the Ball moving
-  press A or W and S or D to move the Left Paddle up and down
-  press H or J and K or L to move the Right Paddle up and down
-  press $LEFT $UP $DOWN $RIGHT shove the Ball left, up, down, or right
-  other letters silently do nothing, except Q ends the game if pressed 3 times
-  other keys, such as Esc, end the game if pressed 3 times, same as Q does
+  press W and S (or A and D) to move the Left Paddle up and down
+  press K and J (or H and L) to move the Right Paddle up and down
+  press $L $U $D $R shove on the Ball to go more left, up, down, or right
+  press other letters if you want, but only Q ends the game if pressed 3 times
+  other keys, such as Esc, do also end the game if pressed 3 times, same as Q does
 
 examples:
   git clone https://github.com/pelavarre/byoverbs.git
   ./demos/shpong.py  # show these examples
   ./demos/shpong.py --  # bounce a \u25A0 Ping-Pong Ball back & forth between 2 Paddles
 """
+# $B $D $L $R $U initted far below
 
 # code reviewed by people, and by Black and Flake8
 # developed by:  F=demos/shpong.py && black $F && flake8 $F && $F --
@@ -32,7 +33,6 @@ import difflib
 import os
 import pdb
 import random
-import shutil
 import string
 import sys
 import textwrap
@@ -45,47 +45,70 @@ if not hasattr(__builtins__, "breakpoint"):
     breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
 
 
-__main__.__doc__ = __main__.__doc__.replace("$BALL", "\N{Black Square}")  # U+25A0
-__main__.__doc__ = __main__.__doc__.replace("$DOWN", "\N{Downwards Arrow}")  # U+2193
-__main__.__doc__ = __main__.__doc__.replace("$LEFT", "\N{Leftwards Arrow}")  # U+2190
-__main__.__doc__ = __main__.__doc__.replace("$RIGHT", "\N{Rightwards Arrow}")  # U+2192
-__main__.__doc__ = __main__.__doc__.replace("$UP", "\N{Upwards Arrow}")  # U+2191
+#
+# Auto-complete the Help Lines
+#
 
 
-BALL = "\N{Black Square}"
+DOC = __main__.__doc__
 
-CSI = "\x1B["
+DOC = DOC.replace("$B", "\N{Black Square}")  # ■ U+25A0
+DOC = DOC.replace("$D", "\N{Downwards Arrow}")  # ↓ U+2193
+DOC = DOC.replace("$L", "\N{Leftwards Arrow}")  # ← U+2190
+DOC = DOC.replace("$R", "\N{Rightwards Arrow}")  # → U+2192
+DOC = DOC.replace("$U", "\N{Upwards Arrow}")  # ↑ U+2191
 
-CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP)  # such as "\x1B[1;1H"
-
-DECTCEM_HIDE = "\x1B[?25l"  # Hide away the one cursor
-DECTCEM_SHOW = "\x1B[?25h"  # Show the one cursor
-
-SCREEN_ROWS = 24
-SCREEN_COLUMNS = 80
-
-BOARD_ROWS = SCREEN_ROWS - 2
-BOARD_COLUMNS = SCREEN_COLUMNS - 6
-
-PADDLE_ROWS = 5
-
-PADDLE_Y = (BOARD_ROWS - PADDLE_ROWS) // 2
-
-PADDLE_LEFT_Y_X = [PADDLE_Y, 1 + 1]
-PADDLE_RIGHT_Y_X = [PADDLE_Y, SCREEN_COLUMNS - 2]
-
-MID_BOARD_X = 1 + (BOARD_COLUMNS // 2)
-
-BALL_Y_X = [(BOARD_ROWS // 2) - 1, 1 + (BOARD_COLUMNS // 2)]
+__main__.__doc__ = DOC
 
 
-SCORE_LEFT_X = BALL_Y_X[-1] - 3 - 5
-SCORE_RIGHT_X = BALL_Y_X[-1] + 3 + 1
-SCORE_XS = [SCORE_LEFT_X, SCORE_RIGHT_X]
+#
+# Name some Commands of the Terminal Output Magic
+#
+#   https://en.wikipedia.org/wiki/ANSI_escape_code
+#   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+#
 
-SCORES = [0, 0]
 
-DIGITS = """
+CSI = "\x1B["  # macOS Terminal takes "\x1B[" as CSI, doesn't take "\N{CSI}" == "\x9B"
+
+CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP)  # from upper left "\x1B[1;1H"
+
+HOME_AND_WIPE = "\x1B[H" "\x1B[2J"
+
+DECTCEM_CURSOR_HIDE = "\x1B[?25l"  # Hide away the one Cursor on Screen
+DECTCEM_CURSOR_SHOW = "\x1B[?25h"  # Show the one Cursor on Screen
+
+OS_PUT_TERMINAL_SIZE = "\x1B[8;{};{}t"  # "CSI 8 t" to Resize Window in Monospace Chars
+# such as "\x1B[8;50;89t" for a Black-styled Python Terminal
+
+
+#
+# Spell out some Words of the Terminal Input Magic
+#
+
+
+Space = "Space"
+
+Down = "\N{Downwards Arrow}"
+Left = "\N{Leftwards Arrow}"
+Right = "\N{Rightwards Arrow}"
+Up = "\N{Upwards Arrow}"
+
+
+#
+# Draw decimal digits in the style of
+#
+#   LED & LCD Seven-Segment Displays, circa 1975
+#   https://en.wikipedia.org/wiki/Seven-segment_display
+#
+
+
+#
+#   12345   12345   12345   12345   12345   12345   12345   12345   12345   12345
+#   1234567_1234567_1234567_1234567_1234567_1234567_1234567_1234567_1234567_12345
+#
+
+DIGITS_CHARS = """
 
     ■ ■ ■       ■   ■ ■ ■   ■ ■ ■   ■   ■   ■ ■ ■   ■       ■ ■ ■   ■ ■ ■   ■ ■ ■
     ■   ■       ■       ■       ■   ■   ■   ■       ■           ■   ■   ■   ■   ■
@@ -93,21 +116,62 @@ DIGITS = """
     ■   ■       ■   ■           ■       ■       ■   ■   ■       ■   ■   ■       ■
     ■ ■ ■       ■   ■ ■ ■   ■ ■ ■       ■   ■ ■ ■   ■ ■ ■       ■   ■ ■ ■   ■ ■ ■
 
-"""  # .... 12345 . 12345 . 12345 . 12345 . 12345 . 12345 . 12345 . 12345 . 12345
+"""
+# "\N{Black Square}"  # ■ U+25A0
 
-DIGITS = textwrap.dedent(DIGITS).strip()
+DIGITS_CHARS = textwrap.dedent(DIGITS_CHARS).strip()
 
-CHARS_BY_DIGIT = dict()
 
-_LINES = DIGITS.splitlines()
-for _DIGIT in range(10):
-    _CHARS = ""
-    for _LINE in _LINES:
-        if _CHARS:
-            _CHARS += "\n"
-        _CHARS += _LINE[(_DIGIT * 8) :][:5]
+BALL = "\N{Black Square}"  # ■  # Black in Light Mode, White in Dark Mode
 
-    CHARS_BY_DIGIT[_DIGIT] = _CHARS
+
+def form_chars_by_digit():
+    """Pick each Decimal Digit out of DIGITS_CHARS as 5 Lines of 5 Chars each"""
+
+    chars_by_digit = dict()
+
+    lines = DIGITS_CHARS.splitlines()
+    for digit in range(10):
+
+        chars = ""
+        for line in lines:
+            if chars:
+                chars += "\n"
+
+            chars += line[(digit * 8) :][:5]
+
+        chars_by_digit[digit] = chars
+
+    return chars_by_digit
+
+
+CHARS_BY_DIGIT = form_chars_by_digit()
+
+
+#
+# Bind some Letter Keycaps to Code
+#
+#   . . ↑ . .    . W . .
+#   . ← ↓ → .   . A S D .   H J K L
+#
+#
+
+
+ARROW_BY_CAP = dict()
+
+ARROW_BY_CAP["A"] = "\N{Leftwards Arrow}"
+ARROW_BY_CAP["W"] = "\N{Upwards Arrow}"
+ARROW_BY_CAP["S"] = "\N{Downwards Arrow}"
+ARROW_BY_CAP["D"] = "\N{Rightwards Arrow}"
+
+ARROW_BY_CAP["H"] = "\N{Leftwards Arrow}"
+ARROW_BY_CAP["K"] = "\N{Upwards Arrow}"
+ARROW_BY_CAP["J"] = "\N{Downwards Arrow}"
+ARROW_BY_CAP["L"] = "\N{Rightwards Arrow}"
+
+Q_CAP = "Q"
+
+ESC_CAP = "Esc"  # tested by default, not explicitly
 
 
 #
@@ -119,76 +183,31 @@ def main():
     """Run from the Sh command line"""
 
     parse_shpong_py_args_else()  # prints helps and exits, else returns args
-
-    require_tui()
+    keycaps.stdio_has_tui_else(sys.stderr)  # prints helps and exits if no Tui found
 
     run_shpong()
 
 
-def require_tui():
-    """Fail-fast when not run from a Text User Interface (TUI) Terminal"""
-
-    try:
-        with keycaps.tui_open(sys.stderr):
-            pass
-    except Exception as exc:
-        sys_stderr_print("Traceback (most recent call last):")
-        sys_stderr_print("  ...")
-        sys_stderr_print("{}: {}".format(type(exc).__name__, exc))
-
-        sys_stderr_print()
-        sys_stderr_print("Run this code inside a Terminal, such as a Windows Dos Box")
-
-        sys.exit(1)
-
-
 def run_shpong():
-    """Bounce a \u25A0 Ping-Pong Ball back & forth between 2 Paddles"""
+    """Start and stop emulating a Glass Teletype at Stdio"""
 
-    # Resize the Terminal Window to fit the Board plus margin
+    stdio = sys.stderr
 
-    print("\x1B[8;{};{}t".format(SCREEN_ROWS, SCREEN_COLUMNS))
+    if False:
+        flat_up = os.terminal_size(SCREEN_ROWS, SCREEN_COLUMNS)
+        keycaps.try_put_terminal_size(stdio, size=flat_up)
 
-    #
-
-    with keycaps.tui_open(sys.stderr) as tui:
-        tui_print_blank_screen(tui)
-
-        tui.print(DECTCEM_HIDE)
+    with keycaps.tui_open(stdio) as tui:
+        tui.print(DECTCEM_CURSOR_HIDE)
         try:
+            tui.screen_wipe_below()
             try_shpong(tui)
         finally:
-            tui.print(DECTCEM_SHOW)
+            tui.print(DECTCEM_CURSOR_SHOW)
 
 
 def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
-    """Bounce a \u25A0 Ping-Pong Ball back & forth between 2 Paddles"""
-
-    #
-
-    Down = "\N{Downwards Arrow}"
-    Left = "\N{Leftwards Arrow}"
-    Right = "\N{Rightwards Arrow}"
-    Space = "Space"
-    Up = "\N{Upwards Arrow}"
-
-    arrow_by_cap = dict()
-
-    arrow_by_cap["A"] = "\N{Leftwards Arrow}"
-    arrow_by_cap["W"] = "\N{Upwards Arrow}"
-    arrow_by_cap["S"] = "\N{Downwards Arrow}"
-    arrow_by_cap["D"] = "\N{Rightwards Arrow}"
-
-    arrow_by_cap["H"] = "\N{Leftwards Arrow}"
-    arrow_by_cap["J"] = "\N{Downwards Arrow}"
-    arrow_by_cap["K"] = "\N{Upwards Arrow}"
-    arrow_by_cap["L"] = "\N{Rightwards Arrow}"
-
-    #
-
-    tui_print_blank_screen(tui)
-
-    #
+    """Bounce a Ball back & forth between 2 Paddles"""
 
     inertia_y_x = [0, 0]
     inertia_y_x[0] = random.randint(-3, 3)  # FIXME
@@ -246,8 +265,8 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
             cap = cap.split()[-1]  # such as 'H' from '⌃ ⌥ ⇧ H'
 
         alt_cap = cap
-        if cap in arrow_by_cap.keys():
-            alt_cap = arrow_by_cap[cap]
+        if cap in ARROW_BY_CAP.keys():
+            alt_cap = ARROW_BY_CAP[cap]
 
         # Clear two Paddles
 
@@ -306,7 +325,7 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
                 quit_strokes.clear()
                 inertia_y_x[0] -= 1
 
-            elif alt_cap == "Q":
+            elif alt_cap == Q_CAP:
 
                 continue
 
@@ -364,16 +383,29 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
     tui.print(CUP_Y_X.format(SCREEN_ROWS - 1, 1), end="")
 
 
-def tui_print_blank_screen(self):
-    """Scroll history away and print a blank screen"""
+SCREEN_ROWS = 24
+SCREEN_COLUMNS = 80
 
-    size = shutil.get_terminal_size()
-    for _ in range(size.lines):
-        self.print()
+BOARD_ROWS = SCREEN_ROWS - 2
+BOARD_COLUMNS = SCREEN_COLUMNS - 6
 
-    self.print("\x1B[H" "\x1B[2J", end="")
+PADDLE_ROWS = 5
 
-    sys.stdout.flush()
+PADDLE_Y = (BOARD_ROWS - PADDLE_ROWS) // 2
+
+PADDLE_LEFT_Y_X = [PADDLE_Y, 1 + 1]
+PADDLE_RIGHT_Y_X = [PADDLE_Y, SCREEN_COLUMNS - 2]
+
+MID_BOARD_X = 1 + (BOARD_COLUMNS // 2)
+
+BALL_Y_X = [(BOARD_ROWS // 2) - 1, 1 + (BOARD_COLUMNS // 2)]
+
+
+SCORE_LEFT_X = BALL_Y_X[-1] - 3 - 5
+SCORE_RIGHT_X = BALL_Y_X[-1] + 3 + 1
+SCORE_XS = [SCORE_LEFT_X, SCORE_RIGHT_X]
+
+SCORES = [0, 0]
 
 
 #
@@ -535,6 +567,15 @@ def sys_stderr_print(*args, **kwargs):
 
 if __name__ == "__main__":
     main()
+
+
+# record and replay the game, at 1X or some other X speed
+# take Return as Return, not as ⌃ M
+# score a point only if Paddle not present - when Ball hits the left edge or top edge
+# bounce, don't crash - when Ball hits the top edge or bottom edge
+# bounce more convincingly off each Paddle
+# bounce differently at each pixel of each Paddle
+# timeout Keycaps struck to keep the Ball moving even while no Keycaps struck
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/keycaps.py

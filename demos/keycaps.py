@@ -38,7 +38,8 @@ import os
 import pdb
 import random
 import re
-import select  # deployed in Windows only for Sockets, not also for Keyboards
+import select  # defined in Windows only for Sockets, not also for Keyboards
+import shutil
 import string
 import sys
 import textwrap
@@ -57,6 +58,31 @@ _ = time
 
 if not hasattr(__builtins__, "breakpoint"):
     breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
+
+
+#
+# Name many Spells of the Terminal Output Magic: the spells tested here, and more
+#
+#   https://en.wikipedia.org/wiki/ANSI_escape_code
+#   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+#
+
+
+CSI = "\x1B["  # macOS Terminal takes "\x1B[" as CSI, doesn't take "\N{CSI}" == "\x9B"
+
+CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP)  # from upper left "\x1B[1;1H"
+
+DECTCEM_CURSOR_HIDE = "\x1B[?25l"  # Hide away the one Cursor on Screen
+DECTCEM_CURSOR_SHOW = "\x1B[?25h"  # Show the one Cursor on Screen
+
+HOME_AND_WIPE = "\x1B[H" "\x1B[2J"  # Wipe Screen with Spaces, warp Cursor into Top Left
+CLEAR = "\x1B[H" "\x1B[2J" "\x1B[3J"  # Like Home and Wipe, but also clear Scrollback
+# doc'ed as "Erase in Display", "Clear Entire Screen"
+# some Terminals don't need the "\x1B[H" before "\x1B[2J"
+# some Linux Clear's echo $'\x1B[H\x1B[3J\x1B[2J', which doesn't always clear Scrollback
+
+OS_PUT_TERMINAL_SIZE = "\x1B[8;{};{}t"  # "CSI 8 t" to Resize Window in Monospace Chars
+# such as "\x1B[8;50;89t" for a Black-styled Python Terminal
 
 
 MAC_PASTE_CHUNK_1022 = 1022
@@ -106,30 +132,12 @@ def main(sys_argv=None):
     """Run from the Sh command line"""
 
     parse_keycaps_py_args_else(sys_argv)  # prints helps and exits, else returns args
-
-    require_tui()
+    stdio_has_tui_else(sys.stderr)
 
     keycaps_plot.t_by_keycap = dict()
     keycaps_plot.plotted = str()
 
     run_fireplace()
-
-
-def require_tui():
-    """Fail-fast when not run from a Text User Interface (TUI) Terminal"""
-
-    try:
-        with tui_open(sys.stderr):
-            pass
-    except Exception as exc:
-        sys_stderr_print("Traceback (most recent call last):")
-        sys_stderr_print("  ...")
-        sys_stderr_print("{}: {}".format(type(exc).__name__, exc))
-
-        sys_stderr_print()
-        sys_stderr_print("Run this code inside a Terminal, such as a Windows Dos Box")
-
-        sys.exit(1)
 
 
 def run_fireplace():
@@ -966,17 +974,34 @@ def ch_encode_repr(ch):
 #
 
 
+def stdio_has_tui_else(stdio):
+    """Fail-fast when not run from a Text User Interface (TUI) Terminal"""
+
+    try:
+        with tui_open(stdio):
+            pass
+    except Exception as exc:
+        sys_stderr_print("Traceback (most recent call last):")
+        sys_stderr_print("  ...")
+        sys_stderr_print("{}: {}".format(type(exc).__name__, exc))
+
+        sys_stderr_print()
+        sys_stderr_print("Run this code inside a Terminal, such as a Windows Dos Box")
+
+        sys.exit(1)
+
+
 def tui_open(stdio):
     """Accept such usage as 'with tui_open(sys.stderr):'"""
 
-    tui = GlassTeletype(stdio)
+    tui = TextUserInterface(stdio)
 
     return tui
 
 
-class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
+class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
     r"""
-    Emulate a glass teletype at Stdio, such as the 1978 DEC VT100 Video Terminal
+    Emulate a Glass Teletype at Stdio, such as the 1978 DEC VT100 Video Terminal
 
     Apply Terminal Input Magic to read ⌃@ ⌃C ⌃D ⌃J ⌃M ⌃Q ⌃S ⌃T ⌃Z ⌃\ etc as themselves,
     not as NUL SIGINT EOF LF CR SIGCONT SIGSTOP SIGINFO SIGTSTP SIGQUIT etc
@@ -1259,6 +1284,28 @@ class GlassTeletype:  # FIXME work in Windows too, not just in Mac and Linux
             assert rs_1 == [], rs_1
 
         return rs_1
+
+    def screen_wipe_below(self):
+        """Scroll away history without dropping all of it, and print a blank screen"""
+
+        size = shutil.get_terminal_size()
+        for _ in range(size.lines):
+            self.print()
+
+        assert HOME_AND_WIPE == "\x1B[H" "\x1B[2J"
+        self.print(HOME_AND_WIPE, end="")
+
+        sys.stdout.flush()
+
+
+def try_put_terminal_size(stdio, size):
+    """Write "CSI 8 t" to Resize Window in Monospace Chars"""
+
+    flat_up = os.terminal_size(size)
+
+    print(OS_PUT_TERMINAL_SIZE(flat_up.lines, flat_up.columns), end="")
+
+    sys.stdout.flush()
 
 
 #
