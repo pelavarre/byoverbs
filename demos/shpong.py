@@ -9,10 +9,12 @@ options:
   -h, --help  show this help message and exit
 
 quirks:
-  $UP and $DOWN or W and S move the Left Paddle
-  $DOWN and $UP or J and K move the Right Paddle
-  $LEFT or A or H and $RIGHT or D or L shove the Ball left or right
-  other keys, such as Q or Esc, end the game if pressed 3 times
+  hold down the Spacebar to keep the Ball moving
+  press A or W and S or D to move the Left Paddle up and down
+  press H or J and K or L to move the Right Paddle up and down
+  press $LEFT $UP $DOWN $RIGHT shove the Ball left, up, down, or right
+  other letters silently do nothing, except Q ends the game if pressed 3 times
+  other keys, such as Esc, end the game if pressed 3 times, same as Q does
 
 examples:
   git clone https://github.com/pelavarre/byoverbs.git
@@ -188,9 +190,12 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
 
     #
 
-    inertia_y_x = [0, +1]
-    quit_strokes = list()
+    inertia_y_x = [0, 0]
+    inertia_y_x[0] = random.randint(-3, 3)  # FIXME
+    inertia_y_x[0] = 0
+    inertia_y_x[-1] = +1
 
+    quit_strokes = list()
     while True:
 
         # Draw one Ball
@@ -261,7 +266,7 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
         paddle_index = inertia_y_x[-1] > 0
         if cap in "AWSD":
             paddle_index = False
-        if cap in "HJKL":
+        elif cap in "HJKL":
             paddle_index = True
 
         if not paddle_index:
@@ -271,38 +276,55 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
 
         # Interpret the Keycap
 
-        if alt_cap == Up:
-            quit_strokes.clear()
-            if paddle[0] > 1:
-                paddle[0] -= 1
+        if cap in "AWSD" "HJKL":
 
-        elif alt_cap == Down:
-            quit_strokes.clear()
-            if paddle[0] < (BOARD_ROWS + 1 - PADDLE_ROWS):
-                paddle[0] += 1
+            if alt_cap in (Up, Left):
+                quit_strokes.clear()
+                if paddle[0] > 1:
+                    paddle[0] -= 1
 
-        elif alt_cap == Left:
-            quit_strokes.clear()
-            inertia_y_x[-1] = -1
+            elif alt_cap in (Down, Right):
+                quit_strokes.clear()
+                if paddle[0] < (BOARD_ROWS + 1 - PADDLE_ROWS):
+                    paddle[0] += 1
 
-        elif alt_cap == Right:
-            quit_strokes.clear()
-            inertia_y_x[-1] = +1
+        else:
 
-        elif alt_cap == "Q":
+            if alt_cap == Down:
+                quit_strokes.clear()
+                inertia_y_x[0] += 1
 
-            continue
+            elif alt_cap == Left:
+                quit_strokes.clear()
+                inertia_y_x[-1] -= 1
 
-        elif alt_cap == Space:
-            quit_strokes.clear()
+            elif alt_cap == Right:
+                quit_strokes.clear()
+                inertia_y_x[-1] += 1
 
-        elif alt_cap in string.ascii_uppercase:
-            quit_strokes.clear()
+            elif alt_cap == Up:
+                quit_strokes.clear()
+                inertia_y_x[0] -= 1
+
+            elif alt_cap == "Q":
+
+                continue
+
+            elif alt_cap == Space:
+                quit_strokes.clear()
+
+            elif alt_cap in string.ascii_uppercase:
+                quit_strokes.clear()
+
+        # Limit Inertia
+
+        inertia_y_x[0] = min(max(inertia_y_x[0], -2), +2)
+        inertia_y_x[-1] = min(max(inertia_y_x[-1], -3), +3)
 
         # Step forward in Time
 
         for tries in range(3):
-            assert tries < 2, tries
+            assert tries < 2, (tries, BALL_Y_X, inertia_y_x)
 
             (y, x) = BALL_Y_X
 
@@ -312,10 +334,14 @@ def try_shpong(tui):  # FIXME  # noqa C901 too complex (14
             y += inertia_y_x[0]
             x += inertia_y_x[-1]
 
-            y = min(max(y_min, y), y_max)
-            x = min(max(x_min, x), x_max)
+            y = min(max(y, y_min), y_max)
+            x = min(max(x, x_min), x_max)
 
             if (y, x) != tuple(BALL_Y_X):
+
+                break
+
+            if inertia_y_x == [0, 0]:
 
                 break
 
