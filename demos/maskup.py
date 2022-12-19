@@ -13,6 +13,7 @@ quirks:
   delays infinitely & looks weird if you paste in an open line prefaced by closed lines
 
 examples:
+  open https://shell.cloud.google.com/?show=terminal  # if you need another Linux
   git clone https://github.com/pelavarre/byoverbs.git
   demos/maskup.py  # show these examples
   demos/maskup.py --  # randomize runs of hex, and runs of alphanumerics

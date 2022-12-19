@@ -20,6 +20,7 @@ quirks:
   quits the Game when you press Q or Esc
 
 examples:
+  open https://shell.cloud.google.com/?show=terminal  # if you need another Linux
   git clone https://github.com/pelavarre/byoverbs.git
   demos/tictactoe.py  # show these examples
   demos/tictactoe.py --  # draw a Tic-Tac-Toe Board more vividly than we do by hand

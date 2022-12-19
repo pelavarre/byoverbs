@@ -17,6 +17,7 @@ quirks:
   press Keys while the other Player needs to press Keys, just to delay those Keys
 
 examples:
+  open https://shell.cloud.google.com/?show=terminal  # if you need another Linux
   git clone https://github.com/pelavarre/byoverbs.git
   printf '\e[8;24;80t'  # play in a conventional 24x80 Terminal Window
   ./demos/shpong.py  # show these examples
