@@ -18,6 +18,7 @@ quirks:
 
 examples:
   git clone https://github.com/pelavarre/byoverbs.git
+  printf '\e[8;24;80t'  # play in a conventional 24x80 Terminal Window
   ./demos/shpong.py  # show these examples
   ./demos/shpong.py --  # bounce a \u25A0 Ping-Pong Ball back & forth between 2 Paddles
 """
@@ -339,14 +340,18 @@ class ShPongGame:
 
             sys.stdout.flush()
 
-            stroke = tui.readline()
-            cap = tui.cap_from_stroke(stroke)
+            stroke = None
+            if not tui.kbhit(timeout=0.100):
+                cap = Space
+            else:
+                stroke = tui.readline()
+                cap = tui.cap_from_stroke(stroke)
 
-            caps.append(cap)
-            if caps[-3:] == (3 * [cap]):
-                if cap not in HOT_CAPS:
+                caps.append(cap)
+                if caps[-3:] == (3 * [cap]):
+                    if cap not in HOT_CAPS:
 
-                    break
+                        break
 
             # Change the Score on request
 
@@ -788,7 +793,7 @@ if __name__ == "__main__":
     main()
 
 
-# todo:  timeout Keycaps struck to keep the Ball moving even while no Keycaps struck
+# todo:  bounce the Ball into Angles and Speeds that aren't whole Int's
 # todo:  record and replay the game, at 1X or some other X speed
 
 
