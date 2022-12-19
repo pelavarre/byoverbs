@@ -69,13 +69,8 @@ CSI = "\x1B["  # macOS Terminal takes "\x1B[" as CSI, doesn't take "\N{CSI}" == 
 
 CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP)  # from upper left "\x1B[1;1H"
 
-HOME_AND_WIPE = "\x1B[H" "\x1B[2J"
-
 DECTCEM_CURSOR_HIDE = "\x1B[?25l"  # Hide away the one Cursor on Screen
 DECTCEM_CURSOR_SHOW = "\x1B[?25h"  # Show the one Cursor on Screen
-
-OS_PUT_TERMINAL_SIZE = "\x1B[8;{};{}t"  # "CSI 8 t" to Resize Window in Monospace Chars
-# such as "\x1B[8;50;89t" for a Black-styled Python Terminal
 
 
 #
@@ -218,7 +213,7 @@ def run_shpong():
 
     stdio = sys.stderr
 
-    if True:
+    if False:
         flat_up = os.terminal_size((80, 24))
         keycaps.try_put_terminal_size(stdio, size=flat_up)
 
@@ -231,7 +226,7 @@ def run_shpong():
             tui.screen_wipe_below()
             game.run_till_quit()
         finally:
-            tui.print(DECTCEM_CURSOR_SHOW)
+            tui.print(DECTCEM_CURSOR_SHOW)  # todo:  grow 'tui.__exit__'
 
 
 class ShPongGame:
@@ -244,7 +239,7 @@ class ShPongGame:
         self.tui = tui
         self.caps = []  # trace of 'tui.readcap()'
 
-        self.ball_vector_yx = (0, +3)
+        self.ball_vector_yx = (0, +1)
         self.scores = [0, 0]
 
         self.mutate_size()
@@ -298,7 +293,9 @@ class ShPongGame:
 
         self.rows = rows
         self.columns = columns
+
         self.board_mid_x = board_mid_x
+        self.board_mid_y = board_mid_y
 
         self.ball_y_min = ball_y_min
         self.ball_y_max = ball_y_max
@@ -385,15 +382,15 @@ class ShPongGame:
 
         # Draw one Ball
 
-        (y, x) = self.ball_yx
-        tui.print(CUP_Y_X.format(y, x) + BALL, end="")
+        (ball_y, ball_x) = self.ball_yx
+        tui.print(CUP_Y_X.format(ball_y, ball_x) + BALL, end="")
 
         # Draw two Paddles
 
-        for y_x in zip(self.paddle_ys, self.paddle_xs):
-            (y, x) = y_x
+        for paddle_yx in zip(self.paddle_ys, self.paddle_xs):
+            (paddle_y, paddle_x) = paddle_yx
             for row in range(PADDLE_ROWS):
-                tui.print(CUP_Y_X.format(y + row, x) + BALL, end="")
+                tui.print(CUP_Y_X.format(paddle_y + row, paddle_x) + BALL, end="")
 
         # Draw the two Dots of one Colon
 
@@ -402,10 +399,10 @@ class ShPongGame:
 
         # Draw two single digit Scores
 
-        for (x, score) in zip(self.score_xs, self.scores):
+        for (score_x, score) in zip(self.score_xs, self.scores):
             chars = CHARS_BY_DIGIT[score]
             for (index, line) in enumerate(chars.splitlines()):
-                tui.print(CUP_Y_X.format(2 + index, x) + line, end="")
+                tui.print(CUP_Y_X.format(2 + index, score_x) + line, end="")
 
         # Draw an echo of unwanted input, if any arrived lately
 
@@ -431,15 +428,25 @@ class ShPongGame:
 
         # Erase two Paddles
 
-        for paddle_y_x in zip(self.paddle_ys, self.paddle_xs):
-            (y, x) = paddle_y_x
+        for paddle_yx in zip(self.paddle_ys, self.paddle_xs):
+            (paddle_y, paddle_x) = paddle_yx
             for row in range(PADDLE_ROWS):
-                tui.print(CUP_Y_X.format(y + row, x) + " ", end="")
+                tui.print(CUP_Y_X.format(paddle_y + row, paddle_x) + " ", end="")
 
         # Erase one Ball
 
-        (y, x) = self.ball_yx
-        tui.print(CUP_Y_X.format(y, x) + " ", end="")
+        (ball_y, ball_x) = self.ball_yx
+        tui.print(CUP_Y_X.format(ball_y, ball_x) + " ", end="")
+
+    def paddle_in_yx(self, yx):
+        """Say how far down (Y, X) is in Paddle"""
+
+        for paddle_yx in zip(self.paddle_ys, self.paddle_xs):
+            (paddle_y, paddle_x) = paddle_yx
+            for row in range(PADDLE_ROWS):
+                if yx == (paddle_y + row, paddle_x):
+
+                    return yx
 
     def score_cap_stroke(self, cap, stroke):
         """Edit the Scores"""
@@ -526,6 +533,8 @@ class ShPongGame:
         (vector_y, vector_x) = self.ball_vector_yx
         (vector_y_next, vector_x_next) = (vector_y, vector_x)
 
+        # Move up or down or neither
+
         y_next = y + vector_y_next
         if not (self.ball_y_min <= y_next <= self.ball_y_max):
             vector_y_next = -vector_y
@@ -533,6 +542,8 @@ class ShPongGame:
             y_next = min(max(y_next, self.ball_y_min), self.ball_y_max)
             if not (self.ball_y_min <= y_next <= self.ball_y_max):
                 assert False, (self.ball_y_min, y_next, self.ball_y_max)
+
+        # Move left or right or neither
 
         x_next = x + vector_x_next
         if not (self.ball_x_min <= x_next <= self.ball_x_max):
@@ -542,12 +553,32 @@ class ShPongGame:
             if not (self.ball_x_min <= x_next <= self.ball_x_max):
                 assert False, (self.ball_x_min, x_next, self.ball_x_max)
 
-            if x_next == self.ball_x_min:
-                self.scores[-1] += 1
-                assert self.scores[-1] <= 9, self.scores[0]
-            elif x_next == self.ball_x_max:
-                self.scores[0] += 1
-                assert self.scores[0] <= 9, self.scores[0]
+            # Score if exiting left or right
+
+            yx_next = (y_next, x_next)
+            if not self.paddle_in_yx(yx_next):
+
+                index = None
+                if x_next == self.ball_x_min:
+                    index = -1
+                elif x_next == self.ball_x_max:
+                    index = 0
+
+                # Restart the Ball, serve from the winner
+
+                if index is not None:
+                    self.scores[index] += 1
+                    assert self.scores[index] <= 9, self.scores[index]
+
+                    y_next = self.board_mid_y
+                    x_next = self.ball_x_max if index else self.ball_x_min
+
+                    vector_y_next = 0
+                    vector_x_next = -1 if index else +1
+                    if vector_x:
+                        vector_x_next = -abs(vector_x) if index else abs(vector_x)
+
+        # Mutate Self
 
         self.ball_yx = (y_next, x_next)
         self.ball_vector_yx = (vector_y_next, vector_x_next)
@@ -714,8 +745,6 @@ if __name__ == "__main__":
     main()
 
 
-# todo:  score a point only if Paddle not present when Ball exits Board left or right
-# todo:  recenter the Ball when Ball exits Board left or right
 # todo:  bounce differently at each pixel of each Paddle
 # todo:  timeout Keycaps struck to keep the Ball moving even while no Keycaps struck
 # todo:  record and replay the game, at 1X or some other X speed
