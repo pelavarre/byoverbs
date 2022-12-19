@@ -1,32 +1,31 @@
 #!/usr/bin/env python3
 
 r"""
-usage: shpong.py [-h]
+usage: shbreakout.py [-h]
 
-bounce a U+25A0 $B Ping-Pong Ball back & forth between 2 Paddles
+bounce a U+25A0 $B Breakout Ball above one Paddle through a ceiling of Layers of Bricks
 
 options:
   -h, --help  show this help message and exit
 
 quirks:
   hold down the Spacebar to keep the Ball moving
-  press W and S (or A and D) to move the Left Paddle up and down
-  press K and J (or H and L) to move the Right Paddle up and down
+  run the Ball into a Brick to explode the Brick and bounce the Ball
+  press A and D (or W and S) to move the one Paddle left and right, (or H K ad L J)
   press $L $U $D $R shove on the Ball to speed it up or slow it down
-  press Esc three times in a row, to end the Game before scoring 9 points
-  press Keys while the other Player needs to press Keys, just to delay those Keys
+  press Esc three times in a row, to end the Game before exploding all the Bricks
 
 examples:
   open https://shell.cloud.google.com/?show=terminal  # if you need another Linux
   git clone https://github.com/pelavarre/byoverbs.git
   printf '\e[8;24;80t'  # play in a conventional 24x80 Terminal Window
-  ./demos/shpong.py  # show these examples
-  ./demos/shpong.py --  # bounce a \u25A0 Ping-Pong Ball back & forth between 2 Paddles
+  ./demos/shbreakout.py  # show these examples
+  ./demos/shbreakout.py --  # bounce a \u25A0 Breakout Ball above one Paddle
 """
 # $B $D $L $R $U initted far below
 
 # code reviewed by people, and by Black and Flake8
-# developed by:  F=demos/shpong.py && black $F && flake8 $F && $F --
+# developed by:  F=demos/breakout.py && black $F && flake8 $F && $F --
 
 
 import __main__
@@ -89,61 +88,17 @@ Up = "\N{Upwards Arrow}"
 
 
 #
-# Draw decimal digits in the style of
+# Spell out some Words of the Terminal Input Magic
 #
-#   LED & LCD Seven-Segment Displays, circa 1975
-#   https://en.wikipedia.org/wiki/Seven-segment_display
-#
-
-
-#
-#   12345   12345   12345   12345   12345   12345   12345   12345   12345   12345
-#   1234567_1234567_1234567_1234567_1234567_1234567_1234567_1234567_1234567_12345
-#
-
-DIGITS_CHARS = """
-
-    ■ ■ ■       ■   ■ ■ ■   ■ ■ ■   ■   ■   ■ ■ ■   ■       ■ ■ ■   ■ ■ ■   ■ ■ ■
-    ■   ■       ■       ■       ■   ■   ■   ■       ■           ■   ■   ■   ■   ■
-    ■   ■       ■    ■ ■    ■ ■ ■   ■ ■ ■    ■ ■    ■ ■ ■       ■   ■ ■ ■   ■ ■ ■
-    ■   ■       ■   ■           ■       ■       ■   ■   ■       ■   ■   ■       ■
-    ■ ■ ■       ■   ■ ■ ■   ■ ■ ■       ■   ■ ■ ■   ■ ■ ■       ■   ■ ■ ■   ■ ■ ■
-
-"""
-# "\N{Black Square}"  # ■ U+25A0
-
-DIGITS_CHARS = textwrap.dedent(DIGITS_CHARS).strip()
 
 
 BALL = "\N{Black Square}"  # ■ U+25A0  # Black in Light Mode, White in Dark Mode
 
+BRICK = BALL
 
-PADDLE_ROWS = 5  # a vertical line segment of Five "\N{Black Square}"  # ■ U+25A0
+BRICK_ROWS = 5  # how many Layers of Brick
 
-
-def form_chars_by_digit():
-    """Pick each Decimal Digit out of DIGITS_CHARS as 5 Lines of 5 Chars each"""
-
-    chars_by_digit = dict()
-
-    lines = DIGITS_CHARS.splitlines()
-    for digit in range(10):
-
-        chars = ""
-        for line in lines:
-            if chars:
-                chars += "\n"
-
-            chars += line[(digit * 8) :][:5]
-
-        chars_by_digit[digit] = chars
-
-    return chars_by_digit
-
-
-CHARS_BY_DIGIT = form_chars_by_digit()
-
-DIGIT_WIDTH_5 = 5
+PADDLE_COLUMNS = 5  # how many Pixels per Paddle
 
 
 #
@@ -155,37 +110,20 @@ DIGIT_WIDTH_5 = 5
 #
 
 
-SCORE_CAPS = tuple("-0123456789=")  # '=' for '=' itself, and for '+' at '⇧ ='
-
-HOT_CAPS = list()
-HOT_CAPS += list("← ↑ ↓ → W A S D H J K L Space".split())
-HOT_CAPS += SCORE_CAPS
-HOT_CAPS.sort()
-HOT_CAPS = tuple(HOT_CAPS)
+HOT_CAPS = tuple("← ↑ ↓ → W A S D H J K L Space".split())
 
 
-PADDLE_INDEX_BY_CAP = dict()
 PADDLE_VECTOR_BY_CAP = dict()
 
-PADDLE_INDEX_BY_CAP["A"] = 0  # Left Paddle
-PADDLE_INDEX_BY_CAP["W"] = 0
-PADDLE_INDEX_BY_CAP["S"] = 0
-PADDLE_INDEX_BY_CAP["D"] = 0
-
-PADDLE_VECTOR_BY_CAP["A"] = -1  # Up
+PADDLE_VECTOR_BY_CAP["A"] = -1  # Left
 PADDLE_VECTOR_BY_CAP["W"] = -1
-PADDLE_VECTOR_BY_CAP["S"] = +1  # Down
-PADDLE_VECTOR_BY_CAP["D"] = +1
+PADDLE_VECTOR_BY_CAP["S"] = +1
+PADDLE_VECTOR_BY_CAP["D"] = +1  # Right
 
-PADDLE_INDEX_BY_CAP["H"] = -1  # Right Paddle
-PADDLE_INDEX_BY_CAP["K"] = -1
-PADDLE_INDEX_BY_CAP["J"] = -1
-PADDLE_INDEX_BY_CAP["L"] = -1
-
-PADDLE_VECTOR_BY_CAP["H"] = -1  # Up
+PADDLE_VECTOR_BY_CAP["H"] = -1  # Left
 PADDLE_VECTOR_BY_CAP["K"] = -1
-PADDLE_VECTOR_BY_CAP["J"] = +1  # Down
-PADDLE_VECTOR_BY_CAP["L"] = +1
+PADDLE_VECTOR_BY_CAP["J"] = +1
+PADDLE_VECTOR_BY_CAP["L"] = +1  # Right
 
 
 VECTOR_YX_BY_CAP = dict()
@@ -204,13 +142,13 @@ VECTOR_YX_BY_CAP["→"] = (0, +1)
 def main():
     """Run from the Sh command line"""
 
-    parse_shpong_py_args_else()  # prints helps and exits, else returns args
+    parse_breakout_py_args_else()  # prints helps and exits, else returns args
     keycaps.stdio_has_tui_else(sys.stderr)  # prints helps and exits if no Tui found
 
-    run_shpong()
+    run_breakout()
 
 
-def run_shpong():
+def run_breakout():
     """Start and stop emulating a Glass Teletype at Stdio"""
 
     stdio = sys.stderr
@@ -221,7 +159,7 @@ def run_shpong():
 
     with keycaps.tui_open(stdio) as tui:
 
-        game = ShPongGame(tui)
+        game = BreakoutGame(tui)
 
         tui.print(DECTCEM_CURSOR_HIDE)
         try:
@@ -231,18 +169,18 @@ def run_shpong():
             tui.print(DECTCEM_CURSOR_SHOW)  # todo:  grow 'tui.__exit__'
 
 
-class ShPongGame:
+class BreakoutGame:
 
     selves = list()
 
     def __init__(self, tui):
-        ShPongGame.selves.append(self)
+        BreakoutGame.selves.append(self)
 
         self.tui = tui
         self.caps = []  # trace of 'tui.cap_from_stroke' of 'tui.readline'
 
-        self.ball_vector_yx = (0, +1)
-        self.scores = [0, 0]
+        self.ball_vector_yx = (-1, 0)
+        self.brick_yxs_set = set()
 
         self.mutate_size()
 
@@ -264,30 +202,26 @@ class ShPongGame:
         ball_y_mid = 1 + (board_rows // 2)
         ball_x_mid = 1 + (board_columns // 2)  # todo: why 1 extra column on right ??
 
-        ball_yx = (ball_y_mid, ball_x_mid)
+        ball_yx = (rows - 2, ball_x_mid)
 
-        ball_y_min = 2
+        ball_y_min = 1
         ball_y_max = ball_y_min + board_rows - 1
         ball_x_min = 2
         ball_x_max = ball_x_min + board_columns - 1
 
-        # Place two Paddles
+        # Place one Paddle
 
-        paddle_y_mid = (board_rows // 2) - (PADDLE_ROWS // 2) + 1
-        paddle_ys = [paddle_y_mid, paddle_y_mid]
-        paddle_xs = [2, columns - 1]
+        paddle_x_mid = ball_x_mid - (PADDLE_COLUMNS // 2)
 
-        paddle_y_min = 2
-        paddle_y_max = (paddle_y_min + board_rows - 1) - (PADDLE_ROWS - 1)
+        paddle_y = rows - 2
+        paddle_x = paddle_x_mid
 
-        # Place two single-digit decimal Scores
+        paddle_x_min = 2
+        paddle_x_max = (paddle_x_min + board_columns - 1) - (PADDLE_COLUMNS - 1)
 
-        colon_y = 4
-        colon_x = ball_x_mid
+        # Place the Bricks
 
-        score_left_x = ball_x_mid - 3 - DIGIT_WIDTH_5  # 3 columns left of middle
-        score_right_x = ball_x_mid + 3 + 1  # 3 columns right of middle
-        score_xs = [score_left_x, score_right_x]
+        brick_y = BRICK_ROWS
 
         # Place Status
 
@@ -309,16 +243,13 @@ class ShPongGame:
 
         self.ball_yx = ball_yx
 
-        self.paddle_y_min = paddle_y_min
-        self.paddle_y_mid = paddle_y_mid
-        self.paddle_y_max = paddle_y_max
-        self.paddle_ys = paddle_ys
-        self.paddle_xs = paddle_xs
+        self.paddle_x_min = paddle_x_min
+        self.paddle_x_mid = paddle_x_mid
+        self.paddle_x_max = paddle_x_max
+        self.paddle_y = paddle_y
+        self.paddle_x = paddle_x
 
-        self.colon_y = colon_y
-        self.colon_x = colon_x
-
-        self.score_xs = score_xs
+        self.brick_y = brick_y
 
         self.status_y = status_y
         self.status_x = status_x
@@ -329,14 +260,13 @@ class ShPongGame:
         tui = self.tui
 
         caps = self.caps
-        scores = self.scores
 
         while True:
 
-            # Draw one Ball, two Paddles, one Colon, two Scores
+            # Draw one Ball and one Paddle
 
             self.board_draw()
-            if (scores[0] >= 9) or (scores[-1] >= 9):
+            if not self.brick_yxs_set:
 
                 break
 
@@ -345,7 +275,7 @@ class ShPongGame:
             sys.stdout.flush()
 
             stroke = None
-            if not tui.kbhit(timeout=0.100):
+            if False:  # not tui.kbhit(timeout=0.100):  # FIXME
                 cap = Space
             else:
                 stroke = tui.readline()
@@ -357,16 +287,11 @@ class ShPongGame:
 
                         break
 
-            # Change the Score on request
-
-            if cap in SCORE_CAPS:
-                self.score_cap_stroke(cap, stroke)
-
-            # Erase one moving Ball and two moving Paddles
+            # Erase one moving Ball and one moving Paddle
 
             self.board_erase()
 
-            # Move the Paddles on demand
+            # Move the Paddle on demand
 
             if cap in PADDLE_VECTOR_BY_CAP.keys():
                 self.paddle_move(cap)
@@ -386,9 +311,14 @@ class ShPongGame:
         tui.print(CUP_Y_X.format(self.rows - 2, 1))
 
     def board_draw(self):
-        """Draw one Ball, two Paddles, one Colon, two Scores - and update Status"""
+        """Draw one Ball and one Paddle - and update Status"""
 
+        brick_y = self.brick_y
+        brick_yxs_set = self.brick_yxs_set
         caps = self.caps
+        columns = self.columns
+        paddle_x = self.paddle_x
+        paddle_y = self.paddle_y
         tui = self.tui
 
         # Draw one Ball
@@ -396,24 +326,23 @@ class ShPongGame:
         (ball_y, ball_x) = self.ball_yx
         tui.print(CUP_Y_X.format(ball_y, ball_x) + BALL, end="")
 
-        # Draw two Paddles
+        # Draw one Paddle
 
-        for paddle_yx in zip(self.paddle_ys, self.paddle_xs):
-            (paddle_y, paddle_x) = paddle_yx
-            for row in range(PADDLE_ROWS):
-                tui.print(CUP_Y_X.format(paddle_y + row, paddle_x) + BALL, end="")
+        for column in range(PADDLE_COLUMNS):
+            tui.print(CUP_Y_X.format(paddle_y, paddle_x + column) + BALL, end="")
 
-        # Draw the two Dots of one Colon
+        # Draw Layers of Bricks
 
-        tui.print(CUP_Y_X.format(self.colon_y + 0, self.colon_x) + BALL, end="")
-        tui.print(CUP_Y_X.format(self.colon_y + 1, self.colon_x) + BALL, end="")
+        if not brick_yxs_set:
 
-        # Draw two single digit Scores
+            for row in range(BRICK_ROWS):
+                bricks = (columns - 2) * BRICK
 
-        for (score_x, score) in zip(self.score_xs, self.scores):
-            chars = CHARS_BY_DIGIT[score]
-            for (index, line) in enumerate(chars.splitlines()):
-                tui.print(CUP_Y_X.format(2 + index, score_x) + line, end="")
+                tui.print(CUP_Y_X.format(brick_y + row, 2) + bricks, end="")
+
+                for brick_x in range(2, 2 + len(bricks)):
+                    brick_yx = (brick_y + row, brick_x)
+                    brick_yxs_set.add(brick_yx)
 
         # Draw an echo of unwanted input, if any arrived lately
 
@@ -435,14 +364,14 @@ class ShPongGame:
     def board_erase(self):
         """Erase one moving Ball and two moving Paddles"""
 
+        paddle_x = self.paddle_x
+        paddle_y = self.paddle_y
         tui = self.tui
 
-        # Erase two Paddles
+        # Erase one Paddle
 
-        for paddle_yx in zip(self.paddle_ys, self.paddle_xs):
-            (paddle_y, paddle_x) = paddle_yx
-            for row in range(PADDLE_ROWS):
-                tui.print(CUP_Y_X.format(paddle_y + row, paddle_x) + " ", end="")
+        for column in range(PADDLE_COLUMNS):
+            tui.print(CUP_Y_X.format(paddle_y, paddle_x + column) + " ", end="")
 
         # Erase one Ball
 
@@ -452,74 +381,39 @@ class ShPongGame:
     def paddle_find_yx(self, yx):
         """Return distance in Paddle above/ below center, else None"""
 
-        y_center = PADDLE_ROWS // 2
+        paddle_x = self.paddle_x
+        paddle_y = self.paddle_y
 
-        for paddle_yx in zip(self.paddle_ys, self.paddle_xs):
-            (paddle_y, paddle_x) = paddle_yx
-            for row in range(PADDLE_ROWS):
-                if yx == (paddle_y + row, paddle_x):
-                    y_minus_center = row - y_center
+        x_center = PADDLE_COLUMNS // 2
 
-                    occasion = (-y_center, y_minus_center, y_center)
-                    assert -y_center <= y_minus_center <= y_center, occasion
+        for column in range(PADDLE_COLUMNS):
+            if yx == (paddle_y, paddle_x + column):
+                x_minus_center = column - x_center
 
-                    return y_minus_center
+                occasion = (-x_center, x_minus_center, x_center)
+                assert -x_center <= x_minus_center <= x_center, occasion
 
-    def score_cap_stroke(self, cap, stroke):
-        """Edit the Scores"""
-
-        ball_x_mid = self.ball_x_mid
-        scores = self.scores
-
-        (_, x) = self.ball_yx
-
-        index = 1 - int(x >= ball_x_mid)
-        score = scores[index]
-
-        if cap == "=":
-            if stroke == b"=":
-
-                scores[0] = scores[1] = max(scores)
-
-                return
-
-            alt_score = score + 1
-        elif cap == "-":
-            alt_score = score - 1
-        elif cap in "0123456789":
-            alt_score = int(cap)
-        else:
-            assert False, (SCORE_CAPS, cap)
-
-        next_score = min(max(alt_score, 0), 9)
-        if next_score != alt_score:
-            if next_score == 0:
-                next_score = 1
-            elif next_score == 9:
-                next_score = 8
-
-        scores[index] = next_score
+                return x_minus_center
 
     def paddle_move(self, cap):
-        """Move one Paddle up or down, inside its limits"""
+        """Move one Paddle left or right, inside its limits"""
 
-        index = PADDLE_INDEX_BY_CAP[cap]
         vector = PADDLE_VECTOR_BY_CAP[cap]
 
-        y = self.paddle_ys[index]
+        x = self.paddle_x
 
         # Do as told
 
-        y_next = y + vector
-        if not (self.paddle_y_min <= y_next <= self.paddle_y_max):
+        x_next = x + vector
+        if not (self.paddle_x_min <= x_next <= self.paddle_x_max):
 
             # Else kick back from Min or Max
 
-            y_next = y - vector
-            if not (self.paddle_y_min <= y_next <= self.paddle_y_max):
-                assert False, (self.paddle_y_min, y_next, self.paddle_y_max)
+            x_next = x - vector
+            if not (self.paddle_x_min <= x_next <= self.paddle_x_max):
+                assert False, (self.paddle_x_min, x_next, self.paddle_x_max)
 
-        self.paddle_ys[index] = y_next
+        self.paddle_x = x_next
 
     def ball_shove(self, cap):
         """Shove the Ball along"""
@@ -575,65 +469,53 @@ class ShPongGame:
         self.ball_yx = (y_next, x_next)
         self.ball_vector_yx = (vector_y_next, vector_x_next)
 
+        # Collide with a Brick
+
+        x_minus_center = self.paddle_find_yx(self.ball_yx)
+
+        if self.ball_yx in self.brick_yxs_set:
+            assert y_next != self.ball_y_max, (y_next, self.ball_y_max)
+            assert x_minus_center is None, x_minus_center
+
+            self.brick_yxs_set.remove(self.ball_yx)
+
+            self.ball_vector_yx = (-vector_y_next, -vector_x_next)
+
         # Score and Serve, or Bounce off of Paddle, at far Left or far Right
 
-        y_minus_center = self.paddle_find_yx(self.ball_yx)
-
-        if vector_x != vector_x_next:
-            if y_minus_center is None:
-                self.ball_score_and_serve()
-            else:
-                self.ball_bounce_off_paddle(y_minus_center)
+        if vector_y != vector_y_next:
+            if y_next == self.ball_y_max:
+                if x_minus_center is None:
+                    self.ball_score_and_serve()
+                else:
+                    self.ball_bounce_off_paddle(x_minus_center)
 
     def ball_score_and_serve(self):
-        """Score and Serve, at far Left or far Right"""
+        """Score and Serve, at Bottom"""
 
-        (_, ball_x) = self.ball_yx
-        (_, vector_x) = self.ball_vector_yx
-
-        index = None
-        if ball_x == self.ball_x_min:
-            index = -1
-        elif ball_x == self.ball_x_max:
-            index = 0
-
-        assert index is not None, (self.ball_x_min, ball_x, self.ball_x_max)
-
-        # Score
-
-        self.scores[index] += 1
-        assert self.scores[index] <= 9, self.scores[index]
+        ball_x_mid = self.ball_x_mid
+        rows = self.rows
 
         # Serve fast or slow, but not still
 
-        y_next = self.ball_y_mid
-        x_next = self.ball_x_max if index else self.ball_x_min
-
-        vector_y_next = 0
-        if self.paddle_ys[index] < self.paddle_y_mid:
-            vector_y_next = +1
-        elif self.paddle_ys[index] > self.paddle_y_mid:
-            vector_y_next = -1
-
-        vector_x_next = -1 if index else +1
-        if vector_x:
-            vector_x_next = -abs(vector_x) if index else abs(vector_x)
+        vector_y_next = -1
+        vector_x_next = 0
 
         # Mutate Self
 
-        self.paddle_ys[index] = self.paddle_y_mid
+        self.paddle_x = self.paddle_x_mid
 
-        self.ball_yx = (y_next, x_next)
+        self.ball_yx = (rows - 2, ball_x_mid)
         self.ball_vector_yx = (vector_y_next, vector_x_next)
 
-    def ball_bounce_off_paddle(self, y_minus_center):
-        """Bounce off of Paddle, at far Left or far Right"""
+    def ball_bounce_off_paddle(self, x_minus_center):
+        """Bounce off of Paddle, at Bottom"""
 
-        for _ in range(abs(y_minus_center)):
-            if y_minus_center < 0:
-                self.ball_shove("↓")
+        for _ in range(abs(x_minus_center)):
+            if x_minus_center < 0:
+                self.ball_shove("←")
             else:
-                self.ball_shove("↑")
+                self.ball_shove("→")
 
 
 #
@@ -641,8 +523,8 @@ class ShPongGame:
 #
 
 
-def parse_shpong_py_args_else():
-    """Print helps for ShPong Py and exit zero or nonzero, else return args"""
+def parse_breakout_py_args_else():
+    """Print helps for Breakout Py and exit zero or nonzero, else return args"""
 
     # Drop the '--' Separator if present, even while declaring no Pos Args
 
@@ -652,7 +534,7 @@ def parse_shpong_py_args_else():
 
     # Parse the Sh Command Line, or show Help
 
-    parser = compile_shpong_argdoc_else()
+    parser = compile_breakout_argdoc_else()
     args = parser.parse_args(sys_parms)  # prints helps and exits, else returns args
     if not sys.argv[1:]:
         doc = __main__.__doc__
@@ -664,15 +546,15 @@ def parse_shpong_py_args_else():
     return args
 
 
-def compile_shpong_argdoc_else():
-    """Form an ArgumentParser for ShPong Py"""
+def compile_breakout_argdoc_else():
+    """Form an ArgumentParser for Breakout Py"""
 
     doc = __main__.__doc__
     parser = compile_argdoc(doc, epi="quirks")
     try:
         exit_if_argdoc_ne(doc, parser=parser)
     except SystemExit:
-        sys_stderr_print("shpong.py: ERROR: main doc and argparse parser disagree")
+        sys_stderr_print("breakout.py: ERROR: main doc and argparse parser disagree")
 
         raise
 
@@ -797,16 +679,7 @@ if __name__ == "__main__":
     main()
 
 
-# todo:  accept Tab in place of W Up, accept Return in place of K Up
-# todo:  accept Letters near the Hot Letters in their place
-# todo:  don't exit for Punctuation Key Caps struck by accident
-# todo:  Bell for rejected Letters
-
-# todo:  heat up the Paddle Colors with each Bounced Ball between Points
-
-# todo:  bounce the Ball into Angles and Speeds that aren't whole Int's
-
-# todo:  record and replay the game, at 1X or some other X speed
+# todo: yes, a first draft, but no, its Physics can't explode all the Bricks yet
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/keycaps.py
