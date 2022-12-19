@@ -12,9 +12,9 @@ quirks:
   hold down the Spacebar to keep the Ball moving
   press W and S (or A and D) to move the Left Paddle up and down
   press K and J (or H and L) to move the Right Paddle up and down
-  press $L $U $D $R shove on the Ball to go more left, up, down, or right
-  press other letters if you want, but only Q ends the game if pressed 3 times
-  other keys, such as Esc, do also end the game if pressed 3 times, same as Q does
+  press $L $U $D $R shove on the Ball to speed it up or slow it down
+  press Esc three times in a row, to end the Game before scoring 9 points
+  press Keys while the other Player needs to press Keys, just to delay those Keys
 
 examples:
   git clone https://github.com/pelavarre/byoverbs.git
@@ -793,7 +793,15 @@ if __name__ == "__main__":
     main()
 
 
+# todo:  accept Tab in place of W Up, accept Return in place of K Up
+# todo:  accept Letters near the Hot Letters in their place
+# todo:  don't exit for Punctuation Key Caps struck by accident
+# todo:  Bell for rejected Letters
+
+# todo:  heat up the Paddle Colors with each Bounced Ball between Points
+
 # todo:  bounce the Ball into Angles and Speeds that aren't whole Int's
+
 # todo:  record and replay the game, at 1X or some other X speed
 
 
