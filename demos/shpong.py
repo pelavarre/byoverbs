@@ -259,10 +259,10 @@ class ShPongGame:
 
         # Place one Ball
 
-        board_mid_y = 1 + (board_rows // 2)
-        board_mid_x = 1 + (board_columns // 2)  # todo: why 1 extra column on right ??
+        ball_y_mid = 1 + (board_rows // 2)
+        ball_x_mid = 1 + (board_columns // 2)  # todo: why 1 extra column on right ??
 
-        ball_yx = (board_mid_y, board_mid_x)
+        ball_yx = (ball_y_mid, ball_x_mid)
 
         ball_y_min = 2
         ball_y_max = ball_y_min + board_rows - 1
@@ -271,8 +271,8 @@ class ShPongGame:
 
         # Place two Paddles
 
-        paddle_y = (board_rows // 2) - (PADDLE_ROWS // 2) + 1
-        paddle_ys = [paddle_y, paddle_y]
+        paddle_y_mid = (board_rows // 2) - (PADDLE_ROWS // 2) + 1
+        paddle_ys = [paddle_y_mid, paddle_y_mid]
         paddle_xs = [2, columns - 1]
 
         paddle_y_min = 2
@@ -281,10 +281,10 @@ class ShPongGame:
         # Place two single-digit decimal Scores
 
         colon_y = 4
-        colon_x = board_mid_x
+        colon_x = ball_x_mid
 
-        score_left_x = board_mid_x - 3 - DIGIT_WIDTH_5  # 3 columns left of middle
-        score_right_x = board_mid_x + 3 + 1  # 3 columns right of middle
+        score_left_x = ball_x_mid - 3 - DIGIT_WIDTH_5  # 3 columns left of middle
+        score_right_x = ball_x_mid + 3 + 1  # 3 columns right of middle
         score_xs = [score_left_x, score_right_x]
 
         # Place Status
@@ -294,16 +294,18 @@ class ShPongGame:
         self.rows = rows
         self.columns = columns
 
-        self.board_mid_x = board_mid_x
-        self.board_mid_y = board_mid_y
-
         self.ball_y_min = ball_y_min
+        self.ball_y_mid = ball_y_mid
         self.ball_y_max = ball_y_max
+
         self.ball_x_min = ball_x_min
+        self.ball_x_mid = ball_x_mid
         self.ball_x_max = ball_x_max
+
         self.ball_yx = ball_yx
 
         self.paddle_y_min = paddle_y_min
+        self.paddle_y_mid = paddle_y_mid
         self.paddle_y_max = paddle_y_max
         self.paddle_ys = paddle_ys
         self.paddle_xs = paddle_xs
@@ -438,25 +440,31 @@ class ShPongGame:
         (ball_y, ball_x) = self.ball_yx
         tui.print(CUP_Y_X.format(ball_y, ball_x) + " ", end="")
 
-    def paddle_in_yx(self, yx):
-        """Say how far down (Y, X) is in Paddle"""
+    def paddle_find_yx(self, yx):
+        """Return distance in Paddle above/ below center, else None"""
+
+        center = PADDLE_ROWS // 2
 
         for paddle_yx in zip(self.paddle_ys, self.paddle_xs):
             (paddle_y, paddle_x) = paddle_yx
             for row in range(PADDLE_ROWS):
                 if yx == (paddle_y + row, paddle_x):
+                    y_minus_center = row - center
 
-                    return yx
+                    occasion = (-center, y_minus_center, center)
+                    assert -center <= y_minus_center <= center, occasion
+
+                    return y_minus_center
 
     def score_cap_stroke(self, cap, stroke):
         """Edit the Scores"""
 
-        board_mid_x = self.board_mid_x
+        ball_x_mid = self.ball_x_mid
         scores = self.scores
 
         (_, x) = self.ball_yx
 
-        index = 1 - int(x >= board_mid_x)
+        index = 1 - int(x >= ball_x_mid)
         score = scores[index]
 
         if cap == "=":
@@ -553,35 +561,70 @@ class ShPongGame:
             if not (self.ball_x_min <= x_next <= self.ball_x_max):
                 assert False, (self.ball_x_min, x_next, self.ball_x_max)
 
-            # Score if exiting left or right
+        # Make a first guess at how to Mutate Self
 
-            yx_next = (y_next, x_next)
-            if not self.paddle_in_yx(yx_next):
+        self.ball_yx = (y_next, x_next)
+        self.ball_vector_yx = (vector_y_next, vector_x_next)
 
-                index = None
-                if x_next == self.ball_x_min:
-                    index = -1
-                elif x_next == self.ball_x_max:
-                    index = 0
+        # Score and Serve, or Bounce off of Paddle, at far Left or far Right
 
-                # Restart the Ball, serve from the winner
+        y_minus_center = self.paddle_find_yx(self.ball_yx)
 
-                if index is not None:
-                    self.scores[index] += 1
-                    assert self.scores[index] <= 9, self.scores[index]
+        if vector_x != vector_x_next:
+            if y_minus_center is None:
+                self.ball_score_and_serve()
+            else:
+                self.ball_bounce_off_paddle(y_minus_center)
 
-                    y_next = self.board_mid_y
-                    x_next = self.ball_x_max if index else self.ball_x_min
+    def ball_score_and_serve(self):
+        """Score and Serve, at far Left or far Right"""
 
-                    vector_y_next = 0
-                    vector_x_next = -1 if index else +1
-                    if vector_x:
-                        vector_x_next = -abs(vector_x) if index else abs(vector_x)
+        (_, ball_x) = self.ball_yx
+        (_, vector_x) = self.ball_vector_yx
+
+        index = None
+        if ball_x == self.ball_x_min:
+            index = -1
+        elif ball_x == self.ball_x_max:
+            index = 0
+
+        assert index is not None, (self.ball_x_min, ball_x, self.ball_x_max)
+
+        # Score
+
+        self.scores[index] += 1
+        assert self.scores[index] <= 9, self.scores[index]
+
+        # Serve fast or slow, but not still
+
+        y_next = self.ball_y_mid
+        x_next = self.ball_x_max if index else self.ball_x_min
+
+        vector_y_next = 0
+        if self.paddle_ys[index] < self.paddle_y_mid:
+            vector_y_next = +1
+        elif self.paddle_ys[index] > self.paddle_y_mid:
+            vector_y_next = -1
+
+        vector_x_next = -1 if index else +1
+        if vector_x:
+            vector_x_next = -abs(vector_x) if index else abs(vector_x)
+
+        self.paddle_ys[index] = self.paddle_y_mid
 
         # Mutate Self
 
         self.ball_yx = (y_next, x_next)
         self.ball_vector_yx = (vector_y_next, vector_x_next)
+
+    def ball_bounce_off_paddle(self, y_minus_center):
+        """Bounce off of Paddle, at far Left or far Right"""
+
+        for _ in range(abs(y_minus_center)):
+            if y_minus_center < 0:
+                self.ball_shove("↓")
+            else:
+                self.ball_shove("↑")
 
 
 #
@@ -745,7 +788,6 @@ if __name__ == "__main__":
     main()
 
 
-# todo:  bounce differently at each pixel of each Paddle
 # todo:  timeout Keycaps struck to keep the Ball moving even while no Keycaps struck
 # todo:  record and replay the game, at 1X or some other X speed
 
