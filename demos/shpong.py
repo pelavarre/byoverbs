@@ -158,7 +158,13 @@ DIGIT_WIDTH_5 = 5
 #
 
 
-HOT_CAPS = "← ↑ ↓ → W A S D H J K L Space".split()
+SCORE_CAPS = tuple("-0123456789=")  # '=' for '=' itself, and for '+' at '⇧ ='
+
+HOT_CAPS = list()
+HOT_CAPS += list("← ↑ ↓ → W A S D H J K L Space".split())
+HOT_CAPS += SCORE_CAPS
+HOT_CAPS.sort()
+HOT_CAPS = tuple(HOT_CAPS)
 
 
 PADDLE_INDEX_BY_CAP = dict()
@@ -292,6 +298,7 @@ class ShPongGame:
 
         self.rows = rows
         self.columns = columns
+        self.board_mid_x = board_mid_x
 
         self.ball_y_min = ball_y_min
         self.ball_y_max = ball_y_max
@@ -333,13 +340,19 @@ class ShPongGame:
 
             sys.stdout.flush()
 
-            cap = tui.readcap()
+            stroke = tui.readline()
+            cap = tui.cap_from_stroke(stroke)
 
             caps.append(cap)
             if caps[-3:] == (3 * [cap]):
                 if cap not in HOT_CAPS:
 
                     break
+
+            # Change the Score on request
+
+            if cap in SCORE_CAPS:
+                self.score_cap_stroke(cap, stroke)
 
             # Erase one moving Ball and two moving Paddles
 
@@ -357,7 +370,7 @@ class ShPongGame:
 
             # Step the Ball along
 
-            self.ball_step(cap)
+            self.ball_step()
 
         status = "".center(self.status_width)
         tui.print(CUP_Y_X.format(self.status_y, self.status_x) + status, end="")
@@ -396,19 +409,20 @@ class ShPongGame:
 
         # Draw an echo of unwanted input, if any arrived lately
 
-        blank_caps = 3 * [" "]
+        status = "(press one of "
+        status += "A W S D, H K J L, Space, ← ↑ ↓ →, + - =, 0 1 2 3 4 5 6 7 9 Q)"
 
-        echo_caps = blank_caps
         if caps:
             last_cap = caps[-1]
             if last_cap not in HOT_CAPS:
                 echo_caps = (3 * [" "]) + caps[-3:]
                 echo_caps = echo_caps[-3:]
 
-        echo = " ".join(echo_caps)
+                echo = " ".join(echo_caps)
+                status = echo
 
-        status = echo.center(self.status_width)
-        tui.print(CUP_Y_X.format(self.status_y, self.status_x) + status, end="")
+        status_chars = status.center(self.status_width)[: self.status_width]
+        tui.print(CUP_Y_X.format(self.status_y, self.status_x) + status_chars, end="")
 
     def board_erase(self):
         """Erase one moving Ball and two moving Paddles"""
@@ -426,6 +440,41 @@ class ShPongGame:
 
         (y, x) = self.ball_yx
         tui.print(CUP_Y_X.format(y, x) + " ", end="")
+
+    def score_cap_stroke(self, cap, stroke):
+        """Edit the Scores"""
+
+        board_mid_x = self.board_mid_x
+        scores = self.scores
+
+        (_, x) = self.ball_yx
+
+        index = 1 - int(x >= board_mid_x)
+        score = scores[index]
+
+        if cap == "=":
+            if stroke == b"=":
+
+                scores[0] = scores[1] = max(scores)
+
+                return
+
+            alt_score = score + 1
+        elif cap == "-":
+            alt_score = score - 1
+        elif cap in "0123456789":
+            alt_score = int(cap)
+        else:
+            assert False, (SCORE_CAPS, cap)
+
+        next_score = min(max(alt_score, 0), 9)
+        if next_score != alt_score:
+            if next_score == 0:
+                next_score = 1
+            elif next_score == 9:
+                next_score = 8
+
+        scores[index] = next_score
 
     def paddle_move(self, cap):
         """Move one Paddle up or down, inside its limits"""
@@ -469,7 +518,7 @@ class ShPongGame:
 
         self.ball_vector_yx = (vector_y_next, vector_x_next)
 
-    def ball_step(self, cap):
+    def ball_step(self):
         """Step the Ball along"""
 
         (y, x) = self.ball_yx
@@ -665,7 +714,6 @@ if __name__ == "__main__":
     main()
 
 
-# todo:  change the score for 1234567890 and - +
 # todo:  score a point only if Paddle not present when Ball exits Board left or right
 # todo:  recenter the Ball when Ball exits Board left or right
 # todo:  bounce differently at each pixel of each Paddle

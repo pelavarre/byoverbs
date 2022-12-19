@@ -1099,10 +1099,8 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
 
         print(*args, **kwargs_)  # FIXME: write & flush Stderr, not Stdout?
 
-    def readcap(self):  # FIXME: goes wrong with Paste?
-        """Read the main Keycap of 1 Keystroke, or Paste"""
-
-        stroke = self.readline()
+    def cap_from_stroke(self, stroke):  # todo: test with Paste?
+        """Pick the main Keycap out of 1 Keystroke"""
 
         default_empty = list()
         keycap_joins = KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
@@ -1375,9 +1373,21 @@ def try_put_terminal_size(stdio, size):
 
     flat_up = os.terminal_size(size)
 
-    print(OS_PUT_TERMINAL_SIZE_Y_X.format(flat_up.lines, flat_up.columns), end="")
+    size_1 = os.get_terminal_size(stdio.fileno())
+    if size_1 == flat_up:
+        stdio.flush()
+    else:
+        print(
+            OS_PUT_TERMINAL_SIZE_Y_X.format(flat_up.lines, flat_up.columns),
+            end="",
+            file=stdio,
+        )
 
-    sys.stdout.flush()
+        stdio.flush()
+
+        size_2 = os.get_terminal_size(stdio.fileno())
+        while size_2 != flat_up:  # FIXME: time out if resize takes forever
+            size_2 = os.get_terminal_size(stdio.fileno())
 
 
 #
