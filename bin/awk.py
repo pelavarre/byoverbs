@@ -35,9 +35,6 @@ examples:
 """
 
 import __main__
-import shlex
-import subprocess
-import sys
 
 import byotools as byo
 
@@ -61,13 +58,4 @@ split_strips = list(_.strip() for _ in splits)
 split_strip_join = " ".join(split_strips)
 
 shline = "awk -F: {!r}".format(split_strip_join)
-
-byo.sys_exit_if_testdoc()  # prints examples & exits if no args
-
-byo.sys_exit_if_argdoc()  # prints help lines & exits if "--h" arg, but ignores "-h"
-
-byo.sys_stderr_print("+ {}".format(shline))
-
-run = subprocess.run(shlex.split(shline))
-if run.returncode:
-    sys.exit(run.returncode)
+byo.subprocess_exit_run_if_shline(shline, stdin=None)

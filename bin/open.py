@@ -93,7 +93,7 @@ def compile_open_py_argdoc_else():
     )
 
     try:
-        byo.exit_if_argdoc_ne(parser)
+        byo.sys_exit_if_argdoc_ne(parser)
     except SystemExit:
         print("jvsketch.py: ERROR: Main Doc and ArgParse Parser disagree")
 

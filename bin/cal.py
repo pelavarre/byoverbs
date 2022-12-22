@@ -33,9 +33,11 @@ examples:
   cal.py -h  # same as 'cal.py --', but without highlighting today
   cal.py -H 19990314  # same as 'cal.py --', but centering & highlighting Pi Day 1999
   cal.py -H 314  # same as 'cal.py --', but center & highlight Pi Day this year
+  cal.py -H 628  # same as 'cal.py --', but center & highlight Tau Day this year
   cal.py -m 11  # show the 11th month of some year, and say which one
   cal.py 23  # show twelve months of the 23rd year of some century, and say which one
 """
+# Tau Day is in the last 14 Days of the Month, Pi Day is in the first 14 Days
 
 import argparse
 import datetime as dt
@@ -109,16 +111,16 @@ def main():
 
     # Run the month
 
-    argv = list(inner_argv)
-    argv_append_cal_args(argv, args=args, when=when)
+    middle_argv = list(inner_argv)
+    argv_append_cal_args(middle_argv, args=args, when=when)
 
-    subprocess_run(argv)
+    subprocess_run(middle_argv)
 
     # Also run the month after, when centered in the last 14 days of a month
 
     late_args = argparse.Namespace(**vars(args))
-    early_args.h = None
-    early_args.H = None
+    late_args.h = None
+    late_args.H = None
     late_args.Y = str(late_when.year)
     late_args.m = str(late_when.month)
 
@@ -128,7 +130,7 @@ def main():
     if (not args.Y) and (not args.m):
         if late_when.month != when.month:
 
-            subprocess_run(early_argv)
+            subprocess_run(late_argv)
 
 
 def subprocess_run(argv):
@@ -373,7 +375,7 @@ def compile_cal_py_argdoc_else():
     )
 
     try:
-        byo.exit_if_argdoc_ne(parser)
+        byo.sys_exit_if_argdoc_ne(parser)
     except SystemExit:
         print("jvsketch.py: ERROR: Main Doc and ArgParse Parser disagree")
 

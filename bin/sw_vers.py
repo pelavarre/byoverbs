@@ -37,7 +37,7 @@ import sys
 import byotools as byo
 
 
-byo.sys_exit_if()
+byo.sys_exit_if()  # prints examples or help or args and exits, else returns
 
 run = subprocess.run(
     "sw_vers", stdin=subprocess.PIPE, stdout=subprocess.PIPE, check=True

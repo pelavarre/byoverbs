@@ -1,2 +1,5 @@
+set -e
+echo '+ git checkout >/dev/null' >&2
+git checkout >/dev/null
 set -xe
 git diff "$@"

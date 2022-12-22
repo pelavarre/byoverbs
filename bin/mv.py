@@ -107,8 +107,7 @@ def main():
 
     # Run the chosen Sh Line, and return
 
-    byo.sys_stderr_print("+ {}".format(ttyline))
-    byo.subprocess_run_plus(shline)
+    byo.subprocess_exit_run_if_shline(shline)
 
 
 main()

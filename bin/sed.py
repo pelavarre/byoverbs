@@ -24,7 +24,4 @@ examples:
 import byotools as byo
 
 
-ttyline = "pbpaste |awk '{print $NF}' |sed 's,^,-- ,' |sed 's,$, --,' |pbcopy"
-shline = "bash -c {!r}".format(ttyline)
-
-byo.sys_exit_if(shline, ttyline=ttyline)
+byo.subprocess_exit_run_if()

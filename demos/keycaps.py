@@ -800,7 +800,7 @@ def compile_keycaps_argdoc_else():
     doc = __main__.__doc__
     parser = compile_argdoc(doc, epi="quirks")
     try:
-        exit_if_argdoc_ne(doc, parser=parser)
+        sys_exit_if_argdoc_ne(doc, parser=parser)
     except SystemExit:
         sys_stderr_print("keycaps.py: ERROR: main doc and argparse parser disagree")
 
@@ -837,7 +837,7 @@ def compile_argdoc(doc, epi):
     return parser
 
 
-def exit_if_argdoc_ne(doc, parser):
+def sys_exit_if_argdoc_ne(doc, parser):
     """Complain and exit nonzero, unless Arg Doc equals Parser Format_Help"""
 
     # Fetch the Main Doc, and note where from

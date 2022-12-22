@@ -6,7 +6,8 @@ usage: import byotools as byo  # define Func's
 competently welcome you into Sh Terminal work, batteries included
 
 examples:
-  byo.sys_exit_if()  # prints examples or help lines and exits, else returns
+  byo.sys_exit_if()  # prints examples or help or args and exits, else returns
+  byo.subprocess_exit_run_if(shline)  # prints and exits, else calls $SHELL and returns
 """
 
 import __main__
@@ -66,7 +67,7 @@ def compile_argdoc(epi, drop_help=None):
     return parser
 
 
-def exit_if_argdoc_ne(parser):
+def sys_exit_if_argdoc_ne(parser):
     """Print Diff and exit nonzero, unless Arg Doc equals Parser Format_Help"""
 
     # Fetch the Main Doc, and note where from
@@ -196,6 +197,37 @@ def ast_fetch_testdoc():
 
 
 #
+# Add some Def's to Type List
+#
+
+
+def list_rindex(items, item):
+    """Find the last copy of Item, else raise IndexError"""
+
+    indexed = list(reversed(items))
+    index = indexed.index(item)
+
+    rindex = len(items) - index
+
+    return rindex
+
+
+def list_strip(items):
+    """Drop the leading and trailing Falsey Items"""
+
+    strip = list(items)
+    while strip and not strip[0]:
+        strip = strip[1:]
+
+    while strip and not strip[-1]:
+        strip = strip[:-1]
+
+    return strip
+
+    # todo: coin a name for "\n".join(items).strip().splitlines()
+
+
+#
 # Add some Def's to Import ShLex
 #
 
@@ -234,6 +266,16 @@ def shlex_parms_one_posarg():
 #
 
 
+def str_ldent(chars):  # kin to 'str.lstrip'
+    """Pick out the Spaces etc, at left of some Chars"""
+
+    lstrip = chars.lstrip()
+    length = len(chars) - len(lstrip)
+    dent = chars[:length] if lstrip else ""
+
+    return dent
+
+
 def str_removeprefix(chars, prefix):
     """Remove Prefix from Chars if present, till Oct/2020 Python 3.9 str.removeprefix"""
 
@@ -254,21 +296,126 @@ def str_removesuffix(chars, suffix):
     return result
 
 
+def str_ripgraf(graf):
+    """Pick the lines below the head line of a paragraph, and dedent them"""
+
+    grafdoc = "\n".join(graf)
+    if graf and not graf[0].startswith(" "):
+        grafdoc = "\n".join(graf[1:])
+
+    dedent = textwrap.dedent(grafdoc)
+    strip = dedent.strip()
+    graf = strip.splitlines()
+
+    return graf
+
+
+def str_splitgrafs(doc, keepends=False):  # todo: keepends=True
+    """Form List of Lists of Stripped Lines, from Doc of Grafs between Empty Lines"""
+
+    assert not keepends  # 'keepends=True' like for caller to find Sections of Grafs
+
+    grafs = list()  # collects Grafs
+
+    graf = list()  # begins Empty, opens up to collect Lines, then begins again
+    for line in doc.splitlines():
+
+        # Add each Empty Line found before the next Same or Less Dented Line
+
+        if not line:
+            if graf:
+
+                graf.append(line)
+
+        # Add each More Dented Line
+
+        elif graf and (len(str_ldent(line)) > len(str_ldent(graf[0]))):
+
+            graf.append(line)
+
+        # Strip and close the Open Graf, before starting again with a Less Dented Line
+
+        else:
+            strip = list_strip(graf)
+            if strip:
+
+                grafs.append(strip)
+
+            # Begin again with an Empty Graf, not yet opened by its First Line
+
+            graf = list()
+            graf.append(line)
+
+    # Strip and close the Last Open Graf, if need be
+
+    strip = list_strip(graf)
+    if strip:
+
+        grafs.append(strip)
+
+    return grafs  # -> Grid = List[List[Str]]
+
+
 #
 # Add some Def's to Import SubProcess
 #
 
 
-def subprocess_run_plus(shline):
-    """Call SubProcess Run on a ShLine, without Stdin, with Check True"""
+def subprocess_exit_run_if(stdin=subprocess.PIPE):
+    """Print and exit, else run the last Graf of ShLines in the Main Doc"""
 
+    doc = __main__.__doc__
+    doc_grafs = str_splitgrafs(doc)
+    testdoc_graf = str_ripgraf(doc_grafs[-1])
+
+    rindex = list_rindex(testdoc_graf, "")
+    graf = testdoc_graf[rindex:]
+
+    for ttyline in graf:
+        subprocess_exit_run_if_ttyline(ttyline)  # in effect, shell=True
+
+
+def subprocess_exit_run_if_shline(shline, stdin=subprocess.PIPE):
+    """Print and exit, else run the ShLine and return after it exits zero"""
+
+    sys_exit_if()  # prints examples or help or args and exits, else returns
+
+    sys_stderr_print("+ {}".format(shline))
     argv = shlex.split(shline)
+    run = subprocess.run(argv, stdin=stdin)  # in effect, shell=False
 
-    _ = subprocess.run(argv, stdin=subprocess.PIPE, check=True)
+    if run.returncode:
+        sys_stderr_print("+ exit {}".format(run.returncode))
+
+        sys.exit(run.returncode)
+
+    return run
+
+    # note: Python SubProcess-Run Shell-False does Not demand AbsPath in the ShVerb
+
+
+def subprocess_exit_run_if_ttyline(ttyline, stdin=subprocess.PIPE):
+    """Print and exit, else run the TtyLine in $SHELL and return after it exits zero"""
+
+    sys_exit_if()  # prints examples or help or args and exits, else returns
+
+    env_shell = os.environ["SHELL"]
+    shline = "{} -c {!r}".format(env_shell, ttyline)
+
+    sys_stderr_print("+ {}".format(ttyline))
+    argv = shlex.split(shline)
+    run = subprocess.run(argv, stdin=subprocess.PIPE)  # in effect, shell=True
+
+    if run.returncode:
+        sys_stderr_print("+ exit {}".format(run.returncode))
+
+        sys.exit(run.returncode)
+
+    return run
 
 
 def subprocess_run_oneline(shline):
-    """Pull 1 Line from SubProcess Run"""
+    """Take 1 Line of Output from SubProcess Run Shell=False Check=True"""
 
     argv = shlex.split(shline)
 
@@ -300,33 +447,19 @@ def subprocess_run_oneline(shline):
 def sys_exit():
     """Prints examples or help lines or exception, and exits"""
 
-    sys_exit_if()
+    sys_exit_if()  # prints examples or help or args and exits, else returns
 
     raise NotImplementedError(sys.argv[1:])
 
 
-def sys_exit_if(shline=None, ttyline=None):
-    """Print examples & exit, or print help lines & exit, or shell out & return"""
-
-    alt_ttyline = ttyline if ttyline else shline
-
-    # Sometimes print & exit
+def sys_exit_if():
+    """Print examples or help or args and exit, else return"""
 
     sys_exit_if_testdoc()  # prints examples & exits if no args
 
     sys_exit_if_argdoc()  # prints help lines & exits if "--h" arg, but ignores "-h"
 
     sys_exit_if_not_implemented()  # raises unhandled exception if arg isn't just:  --
-
-    # Call the ShLine, if any
-
-    if shline:
-        sys_stderr_print("+ {}".format(alt_ttyline))
-        subprocess_run_plus(shline)
-
-    # Succeed
-
-    pass
 
 
 def sys_exit_if_argdoc():
