@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-usage: mv.py [-i] [FROM | FROM... TO]
+usage: cp.py [-i] [-p] [FROM | FROM... TO]
 
-rename files or dirs
+duplicate files or dirs
 
 positional arguments:
   FROM       the old name of a file or dir
@@ -12,19 +12,20 @@ positional arguments:
 options:
   --help     show this help message and exit
   -i         stop to ask before replacing file or dir
+  -p         copy, don't fabricate, last-modified date/time stamp and chmod permissions
 
 quirks:
   moves Jpeg, Jpg, Png Files into __jqd-trash__/., for 'git config user.initials'
   moves the last Modified File off the Stack, out to ~%m%djqd%H%M~
+  copies last-modified date/time stamp as faithfully as:  touch -r FROM TO
   goes well with Cp, Mv, Ls, Rm, RmDir, Touch
 
 examples:
-  mv.py  # show these examples and exit
-  mv.py --h  # show help lines and exit (more reliable than -h)
-  mv.py --  # moves Image Files into the Trash, else moves last File off Stack
+  cp.py  # show these examples and exit
+  cp.py --h  # show help lines and exit (more reliable than -h)
+  cp.py --  # duplicates last File of Stack
 
-  echo mv -i "$(ls -1rt |tail -1)"{,~$(date +%m%djqd%H%M)~} __jqd-trash__/.
-  echo mv *.jpeg *.jpg *.png __jqd-trash__/.
+  echo cp -ip "$(ls -1rt |tail -1)"{,~$(date +%m%djqd%H%M)~}
 """
 
 import datetime as dt
@@ -50,31 +51,9 @@ def main():
     jqd = byo.subprocess_run_oneline("git config user.initials")
     jqd = jqd if jqd else "jqd"
 
-    # Look for a Trash Can
-
-    trash_reldir = "__{jqd}-trash__".format(jqd=jqd)
-    main.trash_reldir = trash_reldir
-    trash_isdir_here = os.path.isdir(trash_reldir)
-
-    # Look for File Ext's to archive
-
-    exts = ".jpeg .jpg .png".split()
+    # Peek at top of Stack
 
     (_, _, filenames) = next(os.walk("."))
-
-    finds_set = set()
-    for filename in filenames:
-        ext = os.path.splitext(filename)[-1]
-        if ext in exts:
-            finds_set.add(ext)
-
-    finds = sorted(finds_set)
-
-    patterns = list("*{}".format(_) for _ in finds)
-    if not trash_isdir_here:
-        patterns = None
-
-    # Peek at top of Stack
 
     peeks = list(_ for _ in filenames if not (_.startswith(".") or _.endswith("~")))
     peeks.sort(key=lambda _: (os.stat(_).st_mtime, _))
@@ -95,15 +74,12 @@ def main():
     # Choose a Sh Line, else quit
 
     shline = None
-    if patterns and not parm:  # cleans out the trash
-        ttyline = "mv -i {} {}/.".format(" ".join(patterns), trash_reldir)
-        shline = "bash -c {!r}".format(ttyline)
-    elif fromfile:  # moves a file off the stack
-        ttyline = "mv -i {} {}".format(fromfile, tofile)
+    if fromfile:  # moves a file off the stack
+        ttyline = "cp -ip {} {}".format(fromfile, tofile)
         shline = ttyline
     else:
 
-        raise NotImplementedError("mv.py: no files found here outside of '.*' and '*~'")
+        raise NotImplementedError("cp.py: no files found here outside of '.*' and '*~'")
 
     # Run the chosen Sh Line, and return
 

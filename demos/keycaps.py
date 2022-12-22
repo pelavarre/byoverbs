@@ -484,7 +484,7 @@ KEYCAP_LISTS_BY_STROKE.update(  # more Control C0 Ascii at Mac
         b"\x1C": ["⌃ \\", "⌃ ⌥ \\", "⌃ ⌥ ⇧ \\"],
         b"\x1D": ["⌃ ]", "⌃ ⌥ ]", "⌃ ⌥ ⇧ ]"],
         b"\x1E": ["⌃ ⇧ 6", "⌃ ⌥ ⇧ 6"],  # near to ⇧6 for ^
-        b"\x1F": ["⌃ -", "⌃ ⌥ -", "⌃ ⌥ ⇧ -"],  # near to ⇧- for _
+        b"\x1F": ["⌃ -", "⌃ ⌥ -", "⌃ ⇧ -", "⌃ ⌥ ⇧ -"],  # near to ⇧- for _
         b"\x7F": _8_DELETES,  # or drawn as ⌫ and ⌦
         b"\xC2\xA0": ["⌥ Space", "⌥ ⇧ Space"],
     }

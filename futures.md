@@ -209,6 +209,15 @@ it's got an early index of source code in it, i might should catch that up
 
 i gather notes here when they reach me, then later i spread them out above
 
++ mv.py should toggle itself off?
++ mv.py should stop freaking over trailing '/'
++ cp.py should work like mv.py
+
++ cal.py should give me 'cal && cal -m 1 2023' on 20/Dec
++ + but did give me 'cal && cal -m 12 2022'
+
++ mv.py should trace its calls of 'date +' and of 'ls -1rt'
+
 + tty stdin g should mean qo, else g -R $PWD
 
 + open.py of a thin decimal number should put that number into a recent web address

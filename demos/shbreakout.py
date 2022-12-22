@@ -679,6 +679,8 @@ if __name__ == "__main__":
     main()
 
 
+# todo: need a debug trigger to dump last few states as separate Json to Diff
+
 # todo: yes, a first draft, but no, its Physics can't explode all the Bricks yet
 
 

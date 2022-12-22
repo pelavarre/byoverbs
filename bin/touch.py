@@ -3,6 +3,8 @@
 """
 touch -d 1970-01-01T00:00:00.000Z t.touch
 touch -d 1999-12-31T23:59:59.999 t.touch
+
+touch -r t1.touch t2.touch
 """
 
 import byotools as byo
