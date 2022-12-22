@@ -33,6 +33,7 @@ import argparse
 import difflib
 import os
 import pdb
+import string
 import sys
 import textwrap
 
@@ -110,7 +111,10 @@ PADDLE_COLUMNS = 5  # how many Pixels per Paddle
 #
 
 
-HOT_CAPS = tuple("← ↑ ↓ → W A S D H J K L Space".split())
+HOT_CAPS_SET = set("← ↑ ↓ → W A S D H J K L Space".split())
+
+QUIT_CAPS_SET = list(string.ascii_letters + string.digits) + "Esc".split()
+QUIT_CAPS_SET = set(QUIT_CAPS_SET) - set(HOT_CAPS_SET)
 
 
 PADDLE_VECTOR_BY_CAP = dict()
@@ -302,7 +306,7 @@ class BreakoutGame:
 
                 caps.append(cap)
                 if caps[-3:] == (3 * [cap]):
-                    if cap not in HOT_CAPS:
+                    if cap in QUIT_CAPS_SET:
 
                         break
 
@@ -332,9 +336,6 @@ class BreakoutGame:
     def board_draw(self):
         """Draw one Ball and one Paddle - and update Status"""
 
-        brick_y = self.brick_y
-        brick_yxs_set = self.brick_yxs_set
-        columns = self.columns
         paddle_x = self.paddle_x
         paddle_y = self.paddle_y
         tui = self.tui
@@ -346,13 +347,41 @@ class BreakoutGame:
 
         # Draw one Ball
 
-        (ball_y, ball_x) = self.ball_yx
-        tui.print(CUP_Y_X.format(ball_y, ball_x) + BALL, end="")
+        ball_yx = self.ball_yx
+        (ball_y, ball_x) = ball_yx
+
+        ball = BALL
+        if True:
+            ball = keycaps.COLOR_CHARS_FORMAT.format(keycaps._32_GREEN, BALL)
+
+        tui.print(CUP_Y_X.format(ball_y, ball_x) + ball, end="")
 
         # Draw one Paddle
 
         for column in range(PADDLE_COLUMNS):
-            tui.print(CUP_Y_X.format(paddle_y, paddle_x + column) + BALL, end="")
+            print_yx = (paddle_y, paddle_x + column)
+            if print_yx != ball_yx:
+                tui.print(CUP_Y_X.format(*print_yx) + BALL, end="")
+
+        # Draw the Bricks
+
+        self.board_draw_bricks()
+
+        # Draw an echo of unwanted input, if any arrived lately
+
+        self.board_draw_status()
+
+        # Take credit for drawing a complete Board, not just Diffs
+
+        self.entries = tui.entries
+
+    def board_draw_bricks(self):
+        """Draw the Bricks"""
+
+        brick_y = self.brick_y
+        brick_yxs_set = self.brick_yxs_set
+        columns = self.columns
+        tui = self.tui
 
         # Collect the Layers of Bricks, just once per Game
 
@@ -375,14 +404,6 @@ class BreakoutGame:
                     if brick_yx in brick_yxs_set:
                         tui.print(CUP_Y_X.format(*brick_yx) + BRICK, end="")
 
-        # Draw an echo of unwanted input, if any arrived lately
-
-        self.board_draw_status()
-
-        # Take credit for drawing a complete Board, not just Diffs
-
-        self.entries = tui.entries
-
     def board_draw_status(self):
         """Draw an echo of unwanted input, if any arrived lately"""
 
@@ -390,11 +411,11 @@ class BreakoutGame:
         tui = self.tui
 
         status = "(press one of "
-        status += "A W S D, H K J L, Space, ← ↑ ↓ →, + - =, 0 1 2 3 4 5 6 7 9 Q)"
+        status += "A W S D, H K J L, Space, ← ↑ ↓ →, Q)"
 
         if caps:
             last_cap = caps[-1]
-            if last_cap not in HOT_CAPS:
+            if last_cap not in HOT_CAPS_SET:
                 echo_caps = (3 * [" "]) + caps[-3:]
                 echo_caps = echo_caps[-3:]
 

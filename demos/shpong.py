@@ -418,7 +418,7 @@ class ShPongGame:
         # Draw an echo of unwanted input, if any arrived lately
 
         status = "(press one of "
-        status += "A W S D, H K J L, Space, ← ↑ ↓ →, + - =, 0 1 2 3 4 5 6 7 9 Q)"
+        status += "A W S D, H K J L, Space, ← ↑ ↓ →, + - =, 0 1 2 3 4 5 6 7 8 9 Q)"
 
         if caps:
             last_cap = caps[-1]
