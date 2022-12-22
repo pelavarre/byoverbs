@@ -472,14 +472,7 @@ class BreakoutGame:
         # Collide with a Brick
 
         x_minus_center = self.paddle_find_yx(self.ball_yx)
-
-        if self.ball_yx in self.brick_yxs_set:
-            assert y_next != self.ball_y_max, (y_next, self.ball_y_max)
-            assert x_minus_center is None, x_minus_center
-
-            self.brick_yxs_set.remove(self.ball_yx)
-
-            self.ball_vector_yx = (-vector_y_next, -vector_x_next)
+        self.ball_bricks_collide(x_minus_center)
 
         # Score and Serve, or Bounce off of Paddle, at far Left or far Right
 
@@ -489,6 +482,37 @@ class BreakoutGame:
                     self.ball_score_and_serve()
                 else:
                     self.ball_bounce_off_paddle(x_minus_center)
+
+    def ball_bricks_collide(self, x_minus_center):
+
+        ball_yx = self.ball_yx
+        (vector_y, vector_x) = self.ball_vector_yx
+
+        (y, x) = ball_yx
+
+        tui = self.tui
+
+        #
+
+        if ball_yx in self.brick_yxs_set:
+            assert y != self.ball_y_max, (y, self.ball_y_max)
+            assert x_minus_center is None, x_minus_center
+
+            self.brick_yxs_set.remove(ball_yx)
+
+            self.ball_vector_yx = (-vector_y, -vector_x)
+
+            #
+
+            left_yx = (y, x - 1)
+            if left_yx in self.brick_yxs_set:
+                self.brick_yxs_set.remove(left_yx)
+                tui.print(CUP_Y_X.format(y, x - 1) + " ", end="")
+
+            right_yx = (y, x + 1)
+            if right_yx in self.brick_yxs_set:
+                self.brick_yxs_set.remove(right_yx)
+                tui.print(CUP_Y_X.format(y, x + 1) + " ", end="")
 
     def ball_score_and_serve(self):
         """Score and Serve, at Bottom"""
