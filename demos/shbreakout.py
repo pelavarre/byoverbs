@@ -145,7 +145,14 @@ def main():
     parse_breakout_py_args_else()  # prints helps and exits, else returns args
     keycaps.stdio_has_tui_else(sys.stderr)  # prints helps and exits if no Tui found
 
-    run_breakout()
+    try:
+        run_breakout()
+    except Exception as exc:
+        sys.stderr.write("{}: {}".format(type(exc).__name__, exc))
+
+        breakpoint()
+
+        raise
 
 
 def run_breakout():
@@ -163,7 +170,6 @@ def run_breakout():
 
         tui.print(DECTCEM_CURSOR_HIDE)
         try:
-            tui.screen_wipe_below()
             game.run_till_quit()
         finally:
             tui.print(DECTCEM_CURSOR_SHOW)  # todo:  grow 'tui.__exit__'
@@ -255,6 +261,8 @@ class BreakoutGame:
         self.status_x = status_x
         self.status_width = columns - 1
 
+        self.entries = None
+
     def run_till_quit(self):
 
         tui = self.tui
@@ -280,6 +288,17 @@ class BreakoutGame:
             else:
                 stroke = tui.readline()
                 cap = tui.cap_from_stroke(stroke)
+
+                if stroke == b"\x03":
+                    tui.print(CUP_Y_X.format(self.rows, self.columns))
+                    tui.print()
+                    tui.__exit__(*sys.exc_info())
+
+                    breakpoint()
+
+                    tui.__enter__()
+
+                    continue
 
                 caps.append(cap)
                 if caps[-3:] == (3 * [cap]):
@@ -315,11 +334,15 @@ class BreakoutGame:
 
         brick_y = self.brick_y
         brick_yxs_set = self.brick_yxs_set
-        caps = self.caps
         columns = self.columns
         paddle_x = self.paddle_x
         paddle_y = self.paddle_y
         tui = self.tui
+
+        # Scroll away history without dropping all of it, and print a blank screen
+
+        if self.entries != tui.entries:
+            tui.screen_wipe_below()
 
         # Draw one Ball
 
@@ -331,20 +354,40 @@ class BreakoutGame:
         for column in range(PADDLE_COLUMNS):
             tui.print(CUP_Y_X.format(paddle_y, paddle_x + column) + BALL, end="")
 
-        # Draw Layers of Bricks
+        # Collect the Layers of Bricks, just once per Game
 
         if not brick_yxs_set:
 
             for row in range(BRICK_ROWS):
                 bricks = (columns - 2) * BRICK
-
-                tui.print(CUP_Y_X.format(brick_y + row, 2) + bricks, end="")
-
                 for brick_x in range(2, 2 + len(bricks)):
                     brick_yx = (brick_y + row, brick_x)
                     brick_yxs_set.add(brick_yx)
 
+        # Draw the collected Layers of Bricks
+
+        if self.entries != tui.entries:
+
+            for row in range(BRICK_ROWS):
+                bricks = (columns - 2) * BRICK
+                for brick_x in range(2, 2 + len(bricks)):
+                    brick_yx = (brick_y + row, brick_x)
+                    if brick_yx in brick_yxs_set:
+                        tui.print(CUP_Y_X.format(*brick_yx) + BRICK, end="")
+
         # Draw an echo of unwanted input, if any arrived lately
+
+        self.board_draw_status()
+
+        # Take credit for drawing a complete Board, not just Diffs
+
+        self.entries = tui.entries
+
+    def board_draw_status(self):
+        """Draw an echo of unwanted input, if any arrived lately"""
+
+        caps = self.caps
+        tui = self.tui
 
         status = "(press one of "
         status += "A W S D, H K J L, Space, ← ↑ ↓ →, + - =, 0 1 2 3 4 5 6 7 9 Q)"

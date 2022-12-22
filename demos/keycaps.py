@@ -1021,8 +1021,12 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
 
         self.line = None  # the 2nd Keystroke that came in with a 1st Keystroke
 
+        self.entries = 0  # count calls of 'def __enter__'
+
     def __enter__(self):
         """Flush, then start taking Keystrokes literally & writing Lf as itself"""
+
+        self.entries += 1
 
         fd = self.fd
         tcgetattr = self.tcgetattr
