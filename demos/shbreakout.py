@@ -350,9 +350,7 @@ class BreakoutGame:
         ball_yx = self.ball_yx
         (ball_y, ball_x) = ball_yx
 
-        ball = BALL
-        if True:
-            ball = keycaps.COLOR_CHARS_FORMAT.format(keycaps._32_GREEN, BALL)
+        ball = keycaps.COLOR_CHARS_FORMAT.format(keycaps._32_GREEN, BALL)
 
         tui.print(CUP_Y_X.format(ball_y, ball_x) + ball, end="")
 
