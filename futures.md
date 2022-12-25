@@ -209,6 +209,9 @@ it's got an early index of source code in it, i might should catch that up
 
 i gather notes here when they reach me, then later i spread them out above
 
++ the non-x Py at 'apt find git screen script ssh sudo' should go live
++ + as easily as already at:  bin/touch.py
+
 + mv.py should toggle itself off?
 + mv.py should stop freaking over trailing '/'
 + cp.py should work like mv.py

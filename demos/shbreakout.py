@@ -417,7 +417,7 @@ class BreakoutGame:
                 echo_caps = (3 * [" "]) + caps[-3:]
                 echo_caps = echo_caps[-3:]
 
-                echo = " ".join(echo_caps)
+                echo = " ".join(str(_) for _ in echo_caps)
                 status = echo
 
         status_chars = status.center(self.status_width)[: self.status_width]

@@ -17,7 +17,7 @@ examples:
 
   python3.py  # show these examples and exit
   python3.py --h  # show this help message and exit
-  python3.py --  # todo: run as you like it
+  python3.py --  # run the examples below
 
   : Dec/2008 Python 3  # major release date
   : Jun/2009 Python 3.1  # minor release date

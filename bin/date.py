@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 """
-usage: date.py [--h] ...
+usage: date.py [--h] [-r FILE] ...
 
 format date/time stamps
 
 options:
-  --help  show this help message and exit
+  --help   show this help message and exit
+  -r FILE  work with last-modified stamp of file, in place of now
 
 quirks:
   local to you is remote to me

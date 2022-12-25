@@ -9,15 +9,15 @@ options:
   -h, --help  show this help message and exit
 
 quirks:
-  plots X or O or . in your A B C choice of column and 1 2 3 choice of row
-  chooses X after O, or O after X for you, but lets you choose X or O or . if you like
-  undoes your last Move, when you press the ← Leftwards Arrow key
-  redoes your last Undone Move, when you press the → Rightwards Arrow key
-  steps the Game forward by trying to win, when you press the ↑ Upwards Arrow key
-  steps the Game forward by one random Move, when you press the ↓ Downwards Arrow key
-  mutates some random Cell randomly, when you press the ! Bang key (the ⇧1 chord)
-  clears the Board when you press Tab or the - Dash key
-  quits the Game when you press Q or Esc
+  . X O for what to draw, A B C for which column, 1 2 3 for which row
+  ! to change a random cell randomly, 9 ! to change 9 random cells randomly
+  ← to undo, → to redo, % to swap X's with O's
+  ↓ to move randomly, ↑ to move well, Y to say how to move well
+  > to rotate right, < to rotate left, | to spin, - to flip
+  @ to clear the board, Tab same as @
+  # to start a comment, Return to end a comment
+  ? to ask for help, / same as ?
+  Q to quit
 
 examples:
   open https://shell.cloud.google.com/?show=terminal  # if you need another Linux
@@ -26,7 +26,6 @@ examples:
   demos/tictactoe.py --  # draw a Tic-Tac-Toe Board more vividly than we do by hand
   # colors X O . moves into Cells as:   color color color color color
 """
-
 
 # code reviewed by people, and by Black and Flake8
 # developed by:  cls && F=demos/tictactoe.py && black $F && flake8 $F && $F --
@@ -101,7 +100,7 @@ class TicTacToeGame:
         self.n = n
         self.board = None
 
-        self.keyhelp = ".XO ABC 123 ! ←↑↓→ Y - Tab # Return ? / Q Esc"  # AWSD HKJL
+        self.keyhelp = ".XO ABC 123 ! ←↑↓→ ><|- Y % @ Tab # Return ? / Q"  # AWSD HKJL
         self.chords = list()
         self.helps = list()
         self.whys = list()
@@ -153,10 +152,14 @@ class TicTacToeGame:
                 "\x0A": self.move_onto_empty,  # Enter ⌃J
                 "\x0D": self.move_onto_empty,  # Return ⌃M
                 "\t": self.game_board_clear,  # Tab ⌃I
-                "\x1B": self.quit_game,  # Esc ⌃[
                 "!": self.move_onto_random,
+                "%": self.rewrite_to_swap_x_o,
+                "-": self.rewrite_to_flip_up_down,
+                "<": self.rewrite_to_rotate_left,
+                ">": self.rewrite_to_rotate_right,
                 "Q": self.quit_game,
                 "Y": self.sketch_game,
+                "|": self.rewrite_to_spin_left_right,
                 "\x7F": self.moves_undo_one,  # Delete  # classic ⌃? but not at Mac
                 "\x1B[A": self.move_to_win,  # UpwardsArrow ↑
                 "\x1B[B": self.move_onto_empty,  # DownwardsArrow ↓
@@ -169,8 +172,8 @@ class TicTacToeGame:
             }
         )
 
-        func_by_key["-"] = func_by_key["\t"]
-        func_by_key["Q"] = func_by_key["\x1B"]
+        func_by_key["@"] = self.game_board_clear
+        func_by_key["Q"] = self.quit_game
 
         func_by_key["H"] = func_by_key["\N{Leftwards Arrow}"]  # H mutated by 8x8 games
         func_by_key["K"] = func_by_key["\N{Upwards Arrow}"]
@@ -282,7 +285,10 @@ class TicTacToeGame:
         arrows += "\N{Upwards Arrow}"  # ↑
 
         repeatable_funcs = list(func_by_key[arrow] for arrow in arrows)
+
         repeatable_funcs.append(func_by_key["!"])
+        repeatable_funcs.append(func_by_key["<"])
+        repeatable_funcs.append(func_by_key[">"])
 
         # Count out how many times to call the Func
 
@@ -302,12 +308,6 @@ class TicTacToeGame:
         while True:
             before_chords = list(chords)
             func = self.run_one_key_once(keys, key=alt_key, chord=chord)
-
-            # tui = self.tui
-            # tui.__exit__(*sys.exc_info())
-            # print(alt_key)
-            # breakpoint()
-            # tui.__enter__()
 
             fresh_call_count = self.call_count
             if func in repeatable_funcs:
@@ -391,28 +391,31 @@ class TicTacToeGame:
         default_empty = []
         keycap_lists = keycaps.KEYCAP_LISTS_BY_STROKE.get(stroke, default_empty)
 
-        chord = None
-        if keycap_lists:
+        cap_by_cap = dict()
+        cap_by_cap["⇧,"] = "<"
+        cap_by_cap["⇧."] = ">"
+        cap_by_cap["⇧/"] = "?"
+        cap_by_cap["⇧1"] = "!"
+        cap_by_cap["⇧2"] = "@"
+        cap_by_cap["⇧\\"] = "|"
+        cap_by_cap["\N{Up Arrowhead}" "["] = "Esc"  # "⌃["
+        cap_by_cap["\N{Up Arrowhead}" "I"] = "Tab"  # "⌃I"
+        cap_by_cap["\N{Up Arrowhead}" "J"] = "Enter"  # "⌃J"
+        cap_by_cap["\N{Up Arrowhead}" "M"] = "Return"  # "⌃M"
 
-            chord = "".join(keycap_lists[0].split())
-            if chord == "⇧1":
-                chord = "!"
-            elif chord == "⇧/":
-                chord = "?"
-            elif chord == "\N{Up Arrowhead}" "[":  # "⌃["
-                chord = "Esc"
-            elif chord == "\N{Up Arrowhead}" "I":  # "⌃I"
-                chord = "Tab"
-            elif chord == "\N{Up Arrowhead}" "J":  # "⌃J"
-                chord = "Enter"
-            elif chord == "\N{Up Arrowhead}" "M":  # "⌃M"
-                chord = "Return"
+        cap = None
+        if keycap_lists:
+            alt_cap = "".join(keycap_lists[0].split())
+
+            cap = alt_cap
+            if alt_cap in cap_by_cap.keys():
+                cap = cap_by_cap[alt_cap]
 
         keys = [chars]
         if not chars.startswith("\x1B"):
             keys = list(chars)
 
-        return (keys, chord)
+        return (keys, cap)
 
         # <= FIXME: excessive coupling with 'import keycaps'
 
@@ -473,21 +476,130 @@ class TicTacToeGame:
 
         sys.exit()
 
+    def rewrite_to_flip_up_down(self):  # -
+        """Flip the Board, Up for Down"""
+
+        before = "123"
+        after = "".join(reversed(before))
+
+        def flip_up_down(chars):
+            alt = "".join(
+                (after[before.index(_)] if (_ in before) else _) for _ in chars
+            )
+            return alt
+
+        self.rewrite_game_by_func(func=flip_up_down)
+
+    def rewrite_to_rotate_left(self):  # <
+        """Rotate the Board, one quarter turn left"""
+
+        d = dict()  # same as inside 'def rewrite_to_rotate_right'
+
+        d["A1"] = "C1"
+        d["B1"] = "C2"
+        d["C1"] = "C3"
+
+        d["A2"] = "B1"
+        d["B2"] = "B2"
+        d["C2"] = "B3"
+
+        d["A3"] = "A1"
+        d["B3"] = "A2"
+        d["C3"] = "A3"
+
+        def rotate_left(chars):
+            alt = chars
+            for (k, v) in d.items():
+                if v in alt:
+                    alt = alt.replace(v, k)  # to K from V
+                    break
+            return alt
+
+        self.rewrite_game_by_func(func=rotate_left)
+
+    def rewrite_to_rotate_right(self):  # >
+        """Rotate the Board, one quarter turn right"""
+
+        d = dict()  # same as inside 'def rewrite_to_rotate_left'
+
+        d["A1"] = "C1"
+        d["B1"] = "C2"
+        d["C1"] = "C3"
+
+        d["A2"] = "B1"
+        d["B2"] = "B2"
+        d["C2"] = "B3"
+
+        d["A3"] = "A1"
+        d["B3"] = "A2"
+        d["C3"] = "A3"
+
+        def rotate_right(chars):
+            alt = chars
+            for (k, v) in d.items():
+                if k in alt:
+                    alt = alt.replace(k, v)  # to V from K
+                    break
+            return alt
+
+        self.rewrite_game_by_func(func=rotate_right)
+
+    def rewrite_to_spin_left_right(self):  # |
+        """Spin the Board, Right for Left"""
+
+        before = "ABC"
+        after = "".join(reversed(before))
+
+        def spin_left_right(chars):
+            alt = "".join(
+                (after[before.index(_)] if (_ in before) else _) for _ in chars
+            )
+            return alt
+
+        self.rewrite_game_by_func(func=spin_left_right)
+
+    def rewrite_to_swap_x_o(self):  # %
+        """Substitute X's for O's and O's for X's"""
+
+        before = "XO"
+        after = "".join(reversed(before))
+
+        def swap_x_o(chars):
+            alt = "".join(
+                (after[before.index(_)] if (_ in before) else _) for _ in chars
+            )
+            return alt
+
+        self.rewrite_game_by_func(func=swap_x_o)
+
+    def rewrite_game_by_func(self, func):
+
+        board = self.board
+        chords = self.chords
+        tui = self.tui
+        turn = self.turn
+
+        board.rewrite_board_by_func(func)
+
+        self.turn = func(turn)
+
+        _ = board.board_tui_print(
+            tui, turn=self.turn, chords=chords, taken_as=self.taken_as
+        )
+
+        self.chords_helps_whys_clear()
+
     def choose_x(self):  # A B C
         """Choose a Column of the Board to move onto"""
 
-        digits = self.digits
         key = self.key
         turn = self.turn
 
-        if not digits:
-            self.x = key
-            if self.y:
-                self.move_onto_x_y(after=turn)  # changes no Cell when repeating a Move
+        self.x = key
+        if self.y:
+            self.move_onto_x_y(after=turn)  # changes no Cell when repeating a Move
 
-            self.digits = ""
-
-        self.take_digit()
+        self.digits = ""
 
     def choose_y(self):  # 1 2 3
         """Choose a Row of the Board to move onto"""
@@ -496,14 +608,15 @@ class TicTacToeGame:
         key = self.key
         turn = self.turn
 
-        if not digits:
+        if digits:
+            self.take_digit()
+        else:
             self.y = key
             if self.x:
                 self.move_onto_x_y(after=turn)  # changes no Cell when repeating a Move
-
-            self.digits = ""
-
-        self.take_digit()
+                self.digits = ""
+            else:
+                self.take_digit()
 
     def take_digit(self):  # 0 4 5 6 7 8 9 directly, or 1 2 3 indirectly
         """Say how many times to call a Key Arrow Func"""
@@ -544,7 +657,7 @@ class TicTacToeGame:
 
             self.move_onto_x_y(after=turn)  # always changes 1 Cell
 
-    def move_onto_x_y(self, after):  # called by A B C 1 2 3, but also by# ! ↑ ↓
+    def move_onto_x_y(self, after):  # called by A B C 1 2 3, but also by ! ↑ ↓
         """Mutate the chosen Cell, print the Board, pick next Player"""
 
         board = self.board
@@ -688,7 +801,7 @@ class TicTacToeGame:
                 self.call_count = 0
             self.chords_helps_whys_clear()
 
-    def game_board_clear(self):  # - Tab
+    def game_board_clear(self):  # @ Tab
         """Clear the Board"""
 
         board = self.board
@@ -760,6 +873,30 @@ class TicTacToeBoard:
         self.moves = list()
         self.undos = list()
         self.streaks_by_winner = dict()
+
+    def rewrite_board_by_func(self, func):
+        """Rewrite each Cell, Move, or Undo from an alt point-of-view"""
+
+        cells = self.cells
+        moves = self.moves
+        undos = self.undos
+        xys = self.xys
+
+        for (index, move) in enumerate(moves):
+            moves[index] = func(move)
+
+        cells[::] = len(self.cells) * ["."]
+        for move in moves:
+            (turn, x, y) = move
+
+            xy = (x, y)
+            index = xys.index(xy)
+            cells[index] = turn.lower()
+
+        for (index, undo) in enumerate(undos):
+            undos[index] = func(undo)
+
+        self.mark_wins_and_losses()
 
     def form_streaks(self):
         """List the ways to win"""
@@ -1532,7 +1669,7 @@ class TicTacToeBoard:
         if len(chords) == 1:
 
             chord = chords[-1]
-            if chord in "!←↑↓→":
+            if chord in "!" "←↑↓→":
                 echo = "{}, taken as {}".format(chord, taken_as)
 
                 return echo
@@ -1652,10 +1789,11 @@ class TicTacToeBoard:
                 if cell == ".":
                     tui.print(cell, end=" ")
                 elif move in handicaps:
-                    assert move not in xo_moves, move
+                    assert move not in xo_moves, (handicaps, xo_moves, move)
                     tui.print(cell, end=" ")
                 else:
-                    assert move not in handicaps, move
+                    assert move in xo_moves, (handicaps, xo_moves, move)
+                    assert move not in handicaps, (handicaps, xo_moves, move)
 
                     index = xo_moves.index(move)
                     # rindex = len(xo_moves) - 1 - index

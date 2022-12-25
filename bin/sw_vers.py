@@ -16,9 +16,10 @@ examples:
 
   sw_vers.py  # show these examples and exit
   sw_vers.py --h  # show help lines and exit
-  sw_vers.py --  # show release date and version
+  sw_vers.py --  # run the last paragraph of examples below
 
   sw_vers  # such as:  macOS 12.2.1 21D62
+  echo $(sw_vers |awk '{print $NF}')
   sw_vers |grep ^ProductVersion: |awk '{print $2}'  # such as:  12.2
 
   :
