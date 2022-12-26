@@ -9,11 +9,10 @@ options:
   -h, --help  show this help message and exit
 
 quirks:
-  hold down the Spacebar to keep the Ball moving
   press W and S (or A and D) to move the Left Paddle up and down
   press K and J (or H and L) to move the Right Paddle up and down
   press $L $U $D $R shove on the Ball to speed it up or slow it down
-  press Esc three times in a row, to end the Game before scoring 9 points
+  press Q three times in a row, to end the Game before scoring 9 points
   press Keys while the other Player needs to press Keys, just to delay those Keys
 
 examples:
@@ -155,13 +154,12 @@ DIGIT_WIDTH_5 = 5
 #
 
 
-SCORE_CAPS = tuple("-0123456789=")  # '=' for '=' itself, and for '+' at '⇧ ='
+SCORE_CAPS = list("-0123456789=")  # '=' for '=' itself, and for '+' at '⇧ ='
+SCORE_CAPS.sort()
 
-HOT_CAPS = list()
-HOT_CAPS += list("← ↑ ↓ → W A S D H J K L Space".split())
+HOT_CAPS = list("← ↑ ↓ → W A S D H J K L Space".split())
 HOT_CAPS += SCORE_CAPS
 HOT_CAPS.sort()
-HOT_CAPS = tuple(HOT_CAPS)
 
 
 PADDLE_INDEX_BY_CAP = dict()
@@ -236,9 +234,14 @@ class ShPongGame:
     selves = list()
 
     def __init__(self, tui):
-        ShPongGame.selves.append(self)
 
+        ShPongGame.selves.append(self)
         self.tui = tui
+
+        self.reinit()
+
+    def reinit(self):
+
         self.caps = []  # trace of 'tui.cap_from_stroke' of 'tui.readline'
 
         self.ball_vector_yx = (0, +1)
@@ -324,7 +327,7 @@ class ShPongGame:
         self.status_x = status_x
         self.status_width = columns - 1
 
-    def run_till_quit(self):
+    def run_till_quit(self):  # noqa # too complex (11  # FIXME
 
         tui = self.tui
 
@@ -349,7 +352,10 @@ class ShPongGame:
                 cap = Space
             else:
                 stroke = tui.readline()
+
                 cap = tui.cap_from_stroke(stroke)
+                if stroke == b"@":
+                    cap = "@"  # FIXME: excessive coupling with 'import keycaps'
 
                 caps.append(cap)
                 if caps[-3:] == (3 * [cap]):
@@ -375,6 +381,11 @@ class ShPongGame:
 
             if cap in VECTOR_YX_BY_CAP.keys():
                 self.ball_shove(cap)
+
+            # Start the game again
+
+            if cap == "@":
+                self.reinit()
 
             # Step the Ball along
 
@@ -418,7 +429,7 @@ class ShPongGame:
         # Draw an echo of unwanted input, if any arrived lately
 
         status = "(press one of "
-        status += "A W S D, H K J L, Space, ← ↑ ↓ →, + - =, 0 1 2 3 4 5 6 7 8 9 Q)"
+        status += "A W S D, H K J L, Space, ← ↑ ↓ →, + - =, 0 1 2 3 4 5 6 7 8 9 @ Q)"
 
         if caps:
             last_cap = caps[-1]
@@ -472,8 +483,12 @@ class ShPongGame:
         scores = self.scores
 
         (_, x) = self.ball_yx
+        (_, vector_x) = self.ball_vector_yx
 
         index = 1 - int(x >= ball_x_mid)
+        if vector_x:
+            index = int(vector_x < 0)
+
         score = scores[index]
 
         if cap == "=":
@@ -483,6 +498,7 @@ class ShPongGame:
 
                 return
 
+        if cap == "=":  # take '⇧ =' as '+'
             alt_score = score + 1
         elif cap == "-":
             alt_score = score - 1
