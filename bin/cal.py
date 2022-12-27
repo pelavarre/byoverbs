@@ -340,7 +340,7 @@ def parse_cal_when(str_when, now):
 def compile_cal_py_argdoc_else():
     """Construct an ArgumentParser from the Main ArgDoc"""
 
-    parser = byo.compile_argdoc(drop_help=True, epi="quirks:")
+    parser = byo.compile_argdoc(drop_help=True)
 
     parser.add_argument(
         "--help", action="count", help="show this help message and exit"

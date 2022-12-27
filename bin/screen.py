@@ -27,3 +27,14 @@ export PS1='\$ '
 ⌃A ⌃D  # to disconnect
 
 """
+
+
+_ = """
+
+some combo can tell you what state you're in:  Default, Copy Mode, & in-between's
+
+⌃A ⌃A
+⌃A Esc
+Return
+
+"""

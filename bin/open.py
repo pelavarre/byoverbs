@@ -83,7 +83,7 @@ def parse_open_py_args_else():
 def compile_open_py_argdoc_else():
     """Print helps for Open Py and exit zero or nonzero, else return args"""
 
-    parser = byo.compile_argdoc(epi="quirks:", drop_help=None)
+    parser = byo.compile_argdoc()
 
     parser.add_argument(
         "address",

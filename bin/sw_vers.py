@@ -3,23 +3,23 @@
 """
 usage: sw_vers.py [--h] ...
 
-show macOS version
+show macOS Version, and mark it with its Month/Year
 
 options:
   --help  show this help message and exit
 
 quirks:
   classic Sw_Vers dumps Key-Value Pairs, when given no Parms
-  goes well with:  Linux Lsb-Release A, Mac SwVers, UName
+  goes well with:  Linux Lsb_Release A, Mac Sw_Vers, UName
 
 examples:
 
   sw_vers.py  # show these examples and exit
   sw_vers.py --h  # show help lines and exit
-  sw_vers.py --  # run the last paragraph of examples below
+  sw_vers.py --  # add standard calendar Month/Year to their report of Version
 
-  sw_vers  # such as:  macOS 12.2.1 21D62
-  echo $(sw_vers |awk '{print $NF}')
+  sw_vers
+  echo $(sw_vers |awk '{print $NF}')  # such as:  macOS 12.2.1 21D62
   sw_vers |grep ^ProductVersion: |awk '{print $2}'  # such as:  12.2
 
   :

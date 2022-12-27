@@ -40,7 +40,6 @@ import pdb
 import random
 import re
 import select  # defined in Windows only for Sockets, not also for Keyboards
-import shutil
 import string
 import sys
 import textwrap
@@ -129,10 +128,10 @@ DARK_THEME_COLOR_BY_AGE = tuple(_ for _ in COLOR_BY_AGE if _ not in DARK_COLORS)
 #
 
 
-def main(sys_argv=None):
+def main():
     """Run from the Sh command line"""
 
-    parse_keycaps_py_args_else(sys_argv)  # prints helps and exits, else returns args
+    parse_keycaps_py_args_else()  # prints helps and exits, else returns args
     stdio_has_tui_else(sys.stderr)
 
     keycaps_plot.t_by_keycap = dict()
@@ -241,7 +240,7 @@ def tui_stroke_print(tui, stroke, t0, t1, t2, keycaps):
     if len(stroke) <= 10:
 
         tui.print(
-            "{} {} {} ({}) {} {} ms".format(
+            "{}  {} {} ({})  {} {} ms".format(
                 keycaps,
                 len(stroke),
                 stroke_rep,
@@ -261,10 +260,10 @@ def tui_stroke_print(tui, stroke, t0, t1, t2, keycaps):
 
     hexxed_0 = hexlify(stroke[:3])
     hexxed_1 = hexlify(stroke[-3:])
-    alt_hexxed = "x {} ... {}".format(hexxed_0, hexxed_1)
+    alt_hexxed = "{} ... {}".format(hexxed_0, hexxed_1)
 
     tui.print(
-        "{} {} {} ({}) {} {} ms".format(
+        "{}  {} {} ({})  {} {} ms".format(
             keycaps, len(stroke), alt_rep, alt_hexxed, str_t0t2, str_t1t0
         )
     )
@@ -769,14 +768,12 @@ assert MAX_LEN_KEY_CAPS_STROKE_6 == 6, MAX_LEN_KEY_CAPS_STROKE_6
 #
 
 
-def parse_keycaps_py_args_else(sys_argv):
+def parse_keycaps_py_args_else():
     """Print helps for Keycaps Py and exit zero or nonzero, else return args"""
-
-    as_sys_argv = sys_argv if sys_argv else [None, "--"]
 
     # Drop the '--' Separator if present, even while declaring no Pos Args
 
-    sys_parms = as_sys_argv[1:]
+    sys_parms = sys.argv[1:]
     if sys_parms == ["--"]:
         sys_parms = list()
 
@@ -784,7 +781,7 @@ def parse_keycaps_py_args_else(sys_argv):
 
     parser = compile_keycaps_argdoc_else()
     args = parser.parse_args(sys_parms)  # prints helps and exits, else returns args
-    if not as_sys_argv[1:]:
+    if not sys.argv[1:]:
         doc = __main__.__doc__
 
         exit_via_testdoc(doc, epi="examples")  # exits because no args
@@ -1311,7 +1308,7 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
     def screen_wipe_below(self):
         """Scroll away history without dropping all of it, and print a blank screen"""
 
-        size = shutil.get_terminal_size()
+        size = self.shutil_get_terminal_size()
         for _ in range(size.lines):
             self.print()
 
@@ -1401,7 +1398,7 @@ def try_put_terminal_size(stdio, size):
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/keycaps.py

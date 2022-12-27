@@ -16,7 +16,7 @@ options:
   -m      show as comma separated names
 
 quirks:
-  goes well with Cp, Ls, Mv, Rm, RmDir, Touch
+  goes well with Cp, MkDir, Ls, Mv, Rm, RmDir, Touch
   classic Ls dumps all the Items, with no Scroll limit, when given no Parms
 
 examples:

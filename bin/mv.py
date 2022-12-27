@@ -16,7 +16,7 @@ options:
 quirks:
   moves Jpeg, Jpg, Png Files into __jqd-trash__/., for 'git config user.initials'
   moves the last Modified File off the Stack, out to ~%m%djqd%H%M~
-  goes well with Cp, Mv, Ls, Rm, RmDir, Touch
+  goes well with Cp, MkDir, Mv, Ls, Rm, RmDir, Touch
 
 examples:
   mv.py  # show these examples and exit

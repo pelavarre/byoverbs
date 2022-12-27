@@ -40,10 +40,12 @@ _ = dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6
 #
 
 
-def compile_argdoc(epi, drop_help=None):
+def compile_argdoc(drop_help=None):
     """Construct an ArgumentParser, from ArgDoc, without Positional Args and Options"""
 
     argdoc = __main__.__doc__  # could be:  argdoc = doc if doc else __main__.__doc__
+
+    # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
 
     doc_lines = argdoc.strip().splitlines()
     prog = doc_lines[0].split()[1]  # first word of first line
@@ -53,8 +55,28 @@ def compile_argdoc(epi, drop_help=None):
 
     add_help = not drop_help
 
-    epilog_at = argdoc.index(epi)
-    epilog = argdoc[epilog_at:]
+    # Find the Epilog in the Doc
+
+    epilog = None
+    for (index, line) in enumerate(doc_lines):
+        strip = line.rstrip()
+
+        skip = False
+        skip = skip or not strip
+        skip = skip or strip.startswith(" ")
+        skip = skip or strip.startswith("usage")
+        skip = skip or strip.startswith(description.rstrip())
+        skip = skip or strip.startswith("positional arguments")
+        skip = skip or strip.startswith("options")
+        if skip:
+
+            continue
+
+        epilog = "\n".join(doc_lines[index:])
+
+        break
+
+    # Form an ArgumentParser, without Positional Args and Options
 
     parser = argparse.ArgumentParser(
         prog=prog,
@@ -65,6 +87,20 @@ def compile_argdoc(epi, drop_help=None):
     )
 
     return parser
+
+
+def parser_parse_args(parser):
+    """Parse the Args, even in the conventional corner of no Args coded as ' --'"""
+
+    sys_exit_if_argdoc_ne(parser)
+
+    sys_parms = sys.argv[1:]
+    if sys_parms == ["--"]:  # needed by ArgParse when no Positional Args
+        sys_parms = ""
+
+    args = parser.parse_args(sys_parms)  # prints helps and exits, else returns args
+
+    return args
 
 
 def sys_exit_if_argdoc_ne(parser):
@@ -108,6 +144,7 @@ def sys_exit_if_argdoc_ne(parser):
             b=want_doc.splitlines(),
             fromfile=got_filename,
             tofile=want_filename,
+            lineterm="",  # else the '---' '+++' '@@' Diff Control Lines end with '\n'
         )
     )
 

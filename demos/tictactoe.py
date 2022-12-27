@@ -80,10 +80,10 @@ __main__.__doc__ = __main__.__doc__.replace(5 * " color", " " + COLOR_AS)
 #
 
 
-def main(sys_argv=None):
+def main():
     """Run from the Sh command line"""
 
-    keycaps.parse_keycaps_py_args_else(sys_argv)  # prints and exits, else returns args
+    keycaps.parse_keycaps_py_args_else()  # prints and exits, else returns args
     keycaps.stdio_has_tui_else(sys.stderr)
     with keycaps.tui_open(sys.stderr) as tui:
         game = TicTacToeGame(tui, n=3)
@@ -1970,7 +1970,7 @@ _ = """
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()
 
 
 # todo: rapid lookahead
