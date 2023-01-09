@@ -22,6 +22,7 @@ examples:
 # code reviewed by people, and by Black and Flake8
 
 
+import datetime as dt
 import os
 import select
 import sys
@@ -134,9 +135,11 @@ class TextUserInterface:  # todo: port to Windows
         """Work at Sys Stderr, or elsewhere"""
 
         self.fd = stdio.fileno()  # File Descriptor of Keyboard, for Os Read
-        self.kbpops = list()
         self.stdio = stdio  # File Stream of Keyboard, for IsATty and Flush
         self.tcgetattr = None  # Configuration of Terminal at Entry
+
+        self.kblogs = list()  # Ops completed but not yet logged
+        self.kbpops = list()  # Bytes fetched but not yet returned
 
     def __enter__(self):
         """Flush, then start taking Keystrokes literally & writing Lf as itself"""
@@ -207,29 +210,41 @@ class TextUserInterface:  # todo: port to Windows
             kbline = self.kbreadline()
             assert kbline
 
+            # Search for miscodings in Paste or in bursts of Keystrokes
+
+            alt_kbline = kbline
             if len(kbline) > 3:
 
                 (columns, _) = self.shutil_get_terminal_size()
 
-                Left = b"\x1B[D"
-                LeftLine = columns * Left
                 Up = b"\x1B[A"
-                kbline = kbline.replace(
-                    LeftLine, Up
-                )  # needed at Gmail Terminal Jan/2023
-
-                Right = b"\x1B[C"
-                RightLine = columns * Right
                 Down = b"\x1B[B"
-                kbline = kbline.replace(
-                    RightLine, Down
-                )  # needed at Gmail Terminal Jan/2023
+                Right = b"\x1B[C"
+                Left = b"\x1B[D"
 
-            kbpops.extend(list(kbline[_:][:1] for _ in range(len(kbline))))
+                # Liberally accept miscoding Up as a Left in every Column
+
+                LeftLine = columns * Left
+                alt_kbline = alt_kbline.replace(LeftLine, Up)
+
+                # Liberally accept miscoding Down as a Right in every Column
+
+                RightLine = columns * Right
+                alt_kbline = alt_kbline.replace(RightLine, Down)
+
+                self.kblog(2, dt.datetime.now(), columns, alt_kbline)
+
+                # liberal Up/ Down needed at Gmail Terminal Jan/2023 for Option+Click
+
+            #
+
+            kbpops.extend(list(alt_kbline[_:][:1] for _ in range(len(alt_kbline))))
 
         pop = kbpops.pop(0)
 
         return pop
+
+        # Gmail Terminal Mobile Tap+Hold worked like Laptop Option+Click
 
     def kbreadline(self):
         """Read 1 or more Bytes arriving as 1 Keystroke, or a Keystroke Sequence, or Paste"""
@@ -243,16 +258,41 @@ class TextUserInterface:  # todo: port to Windows
             more = os.read(fd, length)
             assert more
 
+            self.kblog(1, dt.datetime.now(), more)
+
             line += more
+
+            if self.kbhit(timeout=0):
+
+                continue  # needed at Gmail Terminal Jan/2023 for Option+Click
 
             if len(more) == length:
                 if self.kbhit(timeout=MAC_PASTE_125MS):
 
-                    continue
+                    continue  # needed at macOS Jan/2023 for large paste
 
             break
 
+        self.kblogflush()
+
         return line
+
+    def kblog(self, *args):
+
+        kblogs = self.kblogs
+
+        kblogs.append(args)
+
+    def kblogflush(self):
+
+        kblogs = self.kblogs
+
+        if kblogs:
+            with open("glass.log", "a") as a:
+                while kblogs:
+                    args = kblogs.pop(0)
+                    line = " ".join(str(_) for _ in args)
+                    a.write("{}\n".format(line))
 
     def kbhit(self, timeout):  # 'timeout' in seconds
         """Wait till next Byte of Keystroke, next burst of Paste pasted, or Timeout"""
