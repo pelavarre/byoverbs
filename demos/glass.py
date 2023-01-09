@@ -48,12 +48,10 @@ except Exception:  # auth edit of Sys Path for Flake8 with this Try Except Block
 ESC = "\x1B"  # Esc
 CSI = ESC + "["  # Control Sequence Introducer (CSI)
 
+
 ED_2 = "\x1B[2J"  # Erase in Display (ED)  # 2 = Whole Screen
 CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP)  # such as "\x1B[1;1H"
 CUP_1_1 = "\x1B[H"  # Cursor Position (CUP)  # (1, 1) = Upper Left
-
-DECSCUSR_N = "\x1B[{} q"  # Set Cursor Style  # such as "\x1B[2 q"
-DECSCUSR = "\x1B[ q"  # Clear Cursor Style (but doc'ed poorly)
 
 DECSC = ESC + "7"  # DEC Save Cursor
 DECRC = ESC + "8"  # DEC Restore Cursor
@@ -68,6 +66,11 @@ _CURSES_INITSCR_ = SMCUP + ED_2 + CUP_1_1
 _CURSES_ENDWIN_ = RMCUP
 
 
+DECSCUSR_N = "\x1B[{} q"  # Set Cursor Style  # such as "\x1B[2 q"
+DECSCUSR = "\x1B[ q"  # Clear Cursor Style (but doc'ed poorly)
+
+
+MAC_PASTE_125MS = 125e-3
 MAC_PASTE_CHUNK_1022 = 1022
 
 
@@ -94,10 +97,16 @@ def main():
     try:
         ibytes = b""
         with TextUserInterface(sys.stderr) as tui:
+            if not args.no_init:
+                print()
+                print(tui.shutil_get_terminal_size(), end="\r\n")
+                print()
+                print("Press Q Q Q to quit, or other keys")
+                print()
 
             while True:
                 sys.stdout.flush()
-                ibyte = os.read(tui.fd, 1)
+                ibyte = tui.kbreadbyte()
                 os.write(sys.stdout.fileno(), ibyte)
                 ibytes += ibyte
 
@@ -113,6 +122,9 @@ def main():
     finally:
 
         if not args.no_init:
+            print("... sleeping briefly ...  ", end="")
+            sys.stdout.flush()
+
             time.sleep(1)
             sys.stdout.write(_CURSES_ENDWIN_)
 
@@ -122,6 +134,7 @@ class TextUserInterface:  # todo: port to Windows
         """Work at Sys Stderr, or elsewhere"""
 
         self.fd = stdio.fileno()  # File Descriptor of Keyboard, for Os Read
+        self.kbpops = list()
         self.stdio = stdio  # File Stream of Keyboard, for IsATty and Flush
         self.tcgetattr = None  # Configuration of Terminal at Entry
 
@@ -168,7 +181,7 @@ class TextUserInterface:  # todo: port to Windows
 
         stdio.flush()
 
-        # Flush input
+        # Flush input  # todo: apps that don't want Flush Input at Exit
 
         if termios:
             length = MAC_PASTE_CHUNK_1022
@@ -182,8 +195,64 @@ class TextUserInterface:  # todo: port to Windows
                 self.tcgetattr = None  # mutate
 
                 when = termios.TCSADRAIN
-                # when = termios.TCSAFLUSH  # todo: find a test that cares
+                # when = termios.TCSAFLUSH  # todo: find a tebst that cares
                 termios.tcsetattr(fd, when, tcgetattr)
+
+    def kbreadbyte(self):
+        """Read 1 Byte"""
+
+        kbpops = self.kbpops
+
+        if not kbpops:
+            kbline = self.kbreadline()
+            assert kbline
+
+            if len(kbline) > 3:
+
+                (columns, _) = self.shutil_get_terminal_size()
+
+                Left = b"\x1B[D"
+                LeftLine = columns * Left
+                Up = b"\x1B[A"
+                kbline = kbline.replace(
+                    LeftLine, Up
+                )  # needed at Gmail Terminal Jan/2023
+
+                Right = b"\x1B[C"
+                RightLine = columns * Right
+                Down = b"\x1B[B"
+                kbline = kbline.replace(
+                    RightLine, Down
+                )  # needed at Gmail Terminal Jan/2023
+
+            kbpops.extend(list(kbline[_:][:1] for _ in range(len(kbline))))
+
+        pop = kbpops.pop(0)
+
+        return pop
+
+    def kbreadline(self):
+        """Read 1 or more Bytes arriving as 1 Keystroke, or a Keystroke Sequence, or Paste"""
+
+        fd = self.fd
+
+        line = b""
+
+        length = MAC_PASTE_CHUNK_1022
+        while True:
+            more = os.read(fd, length)
+            assert more
+
+            line += more
+
+            if len(more) == length:
+                if self.kbhit(timeout=MAC_PASTE_125MS):
+
+                    continue
+
+            break
+
+        return line
 
     def kbhit(self, timeout):  # 'timeout' in seconds
         """Wait till next Byte of Keystroke, next burst of Paste pasted, or Timeout"""
