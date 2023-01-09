@@ -22,6 +22,7 @@ examples:
 # code reviewed by people, and by Black and Flake8
 
 
+import datetime as dt
 import os
 import select
 import sys
@@ -42,6 +43,9 @@ except Exception:  # auth edit of Sys Path for Flake8 with this Try Except Block
 
 #
 # Configure Text User Interface
+#
+#   https://en.wikipedia.org/wiki/ANSI_escape_code
+#   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 #
 
 
@@ -64,6 +68,11 @@ RMCUP = ED_2 + _XTERM_MAIN_ + DECRC  # Reset-Mode Cursor-Positioning
 
 _CURSES_INITSCR_ = SMCUP + ED_2 + CUP_1_1
 _CURSES_ENDWIN_ = RMCUP
+
+
+DSR = "\x1B[6n"  # Device Status Report, answered by CPR_Y_X
+CPR_Y_X = "\x1B[{};{}R"  # Cursor Position Report, called for by DSR
+# Wikipedia mentions the "\x1B[?6n" variation  # Gmail Terminal ignored it Jan/2023
 
 
 DECSCUSR_N = "\x1B[{} q"  # Set Cursor Style  # such as "\x1B[2 q"
@@ -91,6 +100,9 @@ def main():
 
     #
 
+    with open("glass.log", "w"):
+        pass
+
     if not args.no_init:
         sys.stdout.write(_CURSES_INITSCR_)
 
@@ -104,8 +116,13 @@ def main():
                 print("Press Q Q Q to quit, or other keys")
                 print()
 
+            if False:
+                sys.stdout.write("\x1B[6n")
+                sys.stdout.flush()
+
             while True:
                 sys.stdout.flush()
+
                 ibyte = tui.kbreadbyte()
                 os.write(sys.stdout.fileno(), ibyte)
                 ibytes += ibyte
@@ -134,9 +151,11 @@ class TextUserInterface:  # todo: port to Windows
         """Work at Sys Stderr, or elsewhere"""
 
         self.fd = stdio.fileno()  # File Descriptor of Keyboard, for Os Read
-        self.kbpops = list()
         self.stdio = stdio  # File Stream of Keyboard, for IsATty and Flush
         self.tcgetattr = None  # Configuration of Terminal at Entry
+
+        self.kblogs = list()  # Ops completed but not yet logged
+        self.kbpops = list()  # Bytes fetched but not yet returned
 
     def __enter__(self):
         """Flush, then start taking Keystrokes literally & writing Lf as itself"""
@@ -203,38 +222,82 @@ class TextUserInterface:  # todo: port to Windows
 
         kbpops = self.kbpops
 
+        #
+
         if not kbpops:
+
+            # FIXME: ask to sample cursor position if not kbhit
+
+            #
+
             kbline = self.kbreadline()
             assert kbline
 
+            # Search for miscodings in Paste or in bursts of Keystrokes
+
+            alt_kbline = kbline
             if len(kbline) > 3:
 
                 (columns, _) = self.shutil_get_terminal_size()
 
-                Left = b"\x1B[D"
-                LeftLine = columns * Left
                 Up = b"\x1B[A"
-                kbline = kbline.replace(
-                    LeftLine, Up
-                )  # needed at Gmail Terminal Jan/2023
-
-                Right = b"\x1B[C"
-                RightLine = columns * Right
                 Down = b"\x1B[B"
-                kbline = kbline.replace(
-                    RightLine, Down
-                )  # needed at Gmail Terminal Jan/2023
+                Right = b"\x1B[C"
+                Left = b"\x1B[D"
 
-            kbpops.extend(list(kbline[_:][:1] for _ in range(len(kbline))))
+                # FIXME: detect more Left or Right than fits vs CPR Cursor Position
+
+                # Liberally accept miscoding Up as a Left in every Column
+
+                LeftLine = columns * Left
+                alt_kbline = alt_kbline.replace(LeftLine, Up)
+
+                # Liberally accept miscoding Down as a Right in every Column
+
+                RightLine = columns * Right
+                alt_kbline = alt_kbline.replace(RightLine, Down)
+
+                if kbline != alt_kbline:
+                    self.kblog(2, dt.datetime.now(), columns, alt_kbline)
+
+                # liberal Up/ Down needed at Gmail Terminal Jan/2023 for Option+Click
+
+            #
+
+            kbpops.extend(list(alt_kbline[_:][:1] for _ in range(len(alt_kbline))))
 
         pop = kbpops.pop(0)
 
         return pop
 
+        # Gmail Terminal Mobile Tap+Hold worked like Laptop Option+Click
+
+    def kbwritedsr(self, more):
+
+        Up = b"\x1B[A"
+        Down = b"\x1B[B"
+        Right = b"\x1B[C"
+        Left = b"\x1B[D"
+
+        assert len(Up) == len(Down) == len(Right) == len(Left)
+
+        for arrow in (Up, Down, Right, Left):
+            if more == ((len(more) // len(Up)) * arrow):
+                self.kblog(0, dt.datetime.now(), len(more), DSR.encode())
+                self.stdio.write(DSR)
+                self.stdio.write("\a")
+                self.stdio.flush()
+
+                self.kbwritedsr = lambda _: None
+
+                return
+
     def kbreadline(self):
         """Read 1 or more Bytes arriving as 1 Keystroke, or a Keystroke Sequence, or Paste"""
 
         fd = self.fd
+
+        #
 
         line = b""
 
@@ -243,16 +306,47 @@ class TextUserInterface:  # todo: port to Windows
             more = os.read(fd, length)
             assert more
 
+            self.kbwritedsr(more)
+
+            self.kblog(1, dt.datetime.now(), more)
+
+            # FIXME: snoop reports of cursor position
+
+            #
+
             line += more
+
+            if self.kbhit(timeout=0):
+
+                continue  # needed at Gmail Terminal Jan/2023 for Option+Click
 
             if len(more) == length:
                 if self.kbhit(timeout=MAC_PASTE_125MS):
 
-                    continue
+                    continue  # needed at macOS Jan/2023 for large paste
 
             break
 
+        self.kblogflush()
+
         return line
+
+    def kblog(self, *args):
+
+        kblogs = self.kblogs
+
+        kblogs.append(args)
+
+    def kblogflush(self):
+
+        kblogs = self.kblogs
+
+        if kblogs:
+            with open("glass.log", "a") as a:
+                while kblogs:
+                    args = kblogs.pop(0)
+                    line = " ".join(str(_) for _ in args)
+                    a.write("{}\n".format(line))
 
     def kbhit(self, timeout):  # 'timeout' in seconds
         """Wait till next Byte of Keystroke, next burst of Paste pasted, or Timeout"""
