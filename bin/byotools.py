@@ -100,6 +100,8 @@ def parser_parse_args(parser):
 
     args = parser.parse_args(sys_parms)  # prints helps and exits, else returns args
 
+    sys_exit_if_testdoc()
+
     return args
 
 
