@@ -174,22 +174,24 @@ def print_screenful():
     size = shutil.get_terminal_size(sys.stderr.fileno())
 
     corners = list()
-    lower_right = (size.lines - 1, size.columns - 1)
-
     for row in (0, size.lines - 1):
         for col in (0, size.columns - 1):
             corner = (row, col)
             corners.append(corner)
 
+    lower_right_corner = (size.lines - 1, size.columns - 1)
+
     for row in range(size.lines):
         for col in range(size.columns):
             point = (row, col)
 
-            if point == lower_right:
-
-                break
-
-            if point in corners:
+            if point == lower_right_corner:
+                pass
+            elif (row in (0, size.lines - 1)) and (col == (size.columns - 2)):
+                sys.stdout.write(" ")
+            elif col == (size.columns - 1):
+                sys.stdout.write("\n")
+            elif point in corners:
                 sys.stdout.write(" ")
             else:
                 sys.stdout.write(".")
@@ -198,6 +200,9 @@ def print_screenful():
 
     # range(0x20, 0x7E)  # printable US Ascii
     # range(0xA1, 0x375)  # not so printable, really
+
+    # macOS 50x89 Jan/2023 struggles over a screenful of chars without line-break's
+    # Chome Gmail Terminal Jan/2023 fell into two Tabs of 'stty size' 24 80 from 43 103
 
 
 class TextUserInterface:  # todo: port to Windows
