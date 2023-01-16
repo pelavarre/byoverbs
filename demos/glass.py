@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
-"""
-usage: glass.py [-h] [-X]
+r"""
+usage: glass.py [-h] [--init] [--fill]
 
 print the bytes of keystrokes to the screen, when they arrive, as they arrive
 
 options:
   -h, --help  show this help message and exit
-  -X, --init  run in the alt screen, not in the main screen a la:  less -X
+  --init      run in the alt screen, not in the main screen a la:  less -X
+  --fill      print a screenful of dots, and then run
 
 quirks:
   quits after you repeat any three input characters, such as Q Q Q
@@ -17,6 +18,9 @@ examples:
   ./demos/glass.py --h  # show help and examples
   ./demos/glass.py  # show examples
   ./demos/glass.py --  # loop back like a Glass Terminal with no Remote Host
+  ./demos/glass.py --init  # run in the alt screen, not in the main screen
+  ./demos/glass.py --fill  # print a screenful of dots, and then run
+  printf '\x1B[6n' && cat -etv  # print Device Status to insert Cursor Position Report
 """
 
 # code reviewed by people, and by Black and Flake8
@@ -26,6 +30,7 @@ import datetime as dt
 import os
 import re
 import select
+import shutil
 import sys
 import termios
 import time
@@ -106,8 +111,11 @@ def main():
 
     parser = byo.compile_argdoc()
 
-    X_help = "run in the alt screen, not in the main screen a la:  less -X"
-    parser.add_argument("-X", "--init", action="count", help=X_help)
+    init_help = "run in the alt screen, not in the main screen a la:  less -X"
+    parser.add_argument("--init", action="count", help=init_help)
+
+    fill_help = "print a screenful of dots, and then run"
+    parser.add_argument("--fill", action="count", help=fill_help)
 
     args = byo.parser_parse_args(parser)  # prints helps and exits, else returns args
 
@@ -118,6 +126,9 @@ def main():
 
     if args.init:
         sys.stdout.write(_CURSES_INITSCR_)
+
+    if args.fill:
+        print_screenful()
 
     try:
         ibytes = b""
@@ -155,6 +166,38 @@ def main():
 
             time.sleep(0.250)
             sys.stdout.write(_CURSES_ENDWIN_)
+
+
+def print_screenful():
+    """Print a screenful of random chars, and then run"""
+
+    size = shutil.get_terminal_size(sys.stderr.fileno())
+
+    corners = list()
+    lower_right = (size.lines - 1, size.columns - 1)
+
+    for row in (0, size.lines - 1):
+        for col in (0, size.columns - 1):
+            corner = (row, col)
+            corners.append(corner)
+
+    for row in range(size.lines):
+        for col in range(size.columns):
+            point = (row, col)
+
+            if point == lower_right:
+
+                break
+
+            if point in corners:
+                sys.stdout.write(" ")
+            else:
+                sys.stdout.write(".")
+
+    sys.stdout.flush()
+
+    # range(0x20, 0x7E)  # printable US Ascii
+    # range(0xA1, 0x375)  # not so printable, really
 
 
 class TextUserInterface:  # todo: port to Windows
@@ -338,6 +381,7 @@ class TextUserInterface:  # todo: port to Windows
         str_size = "{}x{}".format(size.lines, size.columns)
         assert size.columns and size.lines, str_size
 
+        t0 = dt.datetime.now()
         while True:
             cpr_kbline = self.kbreadline()
             fill_kblines.append(cpr_kbline)
@@ -347,7 +391,12 @@ class TextUserInterface:  # todo: port to Windows
 
                 break
 
-            self.kblog(10.9, dt.datetime.now(), b"".join(fill_kblines), str_size)
+            t1 = dt.datetime.now()
+            if (t1 - t0).total_seconds() >= 1:
+                self.kblog(10.9, dt.datetime.now(), b"".join(fill_kblines), str_size)
+                kblines.extend(fill_kblines)
+
+                return
 
         y = int(hit.group(1), 10)
         x = int(hit.group(2), 10)
