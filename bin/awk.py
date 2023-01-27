@@ -58,4 +58,4 @@ split_strips = list(_.strip() for _ in splits)
 split_strip_join = " ".join(split_strips)
 
 shline = "awk -F: {!r}".format(split_strip_join)
-byo.subprocess_exit_run_if_shline(shline, stdin=None)
+byo.subprocess_shline_exit_if(shline, stdin=None)

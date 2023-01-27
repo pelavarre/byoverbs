@@ -83,7 +83,7 @@ def main():
 
     # Run the chosen Sh Line, and return
 
-    byo.subprocess_exit_run_if_shline(shline)
+    byo.subprocess_shline_exit_if(shline)
 
 
 main()

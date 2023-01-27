@@ -1,5 +1,6 @@
 if [[ $# == 0 ]]; then
-    set -xe
+    set -e
+    echo '+ cat - >/dev/null'
     cat - >/dev/null
 else
     set -xe

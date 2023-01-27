@@ -18,20 +18,11 @@ while [[ $index -le $last ]]; do
     index=$((index + 1))
 done
 
-echo +
-echo "+ echo |python3 -m pdb $py" >&2
+set -xe
+
 echo |python3 -m pdb $py
-
-echo +
-echo "+ black $py" >&2
 black $py
-
-echo +
-echo "+ flake8 $py" >&2
 flake8 $py
-
-echo +
-
-echo +
-echo '+ python3' "$@" >&2
+:
+:
 python3 "$@"

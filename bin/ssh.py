@@ -23,5 +23,6 @@ examples:
   ssh.py --  # todo: run as you like it
 
   ssh -F /dev/null $USER@localhost
+  ssh -t localhost "cd $PWD && bash -i"
 """
 # loop to retry, only while exit codes nonzero

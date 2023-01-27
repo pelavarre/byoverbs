@@ -411,10 +411,10 @@ def subprocess_exit_run_if(stdin=subprocess.PIPE):
     graf = testdoc_graf[rindex:]
 
     for ttyline in graf:
-        subprocess_exit_run_if_ttyline(ttyline)  # in effect, shell=True
+        subprocess_ttyline_exit_if(ttyline)  # in effect, shell=True
 
 
-def subprocess_exit_run_if_shline(shline, stdin=subprocess.PIPE):
+def subprocess_shline_exit_if(shline, stdin=subprocess.PIPE):
     """Print and exit, else run the ShLine and return after it exits zero"""
 
     sys_exit_if()  # prints examples or help or args and exits, else returns
@@ -433,7 +433,7 @@ def subprocess_exit_run_if_shline(shline, stdin=subprocess.PIPE):
     # note: Python SubProcess-Run Shell-False does Not demand AbsPath in the ShVerb
 
 
-def subprocess_exit_run_if_ttyline(ttyline, stdin=subprocess.PIPE):
+def subprocess_ttyline_exit_if(ttyline, stdin=subprocess.PIPE):
     """Print and exit, else run the TtyLine in $SHELL and return after it exits zero"""
 
     sys_exit_if()  # prints examples or help or args and exits, else returns

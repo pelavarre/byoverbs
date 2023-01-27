@@ -77,8 +77,8 @@ black:
 flake8:
 	~/.pyvenvs/flake8/bin/flake8 \
 		--max-line-length=999 --max-complexity 10 --ignore=E203,W503 ../byoverbs
-	# --ignore=E203  # Black '[ : ]' rules over E203 whitespace before ':'
-	# --ignore=W503  # 2017 Pep 8 and Black over W503 line break before bin op
+# --ignore=E203  # Black '[ : ]' rules over E203 whitespace before ':'
+# --ignore=W503  # 2017 Pep 8 and Black over W503 line break before bin op
 
 
 # Lint the Bash Source Files, quickly
