@@ -14,17 +14,20 @@ options:
   -i         stop to ask before replacing file or dir
 
 quirks:
-  moves Image Files into __jqd-trash__/., for 'git config user.initials'
-  moves the last Modified File off the Stack, out to ~%m%djqd%H%M~
-  goes well with Cp, MkDir, Mv, Ls, Rm, RmDir, Touch
+  moves top File off Stack, but keeps its date/time stamp a la:  touch -r FROM TO
+  unless it moves Image Files into a "__$(qjd)-trash__/" Trash Dir
+  goes well with Cp, Echo, MkDir, Mv, Ls, Rm, RmDir, Touch
 
 examples:
-  mv.py  # show these examples and exit
-  mv.py --h  # show help lines and exit (more reliable than -h)
-  mv.py --  # moves Image Files into the Trash, else moves last File off Stack
+  mv.py --  # moves top File off Stack
+  mv.py --  # unless it moves Image Files into "__$(jqd)-trash__"
 
-  echo mv -i "$(ls -1rt |tail -1)"{,~$(date +%m%djqd%H%M)~} __jqd-trash__/.
-  echo mv *.jpeg *.jpg *.png *.svg __jqd-trash__/.
+  touch t.txt
+  F=t.txt && echo mv -i $F{,~$(date -r $F +%m%d$(jqd)%H%M)~} |tee /dev/tty |bash
+
+  echo mv *.jpeg *.jpg *.png *.svg __$(qjd)-trash__/.
+
+  echo mv -i "$(ls -1rt |tail -1)"{,~$(date +%m%d$(jqd)%H%M)~}
 """
 
 import datetime as dt
@@ -108,6 +111,9 @@ def main():
         mv_ttyline = "mv -i {} {}".format(fromfile, tofile)
         mv_shline = mv_ttyline
         byo.subprocess_shline_exit_if(mv_shline)
+
+        mv_undo_ttyline = "mv -i {} {}".format(tofile, fromfile)
+        print("next: ", mv_undo_ttyline, file=sys.stderr)
 
     else:
 

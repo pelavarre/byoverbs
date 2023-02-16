@@ -254,6 +254,23 @@ i gather notes here when they reach me, then later i spread them out above
 + 'dotfiles/bash\_profile'
 + screen for SyntaxErrors, and auto-repair needs 1 trailing ':' or a few '))'
 
+## More
+
+hmm
+
+    $ c >p.py
+    ...
+    $ python3.bash p.py
+    ++ echo
+    ++ python3 -m pdb p.py
+    Traceback (most recent call last):
+      ...
+      File ~/work/pure_tools/p.py, line 1
+        + cat - >/dev/null
+                ^
+    SyntaxError: invalid syntax
+
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md

@@ -6,7 +6,7 @@ usage: import byotools as byo  # define Func's
 competently welcome you into Sh Terminal work, batteries included
 
 examples:
-  byo.sys_exit_if()  # prints examples or help or args and exits, else returns
+  byo.sys_exit_if()  # prints examples or help and exits, else returns args
   byo.subprocess_exit_run_if(shline)  # prints and exits, else calls $SHELL and returns
 """
 
@@ -27,6 +27,7 @@ if not hasattr(__builtins__, "breakpoint"):
 
 _ = subprocess.run  # new since Sep/2015 Python 3.5
 _ = dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6
+_ = "{:_}".format(12345)  # new since Dec/2016 Python 3.6
 # _ = breakpoint  # new since Jun/2018 Python 3.7
 # _ = importlib.import_module("dataclasses")  # new since Jun/2018 Python 3.7
 # _ = f"{sys.version_info[:3]=}"  # new since Oct/2019 Python 3.8
@@ -417,7 +418,7 @@ def subprocess_exit_run_if(stdin=subprocess.PIPE):
 def subprocess_shline_exit_if(shline, stdin=subprocess.PIPE):
     """Print and exit, else run the ShLine and return after it exits zero"""
 
-    sys_exit_if()  # prints examples or help or args and exits, else returns
+    sys_exit_if()  # prints examples or help and exits, else returns args
 
     sys_stderr_print("+ {}".format(shline))
     argv = shlex.split(shline)
@@ -436,7 +437,7 @@ def subprocess_shline_exit_if(shline, stdin=subprocess.PIPE):
 def subprocess_ttyline_exit_if(ttyline, stdin=subprocess.PIPE):
     """Print and exit, else run the TtyLine in $SHELL and return after it exits zero"""
 
-    sys_exit_if()  # prints examples or help or args and exits, else returns
+    sys_exit_if()  # prints examples or help and exits, else returns args
 
     env_shell = os.environ["SHELL"]
     shline = "{} -c {!r}".format(env_shell, ttyline)

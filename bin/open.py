@@ -280,5 +280,8 @@ if __name__ == "__main__":
     main()
 
 
+# todo: 'http://example.com?q=a+b' should come out as 'q=a+b' not 'q=a%20b', true??
+
+
 # posted into:  https://github.com/pelavarre/byobash/blob/main/bin/open.py
 # copied from:  git clone https://github.com/pelavarre/byobash.git

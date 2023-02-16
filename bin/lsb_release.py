@@ -39,7 +39,7 @@ import sys
 import byotools as byo
 
 
-byo.sys_exit_if()  # prints examples or help or args and exits, else returns
+byo.sys_exit_if()  # prints examples or help and exits, else returns args
 
 run = subprocess.run(
     "lsb_release -a".split(),

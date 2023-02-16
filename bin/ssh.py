@@ -6,9 +6,10 @@ usage: ssh.py [--h] [-t] [-f CONFIG] ...
 shell out to a host
 
 options:
-  --help     show this help message and exit
-  -t         forward control of the local terminal (-tt for more force)
-  -F CONFIG  choose a file of options (default '~/.ssh/config')
+  --help      show this help message and exit
+  -t          forward control of the local terminal (-tt for more force)
+  -F CONFIG   choose a file of options (default '~/.ssh/config')
+  -o COMMAND  try things that could be saved into your '~/.ssh/config'
 
 quirks:
   goes well with:  ssh-add.py
@@ -24,5 +25,11 @@ examples:
 
   ssh -F /dev/null $USER@localhost
   ssh -t localhost "cd $PWD && bash -i"
+
+  ssh-add -l  # work to shrug off differences between your '~/.ssh/config' and mine
+  ssh -A -t -F /dev/null \
+    -o 'UserKnownHostsFile /dev/null' \
+    -o 'StrictHostKeyChecking no' \
+    -o 'LogLevel QUIET' "$USER@localhost"
 """
 # loop to retry, only while exit codes nonzero

@@ -1,0 +1,2 @@
+set -xe
+git config user.initials

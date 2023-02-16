@@ -13,6 +13,7 @@ options:
   -1      show as one column of one file or dir per line
   -C      show as multiple columns
   -l      show as many columns of one file or dir per line
+  -lh     like -l but round off byte counts to k M G T P E Z Y R Q etc
   -m      show as comma separated names
 
 quirks:
@@ -23,9 +24,9 @@ examples:
 
   ls.py  # show these examples and exit
   ls.py --h  # show help lines and exit (more reliable than -h)
-  ls.py --  # count off the '%m%djqd' backup copies of Dirs and Files in the Stack
+  ls.py --  # count off the '%m%d$(qjd)' backup copies of Dirs and Files in the Stack
 
-  ls -1rt |grep $(date +%m%djqd) |cat -n |expand
+  ls -1rt |grep $(date +%m%d$(qjd)) |cat -n |expand
 """
 
 import os

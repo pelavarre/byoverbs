@@ -2,6 +2,12 @@
 
 _ = r"""
 
+T=Tag screen -S $T -L -Logfile $T.screen
+T=Tag && screen -S $T -L -Logfile $T.screen script $T.script
+
+
+#
+
 cd ~/Downloads/
 echo rm -fr Session.*
 rm -fr Session.*

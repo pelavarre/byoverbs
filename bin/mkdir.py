@@ -9,7 +9,7 @@ options:
   -h, --help  show this help message and exit
 
 quirks:
-  moves the 'git status --ignored --short' trash into a new dir ~%m%djqd%H%M~
+  moves the 'git status --ignored --short' trash into a new dir ~%m%d$(qjd)%H%M~
   naturally doesn't move the empty dirs not listed by 'git status --ignored --short'
   goes well with Cp, MkDir, Mv, Ls, Rm, RmDir, Touch
 
@@ -18,8 +18,8 @@ examples:
   mkdir.py --h  # show help and examples
   mkdir.py --  # moves untracked files into a new dir
 
-  mkdir ~$(date +%m%djqd%H%M)~
-  mv -i $(git status --ignored --short |cut -c 4-) ~$(date +%m%djqd%H%M)~/.
+  mkdir ~$(date +%m%d$(qjd)%H%M)~
+  mv -i $(git status --ignored --short |cut -c 4-) ~$(date +%m%d$(qjd)%H%M)~/.
 """
 
 # code reviewed by people, and by Black and Flake8

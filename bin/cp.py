@@ -15,17 +15,16 @@ options:
   -p         copy, don't fabricate, last-modified date/time stamp and chmod permissions
 
 quirks:
-  moves Jpeg, Jpg, Png Files into __jqd-trash__/., for 'git config user.initials'
-  moves the last Modified File off the Stack, out to ~%m%djqd%H%M~
-  copies last-modified date/time stamp as faithfully as:  touch -r FROM TO
-  goes well with Cp, MkDir, Mv, Ls, Rm, RmDir, Touch
+  copies top File off Stack, but keeps its date/time stamp a la:  touch -r FROM TO
+  goes well with Cp, Echo, MkDir, Mv, Ls, Rm, RmDir, Touch
 
 examples:
-  cp.py  # show these examples and exit
-  cp.py --h  # show help lines and exit (more reliable than -h)
-  cp.py --  # duplicates last File of Stack
+  cp.py --  # backs up top File of Stack
 
-  echo cp -ip "$(ls -1rt |tail -1)"{,~$(date +%m%djqd%H%M)~}
+  touch t.txt
+  F=t.txt && echo cp -ip $F{,~$(date -r $F +%m%d$(qjd)%H%M)~} |tee /dev/tty |bash
+
+  echo cp -ip "$(ls -1rt |tail -1)"{,~$(date +%m%d$(qjd)%H%M)~}
 """
 
 import datetime as dt

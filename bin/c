@@ -1,7 +1,12 @@
 if [[ $# == 0 ]]; then
-    set -e
-    echo '+ cat - >/dev/null'
-    cat - >/dev/null
+    if [ -t 1 ]; then  # if sys.stdout.isatty():
+        set -e
+        echo '+ cat - >/dev/null' >&2
+        cat - >/dev/null
+    else
+        set -xe
+        cat -
+    fi
 else
     set -xe
     cat "$@"

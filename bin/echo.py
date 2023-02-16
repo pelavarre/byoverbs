@@ -10,27 +10,31 @@ positional arguments:
 
 options:
   --help  show this help message and exit
-  -n      print without closing the line
+  -n      print without closing the line, a la Bash PrintF
   -E      don't escape the \ backslant
   -e      do escape the \ backslant with any of \ abfnrtv 0 x, and also with \e and \c
 
 quirks:
-  goes well with Clear, Echo, PrintF, Reset, TPut
   classic Echo never numbers its args
+  goes well with Clear, Cp, Echo, Mv, PrintF, Reset, TPut
 
 examples:
+  echo.py -- a 'b c'  # numbers and prints its own args
 
-  echo.py  # show these examples and exit
-  echo.py --h  # show help lines and exit (more reliable than -h)
-  echo.py -- a 'b c'  # number and print these args
-
-  echo "+ exit $?"  # read-and-clear last process returncode exit status
+  echo "+ exit $?"  # reads-and-clears last process returncode exit status
   echo -n '⌃ ⌥ ⇧ ⌘ ← → ↓ ↑ ⎋' |hexdump -C
   echo $'\x1B[34mBlue \x1B[31mRed \x1B[33mYellow \x1B[32mGreen \x1B[36mTeal \x1B[30m'
 
-  printf '\e[8;%s;89t' "$(stty size |cut -d' ' -f2)"  # 89 Columns
-  printf '\e[8;50;%st' "$(stty size |cut -d' ' -f2)"  # 50 Lines
-  printf '\e[H\e[2J\e[3J'  # Clear Scrollback and Screen
+  python3 -c 'print("'"$(echo '\N{Large '{Red,Green,Blue}' Circle} ')"'")'
+  # {Blue,Brown,Green,Orange,Purple,Red,Yellow}
+
+  touch t.txt
+  F=t.txt && echo mv -i $F{,~$(date -r $F +%m%d$(qjd)%H%M)~} |tee /dev/tty |bash
+  F=t.txt && echo cp -ip $F{,~$(date -r $F +%m%d$(qjd)%H%M)~} |tee /dev/tty |bash
+
+  printf '\e[8;%s;89t' "$(stty size |cut -d' ' -f2)"  # echoes inside 89 Columns
+  printf '\e[8;50;%st' "$(stty size |cut -d' ' -f2)"  # echoes inside 50 Lines
+  printf '\e[H\e[2J\e[3J'  # clears Scrollback and Screen of Echoes
 """
 
 import sys
