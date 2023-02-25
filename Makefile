@@ -6,22 +6,27 @@
 #
 
 
-# Show these examples and exit
+# Show examples and exit
+#
+#   cat Makefile |expand |grep '^[^ :]*:' |grep -v '^[.]PHONY:' |cut -d: -f1 |sort
+#   # don't help with:  black, default, flake8, python3, selftest
+#
 
 default:
 	@echo
-	@echo 'make  # shows these examples and exits'
-	@echo 'make help  # shows more help lines and exits'
+	@echo 'make  # shows examples and exits'
+	@echo 'make help  # shows these help lines and exits'
 	@echo 'make push  # restyles & tests the source, then tells me to push it'
 	@echo
 	@echo 'make bin  # put bin dir files under test at home bin dir'
-	@echo 'make dotfiles  # publish many home dot files'
+	@echo 'make dotfiles  # update local dotfiles dir from home dot files'
+	@echo 'make shellcheck  # repeat some 'make push' where ShellCheck installed
 	@echo
 	@echo 'open https://twitter.com/intent/tweet?text=.@PELaVarre'
 	@echo
 
 
-# Show these help lines and exit
+# Show help lines and exit
 
 help:
 	@echo
@@ -32,12 +37,13 @@ help:
 	@echo
 	@echo 'examples:'
 	@echo
-	@echo '  make  # shows examples and exits'
+	@echo '  make  # shows these examples and exits'
 	@echo '  make help  # shows these help lines and exits'
 	@echo '  make push  # restyles & tests the source, then tells me to push it'
 	@echo
 	@echo '  make bin  # put bin dir files under test at home bin dir'
-	@echo '  make dotfiles  # publish many home dot files'
+	@echo '  make dotfiles  # update local dotfiles dir from home dot files'
+	@echo '  make shellcheck  # repeat some 'make push' where ShellCheck installed
 	@echo
 	@echo '  open https://twitter.com/intent/tweet?text=.@PELaVarre'
 	@echo
@@ -106,7 +112,7 @@ python3:  # example usage:  make python3 py=bin/byotools.py
 
 # Put Bin Dir Files under test at Home Bin Dir
 
-.PHONY: bin
+.PHONY: bin  # make input:  ls -d ./bin
 bin:
 	rm -fr bin/__pycache__/
 	cp -p bin/* ~/bin/.
@@ -114,7 +120,7 @@ bin:
 
 # Publish many $HOME DotFiles
 
-.PHONY: dotfiles
+.PHONY: dotfiles  # make input:  ls -d ./dotfiles
 dotfiles:
 	cp -p ~/.emacs dotfiles/dot.emacs
 	# cp -p ~/.gitconfig dotfiles/dot.gitconfig  # nope, '[user]' differs

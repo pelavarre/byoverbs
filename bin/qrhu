@@ -1,6 +1,6 @@
 set -e
-echo 'did you mean: ' git reset --hard @{upstream} "$@"
+echo 'did you mean: ' 'git reset --hard @{upstream}' "$@"
 echo press ⌃D to execute, or ⌃C to quit
 cat - >/dev/null
 set -xe
-git reset --hard @{upstream} "$@"
+git reset --hard '@{upstream}' "$@"  # unnecessary quotes pushed by:  make shellcheck
