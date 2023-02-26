@@ -1,2 +1,3 @@
 echo '+ git remote -v && ...' >&2
-git remote -v >/dev/null && echo "git clone $(git remote -v |xargs -n 1 |grep : |uniq)"
+git remote -v >/dev/null && \
+    echo "next:  git clone $(git remote -v |xargs -n 1 |grep : |uniq)"

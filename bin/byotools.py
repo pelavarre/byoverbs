@@ -98,7 +98,7 @@ def compile_argdoc(drop_help=None):
 def parser_parse_args(parser):
     """Parse the Args, even in the conventional corner of no Args coded as ' --'"""
 
-    sys_exit_if_argdoc_ne(parser)
+    sys_exit_if_argdoc_ne(parser)  # prints diff and exits nonzero, when Arg Doc wrong
 
     sys_parms = sys.argv[1:]
     if sys_parms == ["--"]:  # needed by ArgParse when no Positional Args
@@ -106,7 +106,7 @@ def parser_parse_args(parser):
 
     args = parser.parse_args(sys_parms)  # prints helps and exits, else returns args
 
-    sys_exit_if_testdoc()
+    sys_exit_if_testdoc()  # prints examples & exits if no args
 
     return args
 
@@ -241,6 +241,34 @@ def ast_fetch_testdoc():
     return doc
 
 
+def ast_func_to_py(func):
+    """Convert to Py Source Chars from Func"""
+
+    funcname = func.__name__
+    def_tag = "def {}".format(funcname)
+
+    modulename = func.__module__
+    module = sys.modules[modulename]
+    pyfile = module.__file__
+
+    with open(pyfile) as reading:
+        pyfile_chars = reading.read()
+
+    py = None
+
+    grafs = str_splitgrafs(pyfile_chars)
+    for graf in reversed(grafs):
+        if graf[0].startswith(def_tag):
+            ripgraf = str_ripgraf(graf)
+            py = str_joingrafs([ripgraf])
+
+            break
+
+    assert py, (funcname, pyfile)
+
+    return py
+
+
 #
 # Add some Def's to Type List
 #
@@ -342,6 +370,18 @@ def shlex_quote_if(chars):
 #
 # Add some Def's to Type Str
 #
+
+
+def str_joingrafs(grafs):
+    """Form a Doc of Grafs separated by Empty Lines, from a List of Lists of Lines"""
+
+    chars = ""
+    for graf in grafs:
+        if chars:
+            chars += "\n\n"
+        chars += "\n".join(graf)
+
+    return chars
 
 
 def str_ldent(chars):  # kin to 'str.lstrip'
