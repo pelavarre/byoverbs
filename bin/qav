@@ -1,0 +1,6 @@
+set -xe
+if [[ $# == 0 ]]; then
+    git apply -v p.patch
+else
+    git apply -v "$@"
+fi

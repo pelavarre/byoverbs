@@ -26,6 +26,8 @@ examples:
   ls.py --h  # show help lines and exit (more reliable than -h)
   ls.py --  # count off the '%m%d$(qjd)' backup copies of Dirs and Files in the Stack
 
+  find ./* -prune  # like 'ls', but with different corruption of File and Dir Names
+
   ls -1rt |grep $(date +%m%d$(qjd)) |cat -n |expand
 """
 

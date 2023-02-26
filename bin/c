@@ -1,5 +1,5 @@
 if [[ $# == 0 ]]; then
-    if [ -t 1 ]; then  # if sys.stdout.isatty():
+    if [ -t 0 ] && [ -t 1 ]; then  # if sys.stdin.isatty() && sys.stdout.isatty():
         set -e
         echo '+ cat - >/dev/null' >&2
         cat - >/dev/null

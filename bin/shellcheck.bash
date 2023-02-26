@@ -10,9 +10,11 @@ if ! which shellcheck; then
 
 fi
 
+
 echo "calling ShellCheck on $(echo bin/shellcheck.bash bin/* |wc -w) files"
 
 shellcheck bin/shellcheck.bash
+
 
 function _shellcheck_bin_file () {
 
@@ -22,6 +24,7 @@ function _shellcheck_bin_file () {
 
     shellcheck "$T"
 }
+
 
 cd bin/ || exit 1
 
