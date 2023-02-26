@@ -256,19 +256,21 @@ i gather notes here when they reach me, then later i spread them out above
 
 ## More
 
-hmm
+Git Commit Messages drafted, not pushed
 
-    $ c >p.py
-    ...
-    $ python3.bash p.py
-    ++ echo
-    ++ python3 -m pdb p.py
-    Traceback (most recent call last):
-      ...
-      File ~/work/pure_tools/p.py, line 1
-        + cat - >/dev/null
-                ^
-    SyntaxError: invalid syntax
+    ls.py: Write less code for an Ls of no Dirs
+    ls.py: Write less code for an Ls of only Dirs, no Files Etc
+
+    ls.py: Ship usage: ls.py [-F]  # add '/' at 'd', '*' at 'x', '@' at '->', etc
+
+    ls.py: Ship usage: ls.py [-R]  # walk deep down to show dirs in dirs
+
+    .: Link the Tracked Files to Posted-Into/ Copied-From
+
+    find.py: Ship usage: find.py [TOP ...]
+    find.py: Ship usage: find.py [TOP ...] [-prune]
+
+    echo.py: Ship usage: bash.py -c 'echo *.md' --py  # show how Sh calls Glob
 
 
 ## Copied from

@@ -22,51 +22,19 @@ quirks:
   goes well with Cp, MkDir, Ls, Mv, Rm, RmDir, Touch
   classic Ls dumps all the Items, with no Scroll limit, when given no Parms
 
-examples of write the Python for you:
-
-  ls.py --py
-
-  ls.py --py >.p.py
-  python3 .p.py
-  cat -n .p.py |expand
-
-  ls -1
-  ls.py -1
-  ls.py -1 --py
-
-  ls -1 Makefile
-  ls.py Makefile
-  ls.py Makefile --py
-
-  touch .p.py
-  ls -1 .p.py
-  ls.py .p.py
-
-  ls /dev/null/supercali  &&: exits 1 because 'Not a directory'
-  echo + exit $?
-  ls.py -1 /dev/null/supercali  &&: exits 1 because NotADirectoryError
-  echo + exit $?
-  ls.py -1 /dev/null/supercali --py
-
-  ls -1 demos/
-  ls.py -1 demos/
-  ls.py -1 demos/ --py
-
-  ls -1 demos/ futures.md Makefile
-  ls.py -1 demos/ futures.md Makefile
-  ls.py -1 demos/ futures.md Makefile --py
-
-  ls -a1
-  ls.py -a1
-  ls.py -a1 --py
-
-  python3 -c "$(ls.py --py)"
-
 examples:
 
-  ls.py --  # count off the '%m%d$(qjd)' revisions, else the '$(qjd)' revisions
-  ls.py --py  # show the code for:  ls -1
-  ls.py -C --py  # show the code for:  ls
+  ls.py --  # counts off the '%m%d$(qjd)' Revisions, else the '$(qjd)' Revisions
+
+  ls.py # runs the Code for:  ls -1
+  ls.py --py  # shows the Code for:  ls -1
+  ls.py -C --py  # shows the Code for Ls C, which is also the code for:  ls
+
+  ls.py --py >.p.py  # name the Code
+  python3 .p.py  # run the named Code
+  cat -n .p.py |expand  # show the numbered Sourcelines of the named Code
+
+  python3 -c "$(ls.py -1 --py)"  # runs the Code as shown
 
   find ./* -prune  # like 'ls', but with different corruption of File and Dir Names
   ls -1rt |grep $(date +%m%d$(qjd)) |cat -n |expand
@@ -247,9 +215,11 @@ def echo_ls_func_tops(opt, tops, func):
             shtops.append(shtop)
 
     shline = "ls"
+    shline += " " + opt
     if args.a:
-        shline += " -a"
-    shline += " {} {}".format(opt, " ".join(shtops)).rstrip()
+        shline += "a"
+    if shtops:
+        shline += " " + " ".join(shtops)
 
     echo_py = "# {}".format(shline)
     if func is ls_tops_by_line:
@@ -261,67 +231,99 @@ def echo_ls_func_tops(opt, tops, func):
 def run_ls_opt_kwargs_func_tops(opt, kwargs, func, echo_py):
     """Form the Code, then show it or run it"""
 
-    args = main.args
-
     # Fetch the Code
 
     func_py = byo.ast_func_to_py(func)
 
-    if not args.a:  # stops adding 'os.curdir' and 'os.pardir' to each '.listdir()'
-        func_py = func_py.replace('[".", ".."] + ', "")
-
-    # Drop the Func's DocString
+    # Sculpt the Code
 
     lines = func_py.splitlines()
-    assert lines[0].startswith('"""')
-    lines = lines[1:]
 
-    # Forward the KwArgs
+    forward_kwargs_etc(lines, kwargs=kwargs)
+    apply_dash_a(lines)
+    infer_boilerplates(lines, func=func, echo_py=echo_py)
+
+    lines[::] = list(_ for _ in lines if _ is not None)  # deletes dropped Sourcelines
+
+    # Show the Code or run it
+
+    py = "\n".join(lines)
+
+    run_ls_py(py)
+
+
+def forward_kwargs_etc(lines, kwargs):
+    """Forward the KwArgs, after dropping the Func's DocString"""
+
+    assert lines[0].startswith('"""')
+    lines[0] = None
 
     for (k, v) in reversed(kwargs.items()):
         kv_py = "{} = {!r}".format(k, v)
         lines[1:1] = [kv_py]
 
-    # Resolve the '-a' If's at Compile-Time
 
-    dent = 4 * " "
+def apply_dash_a(lines):
+    """Correct the Code to run for Ls with or without '-a'"""
+
+    args = main.args
+
+    _4_DENT = 4 * " "
+
+    # Drop the Os CurDir and ParDir from what Os ListDir finds, when not:  ls -a
+
+    lines[::] = list(_ for _ in lines if _ is not None)  # deletes dropped Sourcelines
+
+    if not args.a:
+
+        chars = "\n".join(lines)
+        chars = chars.replace('[".", ".."] + ', "")
+        lines[::] = chars.splitlines()
+
+    # Stop caring if Item Starts With Dot, when yes:  ls -a
 
     if args.a:
-        i = -1
-        while (i + 1) < len(lines):
-            i += 1
-            line = lines[i]
 
+        for (i, line) in enumerate(lines):
             if line.strip() == 'if not item.startswith("."):':
 
-                lines[i:] = lines[i:][1:]
-                assert lines[i].startswith(dent)
-                lines[i] = lines[i][len(dent) :]
+                lines[i] = None
 
-    # Pull in the Imports mentioned
+                assert lines[i + 1].startswith(_4_DENT), repr(lines[i + 1])
+                lines[i + 1] = lines[i + 1][len(_4_DENT) :]
 
-    if "os." in func_py:
-        lines[1:1] = [""]
-        lines[1:1] = [""]
-        lines[1:1] = ["import os"]
+                if lines[i + 2 :]:
+                    assert not lines[i + 2].startswith(_4_DENT), repr(lines[i + 2])
 
-    # Insert the DocString to Echo Bash
 
-    lines[0:0] = [""]
-    lines[0:0] = [echo_py]
-    lines[0:0] = [""]
+def infer_boilerplates(lines, func, echo_py):
+    """Choose Hash Bang, DocString, Imports, and sometimes drop all the Blank Lines"""
 
-    # Drop the blank lines  # deviates from Black Python Style, for tiny Programs
+    # Pull in the Imports apparently mentioned, 3rd of all
+
+    lines[::] = list(_ for _ in lines if _ is not None)  # deletes dropped Sourcelines
+
+    chars = "\n".join(lines)
+    if "os." in chars:
+        lines[0:0] = ["import os", "", ""]
+
+    # Insert the DocString to Echo Bash, 2nd of all
+
+    lines[0:0] = ["", echo_py, ""]
+
+    # Mark these Sourcelines as Py Sourcelines, 1st of all
 
     if func is ls_tops_by_line:
+
         lines[0:0] = ["#!/usr/bin/env python3"]
-    else:
-        lines = list(_ for _ in lines if _)
 
-    # Show the Code or run it
+    # Drop the blank Sourcelines when not structuring many Sourcelines
 
-    py = "\n".join(lines)
-    run_ls_py(py)
+    if func is not ls_tops_by_line:
+
+        for (i, line) in enumerate(lines):
+            if not line:
+                lines[i] = None
 
 
 def run_ls_py(py):
@@ -419,6 +421,62 @@ def ls_by_comma_space(top):
     """Show the Item Names, separated by ', ' or ', \n' Comma Space Line-Break"""
 
     raise NotImplementedError("def ls_by_comma_space")
+
+
+#
+# Remember some Tests
+#
+
+
+PY_AUTHOR_TESTS = """
+
+    bind 'set enable-bracketed-paste off' 2>/dev/null; unset zle_bracketed_paste
+
+    ls.py -1a
+    ls.py -1a --py
+    ls.py -1 --py
+    ls
+    ls.py -C --py
+
+    ls.py --py
+
+    ls.py --py >.p.py
+    python3 .p.py
+    cat -n .p.py |expand
+
+    ls -1
+    ls.py -1
+    ls.py -1 --py
+
+    ls -1 Makefile
+    ls.py Makefile
+    ls.py Makefile --py
+
+    touch .p.py
+    ls -1 .p.py
+    ls.py .p.py
+
+    ls /dev/null/supercali  &&: exits 1 because 'Not a directory'
+    echo + exit $?
+    ls.py -1 /dev/null/supercali  &&: exits 1 because NotADirectoryError
+    echo + exit $?
+    ls.py -1 /dev/null/supercali --py
+
+    ls -1 demos/
+    ls.py -1 demos/
+    ls.py -1 demos/ --py
+
+    ls -1 demos/ futures.md Makefile
+    ls.py -1 demos/ futures.md Makefile
+    ls.py -1 demos/ futures.md Makefile --py
+
+    ls -1a
+    ls.py -1a
+    ls.py -1a --py
+
+    python3 -c "$(ls.py -1 --py)"
+
+"""
 
 
 #
