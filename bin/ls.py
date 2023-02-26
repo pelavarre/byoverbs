@@ -21,18 +21,15 @@ quirks:
   classic Ls dumps all the Items, with no Scroll limit, when given no Parms
 
 examples:
-
-  ls.py  # show these examples and exit
-  ls.py --h  # show help lines and exit (more reliable than -h)
-  ls.py --  # count off the '%m%d$(qjd)' backup copies of Dirs and Files in the Stack
-
+  ls.py --  # count off the '%m%d$(qjd)' revisions, else the '$(qjd)' revisions
   find ./* -prune  # like 'ls', but with different corruption of File and Dir Names
-
   ls -1rt |grep $(date +%m%d$(qjd)) |cat -n |expand
 """
 
+# code reviewed by people, and by Black and Flake8
+
+
 import os
-import re
 import shlex
 import subprocess
 import sys
@@ -40,35 +37,47 @@ import sys
 import byotools as byo
 
 
-jqd = byo.subprocess_run_oneline("git config user.initials")
-jqd = jqd if jqd else "jqd"
+def main():
+    """Run from the Sh Command Line"""
 
-assert re.match(r"^[a-z]+$", string=jqd)  # todo: accept JQD initials outside Ascii
+    # Plan to count off the '%m%d$(qjd)' backup copies of Dirs and Files in the Stack
 
-ttyline_0 = "ls -1rt |grep $(date +%m%d{jqd}) |cat -n |expand".format(jqd=jqd)
-shline_0 = "bash -c {!r}".format(ttyline_0)
+    jqd = byo.subprocess_run_oneline("git config user.initials")
+    shjqd = byo.shlex_quote_if(jqd)
 
-ttyline_1 = "ls -1rt |grep {jqd} |cat -n |expand".format(jqd=jqd)
-shline_1 = "bash -c {!r}".format(ttyline_1)
+    ttyline_0 = "ls -1rt |grep $(date +%m%d{jqd}) |cat -n |expand".format(jqd=shjqd)
+    shline_0 = "bash -c {!r}".format(ttyline_0)
 
-byo.sys_exit_if_testdoc()  # prints examples & exits if no args
+    ttyline_1 = "ls -1rt |grep {jqd} |cat -n |expand".format(jqd=shjqd)
+    shline_1 = "bash -c {!r}".format(ttyline_1)
 
-byo.sys_exit_if_argdoc()  # prints help lines & exits if "--h" arg, but ignores "-h"
+    # Maybe choose to do other things
 
-byo.sys_stderr_print("+ {}".format(ttyline_0))
-argv_0 = shlex.split(shline_0)
-run_0 = subprocess.run(
-    argv_0,
-    stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    check=True,
-)
-os.write(sys.stdout.fileno(), run_0.stdout)
-os.write(sys.stderr.fileno(), run_0.stderr)
+    byo.sys_exit_if_testdoc()  # prints examples & exits if no args
 
-if not run_0.stdout:
+    byo.sys_exit_if_argdoc()  # prints help lines & exits if "--h" arg, but ignores "-h"
 
-    byo.sys_stderr_print("+ {}".format(ttyline_1))
-    argv_1 = shlex.split(shline_1)
-    run_1 = subprocess.run(argv_1, stdin=subprocess.PIPE, check=True)
+    # Search up the '%m%d$(qjd)' revisions
+
+    byo.sys_stderr_print("+ {}".format(ttyline_0))
+    argv_0 = shlex.split(shline_0)
+    run_0 = subprocess.run(
+        argv_0,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+    os.write(sys.stdout.fileno(), run_0.stdout)
+    os.write(sys.stderr.fileno(), run_0.stderr)
+
+    # Else fail over to also search up the '$(qjd)' revisions
+
+    if not run_0.stdout:
+
+        byo.sys_stderr_print("+ {}".format(ttyline_1))
+        argv_1 = shlex.split(shline_1)
+        _ = subprocess.run(argv_1, stdin=subprocess.PIPE, check=True)
+
+
+main()

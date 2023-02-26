@@ -10,6 +10,9 @@ examples:
   byo.subprocess_exit_run_if(shline)  # prints and exits, else calls $SHELL and returns
 """
 
+# code reviewed by people, and by Black and Flake8
+
+
 import __main__
 import argparse
 import datetime as dt
@@ -18,12 +21,14 @@ import os
 import pdb
 import shlex
 import signal
+import string
 import subprocess
 import sys
 import textwrap
 
 if not hasattr(__builtins__, "breakpoint"):
     breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
+
 
 _ = subprocess.run  # new since Sep/2015 Python 3.5
 _ = dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6
@@ -272,6 +277,26 @@ def list_strip(items):
 #
 
 
+SHLEX_COLD_CHARS = (
+    "%+,-./"
+    + string.digits
+    + ":=@"
+    + string.ascii_uppercase
+    + "_"
+    + string.ascii_lowercase
+)
+
+SHLEX_COLD_CHARS = "".join(sorted(SHLEX_COLD_CHARS))  # already sorted
+
+
+SHLEX_HOT_CHARS = " !#$&()*;<>?[]^`{|}~" + '"' + "'" + "\\"
+SHLEX_HOT_CHARS = "".join(sorted(SHLEX_HOT_CHARS))
+
+
+SHLEX_QUOTABLE_CHARS = SHLEX_COLD_CHARS + " !#&()*;<>?[]^{|}~"
+SHLEX_QUOTABLE_CHARS = "".join(sorted(SHLEX_QUOTABLE_CHARS))  # omits " $ ' \ `
+
+
 def shlex_parms_dash_dash_h(parms):
     """Return Truthy if '--help' or '--hel' or ... '--h' before '--'"""
 
@@ -299,6 +324,19 @@ def shlex_parms_one_posarg():
             parm = None
 
     return parm
+
+
+def shlex_quote_if(chars):
+    """Resort to ShLex Quote, only when not plainly cold chars"""
+
+    shchars = chars
+
+    hots = sorted(set(chars) - set(SHLEX_COLD_CHARS))
+    if hots:
+
+        shchars = shlex.quote(chars)  # missing from Python till Oct/2019 Python 3.8
+
+    return shchars
 
 
 #
