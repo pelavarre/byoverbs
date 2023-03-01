@@ -258,9 +258,6 @@ i gather notes here when they reach me, then later i spread them out above
 
 Git Commit Messages drafted, not pushed
 
-    ls.py: Write less code for an Ls of no Dirs
-    ls.py: Write less code for an Ls of only Dirs, no Files Etc
-
     ls.py: Ship usage: ls.py [-F]  # add '/' at 'd', '*' at 'x', '@' at '->', etc
 
     ls.py: Ship usage: ls.py [-R]  # walk deep down to show dirs in dirs

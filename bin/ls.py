@@ -46,6 +46,7 @@ examples:
 import argparse
 import os
 import shlex
+import stat
 import subprocess
 import sys
 import traceback
@@ -159,40 +160,27 @@ def run_ls_args(args):
     args_one = args.one if any(bool(_) for _ in explicit_styles) else True
 
     tops = args.tops
-    tops_0 = tops[0] if tops else None
 
     # Pick the Code to show or run
 
     if args_one:
-        opt = "-1"
 
-        if not tops:
-            func = ls_here_by_line
-            kwargs = dict()
-        elif tops[1:]:
-            func = ls_tops_by_line
-            kwargs = dict(tops=tops)
-        else:
-            func = ls_file_etc_by_line
-            kwargs = dict(item=tops_0)
-            if os.path.isdir(tops_0):
-                func = ls_dir_by_line
-                kwargs = dict(top=tops_0)
+        (opt, func, kwargs) = parse_ls_1_args(args)
 
     else:
 
         kwargs = dict(tops=tops)
         if args.C:
-            opt = "-C"
+            opt = "-C"  # show as multiple columns
             func = ls_by_ljust
         elif args.l:
-            opt = "-l"
+            opt = "-l"  # show as many columns of one file or dir per line
             func = ls_by_row
         elif args.lh:
-            opt = "-lh"
+            opt = "-lh"  # like -l but round off byte counts to k M G T P E Z Y R Q etc
             func = ls_by_row_humane
         elif args.m:
-            opt = "-m"
+            opt = "-m"  # show as comma separated names
             func = ls_by_comma_space
         else:
             assert False, args  # unreached
@@ -201,6 +189,64 @@ def run_ls_args(args):
 
     echo_py = echo_ls_func_tops(opt, tops=tops, func=func)
     run_ls_opt_kwargs_func_tops(opt, kwargs=kwargs, func=func, echo_py=echo_py)
+
+
+def parse_ls_1_args(args):
+
+    opt = "-1"  # show as one column of one file or dir per line
+
+    tops = args.tops
+    tops_0 = tops[0] if tops else None
+
+    stat_by_top = fetch_os_stat_by_top(tops)  # always called, sometimes needed
+    isdirs = list(stat.S_ISDIR(_.st_mode) for _ in stat_by_top.values())
+
+    if not tops:  # if no Tops
+
+        func = ls_here_by_line
+        kwargs = dict()
+
+    elif not tops[1:]:  # if one Top
+
+        if all(isdirs):
+            func = ls_dir_by_line
+            kwargs = dict(top=tops_0)
+        else:
+            func = ls_file_etc_by_line
+            kwargs = dict(item=tops_0)
+
+    else:  # else many Tops
+
+        if all(isdirs):
+
+            func = ls_top_dirs_by_line
+            kwargs = dict(tops=tops)
+
+        elif not any(isdirs):
+
+            func = ls_top_files_etc_by_line
+            kwargs = dict(items=tops)
+
+        else:
+
+            func = ls_tops_by_line
+            kwargs = dict(tops=tops)
+
+    return (opt, func, kwargs)
+
+
+def fetch_os_stat_by_top(tops):
+    """Call Os Stat for each Top"""
+
+    alt_tops = tops if tops else [os.curdir]
+
+    stat_by_top = dict()
+    for top in alt_tops:
+        if top not in stat_by_top.keys():
+            stat = os.stat(top)
+            stat_by_top[top] = stat
+
+    return stat_by_top
 
 
 def echo_ls_func_tops(opt, tops, func):
@@ -355,13 +401,6 @@ def ls_here_by_line():
             print(item)
 
 
-def ls_file_etc_by_line(item):
-    """Show the Item Name of one File, as one Line"""
-
-    _ = os.stat(item)
-    print(item)
-
-
 def ls_dir_by_line(top):
     """Show the the Item Names of one Dir, one per Line"""
 
@@ -370,8 +409,43 @@ def ls_dir_by_line(top):
             print(item)
 
 
+def ls_file_etc_by_line(item):
+    """Show the Item Name of one File Etc, as one Line"""
+
+    _ = os.stat(item)
+    assert not os.path.isdir(item), (item,)
+
+    print(item)
+
+
+def ls_top_dirs_by_line(tops):
+    """Show the Item Names of two or more Dirs"""
+
+    sep = None
+    for top in tops:
+        if sep:
+            print()
+        sep = "\n"
+
+        print(top + ":")
+
+        for item in sorted([".", ".."] + os.listdir(top)):
+            if not item.startswith("."):
+                print(item)
+
+
+def ls_top_files_etc_by_line(items):
+    """Show the Item Names of two or more Files Etc"""
+
+    for item in sorted(items):
+        _ = os.stat(item)
+        assert not os.path.isdir(item), (item,)
+
+        print(item)
+
+
 def ls_tops_by_line(tops):
-    """Show the Item Names of two or more Files or Dirs,  at one per Line"""
+    """Show the Item Names of two or more Files Etc or Dirs, at one per Line"""
 
     sep = None
 
@@ -383,13 +457,14 @@ def ls_tops_by_line(tops):
             print(top)
             sep = "\n"
 
-    for topdir in topdirs:
+    for top in topdirs:
         if sep:
             print()
-        print(topdir + ":")
         sep = "\n"
 
-        for item in sorted([".", ".."] + os.listdir(topdir)):
+        print(top + ":")
+
+        for item in sorted([".", ".."] + os.listdir(top)):
             if not item.startswith("."):
                 print(item)
 
@@ -432,6 +507,14 @@ PY_AUTHOR_TESTS = """
 
     bind 'set enable-bracketed-paste off' 2>/dev/null; unset zle_bracketed_paste
 
+    ls -1
+    ls.py -1
+    ls.py -1 --py
+
+    ls -1a
+    ls.py -1a
+    ls.py -1a --py
+
     ls.py -1a
     ls.py -1a --py
     ls.py -1 --py
@@ -443,10 +526,6 @@ PY_AUTHOR_TESTS = """
     ls.py --py >.p.py
     python3 .p.py
     cat -n .p.py |expand
-
-    ls -1
-    ls.py -1
-    ls.py -1 --py
 
     ls -1 Makefile
     ls.py Makefile
@@ -466,13 +545,17 @@ PY_AUTHOR_TESTS = """
     ls.py -1 demos/
     ls.py -1 demos/ --py
 
+    ls -1 demos/ demos/
+    ls.py -1 demos/ demos/
+    ls.py -1 demos/ demos/ --py
+
+    ls -1 futures.md Makefile
+    ls.py -1 futures.md Makefile
+    ls.py -1 futures.md Makefile --py
+
     ls -1 demos/ futures.md Makefile
     ls.py -1 demos/ futures.md Makefile
     ls.py -1 demos/ futures.md Makefile --py
-
-    ls -1a
-    ls.py -1a
-    ls.py -1a --py
 
     python3 -c "$(ls.py -1 --py)"
 
