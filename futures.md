@@ -258,6 +258,8 @@ i gather notes here when they reach me, then later i spread them out above
 
 Git Commit Messages drafted, not pushed
 
+    open.py: Auto-correct Paste Buffer if it's holding 1 over-precise Web Address
+
     ls.py: Ship usage: ls.py [-F]  # add '/' at 'd', '*' at 'x', '@' at '->', etc
 
     ls.py: Ship usage: ls.py [-R]  # walk deep down to show dirs in dirs
@@ -269,6 +271,20 @@ Git Commit Messages drafted, not pushed
 
     echo.py: Ship usage: bash.py -c 'echo *.md' --py  # show how Sh calls Glob
 
+Transcripts
+
+    % cal.py --
+    + cal
+         March 2023
+    Su Mo Tu We Th Fr Sa
+              1  2  3  4
+     5  6  7  8  9 10 11
+    12 13 14 15 16 17 18
+    19 20 21 22 23 24 25
+    26 27 28 29 30 31
+
+    no default trace of: cal -m 3
+    and also its end-of-line spaces
 
 ## Copied from
 

@@ -8,5 +8,5 @@ elif [[ "$1" =~ ^[0-9]$ ]]; then
     git diff "$arg1" "$@"
 else
     set -xe
-    git diff "$@"
+    git diff HEAD~1 "$@"
 fi

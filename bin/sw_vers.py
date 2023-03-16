@@ -67,7 +67,9 @@ else:
     got = got.split("#")[0]
     got = got.strip()
 
-    print(got)
+    alt_got = "{}, patched up to its {}".format(got, product_version)
+
+    print(alt_got)
 
 
 # posted into:  https://github.com/pelavarre/byoverb/blob/main/bin/sw_vers.py
