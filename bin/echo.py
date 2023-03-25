@@ -49,3 +49,7 @@ if sys.argv[1:][:1] != ["--"]:
 for (index, arg) in enumerate(sys.argv):
     print("{}:  {!r}".format(index, arg))
 print(len(sys.argv))
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/echo.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -140,3 +140,7 @@ print(len(list(_ for _ in c_by_nxo["."] if "x" not in corners(_))))
 for c in c_by_nxo["x"]:
     if "x" not in corners(c):
         func(c)
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/t3maths.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

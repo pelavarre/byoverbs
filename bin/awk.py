@@ -59,3 +59,7 @@ split_strip_join = " ".join(split_strips)
 
 shline = "awk -F: {!r}".format(split_strip_join)
 byo.subprocess_shline_exit_if(shline, stdin=None)
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/awk.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

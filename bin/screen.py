@@ -44,3 +44,7 @@ some combo can tell you what state you're in:  Default, Copy Mode, & in-between'
 Return
 
 """
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/screen.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

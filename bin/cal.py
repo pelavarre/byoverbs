@@ -386,3 +386,7 @@ def compile_cal_py_argdoc_else():
 
 if __name__ == "__main__":
     main()
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/cal.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

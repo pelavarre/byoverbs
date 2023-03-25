@@ -164,5 +164,5 @@ if __name__ == "__main__":
 # todo: 2 it doesn't invite you to override its choices of what kinds to see
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/tictactoe.py
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/maskup.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

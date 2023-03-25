@@ -659,3 +659,7 @@ def sys_stderr_print(*args, **kwargs):
 
     if "file" not in kwargs.keys():
         sys.stderr.flush()
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/byotools.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

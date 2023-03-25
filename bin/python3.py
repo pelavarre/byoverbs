@@ -60,3 +60,7 @@ import byotools as byo
 
 
 byo.subprocess_exit_run_if()
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/python3.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

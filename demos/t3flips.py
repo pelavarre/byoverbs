@@ -58,3 +58,7 @@ step = shuffle(step, picks_list=hflip)
 for _ in range(4):
     func(step)
     step = shuffle(step, picks_list=left)
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/t3flips.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

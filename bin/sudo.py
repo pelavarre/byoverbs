@@ -4,3 +4,7 @@ _ = """
                    password is required for the command to run, sudo will
                    display an error message and exit.
 """
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/sudo.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

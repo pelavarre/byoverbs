@@ -33,3 +33,7 @@ examples:
     -o 'LogLevel QUIET' "$USER@localhost"
 """
 # loop to retry, only while exit codes nonzero
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/ssh.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

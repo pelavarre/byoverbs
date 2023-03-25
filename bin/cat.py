@@ -31,3 +31,7 @@ _ = r"""
 +byo.sys_exit_if()
 
 """
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/cat.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

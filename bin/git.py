@@ -24,3 +24,7 @@ done |grep TaggerDate
 git tag -l --format='%(taggerdate)  %(refname:short)'  2022.11.22
 
 """
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/git.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

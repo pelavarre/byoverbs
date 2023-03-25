@@ -27,3 +27,7 @@ export PS1='\$ '
 ⌃A ⌃D  # to disconnect
 
 """
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/script.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git
