@@ -1,0 +1,82 @@
+(set -xe; python3 -i -c '' "$@" </dev/null 2>/dev/null)
+
+
+python3 -i -c '''
+
+
+import __main__
+import importlib
+import sys
+import textwrap
+
+
+sys.exit(3)  # todo: fix up this Py File till it works
+
+
+QIK_PY = """
+
+    import datetime as dt
+    import importlib
+    import json
+    import os
+    import sys
+    import sys
+    import textwrap
+
+"""
+
+
+class QikImport:
+    """Defer the work of "import X as Y" till first Y.Z fetched"""
+
+    def __init__(self, import_, as_=None):
+
+        self.import_ = import_
+        self.as_ = import_ if (as_ is None) else as_
+        self.module = None
+
+    def __getattr__(self, name):
+
+        if self.__getattribute__("module") is None:
+            if name in "import_ as_ module".split():
+
+                return self.__getattribute__(name)
+
+            self.module = importlib.import_module(self.import_)
+            setattr(__main__, self.as_, self.module)
+
+        return self.module.__getattribute__(name)
+
+    def x__repr__(self):
+
+        self.__getattr__("__repr__")
+
+        return repr(self.module)
+
+    @staticmethod
+    def import_lots(py):
+        """Run each QIK_PY sourceline, in order"""
+
+        chars = textwrap.dedent(py).strip()
+        lines = chars.splitlines()
+        for line in lines:
+            splits = line.split()
+
+            import_ = splits[1]
+            as_ = splits[3] if splits[3:] else import_
+
+            qi = QikImport(import_, as_=as_)
+            if as_ not in "textwrap sys".split():
+                globals()[as_] = qi
+
+        print(">>> import ...", file=sys.stderr)
+        print(">>> ", file=sys.stderr)
+
+
+QikImport.import_lots(QIK_PY)
+
+del QIK_PY
+del QikImport
+
+
+''' "$@"
