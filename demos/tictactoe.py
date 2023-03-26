@@ -45,6 +45,9 @@ if not hasattr(__builtins__, "breakpoint"):
     breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
 
 
+FEATURE_STEPPING = None
+
+
 DENT = 4 * " "
 
 ESC_STROKES = list()
@@ -825,6 +828,46 @@ class TicTacToeGame:
         )
 
 
+def board_moves(board, ox):
+
+    t3_cells = list(("." if (_ == "_") else _) for _ in board)
+
+    x_board_moves = list(_ for _ in range(9) if board[_] == "x")
+    o_board_moves = list(_ for _ in range(9) if board[_] == "o")
+
+    xys = "A1 B1 C1 A2 B2 C2 A3 B3 C3".split()
+    xys = list(tuple(_) for _ in xys)
+
+    t3_moves = list()
+    while x_board_moves:
+        x_board_move = x_board_moves.pop(0)
+
+        t3_x_move = "{}{}{}".format("X", *xys[x_board_move])
+        t3_moves.append(t3_x_move)
+
+        if o_board_moves:
+            o_board_move = o_board_moves.pop(0)
+
+            t3_o_move = "{}{}{}".format("O", *xys[o_board_move])
+            t3_moves.append(t3_o_move)
+
+    t3 = TicTacToeBoard(3)
+    for t3_move in t3_moves:
+        t3.x_y_mutate(x=t3_move[1], y=t3_move[2], turn=t3_move[0])  # todo: ugly
+
+    assert not t3.moves
+    t3.moves[::] = t3_moves
+
+    assert t3.cells == t3_cells, (t3.cells, t3_cells)
+
+    turn = ox.upper()
+    shoves = t3.choose_some_shoves_in(turn)
+
+    board_moves = tuple(sorted(xys.index(_) for _ in shoves))
+
+    return board_moves
+
+
 class TicTacToeBoard:
     """Lay out Cells in a square NxN Grid of '.', 'O', and 'X'"""
 
@@ -1144,6 +1187,18 @@ class TicTacToeBoard:
     def choose_shove_in(self, turn):
         """Choose how to max chance of winning"""
 
+        shoves = self.choose_some_shoves_in(turn)
+
+        xy = random.choice(shoves)
+
+        (x, y) = xy
+        move = "{}{}{}".format(turn, x, y)
+
+        return move
+
+    def choose_some_shoves_in(self, turn):
+        """Choose how to max chance of winning"""
+
         moves = self.moves
         xys = self.xys
 
@@ -1171,6 +1226,10 @@ class TicTacToeBoard:
         if not moves:
             voters = [self.corner_xys]
 
+        if FEATURE_STEPPING:
+
+            breakpoint()
+
         # Trade off the goals
 
         weight_by_xy = dict((_, 0) for _ in xys)
@@ -1193,12 +1252,12 @@ class TicTacToeBoard:
         # Choose a move
 
         shoves = list(_ for _ in empty_xys if weight_by_xy[_] == max_weight)
-        xy = random.choice(shoves)
 
-        (x, y) = xy
-        move = "{}{}{}".format(turn, x, y)
+        if FEATURE_STEPPING:
 
-        return move
+            breakpoint()
+
+        return shoves
 
     def find_empty_xys(self):
         """Find the Empty Cells"""
@@ -1379,6 +1438,10 @@ class TicTacToeBoard:
         """Find the Empty Cells to take to Win for Them"""
 
         (_, blocker_xys) = self._find_winner_blocker_xys(turn)
+
+        if FEATURE_STEPPING:
+
+            breakpoint()
 
         return blocker_xys
 

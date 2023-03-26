@@ -1,10 +1,13 @@
 r"""
-usage: python3.bash demos/t3studio.py
+usage: t3studio.py
 
 drop the 3x3 Tic-tac-toe Game into a Python REPL
 
 search keys:
-    Xs and Os, Noughts and crosses, Tic-tac-toe
+  Xs and Os, Noughts and crosses, Tic-tac-toe
+
+examples:
+  black demos && flake8 demos && python3.bash demos/t3studio.py --
 """
 
 
@@ -12,6 +15,8 @@ import code
 import collections
 import datetime as dt
 import string
+
+import tictactoe
 
 
 #
@@ -128,6 +133,9 @@ def main():
 
     wikipedia_flip_spin_turn()
     wikipedia_v_wikipedia()
+
+    diff_2023_v_2022()
+    play_2023_v_2022()
 
 
 def walk_renders():
@@ -438,9 +446,9 @@ def board_breakpoint_if(board, moves):
     """Print Mover and Moves and Board if any Moves chosen"""
 
     if moves:
-        ox = board_mover(board)
+        _ox = board_mover(board)
 
-        print(ox, moves)
+        print(_ox, moves)
         board_print(board)
 
         breakpoint()
@@ -449,12 +457,85 @@ def board_breakpoint_if(board, moves):
 def board_breakpoint(board):
     """Print Mover and Board"""
 
-    ox = board_mover(board)
+    _ox = board_mover(board)
 
-    print(ox)
+    print(_ox)
     board_print(board)
 
     breakpoint()
+
+
+#
+#
+#
+
+
+def play_2023_v_2022():
+    """Play a 2023-03 read of Wikipedia of Newell & Simon 1972, vs 2022-11"""
+
+    for players in ("ox", "xo"):
+
+        print()
+        print("play_2023_v_2022", players)
+
+        board = tuple(9 * "_")
+        boards = [board]
+
+        for step in range(5):
+            for board in boards:
+                _ox = board_mover(board)
+                if _ox != "_":
+                    ox = _ox
+
+                    if ox == players[0]:
+                        moves = tictactoe.board_moves(board, ox=ox)
+                    else:
+                        moves = board_wikipedia_moves(board)
+
+                    for move in moves:
+                        alt_board = board_alt_if(board, i=move, ox=ox)
+                        boards.append(alt_board)
+
+            for board in boards:
+                wins = board_pick_wins(alt_board)
+                if wins:
+
+                    print()
+                    board_print(board)
+
+
+def diff_2023_v_2022():
+    """Contrast a 2023-03 read of Wikipedia of Newell & Simon 1972, vs 2022-11"""
+
+    print()
+    print("diff_2023_v_2022")
+
+    for board in BOARDS:
+        _ox = board_mover(board)
+        if _ox != "_":
+            ox = _ox
+
+            if False:
+                if board == ("_", "_", "_", "_", "_", "o", "x", "_", "x"):
+
+                    tictactoe.FEATURE_STEPPING = True
+
+            moves_2022 = tictactoe.board_moves(board, ox=ox)
+            moves_2023 = board_wikipedia_moves(board)
+
+            if moves_2023 != moves_2022:
+                if board == ("_", "_", "_", "_", "_", "_", "_", "_", "_"):
+                    assert moves_2022 == (0, 2, 6, 8)
+                    assert moves_2023 == (4,)
+                elif not (set(moves_2022) - set(moves_2023)):
+                    pass
+                elif False:
+                    print()
+                    print(ox)
+                    board_print(board)
+                    print("if board == {}:".format(board))
+                    print("assert moves_2022 == {}".format(moves_2022))
+                    print("assert moves_2023 == {}".format(moves_2023))
 
 
 #
@@ -482,10 +563,12 @@ def wikipedia_v_wikipedia():
             print()
             board_print(board)
 
-            ox = board_mover(board)
-            if ox == "_":
+            _ox = board_mover(board)
+            if _ox == "_":
                 stopped_boards.add(board)
             else:
+                ox = _ox
+
                 moves = board_wikipedia_moves(board)
                 for move in moves:
 
@@ -511,23 +594,26 @@ def wikipedia_flip_spin_turn():
 
     for from_renders in RENDERS_BY_MAX_RENDER.values():
 
-        oxs = list()
+        _oxs = list()
         list_maxxes = list()
 
         for from_render in from_renders:
             board = from_render
 
-            ox = board_mover(board)
-            oxs.append(ox)
+            _ox = board_mover(board)
+            _oxs.append(_ox)
             moves = board_wikipedia_moves(board)
 
-            if ox == "_":
-                assert not moves, (moves, ox, board)
+            if _ox == "_":
+                assert not moves, (moves, _ox, board)
             else:
-                assert moves, (moves, ox, board)
+                assert moves, (moves, _ox, board)
 
             maxxes = list()
             for move in moves:
+                assert _ox in "ox"
+                ox = _ox
+
                 to_render = board_alt_if(board, i=move, ox=ox)
                 assert to_render, (to_render, board, move, ox)
 
@@ -537,7 +623,7 @@ def wikipedia_flip_spin_turn():
             maxxes = tuple(sorted(maxxes))
             list_maxxes.append(maxxes)
 
-        assert len(set(oxs)) == 1, (oxs, from_renders[0])
+        assert len(set(_oxs)) == 1, (_oxs, from_renders[0])
 
         converged = set(list_maxxes)
         if len(converged) > 1:
