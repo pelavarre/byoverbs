@@ -782,8 +782,9 @@ def board_block_fork_moves(board, ox):
             # Fall back to block Any Fork, although Wikipedia doesn't say so
 
             else:
-
                 moves = xo_forks  # todo: block the strongest Forks
+
+                # board_breakpoint(board)  # jitter Fri 31/Mar
 
     assert moves == sorted(moves), (moves, board, ox)
 

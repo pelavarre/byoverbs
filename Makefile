@@ -81,6 +81,7 @@ black:
 # Lint the Python Source Files, quickly and meaningfully
 
 flake8:
+	source ~/.pyvenvs/flake8/bin/activate && pip freeze |grep '^flake8-import-order==' >/dev/null
 	~/.pyvenvs/flake8/bin/flake8 \
 		--max-line-length=999 --max-complexity 10 --ignore=E203,W503 ../byoverbs
 # --ignore=E203  # Black '[ : ]' rules over E203 whitespace before ':'

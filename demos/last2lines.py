@@ -3,7 +3,6 @@ usage: python3.bash demos/last2lines.py bin/
 """
 
 import __main__
-
 import os
 import pathlib
 import sys

@@ -43,8 +43,8 @@ import argparse
 import datetime as dt
 import os
 import re
-import subprocess
 import shlex
+import subprocess
 import sys
 import time
 

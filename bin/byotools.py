@@ -146,7 +146,7 @@ def sys_exit_if_argdoc_ne(parser):
     got_doc = main_doc
     want_doc = parser_doc
 
-    diff_lines = list(
+    diffs = list(
         difflib.unified_diff(
             a=got_doc.splitlines(),
             b=want_doc.splitlines(),
@@ -156,8 +156,8 @@ def sys_exit_if_argdoc_ne(parser):
         )
     )
 
-    if diff_lines:
-        print("\n".join(diff_lines))
+    if diffs:
+        print("\n".join(diffs))
 
         sys.exit(2)  # trust caller to log SystemExit exceptions well
 
