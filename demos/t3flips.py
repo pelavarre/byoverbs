@@ -26,7 +26,6 @@ hflip = (p0, p1, p2)
 
 
 def shuffle(rows, picks_list):
-
     flats = list(b for a in rows for b in a)
 
     assert sorted(flats) == sorted(set(flats)), flats

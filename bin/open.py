@@ -57,7 +57,6 @@ def main():
         address_print_nears(address)
 
     else:
-
         byo.sys_stdin_prompt_if()
         print()
         while True:
@@ -162,7 +161,6 @@ def address_form_nears(address):  # FIXME  # noqa C901 too complex (13
 
     alt_unsplit = urllib.parse.urlunsplit(alt_splits)
     if alt_unsplit != address:
-
         lines.append(urllib.parse.urlunsplit(alt_splits))
 
         # Also chop off all but the first word of a Local NetLoc Domain Name
@@ -192,7 +190,6 @@ def address_form_nears(address):  # FIXME  # noqa C901 too complex (13
     basename = os.path.basename(splits.path)
     unquoted_basename = urllib.parse.unquote(basename)
     if unquoted_basename != basename:
-
         lines.append(unquoted_basename)
 
         # Title the Address to speak of the Service apart from the Address
@@ -213,7 +210,6 @@ def address_form_nears(address):  # FIXME  # noqa C901 too complex (13
     kv_address = address
     kv_splits_query = splits.query  # such as from '...?a=1&b=2'
     if not splits.query:
-
         kv_ch = "#"
         kv_address = address.replace("#", "?", COUNT_1)
         kv_splits = urllib.parse.urlsplit(kv_address)
@@ -243,7 +239,7 @@ def address_form_nears(address):  # FIXME  # noqa C901 too complex (13
             kv_sep = ";"
 
         pairs = urllib.parse.parse_qsl(kv_splits_query, separator=kv_sep)
-        for (index, pair) in enumerate(pairs):
+        for index, pair in enumerate(pairs):
             (name, value) = pair
             qvalue = urllib.parse.quote(value)
             if not index:

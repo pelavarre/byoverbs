@@ -9,7 +9,6 @@ import sys
 
 
 def main():
-
     assert sys.argv[1:]
     dir_path_name = sys.argv[1]
 

@@ -43,7 +43,6 @@ sys.path[1:1] = [os.path.join(DIR, os.pardir, "bin")]
 try:
     import byotools as byo
 except Exception:  # auth edit of Sys Path for Flake8 with this Try Except Block
-
     raise
 
 
@@ -153,14 +152,12 @@ def main():
 
                 if ibytes[2:]:
                     if len(set(ibytes[-3:])) == 1:
-
                         break
 
             (columns, lines) = tui.terminal_size()
             sys.stdout.write(CUP_Y_X.format(lines, 1))
 
     finally:
-
         if args.init:
             print("... sleeping briefly ...  ", end="")
 
@@ -393,7 +390,6 @@ class TextUserInterface:  # todo: port to Windows
 
             hit = re.search(CPR_REGEX + rb"$", string=cpr_kbline)
             if hit:
-
                 break
 
             t1 = dt.datetime.now()
@@ -479,7 +475,6 @@ class TextUserInterface:  # todo: port to Windows
 
         should = ups < y
         if not self.kblog_should(11.1, kbline, should, ups, str_size, x, y):
-
             return kbline
 
         repl += ups * UpCodes
@@ -487,7 +482,6 @@ class TextUserInterface:  # todo: port to Windows
         # Take Left-Wrap-Left's as Up-Right's
 
         if kbline.startswith(found + left_wrap):
-
             lefts = 0
             while kbline.startswith(found + LeftCodes):
                 found += LeftCodes
@@ -497,17 +491,14 @@ class TextUserInterface:  # todo: port to Windows
 
             should = 1 < y
             if not self.kblog_should(11.1, kbline, should, 1, str_size, x, y):
-
                 return kbline
 
             should = lefts < size.columns
             if not self.kblog_should(11.2, kbline, should, lefts, str_size, x, y):
-
                 return kbline
 
             should = rights <= (size.columns - x)
             if not self.kblog_should(11.3, kbline, should, rights, str_size, x, y):
-
                 return kbline
 
             repl += UpCodes
@@ -525,7 +516,6 @@ class TextUserInterface:  # todo: port to Windows
         """Return a truthy Should, else log details and return a falsey None"""
 
         if should:
-
             return should
 
         self.kblog(tag, dt.datetime.now(), kbline, should, count, str_size, x, y)
@@ -552,7 +542,6 @@ class TextUserInterface:  # todo: port to Windows
 
         should = downs <= (size.lines - y)
         if not self.kblog_should(11.6, kbline, should, downs, str_size, x, y):
-
             return kbline
 
         repl += downs * DownCodes
@@ -560,7 +549,6 @@ class TextUserInterface:  # todo: port to Windows
         # Take Right-Wrap-Right's as Down-Left's
 
         if kbline.startswith(found + right_wrap):
-
             rights = 0
             while kbline.startswith(found + RightCodes):
                 found += RightCodes
@@ -570,17 +558,14 @@ class TextUserInterface:  # todo: port to Windows
 
             should = y < size.lines
             if not self.kblog_should(11.7, kbline, should, 1, str_size, x, y):
-
                 return kbline
 
             should = rights < size.columns
             if not self.kblog_should(11.8, kbline, should, rights, str_size, x, y):
-
                 return kbline
 
             should = lefts < x
             if not self.kblog_should(11.9, kbline, should, lefts, str_size, x, y):
-
                 return kbline
 
             repl += DownCodes
@@ -611,7 +596,6 @@ class TextUserInterface:  # todo: port to Windows
 
             if len(more) == length:
                 if self.kbhit(timeout=MAC_PASTE_125MS):
-
                     continue  # needed at macOS Jan/2023 for Large Paste
 
             break
@@ -656,7 +640,6 @@ class TextUserInterface:  # todo: port to Windows
                     kbline = args_2
 
         if kbline is None:
-
             return args
 
         # Split Bytes into Runs of Bytes
@@ -681,7 +664,6 @@ class TextUserInterface:  # todo: port to Windows
                 runs = list(verbose_runs)
 
         if not runs:
-
             return args
 
         alt_args = self.kblog_compress_args_2(args, kbline=kbline, runs=runs)
@@ -689,7 +671,6 @@ class TextUserInterface:  # todo: port to Windows
         return alt_args
 
     def kblog_compress_args_2(self, args, kbline, runs):
-
         # Require correct Split
 
         alt_runs = list(runs)
@@ -709,7 +690,6 @@ class TextUserInterface:  # todo: port to Windows
 
         rep_kbline = self.kblog_compress_runs(kbline, runs=alt_runs)
         if rep_kbline == str(kbline):
-
             return args
 
         # Compress
@@ -775,19 +755,15 @@ class TextUserInterface:  # todo: port to Windows
 
 
 def int_else(i, key, default):
-
     if i > 0:
-
         return i  # from 'os.get_terminal_size'
 
     if key in os.environ.keys():
         value = os.environ[key]
         try:
-
             return int(value)  # from '123', '1_123.456', '0x80', etc
 
         except Exception:
-
             pass
 
     return default
@@ -806,7 +782,6 @@ def shutil_get_terminal_size_fd(fd, fallback=(80, 24)):
     # Try Os Get_Terminal_Size
 
     try:
-
         size = os.get_terminal_size(fd)
 
     # Fall back to Os Environ, else to our Fallback Arg

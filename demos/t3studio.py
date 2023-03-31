@@ -167,7 +167,6 @@ def walk_renders():
     assert len(set(RENDERERS)) == len(RENDERERS) == 8
 
     for render in list(RENDERERS):
-
         left_turner = tuple(render[CELLS.index(_)] for _ in TURN_LEFT)
         right_turner = tuple(render[CELLS.index(_)] for _ in TURN_RIGHT)
         spinner = tuple(render[CELLS.index(_)] for _ in SPIN_LEFT_RIGHT)
@@ -193,7 +192,6 @@ def walk_boards():
     more_x_boards.append(x_board)
 
     for step in range(5):
-
         tx = dt.datetime.now()
         tx = tx - t0
         print(tx, "{}th move by X".format(step))
@@ -201,7 +199,6 @@ def walk_boards():
         more_o_boards = form_x_moves(more_x_boards, step=step)
 
         if step < 4:
-
             to = dt.datetime.now()
             to = to - t0
             print(to, "{}th move by O".format(step))
@@ -257,7 +254,6 @@ def form_x_moves(more_x_boards, step):
     for x_board in more_x_boards:
         for x in range(9):
             if x_board[x] == "_":
-
                 board = list(x_board)
                 board[x] = "x"
                 board = tuple(board)
@@ -282,7 +278,6 @@ def form_o_moves(more_o_boards):
     for o_board in more_o_boards:
         for o in range(9):
             if o_board[o] == "_":
-
                 board = list(o_board)
                 board[o] = "o"
                 board = tuple(board)
@@ -381,7 +376,6 @@ def index_boards():
 
 
 def board_find_renders(board):
-
     renders = list()
 
     for renderer in RENDERERS:
@@ -424,7 +418,6 @@ def board_alt_if(board, i, ox):
     assert ox != "_", (ox,)
 
     if board[i] != "_":
-
         return None
 
     alt_board = list(board)
@@ -474,7 +467,6 @@ def play_2023_v_2022():
     """Play a 2023-03 read of Wikipedia of Newell & Simon 1972, vs 2022-11"""
 
     for players in ("ox", "xo"):
-
         print()
         print("play_2023_v_2022", players)
 
@@ -499,7 +491,6 @@ def play_2023_v_2022():
             for board in boards:
                 wins = board_pick_wins(alt_board)
                 if wins:
-
                     print()
                     board_print(board)
 
@@ -517,7 +508,6 @@ def diff_2023_v_2022():
 
             if False:
                 if board == ("_", "_", "_", "_", "_", "o", "x", "_", "x"):
-
                     tictactoe.FEATURE_STEPPING = True
 
             moves_2022 = tictactoe.board_moves(board, ox=ox)
@@ -571,7 +561,6 @@ def wikipedia_v_wikipedia():
 
                 moves = board_wikipedia_moves(board)
                 for move in moves:
-
                     alt_board = board_alt_if(board, i=move, ox=ox)
                     assert alt_board
 
@@ -593,7 +582,6 @@ def wikipedia_flip_spin_turn():
     print("wikipedia_flip_spin_turn")
 
     for from_renders in RENDERS_BY_MAX_RENDER.values():
-
         _oxs = list()
         list_maxxes = list()
 
@@ -711,7 +699,6 @@ def board_fork_moves(board, ox):
     moves = list()
     for i in range(9):
         if board[i] == "_":
-
             alt_board = list(board)
             alt_board[i] = ox
             alt_board = tuple(alt_board)
@@ -748,7 +735,6 @@ def board_block_fork_moves(board, ox):
         if len(xo_forks) == 1:
             moves = xo_forks
         else:
-
             # Look to block All The Forks
 
             blocks = list()
@@ -759,7 +745,6 @@ def board_block_fork_moves(board, ox):
                 if alt_board:
                     alt_xo_forks = board_fork_moves(alt_board, ox=xo)
                     if not alt_xo_forks:
-
                         blocks.append(i)
                         if i in forkless_threats:
                             forkless_threat_blocks.append(i)
@@ -797,7 +782,7 @@ def board_forkless_threads(board, ox, xo_forks):
     pairs = board_threat_win_pairs(board, ox=ox)
 
     forkless_threats = list()
-    for (threat, win) in pairs:
+    for threat, win in pairs:
         if win not in xo_forks:
             forkless_threats.append(threat)
 
@@ -834,7 +819,6 @@ def board_center_moves(board, ox):
 
     i = CELLS.index("e")
     if board[i] == "_":
-
         moves.append(i)
 
     return moves
@@ -856,7 +840,6 @@ def board_opposite_moves(board, ox):
         j = CELLS.index(opposites[-1])
 
         if (board[i] == "_") and (board[j] == xo):
-
             moves.append(i)
 
     return moves
@@ -872,7 +855,6 @@ def board_corner_moves(board, ox):
     for corner in CORNER_ACGI:
         i = CELLS.index(corner)
         if board[i] == "_":
-
             moves.append(i)
 
     return moves
@@ -888,7 +870,6 @@ def board_outside_moves(board, ox):
     for outside in OUTSIDE_BDFH:
         i = CELLS.index(outside)
         if board[i] == "_":
-
             moves.append(i)
 
     return moves
@@ -899,7 +880,6 @@ def board_outside_moves(board, ox):
 #
 
 if __name__ == "__main__":
-
     main()
 
     print()

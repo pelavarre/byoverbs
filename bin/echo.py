@@ -43,10 +43,9 @@ import byotools as byo
 
 
 if sys.argv[1:][:1] != ["--"]:
-
     byo.sys_exit()
 
-for (index, arg) in enumerate(sys.argv):
+for index, arg in enumerate(sys.argv):
     print("{}:  {!r}".format(index, arg))
 print(len(sys.argv))
 

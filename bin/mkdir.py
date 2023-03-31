@@ -74,7 +74,6 @@ def main():
 
     glitches = list(_ for _ in lines if not _.startswith("?? "))
     if glitches:
-
         byo.sys_stderr_print(
             "mkdir.py: {} lines not tagged as '?? ' in:  {}".format(
                 len(glitches), qsis_shline

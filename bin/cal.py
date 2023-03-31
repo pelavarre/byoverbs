@@ -74,7 +74,6 @@ def main():
     shverb = inner_argv[0]
     which_shverb = "/usr/bin/{}".format(inner_argv[0])
     if not os.path.exists(which_shverb):
-
         byo.sys_stderr_print(
             "Command '{}' not found, but can be installed with:".format(shverb)
         )
@@ -106,7 +105,6 @@ def main():
 
     if (not args.Y) and (not args.m):
         if early_when.month != when.month:
-
             subprocess_run(early_argv)
 
     # Run the month
@@ -129,7 +127,6 @@ def main():
 
     if (not args.Y) and (not args.m):
         if late_when.month != when.month:
-
             subprocess_run(late_argv)
 
 
@@ -307,11 +304,9 @@ def parse_cal_when(str_when, now):
 
     whens = list()
     try:
-
-        for (form, example) in zip(forms, examples):
+        for form, example in zip(forms, examples):
             if len(alt_str_when) == len(example):
                 if bool("-" in alt_str_when) == bool("-" in example):
-
                     when = dt.datetime.strptime(alt_str_when, form)
                     if "%y" not in form:
                         when = when.replace(year=now.year)
@@ -321,7 +316,6 @@ def parse_cal_when(str_when, now):
         assert len(whens) == 1, (str_when, alt_str_when, whens)
 
     except Exception:
-
         byo.sys_stderr_print(
             "cal.py: repair -H {!r} to look like one of: {}".format(
                 str_when, " ".join(examples)

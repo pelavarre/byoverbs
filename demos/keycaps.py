@@ -203,7 +203,6 @@ def run_fireplace():
                 quit_strokes.clear()
 
             if quit_strokes[-3:] == (3 * [stroke]):
-
                 break
 
 
@@ -218,7 +217,6 @@ def tui_stroke_print(tui, stroke, t0, t1, t2, keycaps):
     # Choose a hex representation of Bytes
 
     def hexlify(encoded):
-
         decoded = encoded.hex().upper()
         decoded = "x " + " ".join(
             "{}{}".format(_[0], _[-1]) for _ in zip(decoded[0::2], decoded[1::2])
@@ -238,7 +236,6 @@ def tui_stroke_print(tui, stroke, t0, t1, t2, keycaps):
 
     assert MAX_LEN_KEY_CAPS_STROKE_6 == 6 < 10
     if len(stroke) <= 10:
-
         tui.print(
             "{}  {} {} ({})  {} {} ms".format(
                 keycaps,
@@ -305,7 +302,6 @@ def keycaps_plot(keycaps, t1):
             while True:
                 find = indexable.find(whole, start)
                 if find < 0:
-
                     break
 
                 start = find + len(whole)
@@ -673,7 +669,7 @@ def require_keycap_lists_sorted():
 
     stroke_by_keycap_tuple = dict()
 
-    for (stroke, keycap_list) in KEYCAP_LISTS_BY_STROKE.items():
+    for stroke, keycap_list in KEYCAP_LISTS_BY_STROKE.items():
         assert isinstance(keycap_list, list), repr(keycap_list)
 
         # Require Chords sorted by '', '⌃', '⌥', '⇧', '⌃ ⌥', etc - per Apple Standard
@@ -693,7 +689,7 @@ def require_keycap_lists_sorted():
 
             chord_by_cap[cap].append(chord)
 
-        for (cap, chords) in chord_by_cap.items():
+        for cap, chords in chord_by_cap.items():
             indices = list(CHORDS.index(_) for _ in chords)
             assert indices == sorted(indices), (keycap_list, indices)
 
@@ -850,7 +846,6 @@ def sys_exit_if_argdoc_ne(doc, parser):
     with_columns = os.getenv("COLUMNS")
     os.environ["COLUMNS"] = str(89)
     try:
-
         parser_doc = parser.format_help()
 
     finally:
@@ -1070,7 +1065,6 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
         assert MAC_PASTE_CHUNK_1022 == 1022
 
         if True:  # last jittered Sat 12/Nov/2022
-
             if not termios:
                 while msvcrt.kbhit():
                     strokes = msvcrt.getch()
@@ -1144,7 +1138,6 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
         # Return the 1st Keystroke that came as a pair of Accentuator plus 2nd Keystroke
 
         if termios:
-
             mac_accentuators = b"\x60 \xC2\xB4 \xCB\x86 \xCB\x9C \xC2\xA8".split()
             assert MAC_ACCENTUATORS == mac_accentuators  # Option E I N U Grave
 
@@ -1229,7 +1222,6 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
             if len(more) == length:
                 if self.kbhit(timeout=MAC_PASTE_125MS):
                     if len(more) == len(strokes):
-
                         # Clear the prompt early, to make room for Log Lines
 
                         self.kbprompt_erase(prompted)
@@ -1321,19 +1313,15 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
         """Run much like 'shutil.get_terminal_size', but on our File Descriptor"""
 
         def int_else(i, key, default):
-
             if i > 0:
-
                 return i  # from 'os.get_terminal_size'
 
             if key in os.environ.keys():
                 value = os.environ[key]
                 try:
-
                     return int(value)  # from '123', '1_123.456', '0x80', etc
 
                 except Exception:
-
                     pass
 
             return default

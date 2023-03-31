@@ -7,11 +7,9 @@ for o0 in range(9):
     for o1 in range(8):
         for o2 in range(7):
             for o3 in range(6):
-
                 c = 9 * [" "]
 
                 for o in (o0, o1, o2, o3):
-
                     p = o
                     while c[p] == "o":
                         p = p + 1
@@ -33,7 +31,6 @@ print(len(cc))
 
 
 def func(c):
-
     print()
     print(" ".join(c[:3]))
     print(" ".join(c[3:-3]))
@@ -79,19 +76,16 @@ for c in cc:
 
     summed = sum(scores.values())
     if len(scores.keys()) == 0:
-
         k = " "
         c_by_nxo[k].append(c)
 
     elif len(scores.keys()) == 1:
-
         k = sorted(scores.keys())[-1]
         assert k in "xo", (k,)
 
         c_by_nxo[k].append(c)
 
     else:
-
         kk = sorted(scores.keys())
         vv = sorted(scores.values())
 

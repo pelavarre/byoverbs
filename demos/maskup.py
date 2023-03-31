@@ -42,7 +42,6 @@ def main():
     while True:
         line = sys.stdin.readline()  # copies 1 Line from Input
         if not line:
-
             break
 
         oline = line_maskup(line)
@@ -64,7 +63,7 @@ def line_maskup(line):
 
     sep = splits[0]
     maskup = sep
-    for (hit, sep) in zip(splits[1::2], splits[2::2]):
+    for hit, sep in zip(splits[1::2], splits[2::2]):
         if re.match(r"^[0-9]+$", string=hit):
             maskup += length_maskup(string.digits, len(hit))
         elif re.match(r"^[0-9A-Fa-f]+$", string=hit):

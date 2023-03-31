@@ -169,7 +169,6 @@ def run_breakout():
         keycaps.try_put_terminal_size(stdio, size=flat_up)
 
     with keycaps.tui_open(stdio) as tui:
-
         game = BreakoutGame(tui)
 
         tui.print(DECTCEM_CURSOR_HIDE)
@@ -180,7 +179,6 @@ def run_breakout():
 
 
 class BreakoutGame:
-
     selves = list()
 
     def __init__(self, tui):
@@ -268,18 +266,15 @@ class BreakoutGame:
         self.entries = None
 
     def run_till_quit(self):
-
         tui = self.tui
 
         caps = self.caps
 
         while True:
-
             # Draw one Ball and one Paddle
 
             self.board_draw()
             if not self.brick_yxs_set:
-
                 break
 
             # Read the next Keystroke
@@ -307,7 +302,6 @@ class BreakoutGame:
                 caps.append(cap)
                 if caps[-3:] == (3 * [cap]):
                     if cap in QUIT_CAPS_SET:
-
                         break
 
             # Erase one moving Ball and one moving Paddle
@@ -384,7 +378,6 @@ class BreakoutGame:
         # Collect the Layers of Bricks, just once per Game
 
         if not brick_yxs_set:
-
             for row in range(BRICK_ROWS):
                 bricks = (columns - 2) * BRICK
                 for brick_x in range(2, 2 + len(bricks)):
@@ -394,7 +387,6 @@ class BreakoutGame:
         # Draw the collected Layers of Bricks
 
         if self.entries != tui.entries:
-
             for row in range(BRICK_ROWS):
                 bricks = (columns - 2) * BRICK
                 for brick_x in range(2, 2 + len(bricks)):
@@ -468,7 +460,6 @@ class BreakoutGame:
 
         x_next = x + vector
         if not (self.paddle_x_min <= x_next <= self.paddle_x_max):
-
             # Else kick back from Min or Max
 
             x_next = x - vector
@@ -546,7 +537,6 @@ class BreakoutGame:
                     self.ball_bounce_off_paddle(x_minus_center)
 
     def ball_bricks_collide(self, x_minus_center):
-
         ball_yx = self.ball_yx
         (vector_y, vector_x) = self.ball_vector_yx
 
@@ -691,7 +681,6 @@ def sys_exit_if_argdoc_ne(doc, parser):
     with_columns = os.getenv("COLUMNS")
     os.environ["COLUMNS"] = str(89)
     try:
-
         parser_doc = parser.format_help()
 
     finally:

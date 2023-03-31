@@ -64,7 +64,7 @@ def compile_argdoc(drop_help=None):
     # Find the Epilog in the Doc
 
     epilog = None
-    for (index, line) in enumerate(doc_lines):
+    for index, line in enumerate(doc_lines):
         strip = line.rstrip()
 
         skip = False
@@ -75,7 +75,6 @@ def compile_argdoc(drop_help=None):
         skip = skip or strip.startswith("positional arguments")
         skip = skip or strip.startswith("options")
         if skip:
-
             continue
 
         epilog = "\n".join(doc_lines[index:])
@@ -127,7 +126,6 @@ def sys_exit_if_argdoc_ne(parser):
     with_columns = os.getenv("COLUMNS")
     os.environ["COLUMNS"] = str(89)
     try:
-
         parser_doc = parser.format_help()
 
     finally:
@@ -208,7 +206,6 @@ def ast_fetch_argdoc():
 
     word = main_lines[0].split()[0]
     if word == "usage:":
-
         return main_doc
 
     return doc
@@ -224,7 +221,7 @@ def ast_fetch_testdoc():
     main_lines = main_doc.splitlines()
 
     start = 0
-    for (index, line) in enumerate(main_lines):
+    for index, line in enumerate(main_lines):
         if line and not line.startswith(" "):
             start = index
 
@@ -235,7 +232,6 @@ def ast_fetch_testdoc():
 
     word = main_lines[0].split()[0]
     if word != "usage:":
-
         return main_doc
 
     return doc
@@ -330,11 +326,9 @@ def shlex_parms_dash_dash_h(parms):
 
     for parm in parms:
         if parm == "--":  # ignores '--help' etc after '--'
-
             break
 
         if parm.startswith("--h") and "--help".startswith(parm):
-
             return True
 
 
@@ -361,7 +355,6 @@ def shlex_quote_if(chars):
 
     hots = sorted(set(chars) - set(SHLEX_COLD_CHARS))
     if hots:
-
         shchars = shlex.quote(chars)  # missing from Python till Oct/2019 Python 3.8
 
     return shchars
@@ -437,18 +430,15 @@ def str_splitgrafs(doc, keepends=False):  # todo: keepends=True
 
     graf = list()  # begins Empty, opens up to collect Lines, then begins again
     for line in doc.splitlines():
-
         # Add each Empty Line found before the next Same or Less Dented Line
 
         if not line:
             if graf:
-
                 graf.append(line)
 
         # Add each More Dented Line
 
         elif graf and (len(str_ldent(line)) > len(str_ldent(graf[0]))):
-
             graf.append(line)
 
         # Strip and close the Open Graf, before starting again with a Less Dented Line
@@ -456,7 +446,6 @@ def str_splitgrafs(doc, keepends=False):  # todo: keepends=True
         else:
             strip = list_strip(graf)
             if strip:
-
                 grafs.append(strip)
 
             # Begin again with an Empty Graf, not yet opened by its First Line
@@ -468,7 +457,6 @@ def str_splitgrafs(doc, keepends=False):  # todo: keepends=True
 
     strip = list_strip(graf)
     if strip:
-
         grafs.append(strip)
 
     return grafs  # -> Grid = List[List[Str]]
@@ -597,7 +585,6 @@ def sys_exit_if_not_implemented():
 
     parms = sys.argv[1:]
     if parms != ["--"]:
-
         raise NotImplementedError(sys.argv[1:])
 
 
@@ -638,7 +625,6 @@ def sys_stdin_readline_else():
         sys.exit(SIGINT_RETURNCODE_130)  # exits 130 to say KeyboardInterrupt SIGINT
 
     if not line:  # already echoed as "^D\n" at Mac, already echoed as "\n" at Linux
-
         sys.exit()  # exits None to say Stdin Closed
 
     chars = line.splitlines()[0]  # picks out Chars of Line, apart from Line End

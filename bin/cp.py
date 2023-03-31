@@ -42,7 +42,6 @@ def main():
     parm = byo.shlex_parms_one_posarg()
     if not parm:
         if sys.argv[1:] != ["--"]:
-
             byo.sys_exit()  # prints examples or help lines or exception, and exits
 
     # Say who's calling
@@ -77,7 +76,6 @@ def main():
         ttyline = "cp -ip {} {}".format(fromfile, tofile)
         shline = ttyline
     else:
-
         raise NotImplementedError("cp.py: no files found here outside of '.*' and '*~'")
 
     # Run the chosen Sh Line, and return

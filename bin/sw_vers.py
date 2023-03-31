@@ -55,11 +55,9 @@ chars = "macOS {} ".format(major)
 hits = list(_ for _ in doc.splitlines() if chars in _)
 
 if len(hits) != 1:
-
     sys.stdout.write(stdout)
 
 else:
-
     hit = hits[-1]
 
     got = hit

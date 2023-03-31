@@ -96,7 +96,6 @@ def main():
     # Else fail over to also search up the '$(qjd)' revisions
 
     if not run_0.stdout:
-
         byo.sys_stderr_print("+ {}".format(ttyline_1))
         argv_1 = shlex.split(shline_1)
         _ = subprocess.run(argv_1, stdin=subprocess.PIPE, check=True)
@@ -164,11 +163,9 @@ def run_ls_args(args):
     # Pick the Code to show or run
 
     if args_one:
-
         (opt, func, kwargs) = parse_ls_1_args(args)
 
     else:
-
         kwargs = dict(tops=tops)
         if args.C:
             opt = "-C"  # show as multiple columns
@@ -192,7 +189,6 @@ def run_ls_args(args):
 
 
 def parse_ls_1_args(args):
-
     opt = "-1"  # show as one column of one file or dir per line
 
     tops = args.tops
@@ -202,12 +198,10 @@ def parse_ls_1_args(args):
     isdirs = list(stat.S_ISDIR(_.st_mode) for _ in stat_by_top.values())
 
     if not tops:  # if no Tops
-
         func = ls_here_by_line
         kwargs = dict()
 
     elif not tops[1:]:  # if one Top
-
         if all(isdirs):
             func = ls_dir_by_line
             kwargs = dict(top=tops_0)
@@ -216,19 +210,15 @@ def parse_ls_1_args(args):
             kwargs = dict(item=tops_0)
 
     else:  # else many Tops
-
         if all(isdirs):
-
             func = ls_top_dirs_by_line
             kwargs = dict(tops=tops)
 
         elif not any(isdirs):
-
             func = ls_top_files_etc_by_line
             kwargs = dict(items=tops)
 
         else:
-
             func = ls_tops_by_line
             kwargs = dict(tops=tops)
 
@@ -304,7 +294,7 @@ def forward_kwargs_etc(lines, kwargs):
     assert lines[0].startswith('"""')
     lines[0] = None
 
-    for (k, v) in reversed(kwargs.items()):
+    for k, v in reversed(kwargs.items()):
         kv_py = "{} = {!r}".format(k, v)
         lines[1:1] = [kv_py]
 
@@ -321,7 +311,6 @@ def apply_dash_a(lines):
     lines[::] = list(_ for _ in lines if _ is not None)  # deletes dropped Sourcelines
 
     if not args.a:
-
         chars = "\n".join(lines)
         chars = chars.replace('[".", ".."] + ', "")
         lines[::] = chars.splitlines()
@@ -329,10 +318,8 @@ def apply_dash_a(lines):
     # Stop caring if Item Starts With Dot, when yes:  ls -a
 
     if args.a:
-
-        for (i, line) in enumerate(lines):
+        for i, line in enumerate(lines):
             if line.strip() == 'if not item.startswith("."):':
-
                 lines[i] = None
 
                 assert lines[i + 1].startswith(_4_DENT), repr(lines[i + 1])
@@ -360,14 +347,12 @@ def infer_boilerplates(lines, func, echo_py):
     # Mark these Sourcelines as Py Sourcelines, 1st of all
 
     if func is ls_tops_by_line:
-
         lines[0:0] = ["#!/usr/bin/env python3"]
 
     # Drop the blank Sourcelines when not structuring many Sourcelines
 
     if func is not ls_tops_by_line:
-
-        for (i, line) in enumerate(lines):
+        for i, line in enumerate(lines):
             if not line:
                 lines[i] = None
 

@@ -45,7 +45,6 @@ def main():
     parm = byo.shlex_parms_one_posarg()
     if not parm:
         if sys.argv[1:] != ["--"]:
-
             byo.sys_exit()  # prints examples or help lines or exception, and exits
 
     # Say who's calling
@@ -98,7 +97,6 @@ def main():
     # Runs some Sh Lines, else quit
 
     if patterns and not parm:  # cleans out the trash
-
         mv_ttyline = "mv -i {} {}/.".format(" ".join(patterns), trash_reldir)
         byo.subprocess_ttyline_exit_if(mv_ttyline)
 
@@ -107,7 +105,6 @@ def main():
         byo.sys_stderr_print("+")
 
     elif fromfile:  # moves one file off the stack
-
         mv_ttyline = "mv -i {} {}".format(fromfile, tofile)
         mv_shline = mv_ttyline
         byo.subprocess_shline_exit_if(mv_shline)
@@ -116,7 +113,6 @@ def main():
         print("next: ", mv_undo_ttyline, file=sys.stderr)
 
     else:
-
         raise NotImplementedError("mv.py: no files found here outside of '.*' and '*~'")
 
 

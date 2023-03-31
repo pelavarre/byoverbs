@@ -127,7 +127,6 @@ def form_chars_by_digit():
 
     lines = DIGITS_CHARS.splitlines()
     for digit in range(10):
-
         chars = ""
         for line in lines:
             if chars:
@@ -218,7 +217,6 @@ def run_shpong():
         keycaps.try_put_terminal_size(stdio, size=flat_up)
 
     with keycaps.tui_open(stdio) as tui:
-
         game = ShPongGame(tui)
 
         tui.print(DECTCEM_CURSOR_HIDE)
@@ -230,18 +228,15 @@ def run_shpong():
 
 
 class ShPongGame:
-
     selves = list()
 
     def __init__(self, tui):
-
         ShPongGame.selves.append(self)
         self.tui = tui
 
         self.reinit()
 
     def reinit(self):
-
         self.caps = []  # trace of 'tui.cap_from_stroke' of 'tui.readline'
 
         self.ball_vector_yx = (0, +1)
@@ -328,19 +323,16 @@ class ShPongGame:
         self.status_width = columns - 1
 
     def run_till_quit(self):  # noqa # too complex (11  # FIXME
-
         tui = self.tui
 
         caps = self.caps
         scores = self.scores
 
         while True:
-
             # Draw one Ball, two Paddles, one Colon, two Scores
 
             self.board_draw()
             if (scores[0] >= 9) or (scores[-1] >= 9):
-
                 break
 
             # Read the next Keystroke
@@ -360,7 +352,6 @@ class ShPongGame:
                 caps.append(cap)
                 if caps[-3:] == (3 * [cap]):
                     if cap not in HOT_CAPS:
-
                         break
 
             # Change the Score on request
@@ -421,9 +412,9 @@ class ShPongGame:
 
         # Draw two single digit Scores
 
-        for (score_x, score) in zip(self.score_xs, self.scores):
+        for score_x, score in zip(self.score_xs, self.scores):
             chars = CHARS_BY_DIGIT[score]
-            for (index, line) in enumerate(chars.splitlines()):
+            for index, line in enumerate(chars.splitlines()):
                 tui.print(CUP_Y_X.format(2 + index, score_x) + line, end="")
 
         # Draw an echo of unwanted input, if any arrived lately
@@ -493,7 +484,6 @@ class ShPongGame:
 
         if cap == "=":
             if stroke == b"=":
-
                 scores[0] = scores[1] = max(scores)
 
                 return
@@ -528,7 +518,6 @@ class ShPongGame:
 
         y_next = y + vector
         if not (self.paddle_y_min <= y_next <= self.paddle_y_max):
-
             # Else kick back from Min or Max
 
             y_next = y - vector
@@ -739,7 +728,6 @@ def sys_exit_if_argdoc_ne(doc, parser):
     with_columns = os.getenv("COLUMNS")
     os.environ["COLUMNS"] = str(89)
     try:
-
         parser_doc = parser.format_help()
 
     finally:
