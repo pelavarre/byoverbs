@@ -1,0 +1,6 @@
+set -xe
+if [ $# == 0 ]; then
+    git revert HEAD
+else
+    git revert "$@"
+fi
