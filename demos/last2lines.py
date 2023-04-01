@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 r"""
 usage: python3.bash demos/last2lines.py bin/
 """

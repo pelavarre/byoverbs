@@ -23,7 +23,8 @@ examples:
 
   echo "+ exit $?"  # reads-and-clears last process returncode exit status
   echo -n '⌃ ⌥ ⇧ ⌘ ← → ↓ ↑ ⎋' |hexdump -C
-  echo $'\x1B[34mBlue \x1B[31mRed \x1B[33mYellow \x1B[32mGreen \x1B[36mTeal \x1B[30m'
+  printf '\e[34mB \e[31mR \e[35mM \e[33mY \e[32mG \e[36mT \e[37mW \e[m\n'  # Plain
+  printf '\e[94mB \e[91mR \e[95mM \e[93mY \e[92mG \e[96mT \e[97mW \e[m\n'  # Bright
 
   python3 -c 'print("'"$(echo '\N{Large '{Red,Green,Blue}' Circle} ')"'")'
   # {Blue,Brown,Green,Orange,Purple,Red,Yellow}

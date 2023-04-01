@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 _ = """
 
 00 01 02

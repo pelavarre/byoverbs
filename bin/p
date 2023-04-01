@@ -32,6 +32,7 @@ dt = LazyImport(import_="datetime", as_="dt")
 functools = LazyImport(import_="functools")
 hashlib = LazyImport(import_="hashlib")
 os = LazyImport(import_="os")
+pathlib = LazyImport(import_="pathlib")
 pdb = LazyImport(import_="pdb")
 random = LazyImport(import_="random")
 re = LazyImport(import_="re")
@@ -48,6 +49,7 @@ textwrap = LazyImport(import_="textwrap")
 time = LazyImport(import_="time")
 traceback = LazyImport(import_="traceback")
 tty = LazyImport(import_="tty")
+unicodedata = LazyImport(import_="unicodedata")
 
 import urllib.parse
 

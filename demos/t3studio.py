@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 r"""
 usage: t3studio.py
 
