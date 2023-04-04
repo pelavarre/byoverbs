@@ -13,6 +13,7 @@ examples:
   rm -fr keylogger.bytes typescript  # clear cache
   demos/pseudotty.py --  # call once to record
   demos/pseudotty.py --  # call again to replay
+  ls -1 |vi -u /dev/null +':set mouse=a' -  # setup a mouse-click/ touch-tap demo
 """
 
 # code reviewed by people and by Black, Flake8, & Flake8-Import-Order
@@ -195,7 +196,7 @@ def pty_bytes_split_once(bytes_, mode):  # noqa
     # Split out 1 Escape Sequence begun by the Control Sequence Introducer (CSI)
 
     if bytes_[:2] == b"\x1B[":
-        pattern = b"\x1B\\[([^A-Z_a-z]*)[A-Z_a-z]"
+        pattern = b"\x1B\\[([0-9;]*)[^0-9;]"
         m = re.match(pattern, string=bytes_)
         if m:
             packet = m.group(0)
