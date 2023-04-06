@@ -46,7 +46,10 @@ ESC = b"\x1B"
 
 TOLD_BY_PACKET = dict()
 
-TOLD_BY_PACKET[b"\x04"] = "\N{Up Arrowhead}D Tty Eof"  # ⌃D
+TOLD_BY_PACKET[b"\x04"] = "\N{Up Arrowhead}D Tty Eof"  # ␃⌃D
+# [b"\x04"] = "\N{Symbol For End Of Transmission}"  # ␄
+TOLD_BY_PACKET[b"\x07"] = "\N{Up Arrowhead}G Tty Bell"  # ⌃G
+# [b"\x07"] = "\N{Symbol For Bell}"  # ␇
 
 # [b"\r"] = "\N{Return Symbol} Return"  # ⏎
 # [b"\n"] = "\N{Symbol For Newline} Line Break"  # ␤
@@ -80,8 +83,9 @@ TOLD_BY_PACKET[b"\x1B[" b"?1000l"] = "Take No Keystrokes from Mouse Press and Re
 TOLD_BY_PACKET[b"\x1B[" b"?1049l"] = "Main Screen"
 TOLD_BY_PACKET[b"\x1B[" b"?2004l"] = "Main Paste"
 
-TOLD_BY_PACKET[b"\x1B[" b"27m"] = "Positive SGR"
-TOLD_BY_PACKET[b"\x1B[" b"29m"] = "Uncrossed SGR"
+TOLD_BY_PACKET[b"\x1B[" b"23m"] = "Italic Off Blackletter Off SGR"
+TOLD_BY_PACKET[b"\x1B[" b"27m"] = "Reversed Off SGR"  # Positive On SGR
+TOLD_BY_PACKET[b"\x1B[" b"29m"] = "Strikethrough Off SGR"  # Crossed Out Off
 TOLD_BY_PACKET[b"\x1B[" b"94m"] = "Bright Blue SGR"
 TOLD_BY_PACKET[b"\x1B[" b"m"] = "Exit SGR"
 
@@ -89,14 +93,20 @@ TOLD_BY_PACKET[b"\x1B[" b">4;2m"] = "Enter XTQMODKEYS"
 TOLD_BY_PACKET[b"\x1B[" b">4;m"] = "Exit XTQMODKEYS"
 TOLD_BY_PACKET[b"\x1B[" b"?4m"] = "Query XTQMODKEYS"
 
+TOLD_BY_PACKET[b"\x1B[" b"22;0;0t"] = "Enter XTSMTITLE 22 0 0"
 TOLD_BY_PACKET[b"\x1B[" b"22;1t"] = "Push Icon Title"
 TOLD_BY_PACKET[b"\x1B[" b"22;2t"] = "Push Window Title"
+
+TOLD_BY_PACKET[b"\x1B[" b"23;0;0t"] = "Exit XTSMTITLE 23 0 0"
 TOLD_BY_PACKET[b"\x1B[" b"23;1t"] = "Pop Icon Title"
 TOLD_BY_PACKET[b"\x1B[" b"23;2t"] = "Pop Window Title"
 
 TOLD_BY_PACKET_KEYS_MINUS = list(TOLD_BY_PACKET.keys())
 
 TOLD_BY_PACKET[b"\x1B"] = "\N{Broken Circle With Northwest Arrow} Esc"  # ⎋
+
+# begun with my 2023-04 sample of Monterey macOS 12.6.3
+# next Ubuntu 2020|2022 => \x07 \e[23m \e[22;0;0t \e[23;0;0t
 
 
 def main():
