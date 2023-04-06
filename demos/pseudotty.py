@@ -10,16 +10,20 @@ docs:
   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 
 examples:
+  git clean -ffxdq
   rm -fr keylogger.bytes typescript  # clear cache
   demos/pseudotty.py --  # call once to record
-  demos/pseudotty.py --  # call again to replay
   ls -1 |vi -u /dev/null +':set mouse=a' -  # setup a mouse-click/ touch-tap demo
+  :q!
+  ⌃D
+  demos/pseudotty.py --  # call again to replay
 """
 
 # code reviewed by people and by Black, Flake8, & Flake8-Import-Order
 
 
 import __main__
+import ast
 import os
 import pathlib
 import pty
@@ -32,6 +36,10 @@ import time
 C0_C1_INTS = list(range(0x00, 0x20)) + [0x7F] + list(range(0x80, 0xA0))
 C0_C1 = list(struct.pack("B", _) for _ in C0_C1_INTS)
 
+CSI_DIGITS = r"0-9;>\?"
+CSI_PATTERN = "\x1B\\[[{}]*[^{}]".format(CSI_DIGITS, CSI_DIGITS).encode()
+CSI_PATTERN = "\x1B\\[M...|".encode() + CSI_PATTERN
+
 ESC_INT = 0x1B
 ESC = b"\x1B"
 
@@ -39,10 +47,10 @@ ESC = b"\x1B"
 TOLD_BY_PACKET = dict()
 
 TOLD_BY_PACKET[b"\x04"] = "\N{Up Arrowhead}D Tty Eof"  # ⌃D
-TOLD_BY_PACKET[b"\r"] = "\N{Return Symbol} Return"  # ⏎
-TOLD_BY_PACKET[b"\n"] = "\N{Symbol For Newline} Line Break"  # ␤
 
-TOLD_BY_PACKET[b"\r\n"] = "\N{Symbol For Carriage Return}\N{Symbol For Line Feed} CrLf"
+# [b"\r"] = "\N{Return Symbol} Return"  # ⏎
+# [b"\n"] = "\N{Symbol For Newline} Line Break"  # ␤
+# [b"\r\n"] = "\N{Symbol For Carriage Return}\N{Symbol For Line Feed} CrLf"
 # ␍␊
 
 TOLD_BY_PACKET[b"\x1B" b"="] = "Application Keypad (DECKPAM)"  # VT100
@@ -54,17 +62,21 @@ TOLD_BY_PACKET[b"\x1B[" b"2J"] = "Erase In Display (ED) Above Below"
 
 TOLD_BY_PACKET[b"\x1B[" b"K"] = "Erase In Line (EL) To Right"
 
+# b"\x1B[" ... "h" = DECSET CSI ? Pm h  # DEC Private Mode Set
 TOLD_BY_PACKET[b"\x1B[" b"?1h"] = "Application Cursor Keys (DECCKM)"  # VT100
 TOLD_BY_PACKET[b"\x1B[" b"?12h"] = "Blink Cursor"
 TOLD_BY_PACKET[b"\x1B[" b"?25h"] = "Show Cursor"  # DECTCEM VT220, 1st of 2
-TOLD_BY_PACKET[b"\x1B[" b"?1034h"] = "Join Meta"
+TOLD_BY_PACKET[b"\x1B[" b"?1000h"] = "Take Keystrokes from Mouse Press and Release"
+TOLD_BY_PACKET[b"\x1B[" b"?1034h"] = "Join Meta"  # seen without b"?1034l"
 TOLD_BY_PACKET[b"\x1B[" b"?1049h"] = "Alt Screen"
 TOLD_BY_PACKET[b"\x1B[" b"?2004h"] = "Alt Paste"
 
+# b"\x1B[" ... "h" = DECRST CSI ? Pm h  # DEC Private Mode Reset
 TOLD_BY_PACKET[b"\x1B[" b"?1l"] = "Normal Cursor Keys (DECCKM)"  # VT100
 TOLD_BY_PACKET[b"\x1B[" b"?12l"] = "Steady Cursor"
 TOLD_BY_PACKET[b"\x1B[" b"?25l"] = "Hide Cursor"  # DECTCEM VT220, 2nd of 2
-# TOLD_BY_PACKET[b"\x1B[" b"?1034l"] = "Split Meta"  # (not seen in traces lately)
+# [b"\x1B[" b"?1034l"] = "Split 7-Bit Meta"  # (not seen in traces lately)
+TOLD_BY_PACKET[b"\x1B[" b"?1000l"] = "Take No Keystrokes from Mouse Press and Release"
 TOLD_BY_PACKET[b"\x1B[" b"?1049l"] = "Main Screen"
 TOLD_BY_PACKET[b"\x1B[" b"?2004l"] = "Main Paste"
 
@@ -193,13 +205,22 @@ def pty_bytes_split_once(bytes_, mode):  # noqa
 
     assert mode in "rb wb".split(), (mode,)
 
+    csi_digits = r"0-9;>\?"
+    csi_pattern = "\x1b\\[[{}]*[^{}]".format(csi_digits, csi_digits).encode()
+    csi_pattern = "\x1b\\[M...|".encode() + csi_pattern
+
+    assert csi_pattern == CSI_PATTERN
+
     # Split out 1 Escape Sequence begun by the Control Sequence Introducer (CSI)
 
     if bytes_[:2] == b"\x1B[":
-        pattern = b"\x1B\\[([0-9;]*)[^0-9;]"
-        m = re.match(pattern, string=bytes_)
+        m = re.match(csi_pattern, string=bytes_)
         if m:
             packet = m.group(0)
+        else:
+            print("CSI Pattern", csi_pattern.decode().replace("\x1B", r"\e"))  # Stderr?
+            assert False, (packet,)
+            packet = bytes_[:2]
 
     # Split out the widest Defined Packet
 
@@ -275,22 +296,37 @@ def pty_groups_print_repr(groups, path_name):
     """Print the Python Code to write a clone of the Bytes"""
 
     dent = 4 * " "
+    exotic_ints = list(ord(_) for _ in C0_C1 if _ not in b"\t\r\n")
 
+    print()
     print('with open("{}", "wb") as writing:'.format(path_name))
     for group in groups:
         (repeats, packet) = group
 
+        # Pick out the Meaning of a Packet
+
         tail = ""
         told = pty_packet_told(packet)
-        if told:
+        if all((_ not in exotic_ints) for _ in packet):
+            assert not told, (packet, told)
+            tail = "  # (plain text)"
+
+        elif told:
             tail = "  # {}".format(told)
             if "(CUP)" in told:
                 tail = "  # {}".format(told.lower())
 
+        # Print the Packet with its Meaning
+
+        rep = repr(packet)
+        if b'"' not in packet:
+            rep = 'b"' + rep[len("b'") : -len("'")] + '"'
+            assert ast.literal_eval(rep) == packet, (ast.literal_eval(rep), packet)
+
         if repeats == 1:
-            print(dent + r"writing.write({!r}){}".format(packet, tail))
+            print(dent + r"writing.write({}){}".format(rep, tail))
         else:
-            print(dent + r"writing.write({} * {!r}){}".format(repeats, packet, tail))
+            print(dent + r"writing.write({} * {}){}".format(repeats, rep, tail))
 
 
 def pty_packet_told(packet):
@@ -302,7 +338,16 @@ def pty_packet_told(packet):
         told = TOLD_BY_PACKET[packet]
 
     elif packet.startswith(b"\x1B["):  # Control Sequence Introducer (CSI)
-        if packet.endswith(b"H"):
+        if packet.startswith(b"\x1B[M") and (len(packet) == 6):
+            (cb, cx, cy) = (packet[-3], packet[-2], packet[-1])
+
+            (cx_, cy_) = (cx, cy)
+            told = "Mouse Button 0x{:02X} at X={} Y={}".format(cb, cx_, cy_)
+            if cb & 0x20:
+                (cx_, cy_) = (cx - 0x20, cy - 0x20)
+                told = "Mouse Button 0x{:02X} at X={} Y={}".format(cb, cx_, cy_)
+
+        elif packet.endswith(b"H"):
             told = "Cursor Position (CUP) Y X"
         elif packet.endswith(b"r"):
             told = "Set Scrolling Region (DECSTBM) Y1 Y2"
