@@ -378,6 +378,8 @@ def pty_groups_print_repr(groups, path_name):
             rep = 'b"' + rep[len("b'") : -len("'")] + '"'
             assert ast.literal_eval(rep) == packet, (ast.literal_eval(rep), packet)
 
+            # FIXME: upper hex for the Rep
+
         if repeats == 1:
             print(dent + r"writing.write({}){}".format(rep, tail))
         else:
