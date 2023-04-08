@@ -378,7 +378,7 @@ def pty_groups_print_repr(groups, path_name):
             rep = 'b"' + rep[len("b'") : -len("'")] + '"'
             assert ast.literal_eval(rep) == packet, (ast.literal_eval(rep), packet)
 
-            # FIXME: upper hex for the Rep
+            # FIXME FIXME: upper hex for the Rep
 
         if repeats == 1:
             print(dent + r"writing.write({}){}".format(rep, tail))
@@ -425,3 +425,11 @@ def pty_packet_told(packet):
 
 if __name__ == "__main__":
     main()
+
+
+# FIXME: large Terminals
+# FIXME: even Terminals larger than 255 x 255 Columns x Rows
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/pseudotty.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

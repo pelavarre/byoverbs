@@ -102,7 +102,7 @@ def main():
     parser = byo.compile_argdoc()
     byo.parser_parse_args(parser)  # prints helps and exits, else returns args
 
-    logfile = open("logfile.log", "w")
+    logfile = open("keylogger.bytes", "wb")
 
     with TextUserInterface(sys.stderr) as tui:
         os.write(sys.stdout.fileno(), b"\x1B[" b"?1000h")  # Mouse Enter
@@ -114,7 +114,7 @@ def main():
                 ibytes = b""
                 for _ in range(6):
                     ibyte = tui.kbreadbyte()
-                    print("0x{:02X}".format(ibyte[0]), file=logfile)
+                    os.write(logfile.fileno(), ibyte)
                     ibytes += ibyte
                     if ibytes == b"\x1B":
                         continue
@@ -766,6 +766,9 @@ sys.stderr.write(str(shutil.get_terminal_size()) + "\n")
 
 if __name__ == "__main__":
     main()
+
+
+# FIXME: GShell Mouse Clicks below the Bottom Row
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/glass1000.py
