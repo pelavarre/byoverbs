@@ -63,6 +63,13 @@ def main():
     screen_edit_till()
 
 
+def log_print(*args, **kwargs):
+    """Append a Log Line to the file './l.log'"""
+
+    with open("l.log", "a") as file_:
+        print(*args, **kwargs, file=file_)
+
+
 def screen_edit_till():
     """Copy Keyboard to Screen, except for special cases"""
 
@@ -91,6 +98,7 @@ class ScreenEditor:
         self.input_lines = list()
         self.stdio = gt.stdio
 
+        self.status_chars = None
         self.helping_bot_by_line = self.form_helping_bot_by_line()
         self.texting_bot_by_line = self.form_texting_bot_by_line()
 
@@ -145,7 +153,7 @@ class ScreenEditor:
         prefix = line[:1]
 
         bot = self.write
-        if self.texting and (line == prefix):
+        if self.texting:
             if prefix in texting_bot_by_line.keys():
                 bot = texting_bot_by_line[prefix]
         else:
@@ -191,14 +199,22 @@ class ScreenEditor:
             self.on_mouse(line)
             return
 
-        if re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=line):
+        m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=line)
+        if m:
             self.on_cpr(line)
             return
 
         self.write(line)
 
     def on_cpr(self, line):
-        r"""Reply to '\e[...;...R' Cursor Position (CPR)"""
+        r"""Reply to '\e[...;...R' Cursor Position Report (CPR)"""
+
+        # Read and Clear the CPR Status Chars
+
+        status_chars = self.status_chars
+        self.status_chars = None
+
+        # Parse the Cursor Position Report (CPR)
 
         m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=line)
         (ydigits, xdigits) = (m.group(1), m.group(2))
@@ -206,14 +222,19 @@ class ScreenEditor:
 
         (columns, lines) = self.get_terminal_size()
 
+        # Form a conventional Vi Status Row
+
+        chars = status_chars
+        if chars is None:
+            chars = '"/dev/tty" [Modified] {} lines {} columns   {},{}'.format(
+                lines, columns, y, x
+            )
+
+        # Write the Status Row and restore Cursor Position
+
         self.to_lower_left()
         self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
-
-        chars = '"/dev/tty" [Modified] {} lines {} columns   {},{}'.format(
-            lines, columns, y, x
-        )
         self.write(chars.encode())
-
         self.write("\x1B[{};{}H".format(y, x).encode())
 
     def on_mouse(self, line):
@@ -276,10 +297,20 @@ class ScreenEditor:
         gt = self.gt
 
         texting = self.texting_backup()
+
+        self.status_chars = "⌃O"
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+
         self.helping_enter(line)
 
         inner_line = gt.readline()
         self.reply_to(inner_line)
+        if self.status_chars is None:
+            inner_line = gt.readline()
+            self.reply_to(inner_line)
+
+        self.status_chars = ""
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
 
         self.texting_restore(texting, line=line)
 
@@ -319,10 +350,20 @@ class ScreenEditor:
         gt = self.gt
 
         texting = self.texting_backup()
+
+        self.status_chars = "R"
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+
         self.replacing_enter(line)
 
         inner_line = gt.readline()
         self.reply_to(inner_line)
+        if self.status_chars is None:
+            inner_line = gt.readline()
+            self.reply_to(inner_line)
+
+        self.status_chars = ""
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
 
         self.texting_restore(texting, line=line)
 
@@ -332,16 +373,30 @@ class ScreenEditor:
         gt = self.gt
 
         texting = self.texting_backup()
+
+        self.status_chars = "⌃V"
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+
         self.replacing_enter(line)
 
         inner_line = gt.readline()
-        self.write(inner_line)
+        m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=inner_line)
+        if not m:
+            self.write(inner_line)
+        else:
+            self.reply_to(inner_line)
+            inner_line = gt.readline()
+            self.write(inner_line)
+
+        self.status_chars = ""
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
 
         self.texting_restore(texting, line=line)
 
     def write_device_status_report(self, line):  # Vi ⌃G
         """Call for b'\x1B[{y};{x}R' Cursor Position (CPR)"""
 
+        self.status_chars = None
         self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
 
     #
@@ -602,6 +657,7 @@ class ScreenEditor:
         bot_by_line[b"\x0D"] = self.char_insert_line_break  # Vi ⌃M Return
         bot_by_line[b"\x0F"] = self.helping_visit  # Vi ⌃O
         bot_by_line[b"\x16"] = self.writing_visit  # Vi ⌃V
+        bot_by_line[b"\x1B"] = self.on_esc  # Vi ⌃[
 
         return bot_by_line
 
