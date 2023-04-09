@@ -116,7 +116,7 @@ python3:  # example usage:  make python3 py=bin/byotools.py
 .PHONY: bin  # make input:  ls -d ./bin
 bin:
 	rm -fr bin/__pycache__/
-	cp -p bin/* ~/bin/.
+	cp -pR bin/* ~/bin/.
 
 
 # Publish many $HOME DotFiles

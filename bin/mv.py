@@ -25,7 +25,7 @@ examples:
   touch t.txt
   F=t.txt && echo mv -i $F{,~$(date -r $F +%m%d$(jqd)%H%M)~} |tee /dev/tty |bash
 
-  echo mv *.jpeg *.jpg *.png *.svg __$(qjd)-trash__/.
+  echo mv *.jpeg *.jpg *.png *.svg *.webp __$(qjd)-trash__/.
 
   echo mv -i "$(ls -1rt |tail -1)"{,~$(date +%m%d$(jqd)%H%M)~}
 """
@@ -60,7 +60,7 @@ def main():
 
     # Look for File Ext's to archive
 
-    image_exts = ".jpeg .jpg .png .svg".split()
+    image_exts = ".jpeg .jpg .png .svg .webp".split()
 
     (_, _, filenames) = next(os.walk("."))
 
