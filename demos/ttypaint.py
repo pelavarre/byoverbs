@@ -12,9 +12,9 @@ quirks:
   1 quits when told ⌃C ⌃M ⌃M ⌃M, or when told ⌃C ⇧Z⇧Q
   2 echoes Mouse Press/ Release as move Cursor
   3 loops Keystrokes to Terminal while Replacing/ Inserting, except ⌃C ⌃G ⌃M ⌃O ⌃V
-  4 closely emulates Vi $ | 0 A H I J K L O R S X and ⇧4 ⇧\ and ⌃P ⌃N
+  4 closely emulates Vi $ | 0 A H I J K L O R S X and ⌃P ⌃N
   5 closely emulates Vi ⇧C ⇧D ⇧H ⇧L ⇧M ⇧O ⇧R ⇧S, also emulates ⇧X past first Column
-  6 also emulates Vi + - ^ _ and ⇧I and ⇧= ⇧6 ⇧-, but can't see Dents
+  6 also emulates Vi + - << <L >> >L CC DD ^ _ and ⇧I, but can't see Dents
 
 limits:
   can't read or search Chars, nor Dents, nor the Spaces beyond each End of Line
@@ -81,11 +81,7 @@ def screen_edit_till():
                 line = gt.readline()
                 se.reply_to(line)
         finally:
-            gt.write(b"\x1B[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert Mode (IRM)
-            gt.write(b"\x1B[ q")  # CSI Pm SP q Set Cursor Style (DECSCUSR)  # (default)
-
-            se.to_lower_left()
-            # gt.print()  # no, don't, let us quit without scrolling up
+            se.write_exit()
 
 
 class ScreenEditor:
@@ -101,6 +97,11 @@ class ScreenEditor:
         self.status_chars = None
         self.helping_bot_by_line = self.form_helping_bot_by_line()
         self.texting_bot_by_line = self.form_texting_bot_by_line()
+
+        self.columns = None
+        self.lines = None
+        self.x = None
+        self.y = None
 
         self.editing_start()
 
@@ -132,8 +133,8 @@ class ScreenEditor:
 
         (x, y) = self.get_terminal_size()
 
-        x_ = 1
-        self.write("\x1B[{};{}H".format(y, x_).encode())
+        x_1 = 1
+        self.write("\x1B[{};{}H".format(y, x_1).encode())
 
     #
     # Take Keyboard Input Lines as saying more than they do
@@ -159,6 +160,8 @@ class ScreenEditor:
         else:
             if prefix in helping_bot_by_line.keys():
                 bot = helping_bot_by_line[prefix]
+            else:
+                bot = self.write_bel
 
         if False:  # jitter Sun 9/Apr
             if prefix != b"i":
@@ -169,16 +172,10 @@ class ScreenEditor:
 
         bot(line)
 
-        #
-
-        if not self.texting:
-            if input_lines[-3:] == [b"\r", b"\r", b"\r"]:
-                sys.exit()
-            if input_lines[-2:] == [b"Z", b"Q"]:
-                sys.exit()
-
     def on_esc(self, line):
         r"""Reply to '\e' Keyboard Input Lines"""
+
+        texting = self.texting
 
         assert line.startswith(b"\x1B"), line
 
@@ -186,7 +183,10 @@ class ScreenEditor:
             self.on_csi(line)
             return
 
-        self.write(line)
+        if texting:
+            self.write(line)
+        else:
+            self.write_bel(line)
 
     def on_csi(self, line):
         r"""Reply to '\e[' Keyboard Input Lines"""
@@ -222,6 +222,13 @@ class ScreenEditor:
 
         (columns, lines) = self.get_terminal_size()
 
+        # Publish stale Status
+
+        self.columns = columns
+        self.lines = lines
+        self.x = x
+        self.y = y
+
         # Form a conventional Vi Status Row
 
         chars = status_chars
@@ -252,8 +259,26 @@ class ScreenEditor:
 
         self.write("\x1B[{};{}H".format(y, x).encode())
 
+    def write_bel(self, line):
+        """Write 1 Bel"""
+
+        self.write(b"\x07")
+
+    def write_exit(self):
+        """Write to cancel changes to Terminal Mode, before exiting"""
+
+        self.write(b"\x1B[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert Mode (IRM)
+        self.write(b"\x1B[ q")  # CSI Pm SP q Set Cursor Style (DECSCUSR)  # (default)
+
+        self.to_lower_left()
+
+        # gt.print()  # no, don't, let us quit without scrolling up
+
     def write(self, reply):
         """Write some Bytes without encoding them, and without adding an End to them"""
+
+        if False:  # jitter Sun 9/Apr
+            log_print(reply)
 
         gt = self.gt
         gt.write(reply)
@@ -284,12 +309,13 @@ class ScreenEditor:
     def helping_enter(self, line):  # Vi ⌃C
         """Stop texting, start helping"""
 
+        texting = self.texting
         self.texting = None
 
-        self.write(b"\x1B[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert Mode (IRM)
-        self.write(b"\x1B[ q")  # CSI Pm SP q Set Cursor Style (DECSCUSR)  # (default)
+        if texting == "Inserting":
+            self.write(b"\x1B[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert (IRM)
 
-        # todo: don't Reset Insert when not inserting
+        self.write(b"\x1B[ q")  # CSI Pm SP q Set Cursor Style (DECSCUSR)
 
     def helping_visit(self, line):  # Vi ⌃O
         """Take one Keyboard Input Line as Helping"""
@@ -529,6 +555,199 @@ class ScreenEditor:
         self.line_insert_above(line)
 
     #
+    # Delete or Change or Quit
+    #
+
+    def changing_upto_visit(self, line):  # Vi CC
+        """Take one Keyboard Input Line as how many Lines to Delete, and then Insert"""
+
+        gt = self.gt
+
+        self.status_chars = "C"
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+
+        inner_line = gt.readline()
+        m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=inner_line)
+        if m:
+            self.reply_to(inner_line)
+            changing_kind = gt.readline()
+        else:
+            changing_kind = inner_line
+            inner_line = gt.readline()
+            self.reply_to(inner_line)
+
+        self.to_lower_left()
+        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+
+        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+
+        if changing_kind == b"c":
+            self.write(b"\x1B[M")
+        else:
+            self.write(b"\x07")
+
+        x_1 = 1
+        self.write("\x1B[{};{}H".format(self.y, x_1).encode())
+
+        self.line_insert_above(line)
+
+    def deleting_upto_visit(self, line):  # Vi DD moves to Dent
+        """Take one Keyboard Input Line as how many Lines to Delete"""
+
+        gt = self.gt
+
+        self.status_chars = "D"
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+
+        inner_line = gt.readline()
+        m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=inner_line)
+        if m:
+            self.reply_to(inner_line)
+            deleting_kind = gt.readline()
+        else:
+            deleting_kind = inner_line
+            inner_line = gt.readline()
+            self.reply_to(inner_line)
+
+        self.to_lower_left()
+        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+
+        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+
+        if deleting_kind == b"d":
+            self.write(b"\x1B[M")
+        else:
+            self.write(b"\x07")
+
+        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+
+    def write_cr(self, line):  # Vi ⌃M
+        """Write Carriage Return"""
+
+        input_lines = self.input_lines
+
+        self.write(b"\r")
+
+        if input_lines[-3:] == [b"\r", b"\r", b"\r"]:
+            sys.exit()
+
+    def quitting_upto_visit(self, line):  # Vi ZQ
+        """Take one Keyboard Input Line to cancel/ confirm Quit"""
+
+        gt = self.gt
+
+        self.status_chars = "⇧Z"
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+
+        inner_line = gt.readline()
+        m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=inner_line)
+        if m:
+            self.reply_to(inner_line)
+            quitting_kind = gt.readline()
+        else:
+            quitting_kind = inner_line
+            inner_line = gt.readline()
+            self.reply_to(inner_line)
+
+        self.to_lower_left()
+        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+
+        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+
+        if quitting_kind == b"Q":
+            sys.exit()
+        else:
+            self.write_bel(line)
+
+    #
+    # Dedent or Indent
+    #
+
+    def dedenting_visit(self, line):  # Vi <<  # Vi <L deletes only Spaces, ends at Dent
+        """Take one Keyboard Input Line as how many Lines to Dedent"""
+
+        gt = self.gt
+
+        self.status_chars = "<"
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+
+        self.replacing_enter(line)
+
+        inner_line = gt.readline()
+        m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=inner_line)
+        if m:
+            self.reply_to(inner_line)
+            denting_kind = gt.readline()
+        else:
+            denting_kind = inner_line
+            inner_line = gt.readline()
+            self.reply_to(inner_line)
+
+        if denting_kind == b"<":
+            self.inserting_enter(line)
+            self.write(b"\r\x1B[4P")  # CSI Ps P  # Delete Characters (DCH)
+            self.helping_enter(line)
+        elif denting_kind == b"L":
+            self.inserting_enter(line)
+            y = self.y
+            while y < self.lines:
+                self.write(b"\r\x1B[4P\n")  # CSI Ps P  # Delete Characters (DCH)
+                y += 1
+            self.write(b"\r\x1B[4P")  # CSI Ps P  # Delete Characters (DCH)
+            self.helping_enter(line)
+        else:
+            self.write(b"\x07")
+
+        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+
+        self.to_lower_left()
+        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+
+        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+
+    def indenting_visit(self, line):  # Vi >>  # Vi >L ends at Dent
+        """Take one Keyboard Input Line as how many Lines to Indent"""
+
+        gt = self.gt
+
+        self.status_chars = ">"
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+
+        self.replacing_enter(line)
+
+        inner_line = gt.readline()
+        m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=inner_line)
+        if m:
+            self.reply_to(inner_line)
+            denting_kind = gt.readline()
+        else:
+            denting_kind = inner_line
+            inner_line = gt.readline()
+            self.reply_to(inner_line)
+
+        if denting_kind == b">":
+            self.inserting_enter(line)
+            self.write(b"\r    ")
+            self.helping_enter(line)
+        elif denting_kind == b"L":
+            self.inserting_enter(line)
+            y = self.y
+            while y < self.lines:
+                self.write(b"\r    \n")
+                y += 1
+            self.write(b"\r    ")
+            self.helping_enter(line)
+        else:
+            self.write(b"\x07")
+
+        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+
+        self.to_lower_left()
+        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+
+        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+
+    #
     # Map Keyboard Input Lines to Editor Action while Helping
     #
 
@@ -547,7 +766,7 @@ class ScreenEditor:
         # Vi ⌃V⌃J works when echoed (including scroll up 1 row when at last row)
         # Vi ⌃K works when echoed (as Vertical Tab VT alias of ⌃J Line Feed LF)
         # Vi ⌃L
-        # Vi ⌃M works when echoed as Carriage Return CR
+        bot_by_line[b"\x0D"] = self.write_cr  # Vi ⌃M works when echoed as CR
         bot_by_line[b"\x0E"] = self.to_row_down  # Vi ⌃N
         # Vi ⌃O
         bot_by_line[b"\x10"] = self.to_row_up  # Vi ⌃P
@@ -566,15 +785,15 @@ class ScreenEditor:
         bot_by_line[b"+"] = self.to_row_down  # Vi ⇧=  # Vi +
         # Vi ,
         bot_by_line[b"-"] = self.to_row_up  # Vi -
-        # todo: Vi . as Repeat
+        # TODO: Vi . as Repeat
         # Vi /
 
         bot_by_line[b"0"] = self.to_column_chosen  # Vi 0
         # TODO: 0123456789 as Choose Count
         # Vi :, Vi ;
-        # TODO: <L as Undent  # Vi << stops undenting after Dent
+        bot_by_line[b">"] = self.indenting_visit  # Vi >>  # Vi >L
         # Vi =
-        # TODO: >L as Dent  # Vi >> doesn't delete Chars scrolled off Screen
+        bot_by_line[b"<"] = self.dedenting_visit  # Vi >>  # Vi >L
         # Vi ?
 
         # Vi ⇧A
@@ -602,7 +821,7 @@ class ScreenEditor:
         # Vi ⇧W
         bot_by_line[b"X"] = self.char_delete_left  # Vi ⇧X
         # Vi ⇧Y
-        # Vi ⇧Z
+        bot_by_line[b"Z"] = self.quitting_upto_visit  # Vi ⇧Z
 
         # Vi [, Vi \, Vi ]
         bot_by_line[b"^"] = self.to_row_this
@@ -611,8 +830,8 @@ class ScreenEditor:
 
         bot_by_line[b"a"] = self.right_and_inserting_enter
         # Vi B
-        # todo: CC like ⇧S
-        # todo: DD for Line Delete without Inserting Enter
+        bot_by_line[b"c"] = self.changing_upto_visit
+        bot_by_line[b"d"] = self.deleting_upto_visit
         # Vi E
         # Vi F
         # Vi G
@@ -828,7 +1047,7 @@ if __name__ == "__main__":
 
 
 # todo: define '--no-banner' to not even scroll up Two Lines
-# todo: Mouse Drag to feed into 'pbcopy'
+# TODO: Mouse Drag to feed into 'pbcopy'
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/ttypaint.py
