@@ -20,6 +20,7 @@ quirks:
 docs:
   https://en.wikipedia.org/wiki/ANSI_escape_code
   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+  :!demos/ttypaint.py --  && : works to edit Vi Screen after Vi :set t_ti= t_te=
 
 examples:
   ./demos/ttypaint.py --  # loop back like a Glass Terminal with no Remote Host
@@ -32,6 +33,7 @@ examples:
 import __main__
 import datetime as dt
 import os
+import re
 import select
 import shutil
 import struct
@@ -120,8 +122,7 @@ class ScreenEditor:
         (x, y) = self.get_terminal_size()
 
         x_ = 1
-        reply = "\x1B[{};{}H".format(y, x_).encode()
-        os.write(sys.__stdout__.fileno(), reply)
+        self.write("\x1B[{};{}H".format(y, x_).encode())
 
     #
     # Take Keyboard Input Lines as saying more than they do
@@ -157,6 +158,8 @@ class ScreenEditor:
     def on_esc(self, line):
         r"""Reply to '\e' Keyboard Input Lines"""
 
+        assert line.startswith(b"\x1B"), line
+
         if line.startswith(b"\x1B["):
             self.on_csi(line)
             return
@@ -168,11 +171,36 @@ class ScreenEditor:
 
         assert MouseButton == b"\x1B[" b"M"
 
+        assert line.startswith(b"\x1B["), line
+
         if (len(line) == 6) and line.startswith(b"\x1B[" b"M"):
             self.on_mouse(line)
             return
 
+        if re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=line):
+            self.on_cpr(line)
+            return
+
         self.write(line)
+
+    def on_cpr(self, line):
+        r"""Reply to '\e[...;...R' Cursor Position (CPR)"""
+
+        m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=line)
+        (ydigits, xdigits) = (m.group(1), m.group(2))
+        (y, x) = (int(ydigits), int(xdigits))
+
+        (columns, lines) = self.get_terminal_size()
+
+        self.to_lower_left()
+        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+
+        chars = '"/dev/tty" [Modified] {} lines {} columns   {},{}'.format(
+            lines, columns, y, x
+        )
+        self.write(chars.encode())
+
+        self.write("\x1B[{};{}H".format(y, x).encode())
 
     def on_mouse(self, line):
         r"""Reply to '\e[M' Keyboard Input Lines"""
@@ -187,8 +215,7 @@ class ScreenEditor:
 
         (x, y) = (cx - 0x20, cy - 0x20)
 
-        reply = "\x1B[{};{}H".format(y, x).encode()
-        self.write(reply)
+        self.write("\x1B[{};{}H".format(y, x).encode())
 
     def write(self, reply):
         """Write some Bytes without encoding them, and without adding an End to them"""
@@ -239,6 +266,11 @@ class ScreenEditor:
         self.write(
             b"\x1B[4 q"
         )  # CSI Pm SP q Set Cursor Style (DECSCUSR)  # Steady Line
+
+    def write_device_status_report(self, line):  # Vi ⌃G
+        """Call for b'\x1B[{y};{x}R' Cursor Position (CPR)"""
+
+        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
 
     #
     # Move the Cursor relatively
@@ -375,7 +407,7 @@ class ScreenEditor:
         # ⌃D
         # todo: ⌃E scroll up
         # ⌃F
-        # Vi ⌃G works when echoed as Bell BEL  # todo: Vi ⌃G report
+        bot_by_line[b"\x07"] = self.write_device_status_report  # Vi ⌃G
         # Vi ⌃H works when echoed as Backspace BS
         # Vi ⌃I works when echoed (though rather differently than Vi ⌃I)
         # Vi ⌃J works when echoed (including scroll up 1 row when at last row)
@@ -647,6 +679,7 @@ if __name__ == "__main__":
 
 
 # TODO: define '--no-banner' to not even scroll up Two Lines
+# TODO: Mouse Drag to feed into 'pbcopy'
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/ttypaint.py
