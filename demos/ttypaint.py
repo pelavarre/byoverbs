@@ -756,7 +756,9 @@ class ScreenEditor:
 
         bot_by_line = dict()
 
-        # Vi ⌃⇧2, Vi ⌃A, Vi ⌃B, Vi ⌃C, Vi ⌃D
+        # Vi ⌃⇧2, Vi ⌃A, Vi ⌃B
+        bot_by_line[b"\x03"] = lambda _: None  # Vi ⌃C
+        # Vi ⌃D
         # todo: ⌃E scroll up
         # Vi ⌃F
         bot_by_line[b"\x07"] = self.write_device_status_report  # Vi ⌃G
