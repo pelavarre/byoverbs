@@ -1048,8 +1048,38 @@ if __name__ == "__main__":
     main()
 
 
+# todo: r"\e[1m": etc as the syntax of Bold in here, for copy into Sh PrintF
+
+# todo: Paste that does only Replace/ Insert, especially when Bracketed
+# todo: Replace that does ⌃O its Return Keystrokes
+
+# todo: "--no-banner" to go in with no startup/ shutdown
+# todo: drop shutdown of things toggled by hand, or cut from startup
+
+# todo: buffer up echoes to trace as status when you can
+# todo: status to preview Bold Blue etc
+# todo: status of next step towards quitting
+
+# todo: keys to toggle Main/Alt Screen
+# todo: Alt Screen full of tips
+# todo: keys to toggle Mouse Enter/ Exit
+
+# todo: a test for each layer of code - GlassTerminal, ScreenEditor, FileEditor
+
+
+# todo: Backspace/ Delete while Replacing/ Inserting
+# todo: 0123456788 Repeat Counts
+# todo: every input visible review
+
+# todo: test Mouse-Exit Alt-Screen - Enter Clears, Share Scrollback, Print Scroll Loss
+# todo: test running inside Mouse-Enter or not
+
+# todo: vi +:set ttymouse=sgr  # columns beyond 223 (255 - 32), compatible with 'xterm2'
+
 # todo: define '--no-banner' to not even scroll up Two Lines
+# todo: Mouse Release/ Press inside ReplIt-Com
 # TODO: Mouse Drag to feed into 'pbcopy'
+# todo: why no exit write of '\e[m' to undo b'\e[1m' for Bold, b'\e34m' for Blue, etc
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/ttypaint.py

@@ -1,0 +1,14 @@
+set -e
+
+shline='git grep -i '
+while [ $# != 0 ]; do
+    if [[ "$1" =~ ^-.*$ ]]; then
+        shline="$shline $1"
+    else
+        shline="$shline -e $1"
+    fi
+    shift
+done
+
+set -xe
+$shline
