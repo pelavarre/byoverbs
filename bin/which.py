@@ -13,6 +13,12 @@ bh ()
 }
 $
 
+for P in $(echo $PATH |tr ': ' ' :'); do
+  (cd $P/ && for F in $(echo .* *); do [ -x $F ] && echo $F; done);
+done 2>/dev/null |grep boot |sort -u |cat -n |expand
+
+# Zsh has to work the Echo to drop its notice of:  zsh: no matches found: .* (edited)
+
 """
 
 

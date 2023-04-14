@@ -8,6 +8,8 @@ bind 'set enable-bracketed-paste off' 2>/dev/null; unset zle_bracketed_paste
 echo a
 echo b
 echo c
+
+export PS1="$PS1\n\\$ "
 """
 
 

@@ -15,6 +15,7 @@ quirks:
   4 closely emulates Vi $ | 0 A H I J K L O R S X and ⌃P ⌃N
   5 closely emulates Vi ⇧C ⇧D ⇧H ⇧L ⇧M ⇧O ⇧R ⇧S, also emulates ⇧X past first Column
   6 also emulates Vi + - << <L >> >L CC DD ^ _ and ⇧I, but can't see Dents
+  7 exit implies Lower-Left Default-Cursor-Style Replace-Mode
 
 limits:
   can't read or search Chars, nor Dents, nor the Spaces beyond each End of Line
@@ -33,6 +34,12 @@ examples:
 
 # code reviewed by people, and by Black and Flake8
 
+# FIXME: : q Return to exit
+# FIXME: : q ! Return to exit
+# FIXME: accept Q : vi
+
+# FIXME: -q  enter and exit without setup, greeting, or teardown
+
 
 import __main__
 import datetime as dt
@@ -45,6 +52,34 @@ import termios
 import tty
 
 _ = dt
+
+
+#
+# Disclose the Cheat Codes of the Layer of the Terminal that has a Vi Easter Egg in it
+#
+
+
+SH_PRINTFS = r"""
+
+    open https://en.wikipedia.org/wiki/ANSI_escape_code
+    open https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+
+    printf '\e[24;80H' |cv  # CSI Ps ; Ps H  # CursorPosition Y=1 X=1  # CUP
+
+    printf '\e[H' |cv  # UpperLeft
+    printf '\e[1;'$(stty size |cut -d' ' -f2)"H" |cv  # UpperRight
+    printf '\e['$(stty size |cut -d' ' -f2)"H" |cv  # LowerLeft
+    printf '\e['$(stty size |cut -d' ' -f2 -f1 |tr ' ' ';')"H" |cv  # LowerRight
+
+    printf '\e[''6n' |cv  # Device Status Report (DSR) call for CPR
+
+    printf '\e[''?1000h' | cv  # CSI ? Pm h  # Ps = 1 0 0 0  # VT200 MouseEnter
+    printf '\e[''?1000l' | cv  # CSI ? Pm l  # Ps = 1 0 0 0  # VT200 MouseExit
+
+    printf '\e[''?2004h' | cv  # CSI ? Pm h  # Ps = 2 0 0 4  # PasteEnter
+    printf '\e[''?2004l' | cv  # CSI ? Pm l  # Ps = 2 0 0 4  # PasteExit
+
+"""
 
 
 #
@@ -103,21 +138,7 @@ class ScreenEditor:
         self.x = None
         self.y = None
 
-        self.editing_start()
-
-    def editing_start(self):
-        """Start editing the Screen"""
-
-        gt = self.gt
-
-        _ = self.get_terminal_size()  # fails fast
-
-        gt.print(
-            "Press (⌃C and then) press Return (or ⌃M) three times to quit"
-            " (or ⌃C L 0 Z Q)"
-        )
-
-        self.texting = None  # Texting False is Vi :stopinsert, not Vi :startinsert
+        self.write_enter()
 
     def get_terminal_size(self):
         """Count Columns and Rows of monospaced Terminal Screen Characters"""
@@ -125,6 +146,41 @@ class ScreenEditor:
         columns_lines = shutil.get_terminal_size()
 
         return columns_lines
+
+    def write_enter(self):
+        """Start editing the Screen"""
+
+        self.texting = None  # Texting False is Vi :stopinsert, not Vi :startinsert
+
+        _ = self.get_terminal_size()  # fails fast
+
+        greeting = (
+            "Press (⌃C and then) press Return (or ⌃M) three times to quit"
+            " (or ⌃C L 0 Z Q)"
+            "\r\n"
+        )  # ⌃ \N{Up Arrowhead}
+
+        self.write(greeting.encode())
+
+    def write_exit(self):
+        """Write to cancel changes to Terminal Mode, before exiting"""
+
+        self.write(b"\x1B[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert Mode (IRM)
+        self.write(b"\x1B[ q")  # CSI Pm SP q Cursor Style (DECSCUSR)  # (default)
+
+        if True:  # jitter Fri 14/Apr
+            self.to_lower_left()
+
+        # gt.print()  # no, don't, let us quit without scrolling up
+
+    def write(self, reply):
+        """Write some Bytes without encoding them, and without adding an End to them"""
+
+        if False:  # jitter Sun 9/Apr
+            log_print(reply)
+
+        gt = self.gt
+        gt.write(reply)
 
     def to_lower_left(self):
         """Cursor Move to Lower Left"""
@@ -264,25 +320,6 @@ class ScreenEditor:
 
         self.write(b"\x07")
 
-    def write_exit(self):
-        """Write to cancel changes to Terminal Mode, before exiting"""
-
-        self.write(b"\x1B[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert Mode (IRM)
-        self.write(b"\x1B[ q")  # CSI Pm SP q Set Cursor Style (DECSCUSR)  # (default)
-
-        self.to_lower_left()
-
-        # gt.print()  # no, don't, let us quit without scrolling up
-
-    def write(self, reply):
-        """Write some Bytes without encoding them, and without adding an End to them"""
-
-        if False:  # jitter Sun 9/Apr
-            log_print(reply)
-
-        gt = self.gt
-        gt.write(reply)
-
     def texting_backup(self):
         """Back up the kind of Texting going on"""
 
@@ -315,7 +352,7 @@ class ScreenEditor:
         if texting == "Inserting":
             self.write(b"\x1B[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert (IRM)
 
-        self.write(b"\x1B[ q")  # CSI Pm SP q Set Cursor Style (DECSCUSR)
+        self.write(b"\x1B[ q")  # CSI Pm SP q Cursor Style (DECSCUSR)
 
     def helping_visit(self, line):  # Vi ⌃O
         """Take one Keyboard Input Line as Helping"""
@@ -346,7 +383,7 @@ class ScreenEditor:
         self.texting = "Inserting"
 
         self.write(b"\x1B[4h")  # CSI Pm h Set Mode (SM)  # Ps 4 Insert Mode (IRM)
-        self.write(b"\x1B[6 q")  # CSI Pm SP q Set Cursor Style (DECSCUSR)  # Steady Bar
+        self.write(b"\x1B[6 q")  # CSI Pm SP q Cursor Style (DECSCUSR)  # Steady Bar
 
     def right_and_inserting_enter(self, line):  # Vi A scrolls past last Column
         """Step right and tell the Screen to take Writes as Inserts, and stop helping"""
@@ -366,9 +403,7 @@ class ScreenEditor:
         self.texting = "Replacing"
 
         self.write(b"\x1B[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert Mode (IRM)
-        self.write(
-            b"\x1B[4 q"
-        )  # CSI Pm SP q Set Cursor Style (DECSCUSR)  # Steady Line
+        self.write(b"\x1B[4 q")  # CSI Pm SP q Cursor Style (DECSCUSR)  # Steady Line
 
     def replacing_visit(self, line):  # Vi R
         """Take one Keyboard Input Line as Replacing"""
@@ -1049,6 +1084,7 @@ if __name__ == "__main__":
 
 
 # todo: r"\e[1m": etc as the syntax of Bold in here, for copy into Sh PrintF
+# todo: indeed, how about we quote the Sh PrintF and parse it out from there
 
 # todo: Paste that does only Replace/ Insert, especially when Bracketed
 # todo: Replace that does ⌃O its Return Keystrokes
