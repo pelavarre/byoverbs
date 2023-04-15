@@ -47,9 +47,9 @@ _ = "{:_}".format(12345)  # new since Dec/2016 Python 3.6
 
 
 def compile_argdoc(drop_help=None):
-    """Construct an ArgumentParser, from ArgDoc, without Positional Args and Options"""
+    """Form an ArgumentParser from the ArgDoc, without Positional Args and Options"""
 
-    argdoc = __main__.__doc__  # could be:  argdoc = doc if doc else __main__.__doc__
+    argdoc = __main__.__doc__
 
     # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
 
@@ -61,7 +61,7 @@ def compile_argdoc(drop_help=None):
 
     add_help = not drop_help
 
-    # Find the Epilog in the Doc
+    # Pick the Epilog out of the Doc
 
     epilog = None
     for index, line in enumerate(doc_lines):
@@ -95,15 +95,15 @@ def compile_argdoc(drop_help=None):
 
 
 def parser_parse_args(parser):
-    """Parse the Args, even in the conventional corner of no Args coded as ' --'"""
+    """Parse the Sh Args, even when no Sh Args coded as the one Sh Arg '--'"""
 
     sys_exit_if_argdoc_ne(parser)  # prints diff and exits nonzero, when Arg Doc wrong
 
-    sys_parms = sys.argv[1:]
-    if sys_parms == ["--"]:  # needed by ArgParse when no Positional Args
-        sys_parms = ""
+    sh_args = sys.argv[1:]
+    if sh_args == ["--"]:  # needed by ArgParse when no Positional Args
+        sh_args = ""
 
-    args = parser.parse_args(sys_parms)  # prints helps and exits, else returns args
+    args = parser.parse_args(sh_args)  # prints helps and exits, else returns args
 
     sys_exit_if_testdoc()  # prints examples & exits if no args
 
@@ -321,7 +321,7 @@ SHLEX_QUOTABLE_CHARS = SHLEX_COLD_CHARS + " !#&()*;<>?[]^{|}~"
 SHLEX_QUOTABLE_CHARS = "".join(sorted(SHLEX_QUOTABLE_CHARS))  # omits " $ ' \ `
 
 
-def shlex_parms_dash_dash_h(parms):
+def shlex_parms_dash_h_etc(parms):
     """Return Truthy if '--help' or '--hel' or ... '--h' before '--'"""
 
     for parm in parms:
@@ -335,13 +335,13 @@ def shlex_parms_dash_dash_h(parms):
 def shlex_parms_one_posarg():
     """Accept one Arg without "-" Dash Options, preceded by a "--" Sep or not"""
 
-    parms = sys.argv[1:]
+    sh_args = sys.argv[1:]
     if sys.argv[1:][:1] == ["--"]:
-        parms = sys.argv[2:]
+        sh_args = sys.argv[2:]
 
     parm = None
-    if len(parms) == 1:
-        parm = parms[-1]
+    if len(sh_args) == 1:
+        parm = sh_args[-1]
         if parm.startswith("-"):
             parm = None
 
@@ -569,12 +569,12 @@ def sys_exit_if():
 
 
 def sys_exit_if_argdoc():
-    """Print help lines and exit"""
+    """Print help lines and exit, if -h, --h, --he, --hel, --help"""
 
     doc = ast_fetch_argdoc()
 
-    parms = sys.argv[1:]
-    if shlex_parms_dash_dash_h(parms):
+    sh_args = sys.argv[1:]
+    if shlex_parms_dash_h_etc(sh_args):
         print(doc)
 
         sys.exit()
@@ -583,18 +583,18 @@ def sys_exit_if_argdoc():
 def sys_exit_if_not_implemented():
     """Exit by raising unhandled NotImplementedError() if given options or args"""
 
-    parms = sys.argv[1:]
-    if parms != ["--"]:
+    sh_args = sys.argv[1:]
+    if sh_args != ["--"]:
         raise NotImplementedError(sys.argv[1:])
 
 
 def sys_exit_if_testdoc():
-    """Print examples and exit"""
+    """Print examples and exit, if no Sh Args"""
 
     testdoc = ast_fetch_testdoc()
 
-    parms = sys.argv[1:]
-    if not parms:
+    sh_args = sys.argv[1:]
+    if not sh_args:
         print()
         print(testdoc)
         print()

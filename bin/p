@@ -6,6 +6,9 @@ python3 -i -c '''
 
 import importlib
 import sys
+import urllib.parse
+
+_ = urllib.parse  # todo: figure out how to lazy-import X.Y, not just lazy-import X
 
 
 class LazyImport:
@@ -31,6 +34,7 @@ difflib = LazyImport(import_="difflib")
 dt = LazyImport(import_="datetime", as_="dt")
 functools = LazyImport(import_="functools")
 hashlib = LazyImport(import_="hashlib")
+html = LazyImport(import_="html")
 json = LazyImport(import_="json")
 os = LazyImport(import_="os")
 pathlib = LazyImport(import_="pathlib")
@@ -51,8 +55,6 @@ time = LazyImport(import_="time")
 traceback = LazyImport(import_="traceback")
 tty = LazyImport(import_="tty")
 unicodedata = LazyImport(import_="unicodedata")
-
-import urllib.parse
 
 
 ''' "$@"

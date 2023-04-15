@@ -1,5 +1,7 @@
 _ = """
 
+bash --noprofile --norc
+
 (set -x; set |grep ^.=; set |grep ^..=)  # shows a mostly empty namespace
 diff -brpu <(export) <(set) |sort |grep -v '[ +]'  # shows Export's listed as Set's
 
