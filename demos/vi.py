@@ -11,7 +11,9 @@ options:
 
 quirks:
   quits when told ⌃C ⇧Z ⇧Q or ⌃C : Q ! Return
-  logs Keystrokes, Paste, and Milliseconds Delays when told: ⇧Z ⇧K
+  loosely emulates Vi ⌃C ⌃G ⌃M ⌃N ⌃P Space Return $ + 0 G H K N ^ ) h j k l |
+  logs Keystrokes, Paste, and Milliseconds Delays when told ⇧Z ⇧K, until ⌃C
+  copies exactly when told ⇧Z ⇧S, until ⌃C
   edits classic Vi output, when run inside:  vi +':set t_ti= t_te='
 
 examples:
@@ -35,6 +37,7 @@ import argparse
 import datetime as dt
 import difflib
 import os
+import re
 import select
 import shutil
 import struct
@@ -95,13 +98,44 @@ class CharTerminal:
 
         args = main.args
 
+        assert MouseEnter == b"\x1B[?1000h"
+        assert MouseSgrUp == b"\x1B[?1006h"
+        assert BracketedPasteEnter == b"\x1B[?2004h"
+
         if not args.quiet:
+            self.bt_write(b"\x1B[?1000h")
+            self.bt_write(b"\x1B[?1006h")
+            self.bt_write(b"\x1B[?2004h")
+
             self.greet()
 
         return self
 
     def __exit__(self, *exc_info):
         """Undo the Configure Terminal at entry, or not"""
+
+        args = main.args
+
+        assert BracketedPasteExit == b"\x1B[?2004l"
+        assert LowerLeftForm == b"\x1B[{y}H"  # y=1
+        assert MouseExit == b"\x1B[?1000l"
+        assert MouseSgrDown == b"\x1B[?1006l"
+
+        if not args.quiet:
+            size = shutil.get_terminal_size()
+
+            self.bt_write(b"\x1B[?2004l")
+            self.bt_write(b"\x1B[?1006l")
+            self.bt_write(b"\x1B[?1000l")
+
+            self.bt_write("\x1B[{y}H".format(y=size.lines).encode())
+
+    def bt_write(self, line):
+        """Write Bytes out through 'self.bt' Byte Terminal"""
+
+        bt = self.bt
+
+        bt.write(line)
 
     def greet(self):
         """Prompt the Operator"""
@@ -179,7 +213,7 @@ class CharTerminal:
         bt = self.bt
 
         assert control(b"C") == b"\x03"
-        assert LowerLeftForm == b"\x1B[{y}H"
+        assert LowerLeftForm == b"\x1B[{y}H"  # y=1
 
         if not args.quiet:
             bt.print("Press ⌃C to stop logging Keystrokes and Paste")
@@ -193,7 +227,7 @@ class CharTerminal:
 
         if not args.quiet:
             size = shutil.get_terminal_size()
-            bt.write("\x1B[{y}H".format(y=size.lines).encode())
+            self.bt_write("\x1B[{y}H".format(y=size.lines).encode())
             bt.print()
             bt.print("Press ⌃C ⇧Z ⇧Q or ⌃C : Q ! Return to quit")
 
@@ -204,21 +238,21 @@ class CharTerminal:
         bt = self.bt
 
         assert control(b"C") == b"\x03"
-        assert LowerLeftForm == b"\x1B[{y}H"
+        assert LowerLeftForm == b"\x1B[{y}H"  # y=1
 
         if not args.quiet:
             bt.print("Press ⌃C to stop copying Keystrokes and Paste to Screen")
 
         while True:
             line = self.readline()
-            bt.write(line)
+            self.bt_write(line)
 
             if line == b"\x03":
                 break
 
         if not args.quiet:
             size = shutil.get_terminal_size()
-            bt.write("\x1B[{y}H".format(y=size.lines).encode())
+            self.bt_write("\x1B[{y}H".format(y=size.lines).encode())
             bt.print()
             bt.print("Press ⌃C ⇧Z ⇧Q or ⌃C : Q ! Return to quit")
 
@@ -226,18 +260,18 @@ class CharTerminal:
     # Define enough Keystrokes to bootstrap Vi - enough for ⇧Z ⇧K and ⇧Z ⇧S
     #
 
-    def form_bot_by_lines(self):
+    def form_ZK_ZS_bot_by_lines(self):
         """Say which Code runs in reply to which Key Sequences"""
 
         bot_by_lines = dict()
 
         # Define some Keystroke Sequences
 
-        bot_by_lines[b"\x03"] = self.read_more
-        bot_by_lines[b"ZK"] = self.try_keyboard
-        bot_by_lines[b"ZS"] = self.try_screen
-        bot_by_lines[b"ZQ"] = self.quit_bang
-        bot_by_lines[b":q!\r"] = self.quit_bang
+        bot_by_lines[b"\x03"] = self.read_more  # Vi ⌃C
+        bot_by_lines[b"ZK"] = self.try_keyboard  # Vi ⇧Z ⇧K
+        bot_by_lines[b"ZQ"] = self.quit_bang  # Vi ⇧Z ⇧Q
+        bot_by_lines[b"ZS"] = self.try_screen  # Vi ⇧Z ⇧S
+        bot_by_lines[b":q!\r"] = self.quit_bang  # Vi : Q ! Return
 
         # Mark some Keystroke Sequences as incomplete
 
@@ -258,10 +292,12 @@ class CharTerminal:
     def write_bel(self):
         """Freak over almost any tupo"""
 
-        self.bt.write(b"\x07")
+        self.bt_write(b"\x07")
 
     def read_more(self):
         """Take another Byte before choosing a reply"""
+
+        assert control(b"C") == b"\x03"
 
         line = self.readline()
 
@@ -274,8 +310,290 @@ class CharTerminal:
         self.runlines()
 
     #
-    # Define enough Keystrokes to bootstrap Vi - enough for ⇧Z ⇧K and ⇧Z ⇧S
+    # Define the Keystrokes of a Vi for Files as small as the Screen
     #
+
+    def form_bot_by_lines(self):
+        bot_by_lines = self.form_ZK_ZS_bot_by_lines()
+
+        assert b"\a" == b"\x07"
+        assert b"\r" == b"\x0D"
+        assert control(b"N") == b"\x0E"
+        assert control(b"P") == b"\x10"
+        assert PasteOpenPattern == b"\x1B\\[200~"
+
+        # Define some Keystroke Sequences
+
+        bot_by_lines[b"\x07"] = self.send_for_cpr  # Vi ⌃G
+        bot_by_lines[b"\x0D"] = self.to_row_down  # Vi ⌃M  # Vi Return
+        bot_by_lines[b"\x0E"] = self.to_row_down  # Vi ⌃N
+        bot_by_lines[b"\x10"] = self.to_row_up  # Vi ⌃P
+
+        bot_by_lines[b"\x1B[200~"] = self.got_paste
+        bot_by_lines[b"\x1B[<"] = self.got_mouse
+        bot_by_lines[b"\x1B[A"] = self.to_row_up
+        bot_by_lines[b"\x1B[B"] = self.to_row_down
+        bot_by_lines[b"\x1B[C"] = self.to_column_right
+        bot_by_lines[b"\x1B[D"] = self.to_column_left
+
+        bot_by_lines[b" "] = self.to_char_next  # Vi Space
+        bot_by_lines[b"$"] = self.to_column_beyond  # Vi ⇧4  # Vi $
+        bot_by_lines[b"+"] = self.to_dent_down  # Vi ⇧=  # Vi +
+        bot_by_lines[b"-"] = self.to_dent_up  # Vi -
+        bot_by_lines[b"0"] = self.to_column_leftmost  # Vi 0
+        bot_by_lines[b"G"] = self.to_dent_last  # Vi ⇧G
+        bot_by_lines[b"H"] = self.to_dent_first  # Vi ⇧H
+        bot_by_lines[b"L"] = self.to_dent_last  # Vi ⇧L
+        bot_by_lines[b"M"] = self.to_dent_middle  # Vi ⇧M
+        bot_by_lines[b"^"] = self.to_dent_left  # Vi ⇧6  # Vi ^
+        bot_by_lines[b"_"] = self.to_dent_here_down  # Vi ⇧- # Vi _
+        bot_by_lines[b"h"] = self.to_column_left  # Vi H
+        bot_by_lines[b"j"] = self.to_row_down  # Vi J
+        bot_by_lines[b"k"] = self.to_row_up  # Vi K
+        bot_by_lines[b"l"] = self.to_column_right  # Vi L
+        bot_by_lines[b"|"] = self.to_column_chosen  # Vi ⇧\ |
+
+        # Mark some Keystroke Sequences as incomplete
+
+        bot_by_lines[b"\x1B"] = self.read_more
+        bot_by_lines[b"\x1B["] = self.read_more
+
+        # Succeed
+
+        return bot_by_lines
+
+    def send_for_cpr(self):  # Vi ⌃G
+        """Tell Terminal Keyboard to send Cursor Position Report (CPR)"""
+
+        # Send for CPR
+
+        assert DeviceStatusReport == b"\x1B[6n"
+        self.bt_write(b"\x1B[6n")
+
+        if False:  # jitter Sun 16/Apr
+            self.try_keyboard()
+            self.bt_write(b"\x1B[6n")
+
+        # Receive CPR
+
+        assert CursorPositionForm == b"\x1B[{y};{x}H"  # y=1, x=1
+        assert CursorPositionReportPattern == b"\x1B\\[([0-9]+);([0-9]+)R"
+        assert EraseInLineForm == b"\x1B[{ps}K"  # ps=0
+        assert LowerLeftForm == b"\x1B[{y}H"  # y=1
+
+        line = self.readline()
+
+        lines = line
+        m = re.match(b"^\x1B\\[([0-9]+);([0-9]+)R$", string=lines)
+        if not m:
+            lines += self.readline()
+            m = re.match(b"^\x1B\\[([0-9]+);([0-9]+)R$", string=lines)
+
+        if not m:
+            size = shutil.get_terminal_size()
+            self.bt_write("\x1B[{y}H".format(y=size.lines).encode())
+            self.bt_write("\x1B[{ps}K".format(ps="").encode())
+            self.bt.print(line)
+
+            self.write_bel()
+
+            return
+
+        y = int(m.group(1))
+        x = int(m.group(2))
+
+        size = shutil.get_terminal_size()
+        status_chars = '"/dev/tty" [Modified] {} lines {} columns  {},{}'.format(
+            size.lines, size.columns, y, x
+        )
+
+        self.bt_write("\x1B[{y}H".format(y=size.lines).encode())
+        self.bt_write("\x1B[{ps}K".format(ps="").encode())
+        self.bt_write(status_chars.encode())
+
+        self.bt_write("\x1B[{y};{x}H".format(y=y, x=x).encode())
+
+    def got_paste(self):
+        """React to Paste"""
+
+        assert PasteClosePattern == b"\x1B\\[201~"
+
+        line_0 = self.readline()
+
+        alt_line = line_0
+        suffix = b"\x1B[201~"
+        if line_0.endswith(suffix):
+            alt_line = line_0[: -len(suffix)]
+        else:
+            line_1 = self.readline()
+            if line_1.endswith(suffix):
+                alt_line = line_0 + line_1[: -len(suffix)]
+            else:
+                self.write_bel()
+
+        self.lines = alt_line
+        self.runlines()
+
+    def got_mouse(self):
+        """React to Press or Release of the Terminal Mouse"""
+
+        bt = self.bt
+
+        assert CursorPositionForm == b"\x1B[{y};{x}H"  # y=1, x=1
+        assert MousePositionReportPattern == b"\x1B\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])"
+
+        line = self.readline()
+        lines = b"\x1B[<" + line
+
+        while lines:
+            m = re.match(b"\x1B\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])", string=lines)
+            if not m:
+                self.write_bel()
+                return
+
+            lines = lines[m.end() :]
+
+            pb = int(m.group(1))
+            px = int(m.group(2))
+            py = int(m.group(3))
+            pc = m.group(4)
+
+            mask = pb
+            mods = list()
+            if pb & 0x10:
+                mods.append("⌃")
+                mask = mask & ~0x10
+            if pb & 0x8:
+                mods.append("⌥")
+                mask = mask & ~0x8
+            if pb & 0x4:
+                mods.append("⇧")
+                mask = mask & ~0x4
+            mods = " ".join(mods + [""]) if mods else ""
+
+            if False:
+                if pc == b"M":
+                    bt.print("{}Press y={} x={} 0x{:02X}".format(mods, py, px, mask))
+                else:
+                    assert pc == b"m", pc
+                    bt.print("{}Release y={} x={} 0x{:02X}".format(mods, py, px, mask))
+
+            assert mask == 0, hex(mask)
+
+            self.bt_write("\x1B[{y};{x}H".format(y=py, x=px).encode())
+
+    #
+    # Move the Cursor relatively
+    #
+
+    def to_char_next(self):  # Vi Space, but past Last Char and stops before next Row
+        """Cursor Move Next"""
+
+        assert CursorForwardForm == b"\x1B[{x}C"  # x=1
+        self.bt_write("\x1B[{x}C".format(x="").encode())
+
+    def to_column_left(self):  # Vi H
+        """Cursor Move Left"""
+
+        assert BS == b"\b"
+        assert CursorBackwardForm == b"\x1B[{x}D"  # x=1
+        self.bt_write(b"\b")
+
+    def to_column_right(self):  # Vi L, but goes past last Char in Row
+        """Cursor Move Right"""
+
+        assert CursorForwardForm == b"\x1B[{x}C"  # x=1
+        self.bt_write("\x1B[{x}C".format(x="").encode())
+
+    def to_row_down(self):  # Vi J  # Vi ⌃N
+        """Cursor Move Down"""
+
+        assert CursorDownForm == b"\x1B[{y}B"  # y=1
+        self.bt_write("\x1B[{y}B".format(y="").encode())
+
+    def to_row_up(self):  # Vi K  # Vi ⌃P
+        """Cursor Move Up"""
+
+        assert CursorUpForm == b"\x1B[{y}A"  # y=1
+        self.bt_write("\x1B[{y}A".format(y="").encode())
+
+    #
+    # Move the Cursor absolutely
+    #
+
+    def to_column_leftmost(self):  # Vi 0
+        """Cursor Move to first Column of Row"""
+
+        assert CR == b"\r"
+        self.bt_write(b"\r")
+
+    def to_column_chosen(self):  # Vi ⇧\  # Vi |
+        """Cursor Move to chosen Column of Row"""
+
+        assert CursorCharAbsoluteForm == b"\x1B[{x}G"  # x=1
+        self.bt_write("\x1B[{x}G".format(x="").encode())
+
+    def to_column_beyond(self):  # Vi ⇧4  # Vi $  # but past last Char in Row
+        """Cursor Move to last Column of Row"""
+
+        assert CursorCharAbsoluteForm == b"\x1B[{x}G"  # x=1
+
+        size = shutil.get_terminal_size()
+        reply = "\x1B[{x}G".format(x=size.columns).encode()
+        self.bt_write(reply)
+
+    def to_dent_down(self):  # Vi ⇧=  # Vi +  # but left of Dent
+        """Cursor Move to first Column of Row and Down"""
+
+        assert CR == b"\r"
+        assert CursorDownForm == b"\x1B[{y}B"  # y=1
+
+        self.bt_write(b"\r")
+        self.bt_write("\x1B[{y}B".format(y="").encode())
+
+    def to_dent_here_down(self):  # Vi ⇧-  # Vi _  # but left of Dent
+        """Cursor Move to first Column of Row"""
+
+        assert CR == b"\r"
+        self.bt_write(b"\r")
+
+    def to_dent_first(self):  # Vi ⇧H  # but same Column, not right of Dent
+        """Cursor Move to first Row of Screen"""
+
+        assert LinePositionAbsoluteForm == b"\x1B[{y}d"  # y=1
+        self.bt_write("\x1B[{y}d".format(y="").encode())
+
+    def to_dent_left(self):  # Vi ⇧6  # Vi ^  # but left of Dent
+        """Cursor Move to first Column of Row"""
+
+        assert CR == b"\r"
+        self.bt_write(b"\r")
+
+    def to_dent_middle(self):  # Vi ⇧M  # but same Column, not right of Dent
+        """Cursor Move to middle Row of Screen"""
+
+        assert LinePositionAbsoluteForm == b"\x1B[{y}d"  # y=1
+
+        size = shutil.get_terminal_size()
+        reply = "\x1B[{y}d".format(y=(size.lines // 2)).encode()
+        self.bt_write(reply)
+
+    def to_dent_last(self):  # Vi ⇧L  # but same Column, not right of Dent
+        """Cursor Move to last Row of Screen"""
+
+        assert LinePositionAbsoluteForm == b"\x1B[{y}d"  # y=1
+
+        size = shutil.get_terminal_size()
+        reply = "\x1B[{y}d".format(y=size.lines).encode()
+        self.bt_write(reply)
+
+        # Vi ⇧G  # but same Column, not right of Dent, and not below Screen
+
+    def to_dent_up(self):  # Vi -  # but left of Dent
+        """Cursor Move Up"""
+
+        assert CursorUpForm == b"\x1B[{y}A"  # y=1
+        self.bt_write(b"\x1B[A")
 
 
 class ByteTerminal:
@@ -418,25 +736,55 @@ def bytes_splitstroke(line):
 
 
 #
-# Name some Python Idioms
-#
-
-
-#
 # Name Cheat Codes of the Vi Easter Egg buried inside a Layer of the Terminal
 #
 
 
+BS = b"\b"  # Backspace (BS)
+CR = b"\r"  # Carriage Return (CR)
 Esc = b"\x1B"  # also known as rb"\e"
 
 CSI = b"\x1B["  # Control Sequence Introducer
 
-CursorPositionForm = b"\x1B[{y};{x}H"  # CSI Ps ; Ps H  # CursorPosition CUP Y X
+
+CursorPositionForm = b"\x1B[{y};{x}H"  # CSI Ps ; Ps H  # CursorPosition CUP  # y=1,x=1
 
 UpperLeft = b"\x1BH"  # the 4 variations on CPR of (), (y), (y,x), (x)
-LowerLeftForm = b"\x1B[{y}H"
-LowerRightForm = b"\x1B[{y};{x}H"
-UpperRightForm = b"\x1B[;{x}H"
+LowerLeftForm = b"\x1B[{y}H"  # y=1
+LowerRightForm = b"\x1B[{y};{x}H"  # y=1,x=1
+UpperRightForm = b"\x1B[;{x}H"  # x=1
+
+CursorUpForm = b"\x1B[{y}A"  # CSI Ps A  # Cursor Up CUU  # y=1
+CursorDownForm = b"\x1B[{y}B"  # CSI Ps B  # Cursor Down CUD  # y=1
+CursorForwardForm = b"\x1B[{x}C"  # CSI Ps C  # Cursor Forward CUF  # x=1
+CursorBackwardForm = b"\x1B[{x}D"  # CSI Ps D  # Cursor Backward CUB  # x=1
+
+CursorCharAbsoluteForm = b"\x1B[{x}G"  # y=1
+LinePositionAbsoluteForm = b"\x1B[{y}d"  # y=1
+
+EraseInLineForm = b"\x1B[{ps}K"  # CSI Ps K  # EL  # ps=0
+
+
+DeviceStatusReport = b"\x1B[6n"  # CSI Ps n  # DSR  # Ps = 6  # Send for CPR
+
+BracketedPasteEnter = b"\x1B[?2004h"  # CSI ? Pm h  # Ps = 2 0 0 4  # DECSET
+BracketedPasteExit = b"\x1B[?2004l"  # CSI ? Pm l  # Ps = 2 0 0 4  # DECRST
+
+MouseEnter = b"\x1B[?1000h"  # CSI ? Pm h  # Ps = 1 0 0 0  # DECSET
+MouseSgrUp = b"\x1B[?1006h"  # CSI ? Pm h  # Ps = 1 0 0 6  # DECSET
+MouseSgrDown = b"\x1B[?1006l"  # CSI ? Pm h  # Ps = 1 0 0 6  # DECRST
+MouseExit = b"\x1B[?1000l"  # CSI ? Pm h  # Ps = 1 0 0 0  # DECRST
+
+
+CursorPositionReportPattern = b"\x1B\\[([0-9]+);([0-9]+)R"  # CSI r ; c R  # CPR Y X
+# CPR rarely indexed as CSI Pm R
+
+PasteOpenPattern = b"\x1B\\[200~"
+PasteClosePattern = b"\x1B\\[201~"
+
+MousePositionReportPattern = b"\x1B\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])"  # MPR
+# CSI < Pm M  # py ; px ; pb  # MPR  # indexed as:  a final character which is M
+# CSI < Pm m  # py ; px ; pb  # MPR  # indexed as:  and m  for
 
 
 _ = r"""  # todo
@@ -444,12 +792,6 @@ _ = r"""  # todo
 C0_C1_INTS = list(range(0x00, 0x20)) + [0x7F] + list(range(0x80, 0xA0))
 C0_C1_BYTES = list(struct.pack("B", _) for _ in C0_C1_INTS)
 
-BracketedPasteEnter = b"\x1B[?2004h"  # CSI ? Pm h  # Ps = 2 0 0 4
-BracketedPasteExit = b"\x1B[?2004l"  # CSI ? Pm l  # Ps = 2 0 0 4
-
-DeviceStatusReport = b"\x1B[6n"  # CSI Ps n  # call for CPR
-
-CursorPositionReport = rb"\x1B\[([0-9]+);([0-9+)R"  # CSI Ps ; Ps R  # CPR Y X
 
 """
 
@@ -625,7 +967,9 @@ def sys_exit_if_testdoc(epilog):
 #
 
 
-# todo
+# todo: take Vi 1234567890 Keystrokes as digits of repeat
+# todo: take changes from Vi ⇧C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X  a c d i o r s x
+# todo: repeat changes at Vi .
 
 
 #
