@@ -18,9 +18,9 @@ default:
 	@echo 'make help  # shows these help lines and exits'
 	@echo 'make push  # restyles & tests the source, then tells me to push it'
 	@echo
-	@echo 'make bin  # put bin dir files under test at home bin dir'
-	@echo 'make dotfiles  # update local dotfiles dir from home dot files'
-	@echo 'make shellcheck  # repeat some 'make push' where ShellCheck installed
+	@echo 'make bin  # puts bin dir files under test at home bin dir'
+	@echo 'make dotfiles  # updates local dotfiles dir from home dot files'
+	@echo "make pull  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo 'open https://twitter.com/intent/tweet?text=.@PELaVarre'
 	@echo
@@ -41,9 +41,9 @@ help:
 	@echo '  make help  # shows these help lines and exits'
 	@echo '  make push  # restyles & tests the source, then tells me to push it'
 	@echo
-	@echo '  make bin  # put bin dir files under test at home bin dir'
-	@echo '  make dotfiles  # update local dotfiles dir from home dot files'
-	@echo '  make shellcheck  # repeat some 'make push' where ShellCheck installed
+	@echo '  make bin  # puts bin dir files under test at home bin dir'
+	@echo '  make dotfiles  # updates local dotfiles dir from home dot files'
+	@echo "  make pull  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo '  open https://twitter.com/intent/tweet?text=.@PELaVarre'
 	@echo
@@ -52,8 +52,8 @@ help:
 
 # Restyle & test the source, then tell me to push it
 
-push: black flake8 shellcheck selftest
-	rm -fr bin/__pycache__/
+push: pull
+	rm -fr bin/__pycache__/yy
 	rm -fr tmp/
 	:
 	git log --oneline --no-decorate -1
@@ -64,6 +64,9 @@ push: black flake8 shellcheck selftest
 	: press ⌃D to execute, or ⌃C to quit
 	cat - >/dev/null
 	git push
+	:
+
+pull: black flake8 shellcheck selftest
 	:
 
 
