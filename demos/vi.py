@@ -154,8 +154,6 @@ class CharTerminal:
         bot_by_lines = self.bot_by_lines
         lines = self.lines
 
-        self.bt.print(lines)
-
         bot = self.write_bel
         if lines in bot_by_lines.keys():
             bot = bot_by_lines[lines]
