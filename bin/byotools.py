@@ -57,24 +57,31 @@ def compile_argdoc(drop_help=None):
     prog = doc_lines[0].split()[1]  # first word of first line
 
     doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
-    description = doc_firstlines[1]  # first line of second paragraph
+    alt_description = doc_firstlines[1]  # first line of second paragraph
 
     add_help = not drop_help
+
+    # Say when Doc Lines stand plainly outside of the Epilog
+
+    def skippable(line):
+        strip = line.rstrip()
+
+        skip = not strip
+        skip = skip or strip.startswith(" ")
+        skip = skip or strip.startswith("usage")
+        skip = skip or strip.startswith("positional arguments")
+        skip = skip or strip.startswith("options")
+
+        return skip
+
+    default = "just do it"
+    description = default if skippable(alt_description) else alt_description
 
     # Pick the Epilog out of the Doc
 
     epilog = None
     for index, line in enumerate(doc_lines):
-        strip = line.rstrip()
-
-        skip = False
-        skip = skip or not strip
-        skip = skip or strip.startswith(" ")
-        skip = skip or strip.startswith("usage")
-        skip = skip or strip.startswith(description.rstrip())
-        skip = skip or strip.startswith("positional arguments")
-        skip = skip or strip.startswith("options")
-        if skip:
+        if skippable(line) or (line == description):
             continue
 
         epilog = "\n".join(doc_lines[index:])
@@ -98,14 +105,13 @@ def parser_parse_args(parser):
     """Parse the Sh Args, even when no Sh Args coded as the one Sh Arg '--'"""
 
     sys_exit_if_argdoc_ne(parser)  # prints diff and exits nonzero, when Arg Doc wrong
+    sys_exit_if_testdoc()  # prints examples & exits if no args
 
     sh_args = sys.argv[1:]
-    if sh_args == ["--"]:  # needed by ArgParse when no Positional Args
+    if sh_args == ["--"]:  # helps ArgParse as needed when no Positional Args
         sh_args = ""
 
     args = parser.parse_args(sh_args)  # prints helps and exits, else returns args
-
-    sys_exit_if_testdoc()  # prints examples & exits if no args
 
     return args
 

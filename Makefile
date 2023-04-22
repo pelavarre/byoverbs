@@ -68,6 +68,8 @@ push: pull
 
 pull: black flake8 shellcheck selftest
 	:
+	demos/last2lines.py ./ bin/ demos/
+	:
 
 
 #

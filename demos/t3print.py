@@ -85,3 +85,7 @@ for line in lines:
         for f, t in zip(from_chars, to_strs):
             alt_line = alt_line.replace(f, t)
         print(dent + alt_line)
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/t3print.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git
