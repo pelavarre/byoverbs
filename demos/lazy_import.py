@@ -1,9 +1,3 @@
-(set -xe; python3 -i -c '' "$@" </dev/null 2>/dev/null)
-
-
-python3 -i -c '''
-
-
 #!/usr/bin/env python3
 
 """
@@ -86,6 +80,3 @@ def_some_lazy_imports()
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/lazy_import.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
-
-
-''' "$@"

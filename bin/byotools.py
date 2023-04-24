@@ -85,7 +85,6 @@ def compile_argdoc(drop_help=None):
             continue
 
         epilog = "\n".join(doc_lines[index:])
-
         break
 
     # Form an ArgumentParser, without Positional Args and Options

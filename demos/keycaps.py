@@ -471,7 +471,14 @@ KEYCAP_LISTS_BY_STROKE.update(  # more Printable Ascii
 
 KEYCAP_LISTS_BY_STROKE.update(  # more Control C0 Ascii at Mac
     {
-        b"\x00": ["⌃ Space", "⌃ ⇧ Space", "⌃ ⇧ 2", "⌃ ⌥ ⇧ 2"],  # near to ⇧2 for @
+        b"\x00": [
+            "⌃ Space",
+            "⌃ ⌥ Space",
+            "⌃ ⇧ Space",
+            "⌃ ⌥ ⇧ Space",
+            "⌃ ⇧ 2",
+            "⌃ ⌥ ⇧ 2",
+        ],  # near to ⇧2 for @
         b"\x09": _7_TABS,  # drawn as ⇥
         b"\x0D": _11_RETURNS,  # drawn as ↩
         b"\x1B": _11_ESCAPES,  # drawn as ⎋
@@ -502,8 +509,24 @@ KEYCAP_LISTS_BY_STROKE.update(  # the Arrow Key Caps at Mac
     {
         b"\x1B\x5B\x31\x3B\x32\x43": ["⇧ →"],
         b"\x1B\x5B\x31\x3B\x32\x44": ["⇧ ←"],
-        b"\x1B\x5B\x41": ["↑", "⌥ ↑", "⇧ ↑", "⌃ ⌥ ↑", "⌃ ⇧ ↑", "⌃ ⌥ ⇧ ↑"],  # drawn as ▲
-        b"\x1B\x5B\x42": ["↓", "⌥ ↓", "⇧ ↓", "⌃ ⌥ ↓", "⌃ ⇧ ↓", "⌃ ⌥ ⇧ ↓"],  # drawn as ▼
+        b"\x1B\x5B\x41": [
+            "↑",
+            "⌥ ↑",
+            "⇧ ↑",
+            "⌃ ⌥ ↑",
+            "⌃ ⇧ ↑",
+            "⌥ ⇧ ↑",
+            "⌃ ⌥ ⇧ ↑",
+        ],  # drawn as ▲
+        b"\x1B\x5B\x42": [
+            "↓",
+            "⌥ ↓",
+            "⇧ ↓",
+            "⌃ ⌥ ↓",
+            "⌃ ⇧ ↓",
+            "⌥ ⇧ ↓",
+            "⌃ ⌥ ⇧ ↓",
+        ],  # drawn as ▼
         b"\x1B\x5B\x43": ["→", "⌃ ⌥ →", "⌃ ⇧ →", "⌥ ⇧ →", "⌃ ⌥ ⇧ →"],  # drawn as ▶
         b"\x1B\x5B\x44": ["←", "⌃ ⌥ ←", "⌃ ⇧ ←", "⌥ ⇧ ←", "⌃ ⌥ ⇧ ←"],  # drawn as ◀
         b"\x1B\x62": ["⌥ ←"],
