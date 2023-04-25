@@ -286,6 +286,10 @@ Transcripts
     no default trace of: cal -m 3
     and also its end-of-line spaces
 
+Cal Py for 2022-10-19, 2022-11-07 looked wrong to me
+    cal.py 2022-10-19  # should work, and offer min equivalent 'cal' lines
+    cal.py 20221019  # should work, and offer min equivalent 'cal' lines
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md

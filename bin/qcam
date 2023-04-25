@@ -1,2 +1,7 @@
-set -xe
-git commit --all -m wip "$@"
+if [[ $# == 0 ]]; then
+    set -xe
+    git commit --all -m wip
+else
+    set -xe
+    git commit --all -m "wip - $*"
+fi
