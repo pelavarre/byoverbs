@@ -8,11 +8,7 @@ see also:
 
 examples:
   rm -fr __pycache__/
-  python3 -i -c ''
-    from demos import qikpycache
-    qikpycache.tryme(1)  # slow
-    qikpycache.tryme(2)  # fast
-    qikpycache.tryme(3)  # still fast
+  python3 demos/qikpycache.py
 """
 
 # code reviewed by people, and by Black and Flake8
@@ -46,6 +42,77 @@ MODULE = sys.modules[__name__]
 _CACHE_STAMP = None
 _CACHE_DUMP = None
 _CACHE_DICT = None
+
+
+#
+# Run from the Sh Command Line
+#
+
+
+def main():
+    """Run from the Sh Command Line"""
+
+    tryme(1)
+    tryme(2)
+    tryme(3)
+
+
+def tryme(arg):
+    """Try cacheing one Call of SubProcess Run"""
+
+    import datetime as dt
+    import subprocess
+
+    import qikpycache
+
+    t0 = dt.datetime.now()
+    run_dict = qikpycache.try_call(
+        subprocess.run,
+        "echo hello".split(),
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        errors="surrogateescape",
+    )
+    t1 = dt.datetime.now()
+
+    run = subprocess.CompletedProcess(
+        args=run_dict["args"],
+        returncode=run_dict["returncode"],
+        stdout=run_dict["stdout"],
+        stderr=run_dict["stderr"],
+    )
+
+    print(t1 - t0, run)
+
+
+def try_call(func, *args, **kwargs):
+    """Call and raise Exception, else Call and store Result, else fetch Result"""
+
+    # Form a Key
+
+    module_funcname = "{}.{}".format(func.__module__, func.__name__)
+    key = json.dumps([module_funcname, args, kwargs])
+
+    # Call if no Result found
+
+    dump_by_key = load_from_file()
+    if key not in dump_by_key.keys():
+        result = func(*args, **kwargs)
+
+        try:
+            dump = json.dumps(result)
+        except TypeError:
+            result_dict = vars(result)
+            dump = json.dumps(result_dict)
+
+        dump_by_key[key] = dump
+
+    # Fetch the result
+
+    load = dump_by_key[key]
+    result_dict = json.loads(load)
+
+    return result_dict
 
 
 def clear_in_process():
@@ -129,50 +196,14 @@ def dump_changes_to_file():
 
 
 #
-# Test when called
-#
-
-
-def tryme(arg):
-    import datetime as dt
-    import json
-    import subprocess
-
-    from demos import qikpycache
-
-    # Choose what to do
-
-    args = ("echo hello".split(),)
-    kwargs = dict(stdout=subprocess.PIPE, errors="surrogateescape")
-    key = json.dumps(["subprocess.run", args, kwargs])
-
-    # Skip if it done already
-
-    dump_by_key = qikpycache.load_from_file()
-    t0 = dt.datetime.now()
-    if key not in dump_by_key:
-        run = subprocess.run(*args, **kwargs)
-        dump = json.dumps(vars(run))
-        dump_by_key[key] = dump
-
-    # Fetch the result
-
-    load = dump_by_key[key]
-    run = json.loads(load)
-    t1 = dt.datetime.now()
-
-    # Print the result
-
-    print(t1 - t0, run)
-
-
-#
 # Run from the Sh Command Line, if not imported
 #
 
 
 if __name__ == "__main__":
     assert sys.argv[1:], sys.argv
+
+    main()
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/qikpycache.py
