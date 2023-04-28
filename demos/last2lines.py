@@ -76,9 +76,10 @@ def main():
 
                 repl = main_tail.replace("demos/last2lines.py", find)
                 if tail != repl:
-                    edits.append(find)
-                    with open(find, "a") as appending:
-                        appending.write(repl)
+                    if text:
+                        edits.append(find)
+                        with open(find, "a") as appending:
+                            appending.write(repl)
 
     # Say what happened
 

@@ -103,7 +103,7 @@ def compile_argdoc(drop_help=None):
 def parser_parse_args(parser):
     """Parse the Sh Args, even when no Sh Args coded as the one Sh Arg '--'"""
 
-    sys_exit_if_argdoc_ne(parser)  # prints diff and exits nonzero, when Arg Doc wrong
+    sys_exit_if_argdoc_ne(parser)  # prints diff & exits nonzero, when Arg Doc wrong
     sys_exit_if_testdoc()  # prints examples & exits if no args
 
     sh_args = sys.argv[1:]
@@ -113,59 +113,6 @@ def parser_parse_args(parser):
     args = parser.parse_args(sh_args)  # prints helps and exits, else returns args
 
     return args
-
-
-def sys_exit_if_argdoc_ne(parser):
-    """Print Diff and exit nonzero, unless Arg Doc equals Parser Format_Help"""
-
-    # Fetch the Main Doc, and note where from
-
-    main_doc = __main__.__doc__.strip()
-    main_filename = os.path.split(__file__)[-1]
-    got_filename = "./{} --help".format(main_filename)
-
-    # Fetch the Parser Doc from a fitting virtual Terminal
-    # Fetch from a Black Terminal of 89 columns, not current Terminal width
-    # Fetch from later Python of "options:", not earlier Python of "optional arguments:"
-
-    with_columns = os.getenv("COLUMNS")
-    os.environ["COLUMNS"] = str(89)
-    try:
-        parser_doc = parser.format_help()
-
-    finally:
-        if with_columns is None:
-            os.environ.pop("COLUMNS")
-        else:
-            os.environ["COLUMNS"] = with_columns
-
-    parser_doc = parser_doc.replace("optional arguments:", "options:")
-
-    parser_filename = "ArgumentParser(...)"
-    want_filename = parser_filename
-
-    # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
-
-    got_doc = main_doc
-    want_doc = parser_doc
-
-    diffs = list(
-        difflib.unified_diff(
-            a=got_doc.splitlines(),
-            b=want_doc.splitlines(),
-            fromfile=got_filename,
-            tofile=want_filename,
-            lineterm="",  # else the '---' '+++' '@@' Diff Control Lines end with '\n'
-        )
-    )
-
-    if diffs:
-        print("\n".join(diffs))
-
-        sys.exit(2)  # trust caller to log SystemExit exceptions well
-
-    # https://github.com/python/cpython/issues/53903  <= options: / optional arguments:
-    # https://bugs.python.org/issue38438  <= usage: [WORD ... ] / [WORD [WORD ...]]
 
 
 #
@@ -583,6 +530,59 @@ def sys_exit_if_argdoc():
         print(doc)
 
         sys.exit()
+
+
+def sys_exit_if_argdoc_ne(parser):
+    """Print Diff and exit nonzero, unless Arg Doc equals Parser Format_Help"""
+
+    # Fetch the Main Doc, and note where from
+
+    main_doc = __main__.__doc__.strip()
+    main_filename = os.path.split(__file__)[-1]
+    got_filename = "./{} --help".format(main_filename)
+
+    # Fetch the Parser Doc from a fitting virtual Terminal
+    # Fetch from a Black Terminal of 89 columns, not current Terminal width
+    # Fetch from later Python of "options:", not earlier Python of "optional arguments:"
+
+    with_columns = os.getenv("COLUMNS")
+    os.environ["COLUMNS"] = str(89)
+    try:
+        parser_doc = parser.format_help()
+
+    finally:
+        if with_columns is None:
+            os.environ.pop("COLUMNS")
+        else:
+            os.environ["COLUMNS"] = with_columns
+
+    parser_doc = parser_doc.replace("optional arguments:", "options:")
+
+    parser_filename = "ArgumentParser(...)"
+    want_filename = parser_filename
+
+    # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
+
+    got_doc = main_doc
+    want_doc = parser_doc
+
+    diffs = list(
+        difflib.unified_diff(
+            a=got_doc.splitlines(),
+            b=want_doc.splitlines(),
+            fromfile=got_filename,
+            tofile=want_filename,
+            lineterm="",  # else the '---' '+++' '@@' Diff Control Lines end with '\n'
+        )
+    )
+
+    if diffs:
+        print("\n".join(diffs))
+
+        sys.exit(2)  # trust caller to log SystemExit exceptions well
+
+    # https://github.com/python/cpython/issues/53903  <= options: / optional arguments:
+    # https://bugs.python.org/issue38438  <= usage: [WORD ... ] / [WORD [WORD ...]]
 
 
 def sys_exit_if_not_implemented():
