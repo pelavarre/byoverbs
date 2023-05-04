@@ -12,7 +12,7 @@ options:
 quirks:
   quits when told ⌃C ⇧Z ⇧Q or ⌃C : Q ! Return
   loosely emulates Vi ⌃C ⌃G ⌃M ⌃N ⌃P Space Return $ + 0 G H K N ^ ) h j k l |
-  logs Keystrokes, Paste, and Milliseconds Delays when told ⇧Z ⇧K, until ⌃C
+  logs Key Chords, Paste, and Milliseconds Delays when told ⇧Z ⇧K, until ⌃C
   copies exactly when told ⇧Z ⇧S, until ⌃C
   edits classic Vi output, when run inside:  vi +':set t_ti= t_te='
 
@@ -23,13 +23,13 @@ examples:
   cat ./demos/vi.py |dd bs=1 count=10123 |tr '[ -~]' '.' |pbcopy  # makes large Paste
 """
 
+# "⌃" == "\u2303" == "\N{Up Arrowhead}" for the Control Key
+# "⌥" == "\u2325" == "\N{Option Key}" for the Option Key
+# "⇧" == "\u21E7" == "\N{Upwards White Arrow}" for the Shift Key
+# "⌘" == "\u2318" == "\N{Place of Interest Sign}" for the Command Key
+
+
 # code reviewed by people, and by Black and Flake8
-
-
-# "⌃" == "\u2303" == "\N{Up Arrowhead}" of the 'Control+' Modifier
-# "⌥" == "\u2325" == "\N{Option Key}" of the 'Option+' Modifier
-# "⇧" == "\u21E7" == "\N{Upwards White Arrow}" of the 'Shift+' Modifier
-# "⌘" == "\u2318" == "\N{Place of Interest Sign}" of the 'Command+' Modifier
 
 
 import __main__
@@ -40,6 +40,7 @@ import os
 import re
 import select
 import shutil
+import string
 import struct
 import sys
 import termios
@@ -59,10 +60,8 @@ def main():
     main.args = args
 
     stdio = sys.__stdout__  # '__stdout__' as per 'shutil.get_terminal_size'
-
-    with ByteTerminal(stdio) as bt:
-        with CharTerminal(bt) as ct:
-            ct.readlines()
+    with ViTerminal(stdio) as vt:
+        vt.try_vi()
 
 
 def parse_vi_py_args():
@@ -70,179 +69,94 @@ def parse_vi_py_args():
 
     parser = compile_argdoc()
     parser.add_argument("-q", "--quiet", dest="q", action="count", help="say less")
-
     args = parser_parse_args(parser)  # prints help and exits zero, when asked
-
     args.quiet = args.q if args.q else 0
 
     return args
 
 
-class CharTerminal:
-    """Copy Bytes to Screen from Keyboard, till told to quit"""
+class ViTerminal:
+    """Take Bytes from the Keyboard as Commands to edit the Screen"""
 
-    def __init__(self, bt):
-        self.bt = bt
+    def __init__(self, stdio):
+        self.ct = CharTerminal(stdio)
 
-        t0 = dt.datetime.now()
-
-        self.t0 = t0
-        self.t1 = t0
-        self.line = b""
-
-        self.lines = b""
-        self.bot_by_lines = self.form_bot_by_lines()
+        self.splits = list()
+        self.bot_by_chars = self.form_bot_by_chars()
 
     def __enter__(self):
-        """Configure the Terminal and greet the Operator, or not"""
+        """FIXME"""
 
         args = main.args
 
-        assert MouseEnter == b"\x1B[?1000h"
-        assert MouseSgrUp == b"\x1B[?1006h"
-        assert BracketedPasteEnter == b"\x1B[?2004h"
+        ct = self.ct
+        ct.__enter__()
 
         if not args.quiet:
-            self.bt_write(b"\x1B[?1000h")
-            self.bt_write(b"\x1B[?1006h")
-            self.bt_write(b"\x1B[?2004h")
-
             self.greet()
 
         return self
 
     def __exit__(self, *exc_info):
-        """Undo the Configure Terminal at entry, or not"""
+        """FIXME"""
 
-        args = main.args
-
-        assert BracketedPasteExit == b"\x1B[?2004l"
-        assert LowerLeftForm == b"\x1B[{y}H"  # y=1
-        assert MouseExit == b"\x1B[?1000l"
-        assert MouseSgrDown == b"\x1B[?1006l"
-
-        if not args.quiet:
-            size = shutil.get_terminal_size()
-
-            self.bt_write(b"\x1B[?2004l")
-            self.bt_write(b"\x1B[?1006l")
-            self.bt_write(b"\x1B[?1000l")
-
-            self.bt_write("\x1B[{y}H".format(y=size.lines).encode())
-
-    def bt_write(self, line):
-        """Write Bytes out through 'self.bt' Byte Terminal"""
-
-        bt = self.bt
-        bt.write(line)
-
-    def bt_breakpoint(self):
-        """Breakpoint outside of Bracketed Paste"""
-
-        bt = self.bt
-
-        assert BracketedPasteEnter == b"\x1B[?2004h"
-        assert BracketedPasteExit == b"\x1B[?2004l"
-
-        bt.write(b"\x1B[?1000l")
-        bt.breakpoint()
-        bt.write(b"\x1B[?1000h")
+        ct = self.ct
+        if ct.__exit__():
+            return True
 
     def greet(self):
         """Prompt the Operator"""
 
-        bt = self.bt
+        bt = self.ct.bt
 
         bt.print()
-        bt.print("Press ⌃C ⇧Z ⇧K to log Keystrokes and Paste, ⌃C to stop")
+        bt.print("Press ⌃C ⇧Z ⇧K to log Key Chords and Paste, ⌃C to stop")
         bt.print("Press ⌃C ⇧Z ⇧S to copy Bytes to Screen from Keyboard, ⌃C to stop")
         bt.print("Press ⌃C ⇧Z ⇧Q or ⌃C : Q ! Return to quit")
 
-    def readline(self):
-        """Read and log the next Keystroke or Paste"""
+        # "⌃" == "\u2303" == "\N{Up Arrowhead}" for the Control Key
+        # "⇧" == "\u21E7" == "\N{Upwards White Arrow}" for the Shift Key
 
-        bt = self.bt
+    def write_bel(self):
+        """Freak over almost any tupo"""
 
-        # Read and time-stamp the next Keystroke or Paste
+        self.bt_write(b"\x07")
 
-        t0 = self.t1
-        line = bt.readline()
-        t1 = dt.datetime.now()
+    def bt_write(self, line):
+        """Write Bytes out through 'self.bt' Byte Terminal"""
 
-        self.t0 = t0
-        self.t1 = t1
-        self.line = line
-
-        # Succeed
-
-        return line
-
-    def logline(self):
-        """Log this Keystroke or Paste"""
-
-        bt = self.bt
-
-        t0 = self.t0
-        t1 = self.t1
-        line = self.line
-
-        t1t0 = int((t1 - t0).total_seconds() * 1000)
-        if len(str(line)) <= 75:
-            bt.print("{}ms {} {}".format(t1t0, len(line), line))
-        else:
-            formed = "{}ms {} {} ... {}".format(t1t0, len(line), line[:20], line[-20:])
-            bt.print(formed)
-
-        # FIXME: uppercase the hex
-
-    def runlines(self):
-        """Run the Code that defines a Line, else ring the Terminal Bell"""
-
-        assert MouseSgrReportPattern == b"\x1B\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])"
-
-        bot_by_lines = self.bot_by_lines
-        lines = self.lines
-
-        key = lines
-        if key.startswith(b"\x1B[<"):
-            key = b"\x1B[<"
-
-        bot = self.write_bel
-        if key in bot_by_lines.keys():
-            bot = bot_by_lines[key]
-
-        bot()
+        fd = self.ct.bt.fd
+        os.write(fd, line)
 
     #
     # Name some Loops
     #
 
-    def readlines(self):  # ⌃C
-        """Copy Bytes to Screen from Keyboard, till told to quit"""
-
-        while True:
-            line = self.readline()
-            self.lines = line
-            self.runlines()
-
     def try_keyboard(self):  # ⇧Z ⇧K
-        """Log Keystrokes, Paste, & Delays from Keyboard, till told to quit"""
+        """Log Key Chords, Paste, & Delays from Keyboard, till told to quit"""
 
         args = main.args
-        bt = self.bt
 
-        assert control(b"C") == b"\x03"
+        ct = self.ct
+        bt = self.ct.bt
+
         assert LowerLeftForm == b"\x1B[{y}H"  # y=1
 
+        ByteTerminal.readline.verbose = True
+
         if not args.quiet:
-            bt.print("Press ⌃C to stop logging Keystrokes and Paste")
+            bt.print("Press ⌃C to stop logging Key Chords and Paste")
 
         while True:
-            line = self.readline()
-            self.logline()
+            bt.print()
+            line = ct.readline()
+            ct.logline()
+            bt.print("try_keyboard", repr(line))
 
-            if line == b"\x03":
+            if line == "⌃C":
                 break
+
+        ByteTerminal.readline.verbose = False
 
         if not args.quiet:
             size = shutil.get_terminal_size()
@@ -251,20 +165,21 @@ class CharTerminal:
             bt.print("Press ⌃C ⇧Z ⇧Q or ⌃C : Q ! Return to quit")
 
     def try_screen(self):  # ⇧Z ⇧S
-        """Copy Keystrokes and Paste to Screen, till told to quit"""
+        """Copy Key Chords and Paste to Screen, till told to quit"""
 
         args = main.args
-        bt = self.bt
+
+        bt = self.ct.bt
 
         assert control(b"C") == b"\x03"
         assert LowerLeftForm == b"\x1B[{y}H"  # y=1
 
         if not args.quiet:
-            bt.print("Press ⌃C to stop copying Keystrokes and Paste to Screen")
+            bt.print("Press ⌃C to stop copying Key Chords and Paste to Screen")
 
         while True:
-            line = self.readline()
-            self.bt_write(line)
+            line = bt.readline()
+            bt.write(line)
 
             if line == b"\x03":
                 break
@@ -275,127 +190,80 @@ class CharTerminal:
             bt.print()
             bt.print("Press ⌃C ⇧Z ⇧Q or ⌃C : Q ! Return to quit")
 
+    def try_vi(self):  # ⌃C
+        """Take Bytes from the Keyboard as Commands to edit the Screen"""
+
+        while True:
+            bot = self.readbot()
+            bot()
+
     #
-    # Define enough Keystrokes to bootstrap Vi - enough for ⇧Z ⇧K and ⇧Z ⇧S
+    # Define the Key Chords of a Vi for Files as small as the Screen
     #
 
-    def form_ZK_ZS_bot_by_lines(self):
+    def form_bot_by_chars(self):
         """Say which Code runs in reply to which Key Sequences"""
 
-        bot_by_lines = dict()
+        bot_by_chars = dict()
 
-        # Define some Keystroke Sequences
+        bot_by_chars[": Q ! Return"] = self.quit_bang  # Vi : Q ! Return
 
-        bot_by_lines[b"\x03"] = self.read_more  # Vi ⌃C
-        bot_by_lines[b"\x03:q!\r"] = self.quit_bang
-        bot_by_lines[b"\x03ZQ"] = self.quit_bang
+        bot_by_chars["⇧Z ⇧K"] = self.try_keyboard  # Vi ⇧Z ⇧K
+        bot_by_chars["⇧Z ⇧Q"] = self.quit_bang  # Vi ⇧Z ⇧Q
+        bot_by_chars["⇧Z ⇧S"] = self.try_screen  # Vi ⇧Z ⇧S
 
-        bot_by_lines[b":q!\r"] = self.quit_bang  # Vi : Q ! Return
+        assert MouseSgrReportPattern == b"\x1B\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])"
+        assert PasteOpenPattern == b"\x1B\\[200~"
 
-        bot_by_lines[b"ZK"] = self.try_keyboard  # Vi ⇧Z ⇧K
-        bot_by_lines[b"ZQ"] = self.quit_bang  # Vi ⇧Z ⇧Q
-        bot_by_lines[b"ZS"] = self.try_screen  # Vi ⇧Z ⇧S
+        # Define some Key Chord Sequences
 
-        # Mark some Keystroke Sequences as incomplete
+        bot_by_chars["⌃G"] = self.send_for_cpr  # Vi ⌃G
+        bot_by_chars["Return"] = self.to_row_down  # Vi ⌃M  # Vi Return
+        bot_by_chars["⌃N"] = self.to_row_down  # Vi ⌃N
+        bot_by_chars["⌃P"] = self.to_row_up  # Vi ⌃P
 
-        bot_by_lines[b":"] = self.read_more
-        bot_by_lines[b":q"] = self.read_more
-        bot_by_lines[b":q!"] = self.read_more
+        bot_by_chars["\x1B[200~"] = self.got_paste_report  # till CSI 201 ~
+        bot_by_chars["\x1B[<"] = self.got_mouse_report  # CSI < ... M, or ... m
 
-        bot_by_lines[b"Z"] = self.read_more
+        bot_by_chars["↑"] = self.to_row_up
+        bot_by_chars["↓"] = self.to_row_down
+        bot_by_chars["→"] = self.to_column_right
+        bot_by_chars["←"] = self.to_column_left
+
+        bot_by_chars[" "] = self.to_char_next  # Vi Space
+        bot_by_chars["$"] = self.to_column_beyond  # Vi ⇧4  # Vi $
+        bot_by_chars["+"] = self.to_dent_down  # Vi ⇧=  # Vi +
+        bot_by_chars["-"] = self.to_dent_up  # Vi -
+
+        bot_by_chars["0"] = self.to_column_leftmost  # Vi 0
+
+        bot_by_chars["⇧G"] = self.to_dent_last  # Vi ⇧G
+        bot_by_chars["⇧H"] = self.to_dent_first  # Vi ⇧H
+        bot_by_chars["⇧L"] = self.to_dent_last  # Vi ⇧L
+        bot_by_chars["⇧M"] = self.to_dent_middle  # Vi ⇧M
+
+        bot_by_chars["^"] = self.to_dent_left  # Vi ⇧6  # Vi ^
+        bot_by_chars["_"] = self.to_dent_here_down  # Vi ⇧- # Vi _
+
+        bot_by_chars["H"] = self.to_column_left  # Vi H
+        bot_by_chars["J"] = self.to_row_down  # Vi J
+        bot_by_chars["K"] = self.to_row_up  # Vi K
+        bot_by_chars["L"] = self.to_column_right  # Vi L
+
+        bot_by_chars["|"] = self.to_column_chosen  # Vi ⇧\ |
 
         # Succeed
 
-        return bot_by_lines
+        return bot_by_chars
+
+    #
+    #
+    #
 
     def quit_bang(self):  # ⇧Z ⇧Q  # : Q !
         """Quit when told"""
 
         sys.exit()
-
-    def write_bel(self):
-        """Freak over almost any tupo"""
-
-        self.bt_write(b"\x07")
-
-    def read_more(self):
-        """Take another Byte before choosing a reply"""
-
-        assert control(b"C") == b"\x03"
-
-        line = self.readline()
-
-        if self.lines == b"\x03":
-            if line == b"\x03":
-                self.write_bel()
-            self.lines = b""
-
-        self.lines += line
-        self.runlines()
-
-    #
-    # Define the Keystrokes of a Vi for Files as small as the Screen
-    #
-
-    def form_bot_by_lines(self):
-        """Say which Code runs in reply to which Key Sequences"""
-
-        bot_by_lines = self.form_ZK_ZS_bot_by_lines()
-
-        assert b"\a" == b"\x07"
-        assert b"\r" == b"\x0D"
-
-        assert control(b"N") == b"\x0E"
-        assert control(b"P") == b"\x10"
-
-        assert MouseSgrReportPattern == b"\x1B\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])"
-        assert PasteOpenPattern == b"\x1B\\[200~"
-
-        # Define some Keystroke Sequences
-
-        bot_by_lines[b"\x07"] = self.send_for_cpr  # Vi ⌃G
-        bot_by_lines[b"\x0D"] = self.to_row_down  # Vi ⌃M  # Vi Return
-        bot_by_lines[b"\x0E"] = self.to_row_down  # Vi ⌃N
-        bot_by_lines[b"\x10"] = self.to_row_up  # Vi ⌃P
-
-        bot_by_lines[b"\x1B[200~"] = self.got_paste_report  # till CSI 201 ~
-        bot_by_lines[b"\x1B[<"] = self.got_mouse_report  # CSI < ... M, or ... m
-
-        bot_by_lines[b"\x1B[A"] = self.to_row_up
-        bot_by_lines[b"\x1B[B"] = self.to_row_down
-        bot_by_lines[b"\x1B[C"] = self.to_column_right
-        bot_by_lines[b"\x1B[D"] = self.to_column_left
-
-        bot_by_lines[b" "] = self.to_char_next  # Vi Space
-        bot_by_lines[b"$"] = self.to_column_beyond  # Vi ⇧4  # Vi $
-        bot_by_lines[b"+"] = self.to_dent_down  # Vi ⇧=  # Vi +
-        bot_by_lines[b"-"] = self.to_dent_up  # Vi -
-
-        bot_by_lines[b"0"] = self.to_column_leftmost  # Vi 0
-
-        bot_by_lines[b"G"] = self.to_dent_last  # Vi ⇧G
-        bot_by_lines[b"H"] = self.to_dent_first  # Vi ⇧H
-        bot_by_lines[b"L"] = self.to_dent_last  # Vi ⇧L
-        bot_by_lines[b"M"] = self.to_dent_middle  # Vi ⇧M
-
-        bot_by_lines[b"^"] = self.to_dent_left  # Vi ⇧6  # Vi ^
-        bot_by_lines[b"_"] = self.to_dent_here_down  # Vi ⇧- # Vi _
-
-        bot_by_lines[b"h"] = self.to_column_left  # Vi H
-        bot_by_lines[b"j"] = self.to_row_down  # Vi J
-        bot_by_lines[b"k"] = self.to_row_up  # Vi K
-        bot_by_lines[b"l"] = self.to_column_right  # Vi L
-
-        bot_by_lines[b"|"] = self.to_column_chosen  # Vi ⇧\ |
-
-        # Mark some Keystroke Sequences as incomplete
-
-        bot_by_lines[b"\x1B"] = self.read_more
-        bot_by_lines[b"\x1B["] = self.read_more
-
-        # Succeed
-
-        return bot_by_lines
 
     def send_for_cpr(self):  # Vi ⌃G
         """Tell Terminal Keyboard to send Cursor Position Report (CPR)"""
@@ -530,7 +398,7 @@ class CharTerminal:
         self.bt_write("\x1B[{y}A".format(y="").encode())
 
     #
-    # Move the Cursor absolutely
+    # Move the Cursor to the Left Margin of some nearby Row
     #
 
     def to_column_leftmost(self):  # Vi 0
@@ -607,6 +475,449 @@ class CharTerminal:
         assert CursorUpForm == b"\x1B[{y}A"  # y=1
         self.bt_write(b"\x1B[A")
 
+    #
+    #
+    #
+
+    def readbot(self):
+        """Read the next Bot to run"""
+
+        ct = self.ct
+        splits = self.splits
+
+        # Split out the next Key Chords or Paste
+
+        while True:
+            (bot, more) = self.splits_splitbot(splits)
+            if bot:
+                splits[::] = more
+
+                return bot
+
+            # Else read more Bytes
+
+            line = ct.readline()
+            splits.extend(line.split())
+
+    def splits_splitbot(self, splits):
+        """Split out the Bot of the first Key Chords"""
+
+        bot_by_chars = self.bot_by_chars
+
+        join = " ".join(splits)
+        alt_matches = list(
+            _ for _ in bot_by_chars.keys() if (_.startswith(join) or join.startswith(_))
+        )
+
+        matches = alt_matches
+        if len(alt_matches) == 1:
+            match = alt_matches[-1]
+            if splits != match.split():
+                matches = [None, None]
+
+        if not matches:
+            bot = self.write_bel
+            keys = splits[:1]
+        elif len(matches) == 1:
+            key = matches[-1]
+            bot = bot_by_chars[key]
+            keys = [key]
+        else:
+            bot = None
+            keys = list()
+
+        more = splits[len(keys) :]
+
+        return (bot, more)
+
+
+#
+# Bypass the Line Buffer, in speaking with the Screen and Keyboard of the Terminal
+#
+
+
+class CharTerminal:
+    r"""Take Bytes from the Keyboard as Chars"""
+
+    def __init__(self, stdio):
+        self.bt = ByteTerminal(stdio)
+
+        t0 = dt.datetime.now()
+
+        self.t0 = t0
+        self.t1 = t0
+        self.line = b""
+
+        self.lines = bytearray()
+
+    def __enter__(self):
+        """Start intercepting Mouse Strokes and Paste Strokes"""
+
+        bt = self.bt
+
+        assert BracketedPasteEnter == b"\x1B[?2004h"
+        assert MouseEnter == b"\x1B[?1000h"
+        assert MouseSgrUp == b"\x1B[?1006h"
+
+        bt.__enter__()
+
+        bt.write(b"\x1B[?1000h")
+        bt.write(b"\x1B[?1006h")
+        bt.write(b"\x1B[?2004h")
+
+        return self
+
+    def __exit__(self, *exc_info):
+        """Stop intercepting Mouse Strokes and Paste Strokes"""
+
+        bt = self.bt
+
+        assert BracketedPasteExit == b"\x1B[?2004l"
+        assert MouseExit == b"\x1B[?1000l"
+        assert MouseSgrDown == b"\x1B[?1006l"
+
+        assert LowerLeftForm == b"\x1B[{y}H"  # y=1
+
+        if bt.__exit__():
+            return True
+
+        size = shutil.get_terminal_size()
+
+        bt.write(b"\x1B[?2004l")
+        bt.write(b"\x1B[?1006l")
+        bt.write(b"\x1B[?1000l")
+
+        bt.write("\x1B[{y}H".format(y=size.lines).encode())
+
+    def breakpoint(self):
+        """Exit, breakpoint, and try to enter again"""
+
+        bt = self.bt
+
+        self.__exit__(*sys.exc_info())
+        bt.breakpoint()
+        self.__enter__()
+
+    def readline(self):
+        """Read the Chars of the next Key Chords or Paste from Keyboard"""
+
+        bt = self.bt
+        lines = self.lines
+
+        # Split out the next Key Chords or Paste
+
+        while True:
+            (some, more) = self.bytes_splitchord(lines)
+            if some:
+                lines[::] = more
+
+                return some
+
+            # Else read more Bytes
+
+            line = bt.readline()
+            if line:
+                self.t0 = self.t1
+                self.t1 = dt.datetime.now()
+                self.line = line
+
+                # Continue
+
+                lines.extend(line)
+
+    def logline(self):
+        """Log this Key Chords or Paste"""
+
+        bt = self.bt
+
+        t0 = self.t0
+        t1 = self.t1
+        line = self.line
+
+        t1t0 = int((t1 - t0).total_seconds() * 1000)
+        if len(str(line)) <= 75:
+            formed = "{}ms {} {}".format(t1t0, len(line), line)
+        else:
+            formed = "{}ms {} {} ... {}".format(t1t0, len(line), line[:20], line[-20:])
+        bt.print("logline", formed)
+
+        # FIXME: uppercase the hex
+
+    def bytes_splitchord(self, bytes_):
+        """Split out the Chars of the first Key Chord encoded as Bytes"""
+
+        chords_by_bytes = CHORDS_BY_BYTES
+
+        matches = list(
+            _
+            for _ in chords_by_bytes.keys()
+            if (_.startswith(bytes_) or bytes_.startswith(_))
+        )
+
+        if not matches:
+            chords = bytes_.decode(errors="surrogateescape")
+            some = chords[0]
+            key = some.encode(errors="surrogateescape")
+        elif len(matches) == 1:
+            key = matches[-1]
+            some = chords_by_bytes[key]
+        else:
+            some = ""
+            key = b""
+
+        more = bytes_[len(key) :]
+
+        return (some, more)
+
+
+#
+# Name some Key Chords
+#
+
+
+Control = "\N{Up Arrowhead}"  # ⌃
+Option = "\N{Option Key}"  # ⌥
+Shift = "\N{Upwards White Arrow}"  # ⇧
+Command = "\N{Place of Interest Sign}"  # ⌘
+
+
+C0_CONTROLS = b"".join(chr(_).encode() for _ in list(range(0x20)) + [0x7F])
+
+Esc = b"\x1B"  # Escape  # ESC
+
+
+assert b"\xC2\xA0".decode() == "\u00A0" == "\N{No-Break Space}"
+
+
+CHORDS_BY_BYTES = dict()
+
+CHORDS_BY_BYTES[b"\0"] = "⌃Space"  # ⌃Space ⌃⌥Space ⌃⇧Space ⌃⇧2 ⌃⌥⇧2
+CHORDS_BY_BYTES[b"\t"] = "Tab"  # ⌃I ⌃⌥I ⌃⌥⇧I Tab ⌃Tab ⌥Tab ⌃⌥Tab
+CHORDS_BY_BYTES[b"\r"] = "Return"  # ⌃M ⌃⌥M ⌃⌥⇧M Return etc
+CHORDS_BY_BYTES[b" "] = "Space"  # Space ⇧Space
+CHORDS_BY_BYTES[b"\x1B[Z"] = "⇧Tab"  # ⇧Tab ⌃⇧Tab ⌥⇧Tab ⌃⌥⇧Tab
+CHORDS_BY_BYTES[b"\xC2\xA0"] = "⌥Space"  # ⌥Space ⌥⇧Space
+
+CHORDS_BY_BYTES[b"\x1B[A"] = "↑"  # ↑ ⌥↑ ⇧↑ ⌃⌥↑ ⌃⇧↑ ⌥⇧↑ ⌃⌥⇧↑  # macOS takes ⌃↑
+CHORDS_BY_BYTES[b"\x1B[B"] = "↓"  # ↓ ⌥↓ ⇧↓ ⌃⌥↓ ⌃⇧↓ ⌥⇧↓ ⌃⌥⇧↓  # macOS takes ⌃↓
+CHORDS_BY_BYTES[b"\x1B[C"] = "→"  # → ⌃⌥→ ⌃⇧→ ⌥⇧→ ⌃⌥⇧→  # macOS takes ⌃→
+CHORDS_BY_BYTES[b"\x1Bf"] = "⌥→"
+CHORDS_BY_BYTES[b"\x1B[1;2C"] = "⇧→"
+CHORDS_BY_BYTES[b"\x1B[D"] = "←"  # ← ⌃⌥← ⌃⇧← ⌥⇧← ⌃⌥⇧←  # macOS takes ⌃←
+CHORDS_BY_BYTES[b"\x1Bb"] = "⌥←"
+CHORDS_BY_BYTES[b"\x1B[1;2D"] = "⇧←"
+
+# ⌃M is also Return ⌃Return ⌥Return ⇧Return ⌃⌥Return ⌃⇧Return ⌥⇧Return ⌃⌥⇧Return
+
+
+def add_us_ascii_into_chords_by_bytes():
+    """Add a US Ascii Keyboard into Chars by Bytes"""
+
+    chords_by_bytes = CHORDS_BY_BYTES
+
+    # Decode Control Chords
+
+    assert Control == "\N{Up Arrowhead}"  # ⌃
+
+    for ord_ in C0_CONTROLS:
+        char = chr(ord_)
+        bytes_ = char.encode()
+        if bytes_ not in chords_by_bytes.keys():
+            if bytes_ != Esc:
+                chords_by_bytes[bytes_] = Control + chr(ord_ ^ 0x40)
+
+    # Decode Shift'ed and un-Shift'ed US Ascii Letters
+
+    assert Shift == "\N{Upwards White Arrow}"  # ⇧
+
+    for char in string.ascii_uppercase:
+        bytes_ = char.encode()
+        assert bytes_ not in chords_by_bytes.keys(), bytes_
+
+        chords_by_bytes[bytes_] = Shift + char
+
+    for char in string.ascii_lowercase:
+        bytes_ = char.encode()
+        assert bytes_ not in chords_by_bytes.keys(), bytes_
+
+        chords_by_bytes[bytes_] = char.upper()
+
+    # Decode all the US Ascii Bytes not decoded above
+
+    for ord_ in range(0x80):
+        char = chr(ord_)
+
+        bytes_ = char.encode()
+        if bytes_ not in chords_by_bytes.keys():
+            if bytes_ != Esc:
+                chords_by_bytes[bytes_] = char
+
+
+add_us_ascii_into_chords_by_bytes()
+
+assert b" " in CHORDS_BY_BYTES.keys()
+assert ((" " not in _) for _ in CHORDS_BY_BYTES.values())
+
+
+CHORDS_BY_BYTES.update(  # the Fn Key Caps at Mac
+    {
+        b"\x1B\x4F\x50": "F1",
+        b"\x1B\x4F\x51": "F2",
+        b"\x1B\x4F\x52": "F3",
+        b"\x1B\x4F\x53": "F4",
+        b"\x1B\x5B\x31\x35\x7E": "F5",
+        b"\x1B\x5B\x31\x37\x7E": "F6",  # F6  # ⌥F1
+        b"\x1B\x5B\x31\x38\x7E": "F7",  # F7  # ⌥F2
+        b"\x1B\x5B\x31\x39\x7E": "F8",  # F8  # ⌥F3
+        b"\x1B\x5B\x32\x30\x7E": "F9",  # F9  # ⌥F4
+        b"\x1B\x5B\x32\x31\x7E": "F10",  # F10  # ⌥F5
+        b"\x1B\x5B\x32\x33\x7E": "⌥F6",  # F11  # ⌥F6  # macOS takes F11
+        b"\x1B\x5B\x32\x34\x7E": "F12",  # F12  # ⌥F7
+        b"\x1B\x5B\x32\x35\x7E": "⇧F5",  # ⌥F8  # ⇧F5
+        b"\x1B\x5B\x32\x36\x7E": "⇧F6",  # ⌥F9  # ⇧F6
+        b"\x1B\x5B\x32\x38\x7E": "⇧F7",  # ⌥F10  # ⇧F7
+        b"\x1B\x5B\x32\x39\x7E": "⇧F8",  # ⌥F11  # ⇧F8
+        b"\x1B\x5B\x33\x31\x7E": "⇧F9",  # ⌥F12  # ⇧F9
+        b"\x1B\x5B\x33\x32\x7E": "⇧F10",
+        b"\x1B\x5B\x33\x33\x7E": "⇧F11",
+        b"\x1B\x5B\x33\x34\x7E": "⇧F12",
+    }
+)
+
+CHORDS_BY_BYTES.update(  # the Option Digit strokes at Mac
+    {
+        b"\xC2\xBA": "⌥0",
+        b"\xC2\xA1": "⌥1",
+        b"\xE2\x84\xA2": "⌥2",
+        b"\xC2\xA3": "⌥3",
+        b"\xC2\xA2": "⌥4",
+        b"\xE2\x88\x9E": "⌥5",
+        b"\xC2\xA7": "⌥6",
+        b"\xC2\xB6": "⌥7",
+        b"\xE2\x80\xA2": "⌥8",
+        b"\xC2\xAA": "⌥9",
+        b"\xE2\x80\x9A": "⌥⇧0",
+        b"\xE2\x81\x84": "⌥⇧1",
+        b"\xE2\x82\xAC": "⌥⇧2",
+        b"\xE2\x80\xB9": "⌥⇧3",
+        b"\xE2\x80\xBA": "⌥⇧4",
+        b"\xEF\xAC\x81": "⌥⇧5",
+        b"\xEF\xAC\x82": "⌥⇧6",
+        b"\xE2\x80\xA1": "⌥⇧7",
+        b"\xC2\xB0": "⌥⇧8",
+        b"\xC2\xB7": "⌥⇧9",
+    }
+)
+
+CHORDS_BY_BYTES.update(  # the Option Letter strokes at Mac
+    {
+        b"\xC3\xA5": "⌥A",
+        b"\xE2\x88\xAB": "⌥B",
+        b"\xC3\xA7": "⌥C",
+        b"\xE2\x88\x82": "⌥D",  # ⌥E does not come after ⌥D
+        b"\xC3\xA1": "⌥E A",
+        b"\xC3\xA9": "⌥E E",
+        b"\xC3\xAD": "⌥E I",
+        b"\x6A\xCC\x81": "⌥E J",
+        b"\xC3\xB3": "⌥E O",
+        b"\xC3\xBA": "⌥E U",
+        b"\xC6\x92": "⌥F",
+        b"\xC2\xA9": "⌥G",
+        b"\xCB\x99": "⌥H",  # ⌥I does not come after ⌥H
+        b"\xC3\xA2": "⌥I A",
+        b"\xC3\xAA": "⌥I E",
+        b"\xC3\xAE": "⌥I I",
+        b"\xC3\xB4": "⌥I O",
+        b"\xC3\xBB": "⌥I U",
+        b"\xE2\x88\x86": "⌥J",
+        b"\xCB\x9A": "⌥K",
+        b"\xC2\xAC": "⌥L",
+        b"\xC2\xB5": "⌥M",  # ⌥N does not come after ⌥M
+        b"\xC3\xA3": "⌥N A",
+        b"\xC3\xB1": "⌥N N",
+        b"\xC3\xB5": "⌥N O",
+        b"\xC3\xB8": "⌥O",
+        b"\xCF\x80": "⌥P",
+        b"\xC5\x93": "⌥Q",
+        b"\xC2\xAE": "⌥R",
+        b"\xC3\x9F": "⌥S",
+        b"\xE2\x80\xA0": "⌥T",  # ⌥U does not come after ⌥T
+        b"\xC3\xA4": "⌥U A",
+        b"\xC3\xAB": "⌥U E",
+        b"\xC3\xAF": "⌥U I",
+        b"\xC3\xB6": "⌥U O",
+        b"\xC3\xBC": "⌥U U",
+        b"\xC3\xBF": "⌥U Y",
+        b"\xE2\x88\x9A": "⌥V",
+        b"\xE2\x88\x91": "⌥W",
+        b"\xE2\x89\x88": "⌥X",
+        b"\xCE\xA9": "⌥Z",
+        b"\xC3\x85": "⌥⇧A",
+        b"\xC4\xB1": "⌥⇧B",
+        b"\xC3\x87": "⌥⇧C",
+        b"\xC3\x8E": "⌥⇧D",
+        b"\xC2\xB4": "⌥⇧E",  # ⌥E  # ⌥⇧E  # ⌥⇧E Space
+        b"\xC3\x8F": "⌥⇧F",
+        b"\xCB\x9D": "⌥⇧G",
+        b"\xC3\x93": "⌥⇧H",
+        b"\xCB\x86": "⌥⇧I",  # ⌥I  # ⌥⇧I  # ⌥⇧I Space
+        b"\xC3\x94": "⌥⇧J",
+        b"\xEF\xA3\xBF": "⌥⇧K",
+        b"\xC3\x92": "⌥⇧L",
+        b"\xC3\x82": "⌥⇧M",
+        b"\xCB\x9C": "⌥⇧N",  # ⌥N  # ⌥⇧N  # ⌥⇧N Space
+        b"\xC3\x98": "⌥⇧O",
+        b"\xE2\x88\x8F": "⌥⇧P",
+        b"\xC5\x92": "⌥⇧Q",
+        b"\xE2\x80\xB0": "⌥⇧R",
+        b"\xC3\x8D": "⌥⇧S",
+        b"\xCB\x87": "⌥⇧T",
+        b"\xC2\xA8": "⌥⇧U",  # ⌥U  # ⌥⇧U  # ⌥⇧U Space
+        b"\xE2\x97\x8A": "⌥⇧V",
+        b"\xE2\x80\x9E": "⌥⇧W",
+        b"\xCB\x9B": "⌥⇧X",
+        b"\xC3\x81": "⌥⇧Y",
+        b"\xC2\xB8": "⌥⇧Z",
+        b"\xC3\xA0": "⌥`A",
+        b"\xC3\xA8": "⌥`E",
+        b"\xC3\xAC": "⌥`I",
+        b"\xC3\xB2": "⌥`O",
+        b"\xC3\xB9": "⌥`U",
+    }
+)
+
+CHORDS_BY_BYTES.update(  # the Option Punctuation-Mark strokes at Mac
+    {
+        b"\xE2\x80\x93": "⌥-",
+        b"\xE2\x89\xA0": "⌥=",
+        b"\xE2\x80\x9C": "⌥[",
+        b"\xE2\x80\x98": "⌥]",
+        b"\xC2\xAB": "⌥\\",
+        b"\xE2\x80\xA6": "⌥;",
+        b"\xC3\xA6": "⌥'",
+        b"\xE2\x89\xA4": "⌥,",
+        b"\xE2\x89\xA5": "⌥.",
+        b"\xC3\xB7": "⌥/",
+        b"\xE2\x80\x94": "⌥-",
+        b"\xC2\xB1": "⌥⇧=",
+        b"\xE2\x80\x9D": "⌥⇧[",
+        b"\xE2\x80\x99": "⌥⇧]",
+        b"\xC2\xBB": "⌥⇧\\",
+        b"\xC3\x9A": "⌥⇧;",
+        b"\xC3\x86": "⌥⇧'",
+        b"\xC2\xAF": "⌥⇧,",
+        b"\xCB\x98": "⌥⇧.",
+        b"\xC2\xBF": "⌥⇧/",
+    }
+)
+
+# no Bytes come from macOS Keyboard at ⇧F1 ⇧F2 ⇧F3 ⇧F4 ⌃⌥F ⌃⇧F ⌥⇧F ⌃⌥⇧F
+
+
+#
+# Bypass the Line Buffer, in speaking with the Screen and Keyboard of the Terminal
+#
+
 
 class ByteTerminal:
     r"""Start/ Stop line-buffering Input and replacing \n Output with \r\n"""
@@ -615,7 +926,7 @@ class ByteTerminal:
         self.stdio = stdio
 
         self.fd = stdio.fileno()
-        self.line = bytearray()
+        self.lines = bytearray()
         self.tcgetattr = None
 
         self.try_me()
@@ -654,6 +965,13 @@ class ByteTerminal:
             when = termios.TCSADRAIN
             termios.tcsetattr(fd, when, tcgetattr)
 
+    def breakpoint(self):
+        """Exit, breakpoint, and try to enter again"""
+
+        self.__exit__(*sys.exc_info())
+        breakpoint()
+        self.__enter__()
+
     def print(self, *args, **kwargs):
         """Work like Print, but end with '\r\n', not with '\n'"""
 
@@ -670,28 +988,6 @@ class ByteTerminal:
 
         os.write(fd, line)
 
-    def readline(self):
-        """Read the next Keystroke or Paste from Keyboard"""
-
-        fd = self.fd
-        line = self.line
-
-        # Pop the next Keystroke or Paste
-
-        while True:
-            (stroke, lookahead) = bytes_splitstroke(line)
-            if stroke:
-                line[::] = lookahead
-                return stroke
-
-            # Else read more Bytes
-
-            length = 1022  # Paste came as 1022 Bytes per 100ms, at 2023-03 macOS
-            read = os.read(fd, length)
-            line.extend(read)
-
-        # tests of many ⌘V ⌘V Paste Strokes do sometimes read more than one together
-
     def kbhit(self, timeout):  # 'timeout' in seconds
         """Wait till next Keyboard Byte struck or pasted, or Timeout"""
 
@@ -703,55 +999,80 @@ class ByteTerminal:
 
         return rlist_  # empty after Timeout, else clone of  'rlist'
 
-    def breakpoint(self):
-        """Breakpoint with line-buffered Input and "\r\n" Line-End's"""
+    def readline(self):
+        """Read the Bytes of the next Key Chords or Paste from Keyboard"""
 
-        self.__exit__(*sys.exc_info())
-        breakpoint()
-        self.__enter__()
+        fd = self.fd
+        lines = self.lines
+        verbose = self.readline.verbose if hasattr(self.readline, "verbose") else None
 
+        # Split out the next Key Chords or Paste
 
-def bytes_splitstroke(line):
-    """Split off the first Keystroke or Paste"""
+        while True:
+            (some, more) = self.bytes_splitbytes(lines)
+            if some:
+                lines[::] = more
+                return some
 
-    assert Esc == b"\x1B"
-    assert CSI == b"\x1B["
-    assert MouseSixByteReportPattern == b"\x1B\\[M..."
+            # Else read more Bytes
 
-    # Take anything but Esc
+            length = 1022  # Paste came as 1022 Bytes per 100ms, at 2023-03 macOS
+            line = os.read(fd, length)
+            if verbose:
+                self.print("readline", line)
 
-    if not line.startswith(b"\x1B"):  # Esc
-        stroke = line.partition(b"\x1B")[0]
-    elif line.startswith(b"\x1B"):  # Esc
-        stroke = b""
+            # Continue
 
-        # Take a MouseSixByteReportPattern from b"\x1B[M" and more
+            lines.extend(line)
 
-        if line.startswith(b"\x1B[M"):  # CSI
-            m = re.match(MouseSixByteReportPattern, line)  # todo: testme
-            if m:
-                stroke = line
+        # tests of many ⌘V ⌘V Paste Strokes do sometimes read more than one together
 
-        # Take CSI plus Unsigned Decimal Ints split or marked by ";", "<", and "?"
+    def bytes_splitbytes(self, bytes_):
+        """Split out the Bytes of the first Key Chords or Paste"""
 
-        elif line.startswith(b"\x1B["):
-            for index in range(2, len(line)):
-                end = line[index:][:1]
-                csi_middles = b"0123456789;<?"
-                if end not in csi_middles:  # solves many Ps of Pm, but not Pt
-                    stroke = line[: (index + 1)]  # may contain leading zeroes
-                    break
+        assert Esc == b"\x1B"
+        assert CSI == b"\x1B["
+        assert MouseSixByteReportPattern == b"\x1B\\[M..."
 
-    # Split out the leading Stroke
+        # Take anything but Esc
 
-    stroke = bytes(stroke)
-    lookahead = line[len(stroke) :]
+        if not bytes_.startswith(b"\x1B"):  # Esc
+            some = bytes_.partition(b"\x1B")[0]
+        elif bytes_.startswith(b"\x1B"):  # Esc
+            some = b""
 
-    assert (stroke + lookahead) == line, (stroke, lookahead, line)
+            # Take a MouseSixByteReportPattern from b"\x1B[M" and more
 
-    # Succeed
+            if bytes_.startswith(b"\x1B[M"):  # CSI
+                m = re.match(MouseSixByteReportPattern, bytes_)  # todo: testme
+                if m:
+                    some = bytes_
 
-    return (stroke, lookahead)
+            # Take CSI plus Unsigned Decimal Ints split or marked by ";", "<", and "?"
+
+            elif bytes_.startswith(b"\x1B["):
+                for index in range(2, len(bytes_)):
+                    end = bytes_[index:][:1]
+                    csi_middles = b"0123456789;<?"
+                    if end not in csi_middles:  # solves many Ps of Pm, but not Pt
+                        some = bytes_[: (index + 1)]  # may contain leading zeroes
+                        break
+
+            # Take Esc plus whatever, even Esc Esc
+
+            elif bytes_[1:]:
+                some = bytes_[:2]
+
+        # Split out the Bytes of the first Key Chords or Paste
+
+        some = bytes(some)
+        more = bytes_[len(some) :]
+
+        assert (some + more) == bytes_, (some, more, bytes_)
+
+        # Succeed
+
+        return (some, more)
 
 
 #
@@ -764,7 +1085,7 @@ def bytes_splitstroke(line):
 
 BS = b"\b"  # Backspace  # BS
 CR = b"\r"  # Carriage Return   # CR
-Esc = b"\x1B"  # Escape  # ESC
+assert Esc == b"\x1B"  # Escape  # ESC
 
 CSI = b"\x1B["  # Control Sequence Introducer  # CSI
 
@@ -821,6 +1142,12 @@ def control(bytes_):
 
     return ctrl_bytes
 
+    # b"\x7F" == control(b"?"), b"?" == b"\x3F"
+    # b"\x00" == control(b"@"), b"@" == b"\x40"
+    # b"\x01" == control(b"A"), b"A" == b"\x41"
+    # b"\x1A" == control(b"Z"), b"Z" == b"\x5A"
+    # b"\x1F" == control(b"_"), b"_" == b"\x5F"
+
 
 #
 # Add some Def's to Import ArgParse
@@ -828,7 +1155,7 @@ def control(bytes_):
 
 
 def compile_argdoc(drop_help=None):
-    """Form an ArgumentParser from the Main Doc, without Positional Args and Options"""
+    """Form an ArgumentParser from the ArgDoc, without Positional Args and Options"""
 
     argdoc = __main__.__doc__
 
@@ -838,28 +1165,34 @@ def compile_argdoc(drop_help=None):
     prog = doc_lines[0].split()[1]  # first word of first line
 
     doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
-    description = doc_firstlines[1]  # first line of second paragraph
+    alt_description = doc_firstlines[1]  # first line of second paragraph
 
     add_help = not drop_help
+
+    # Say when Doc Lines stand plainly outside of the Epilog
+
+    def skippable(line):
+        strip = line.rstrip()
+
+        skip = not strip
+        skip = skip or strip.startswith(" ")
+        skip = skip or strip.startswith("usage")
+        skip = skip or strip.startswith("positional arguments")
+        skip = skip or strip.startswith("options")
+
+        return skip
+
+    default = "just do it"
+    description = default if skippable(alt_description) else alt_description
 
     # Pick the Epilog out of the Doc
 
     epilog = None
     for index, line in enumerate(doc_lines):
-        strip = line.rstrip()
-
-        skip = False
-        skip = skip or not strip
-        skip = skip or strip.startswith(" ")
-        skip = skip or strip.startswith("usage")
-        skip = skip or strip.startswith(description.rstrip())
-        skip = skip or strip.startswith("positional arguments")
-        skip = skip or strip.startswith("options")
-        if skip:
+        if skippable(line) or (line == description):
             continue
 
         epilog = "\n".join(doc_lines[index:])
-
         break
 
     # Form an ArgumentParser, without Positional Args and Options
@@ -975,7 +1308,7 @@ def sys_exit_if_testdoc(epilog):
 #
 
 
-# todo: take Vi 1234567890 Keystrokes as digits of repeat
+# todo: take Vi 1234567890 Key Chords as digits of repeat
 # todo: take changes from Vi ⇧C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X  a c d i o r s x
 # todo: repeat changes at Vi .
 
