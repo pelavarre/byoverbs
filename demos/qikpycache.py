@@ -186,6 +186,12 @@ def dump_changes_to_file():
 
         path.write_text(dump + "\n")
 
+        # Say when dumped, as if reloaded
+
+        stat = path.stat()
+        stamp = dt.datetime.fromtimestamp(stat.st_mtime)
+        MODULE._CACHE_STAMP = stamp  # replaces
+
         # Don't dump again till after more change
 
         MODULE._CACHE_DUMP = dump  # replaces
