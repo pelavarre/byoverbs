@@ -1,2 +1,2 @@
 set -xe
-git fetch && git checkout "$@" && git rebase
+git fetch --prune && git checkout "$@" && git rebase
