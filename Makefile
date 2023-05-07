@@ -53,13 +53,6 @@ help:
 # Restyle & test the source, then tell me to push it
 
 push: pull
-	rm -fr bin/__pycache__/yy
-	rm -fr tmp/
-	:
-	git log --oneline --no-decorate -1
-	git status --short --ignored
-	git describe --always --dirty
-	:
 	: did you mean:  git push
 	: press ⌃D to execute, or ⌃C to quit
 	cat - >/dev/null
@@ -69,6 +62,14 @@ push: pull
 pull: black flake8 shellcheck selftest
 	:
 	demos/last2lines.py ./ bin/ demos/
+	:
+	rm -fr bin/__pycache__/byotools.cpython-311.pyc
+	rm -fr bin/__pycache__/yy
+	rm -fr tmp/
+	:
+	git log --oneline --no-decorate -1
+	git status --short --ignored
+	git describe --always --dirty
 	:
 
 
