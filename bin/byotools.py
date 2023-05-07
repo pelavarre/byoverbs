@@ -46,6 +46,18 @@ _ = "{:_}".format(12345)  # new since Dec/2016 Python 3.6
 #
 
 
+class ArgumentParser:
+    """Work like Class ArgumentParser of Import ArgParse"""
+
+    def __init__(self):
+        self.parser = compile_argdoc()
+
+    def parse_args(self):
+        parser = self.parser
+        args = parser_parse_args(parser)
+        return args
+
+
 def compile_argdoc(drop_help=None):
     """Form an ArgumentParser from the ArgDoc, without Positional Args and Options"""
 
