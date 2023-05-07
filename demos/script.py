@@ -43,11 +43,14 @@ def main():
     parser = byo.ArgumentParser()
     parser.parse_args()  # often prints help & exits
 
-    to_path = os_find_not_exists("typescript")
-    from_path = os_find_not_exists("keylog")
+    to_path = os_find_not_exists("typescript")  # classic Unix defaults to replace
+    from_path = os_find_not_exists("keylog")  # classic Unix defaults to omit
 
     print("Script started, keylog is {}, screenlog is {}".format(from_path, to_path))
+
     copy_until(to_path, from_path=from_path)
+
+    print()  # macOS 'script' inserts this blank line, Linux 'script' doesn't
     print("Script done, keylog is {}, screenlog is {}".format(from_path, to_path))
 
 
@@ -68,6 +71,9 @@ def os_find_not_exists(pathname):
 def copy_until(to_path, from_path):
     """Stream Bytes to Screen from Keyboard till Sh SubProcess Quits"""
 
+    default_sh = "sh"
+    shverb = os.environ.get("SHELL", default_sh)
+
     with open(from_path, "wb") as keylog:
         with open(to_path, "wb") as screenlog:
 
@@ -86,7 +92,7 @@ def copy_until(to_path, from_path):
                 screenlog.flush()
                 return screen_bytes
 
-            pty.spawn("sh", master_read=going_out, stdin_read=coming_in)
+            pty.spawn(shverb, master_read=going_out, stdin_read=coming_in)
 
     # compare with 'def read' at https://docs.python.org/3/library/pty.html
 
