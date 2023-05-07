@@ -10,12 +10,10 @@ options:
 
 quirks:
   sets you up to bold or color your Sh Input Lines
-  like type ⎋[1m to bold your input, ⎋[m to stop
-  like type ⎋[34m to turn your input blue, ⎋[m to stop
-
-bugs:
-  at macOS, something goes wrong inside if you type more than a full row of Chars,
-    unless first you Ssh'ed out to some other Host
+    like type ⎋[1m to bold your input, ⎋[m to stop
+    like type ⎋[34m to turn your input blue, ⎋[31m red, etc, ⎋[m to stop
+  exports COLUMNS & LINES if opening a Python Pty changes Os Get_Terminal_Size,
+    even while ⎋[18t will still type out ⎋[8;$LINES;${COLUMNS}t
 
 docs:
   https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -29,12 +27,17 @@ examples:
 # code reviewed by people and by Black, Flake8, & Flake8-Import-Order
 
 
+import ast
 import os
 import pathlib
 import pty
+import shlex
 import sys
 
 import byoverbs.bin.byotools as byo
+
+
+OS_ENV_VARS = "COLUMNS LINES SHELL".split()
 
 
 def main():
@@ -43,8 +46,12 @@ def main():
     parser = byo.ArgumentParser()
     parser.parse_args()  # often prints help & exits
 
+    #
+
     to_path = os_find_not_exists("typescript")  # classic Unix defaults to replace
     from_path = os_find_not_exists("keylog")  # classic Unix defaults to omit
+
+    os_putenv_terminal_size_if()
 
     print("Script started, keylog is {}, screenlog is {}".format(from_path, to_path))
 
@@ -68,36 +75,81 @@ def os_find_not_exists(pathname):
     return find
 
 
+def os_putenv_terminal_size_if():
+    """Fall back to Put Env COLUMNS & LINES, if Python Pty zeroes Get_Terminal_Size"""
+
+    assert "COLUMNS" in OS_ENV_VARS
+    assert "LINES" in OS_ENV_VARS
+
+    # Sample Terminal-Size inside a Python Pty Pseudo-Terminal
+
+    py = "import os; print(tuple(os.get_terminal_size()))"
+    shline = "python3 -c {!r}".format(py)
+    shargv = shlex.split(shline)
+
+    read = bytearray()
+
+    def os_read_some(fd):
+        read_some = os.read(fd, 0x400)
+        read.extend(read_some)
+        return b""
+
+    pty.spawn(shargv, master_read=os_read_some)
+
+    read_chars = read.decode()
+    pty_size = ast.literal_eval(read_chars)
+
+    # Fall back to Put Env COLUMNS & LINES, if Python Pty zeroes Get_Terminal_Size
+
+    size = os.get_terminal_size()
+
+    if pty_size != size:
+        assert pty_size == (0, 0), pty_size  # ordinary in May/2023
+
+        os.putenv("COLUMNS", str(size.columns))
+        os.putenv("LINES", str(size.lines))
+
+    # Window Resize may revive 'stty size' after:  stty rows 0 && stty cols 0
+    # Terminal Scroll may fail after:  stty rows 0 && seq 987 && vi +:q!
+    # Zsh Echo may fail inside Python Pty after:  unset COLUMNS LINES && zsh
+
+    # todo: take IsATtty from Stdout/ Stderr/ Stdin
+
+
 def copy_until(to_path, from_path):
     """Stream Bytes to Screen from Keyboard till Sh SubProcess Quits"""
 
+    assert "SHELL" in OS_ENV_VARS
+
     default_sh = "sh"
     shverb = os.environ.get("SHELL", default_sh)
+    shargv = [shverb]
 
     with open(from_path, "wb") as keylog:
         with open(to_path, "wb") as screenlog:
 
-            def coming_in(fd):
+            def key_logger(fd):
                 while True:
-                    key_bytes = os.read(fd, 0x400)
-                    keylog.write(key_bytes)
+                    read_some = os.read(fd, 0x400)
+                    keylog.write(read_some)
                     keylog.flush()
-                    alt_key_bytes = take_in(key_bytes)
-                    if alt_key_bytes:
-                        return alt_key_bytes
 
-            def going_out(fd):
-                screen_bytes = os.read(fd, 0x400)
-                screenlog.write(screen_bytes)
+                    alt_read_some = take_in(read_some)
+                    if alt_read_some:
+                        return alt_read_some
+
+            def screen_recorder(fd):
+                read_some = os.read(fd, 0x400)
+                screenlog.write(read_some)
                 screenlog.flush()
-                return screen_bytes
+                return read_some
 
-            pty.spawn(shverb, master_read=going_out, stdin_read=coming_in)
+            pty.spawn(shargv, master_read=screen_recorder, stdin_read=key_logger)
 
     # compare with 'def read' at https://docs.python.org/3/library/pty.html
 
 
-def take_in(key_bytes):
+def take_in(read_some):
     states = take_in.states
     state = states[0] if states else None
 
@@ -113,9 +165,9 @@ def take_in(key_bytes):
     )
 
     func = func_by_state[state]
-    alt_key_bytes = func(key_bytes)
+    alt_read_some = func(read_some)
 
-    return alt_key_bytes
+    return alt_read_some
 
 
 take_in.states = list()
