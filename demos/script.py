@@ -10,7 +10,7 @@ options:
 
 quirks:
   sets you up to bold or color your Sh Input Lines
-  like type ⎋[3m to bold your input, ⎋[m to stop
+  like type ⎋[1m to bold your input, ⎋[m to stop
   like type ⎋[34m to turn your input blue, ⎋[m to stop
 
 bugs:
