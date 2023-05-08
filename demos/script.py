@@ -10,11 +10,17 @@ options:
 
 quirks:
   visibly echoes ⌃? Delete, ⌃H Backspace, ⌃I Tab, ⌃M Return, ⎋ Escape, etc
+    often pressing ^@ will authorize an Echo without adding another Echo
   sets you up to bold or color your Sh Input Lines
     like type ⎋[1m to bold your input, ⎋[m to stop
     like type ⎋[34m to turn your input blue, ⎋[31m red, etc, ⎋[m to stop
   exports COLUMNS & LINES if opening a Python Pty changes Os Get_Terminal_Size,
     even while ⎋[18t will still type out ⎋[8;$LINES;${COLUMNS}t
+  works well with Bash and Zsh calls to redraw the Screen or Screen Row
+    bind C-l:clear-screen
+    bind C-g:redraw-current-line
+    bindkey "^L" clear-screen  && : :
+    bindkey "^G" redisplay  && : :
 
 docs:
   https://en.wikipedia.org/wiki/ANSI_escape_code
