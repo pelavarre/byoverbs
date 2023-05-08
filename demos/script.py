@@ -9,6 +9,7 @@ options:
   -h, --help  show this help message and exit
 
 quirks:
+  visibly echoes ⌃? Delete, ⌃H Backspace, ⌃I Tab, ⌃M Return, ⎋ Escape, etc
   sets you up to bold or color your Sh Input Lines
     like type ⎋[1m to bold your input, ⎋[m to stop
     like type ⎋[34m to turn your input blue, ⎋[31m red, etc, ⎋[m to stop
@@ -18,6 +19,8 @@ quirks:
 docs:
   https://en.wikipedia.org/wiki/ANSI_escape_code
   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+  https://unicode.org/charts/PDF/U0000.pdf
+  https://unicode.org/charts/PDF/U0080.pdf
 
 examples:
   ./demos/script.py --
@@ -129,138 +132,205 @@ def copy_until(to_path, from_path):
         with open(to_path, "wb") as screenlog:
 
             def key_logger(fd):
+                """Log and copy Bytes in from the Keyboard"""
+
                 while True:
-                    read_some = os.read(fd, 0x400)
-                    keylog.write(read_some)
+                    reads = os.read(fd, 0x400)
+                    keylog.write(reads)
                     keylog.flush()
 
-                    alt_read_some = take_in(read_some)
-                    if alt_read_some:
-                        return alt_read_some
+                    alt_reads = take_in(takes=reads)
+                    if alt_reads:
+                        return alt_reads
 
             def screen_recorder(fd):
-                read_some = os.read(fd, 0x400)
-                screenlog.write(read_some)
+                """Log and copy Bytes out to the Screen"""
+
+                reads = os.read(fd, 0x400)
+                screenlog.write(reads)
                 screenlog.flush()
-                return read_some
+
+                return reads
 
             pty.spawn(shargv, master_read=screen_recorder, stdin_read=key_logger)
 
     # compare with 'def read' at https://docs.python.org/3/library/pty.html
 
 
-def take_in(read_some):
-    states = take_in.states
-    state = states[0] if states else None
+def take_in(takes):
+    """Echo slow Control Sequences visibly, before forwarding them"""
 
-    func_by_state = dict(
-        {
-            None: state_none,
-            1: state_1,
-            2: state_2,
-            3: state_3,
-            4: state_4,
-            5: state_5,
-        }
-    )
+    deferrals = take_in.deferrals
+    echoes = take_in.echoes
 
-    func = func_by_state[state]
-    alt_read_some = func(read_some)
+    fd = sys.__stdout__.fileno()
 
-    return alt_read_some
+    # Take one Byte at a time
 
+    forwardables = bytearray()
 
-take_in.states = list()
-take_in.screen_bytes = b""
+    pops = bytearray(takes)
+    while pops:
+        assert bool(echoes) == bool(deferrals), (bool(echoes), bool(deferrals))
 
+        # Defer and echo each Byte of a Control Sequence
 
-def state_none(key_bytes):
-    states = take_in.states
-    if key_bytes == b"\x1B":
-        states[::] = [1]
-        take_in.screen_bytes = b""
-        take_in.screen_bytes += key_bytes
-        sys.stdout.write("⎋")
-        sys.stdout.flush()
-        return b""
-    return key_bytes
+        if deferrals or takes_is_controlling(pops):
+            while pops:
+                (some, more) = takes_split(deferrals)
+                if some:
+                    break
 
+                pop = pops.pop(0)
+                deferrals.append(pop)
 
-def state_1(key_bytes):
-    states = take_in.states
-    if key_bytes == b"[":
-        states[::] = [2]
-        take_in.screen_bytes = b"\x1B["
-        sys.stdout.write("[")
-        sys.stdout.flush()
-        return b""
-    states[::] = list()
-    sys.stdout.write(len(take_in.screen_bytes) * "\b \b")
-    sys.stdout.flush()
-    return key_bytes
+                pop_echoes = take_form_echoes(pop)
+                os.write(fd, pop_echoes.encode())
+                echoes.extend(pop_echoes)
 
+        # Erase the Echoes of the Control Sequence, when more Bytes arrive
 
-def state_2(key_bytes):
-    states = take_in.states
-    if (len(key_bytes) == 1) and (key_bytes in b"0123456789"):
-        states[::] = [3]
-        take_in.screen_bytes += key_bytes
-        sys.stdout.write(key_bytes.decode())
-        sys.stdout.flush()
-        return b""
-    if key_bytes == b"m":
-        states[::] = [5]
-        take_in.screen_bytes += key_bytes
-        sys.stdout.write("m")
-        sys.stdout.flush()
-        return b""
-    states[::] = list()
-    sys.stdout.write(len(take_in.screen_bytes) * "\b \b")
-    sys.stdout.flush()
-    return key_bytes
+        (some, more) = takes_split(deferrals)
+        assert (not some) or (not more), (deferrals, some, more)
+
+        if some:
+            assert takes_is_controlling(some)
+            if pops:
+                erasures = len(echoes) * b"\b \b"
+                echoes.clear()
+                os.write(fd, erasures)
+
+                # Also write or forward the Control Sequence
+
+                deferrals.clear()
+                if not takes_is_forwardable(some):
+                    os.write(fd, some)
+                    continue
+
+                forwardables.extend(some)
+
+        # Forward all the Bytes arriving that don't start with a Control Sequence
+
+        if pops:
+            assert not deferrals, deferrals
+            forwardables.extend(pops)
+            pops.clear()
+
+    # Succeed
+
+    alt_takes = bytes(forwardables)
+
+    return alt_takes
+
+    # todo: echo the Pt of CSI Pt correctly, especially for Chars outside of US-Ascii
 
 
-def state_3(key_bytes):
-    states = take_in.states
-    if (len(key_bytes) == 1) and (key_bytes in b"0123456789"):
-        states[::] = [4]
-        take_in.screen_bytes += key_bytes
-        sys.stdout.write(key_bytes.decode())
-        sys.stdout.flush()
-        return b""
-    if key_bytes == b"m":
-        states[::] = [5]
-        take_in.screen_bytes += key_bytes
-        sys.stdout.write("m")
-        sys.stdout.flush()
-        return b""
-    states[::] = list()
-    sys.stdout.write(len(take_in.screen_bytes) * "\b \b")
-    sys.stdout.flush()
-    return key_bytes
+take_in.deferrals = bytearray()
+take_in.echoes = list()
 
 
-def state_4(key_bytes):
-    states = take_in.states
-    if key_bytes == b"m":
-        states[::] = [5]
-        take_in.screen_bytes += key_bytes
-        sys.stdout.write("m")
-        sys.stdout.flush()
-        return b""
-    states[::] = list()
-    sys.stdout.write(len(take_in.screen_bytes) * "\b \b")
-    sys.stdout.flush()
-    return key_bytes
+def take_form_echoes(take):
+    """Choose Chars to echo in place of Bytes from Keyboard"""
+
+    assert take in range(0x100), take
+
+    esc_echo = "\N{Broken Circle With Northwest Arrow}"  # ⎋
+    control_echo = "\N{Up Arrowhead}"  # ⌃
+
+    if take > 0x80:
+        echo = "\\x{:02X}".format(take)
+    else:
+        if take in range(0x00, 0x20) or (take == 0x7F):
+            echo = control_echo + chr(take ^ 0x40)  # b"\0" as "⌃@", Delete as "⌃?", etc
+            if take == 0x1B:
+                echo = esc_echo  # Esc as "⎋"
+        else:
+            echo = chr(take)  # b" 0@P`p" etc as " 0@P`p" printable US-Ascii
+
+    return echo
 
 
-def state_5(key_bytes):
-    states = take_in.states
-    states[::] = list()
-    sys.stdout.write(len(take_in.screen_bytes) * "\b \b")
-    sys.stdout.write(take_in.screen_bytes.decode())
-    sys.stdout.flush()
-    return key_bytes
+def takes_is_controlling(takes):
+    """Say if Bytes to Screen starts with a Control Sequence"""
+
+    if takes:
+        ord_ = takes[0]
+        if (ord_ in range(0x00, 0x20)) or (ord_ in range(0x7F, 0xA0)):
+            return True
+
+
+def takes_is_forwardable(takes):
+    """Say if some Bytes from Keyboard should flow on into the Python Pty"""
+
+    if takes[:1] != b"\x1B":
+        return True
+
+    if bytes(takes) in CHORDS_BY_TAKES.keys():
+        return True
+
+
+def takes_split(takes):
+    """Split out a Control Sequence starting some Bytes, else before next Sequence"""
+
+    # Take one or more Bytes that don't start a Control Sequence
+
+    starts = bytearray()
+
+    pops = bytearray(takes)
+    while pops:
+        pop = pops.pop(0)
+        controlling = (pop in range(0x00, 0x20)) or (pop in range(0x7F, 0xA0))
+        if controlling:
+            pops.insert(0, pop)
+            break
+        starts.append(pop)
+
+    # Take a single Control Byte
+
+    if not starts:
+        starts = bytearray(takes[:1])
+
+        # Take one Esc Byte and then one more Byte
+
+        if takes[:1] == b"\x1B":
+            starts = bytearray()
+            if takes[1:]:
+                starts = bytearray(takes[:2])
+
+                # Take Esc [ and then indefinitely many of b"0123456789:;<=>?"
+
+                if takes[:2] == b"\x1B[":
+                    starts = bytearray()
+
+                    esc = pops.pop(0)
+                    left_square_bracket = pops.pop(0)
+                    assert esc == 0x1B
+                    assert left_square_bracket == ord("[")
+
+                    csi = bytearray(b"\x1B[")
+                    while pops:
+                        pop = pops.pop(0)
+                        csi.append(pop)
+                        if pop not in range(0x30, 0x40):  # todo: is this CSI Spec?
+                            starts.extend(csi)
+                            break
+
+    some = bytes(starts)
+    more = takes[len(starts) :]
+
+    return (some, more)
+
+
+CHORDS_BY_TAKES = dict()
+
+CHORDS_BY_TAKES[b"\x1Bb"] = "⌥←"
+CHORDS_BY_TAKES[b"\x1Bf"] = "⌥→"
+CHORDS_BY_TAKES[b"\x1B[A"] = "↑"
+CHORDS_BY_TAKES[b"\x1B[B"] = "↓"
+CHORDS_BY_TAKES[b"\x1B[C"] = "→"
+CHORDS_BY_TAKES[b"\x1B[D"] = "←"
+CHORDS_BY_TAKES[b"\x1B[1;2C"] = "⇧→"
+CHORDS_BY_TAKES[b"\x1B[1;2D"] = "⇧←"
 
 
 #
