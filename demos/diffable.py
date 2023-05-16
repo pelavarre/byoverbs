@@ -188,7 +188,7 @@ def sys_exit_if_testdoc(epilog):
 
     lines = epilog.splitlines()
     indices = list(_ for _ in range(len(lines)) if lines[_])
-    indices = list(_ for _ in range(len(lines)) if not lines[_].startswith(" "))
+    indices = list(_ for _ in indices if not lines[_].startswith(" "))
     testdoc = "\n".join(lines[indices[-1] + 1 :])
     testdoc = textwrap.dedent(testdoc)
 

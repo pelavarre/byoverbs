@@ -45,7 +45,10 @@ import struct
 import sys
 import termios
 import textwrap
+import time
 import tty
+
+_ = time
 
 
 #
@@ -499,7 +502,7 @@ class ViTerminal:
             line = ct.readline()
             splits.extend(line.split())
 
-    def splits_splitbot(self, splits):
+    def splits_splitbot(self, splits):  # to do: no longer correct-at-a-glance
         """Split out the Bot of the first Key Chords"""
 
         bot_by_chars = self.bot_by_chars
@@ -521,7 +524,7 @@ class ViTerminal:
         elif len(matches) == 1:
             key = matches[-1]
             bot = bot_by_chars[key]
-            keys = [key]
+            keys = key.split()
         else:
             bot = None
             keys = list()
@@ -553,6 +556,8 @@ class CharTerminal:
     def __enter__(self):
         """Start intercepting Mouse Strokes and Paste Strokes"""
 
+        args = main.args
+
         bt = self.bt
 
         assert BracketedPasteEnter == b"\x1B[?2004h"
@@ -561,14 +566,17 @@ class CharTerminal:
 
         bt.__enter__()
 
-        bt.write(b"\x1B[?1000h")
-        bt.write(b"\x1B[?1006h")
-        bt.write(b"\x1B[?2004h")
+        if not args.quiet:
+            bt.write(b"\x1B[?1000h")
+            bt.write(b"\x1B[?1006h")
+            bt.write(b"\x1B[?2004h")
 
         return self
 
     def __exit__(self, *exc_info):
         """Stop intercepting Mouse Strokes and Paste Strokes"""
+
+        args = main.args
 
         bt = self.bt
 
@@ -578,16 +586,16 @@ class CharTerminal:
 
         assert LowerLeftForm == b"\x1B[{y}H"  # y=1
 
-        if bt.__exit__():
-            return True
-
         size = shutil.get_terminal_size()
 
-        bt.write(b"\x1B[?2004l")
-        bt.write(b"\x1B[?1006l")
-        bt.write(b"\x1B[?1000l")
+        if not args.quiet:
+            bt.write(b"\x1B[?2004l")
+            bt.write(b"\x1B[?1006l")
+            bt.write(b"\x1B[?1000l")
 
         bt.write("\x1B[{y}H".format(y=size.lines).encode())
+
+        bt.__exit__()
 
     def breakpoint(self):
         """Exit, breakpoint, and try to enter again"""
@@ -1292,7 +1300,7 @@ def sys_exit_if_testdoc(epilog):
 
     lines = epilog.splitlines()
     indices = list(_ for _ in range(len(lines)) if lines[_])
-    indices = list(_ for _ in range(len(lines)) if not lines[_].startswith(" "))
+    indices = list(_ for _ in indices if not lines[_].startswith(" "))
     testdoc = "\n".join(lines[indices[-1] + 1 :])
     testdoc = textwrap.dedent(testdoc)
 
