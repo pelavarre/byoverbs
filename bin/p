@@ -41,6 +41,8 @@ LAZY_IMPORT_NAMES = """
     select shlex shutil signal stat string subprocess sys
     termios textwrap time traceback tty unicodedata urllib xml
 
+    requests
+
 """.split()
 
 
