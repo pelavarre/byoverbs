@@ -1,5 +1,14 @@
 _ = """
 
+(
+FF=bin/git.py
+for F in $FF; do
+    git blame --show-email $F |cut -d'(' -f2- |cut -d')' -f1 |cut -d'-' -f1-2 \
+        |awk '{print $NF" "$0}' |awk '{$NF="";print}'
+    done |sort -r |uniq -c |head
+)
+
+
     "lgg": "git log --oneline --no-decorate -G {}",  # touches, aka Grep Source
 
     "lgs": "git log --oneline --no-decorate -S {}",  # changes, aka Pickaxe
