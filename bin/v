@@ -1,2 +1,9 @@
-set -xe
-vim "$@"
+if [[ $# == 0 ]]; then
+    set -xe
+    pbpaste >v.cv
+    vim v.cv
+    cat v.cv |pbcopy
+else
+    set -xe
+    vim "$@"
+fi

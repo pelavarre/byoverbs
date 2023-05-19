@@ -1,4 +1,4 @@
-if [ -t 0 ]; then  # if sys.stdin.isatty():
+if [ -t 0 ]; then
     set -xe
     pbpaste
 else
