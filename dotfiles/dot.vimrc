@@ -18,16 +18,29 @@
 :set background=dark
 :set background=light
 :syntax off
-:syntax on  # such as for :set syntax=.bash
+:syntax on  " such as for ':set syntax=.bash'
 
 
-" Configure the other basics
+" Don't redefine the conventional Mouse Clicks
+
+:set mouse=a
+:set mouse=  " Option+LeftClick moves Cursor
+
+
+" Say to more show what's going on
+" Choose ':set showcmd' and ':set ruler' explicitly, apart from ':set ttyfast'
+" Shrug off macOS Vim leaving 'ttyfast' out of ':set'
+
+:set cursorline
+:set nocursorline
+:autocmd InsertEnter * set cul  " styles the Cursor Line to show Insert/ Replace/ not
+:autocmd InsertLeave * set nocul
 
 :set noshowmode
 :set showmode  " says '-- INSERT --' in bottom line while you remain in Insert Mode
 
 :set noshowcmd
-:set showcmd  " shows the Key pressed with Option/Alt, while waiting for next Key
+:set showcmd  " shows the first few Keys pressed while waiting for more
 
 :set noruler
 :set ruler  " shows the Line & Column Numbers of the Cursor
@@ -38,23 +51,23 @@
 
 :set noignorecase
 :set invignorecase
-:set ignorecase
+:set ignorecase  " ignores Upper/ Lower Case in Searches
 
 :set wrap
-:set nowrap
+:set nowrap  " secretly hides any text that exists beyond the right margin
 
 :set nohlsearch
-:set hlsearch
+:set hlsearch  " lights up all matches till you :noh, like with \ Esc
 
 :highlight RedLight ctermbg=red
-:call matchadd('RedLight', '\s\+$')
+:call matchadd('RedLight', '\s\+$')  " lights up Tabs and Spaces at end-of-line
 
 :startinsert
-:stopinsert  " start in Normal View Mode, not in Insert Mode
+:stopinsert  " starts in Normal View Mode, not in Insert Mode
 
 
 "
-" Add keys, but duck around to avoid redefining keys
+" Define more Key Chord Sequences without redefining conventional Sequences
 "
 " N-NoRe-Map = Map only for Normal (View) Mode and don't Recurse through other maps
 "
@@ -75,11 +88,6 @@
 " \ ⇧I  => Toggle ignoring case in searches, but depends on :set nosmartcase
 :nnoremap <BSlash>i :set invignorecase<return>
 
-" \ M  => Mouse moves cursor
-" \ ⇧M  => Mouse selects zigzags of chars to copy-paste
-:nnoremap <BSlash>m :set mouse=a<return>
-:nnoremap <BSlash>M :set mouse=<return>
-
 " \ N  => Toggle line numbers
 :nnoremap <BSlash>n :set invnumber<return>
 
@@ -92,8 +100,6 @@
     call cursor(with_line, with_col)
 endfun
 
-" ⇧Z E  => Reload, if no changes waiting for save
-:nnoremap Ze :e<return>
 " ⇧Z ⇧E  => Discard changes and reload
 :nnoremap ZE :e!<return>
 " ⇧Z ⇧Q => Quit Without Saving

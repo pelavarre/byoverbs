@@ -51,5 +51,8 @@ for index, arg in enumerate(sys.argv):
 print(len(sys.argv))
 
 
+# todo:  echo --end='\n' {1,2}.{3,4,5}
+
+
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/echo.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

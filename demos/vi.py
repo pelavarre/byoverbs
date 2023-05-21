@@ -1319,6 +1319,18 @@ def sys_exit_if_testdoc(epilog):
 # todo: take Vi 1234567890 Key Chords as digits of repeat
 # todo: take changes from Vi ⇧C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X  a c d i o r s x
 # todo: repeat changes at Vi .
+# todo: walk something like ⌃O and ⌃I
+# todo: show that ⇧H means some such as ⇧H 0 23| while ^ unknown
+
+# % echo 'bind -p' |bash -i 2>&1 |grep -i 'C-X[^:]*E'
+# "\C-xe": call-last-kbd-macro
+# "\C-xE": do-lowercase-version
+# "\C-x\C-e": edit-and-execute-command
+# %
+# % zsh -c bindkey |grep -i '\^X[^"]*[EU]'
+# "^X^U" undo
+# "^Xu" undo
+# %
 
 
 #

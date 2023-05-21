@@ -290,6 +290,33 @@ Cal Py for 2022-10-19, 2022-11-07 looked wrong to me
     cal.py 2022-10-19  # should work, and offer min equivalent 'cal' lines
     cal.py 20221019  # should work, and offer min equivalent 'cal' lines
 
+## Still more
+
+demos/vi.py --  # X x ZZ etc
+screenlog.0, typescript are both precedents - replaced, not appended
+printf '\e[33m''yellow''\e[m\n'; printf '\e[38;5;130m''orange''\e[m\n'
+
+>>> now
+could expand itself to
+>>> # now
+>>> now = dt.datetime.now()
+>>> print(now)
+>>> print(repr(now))
+
+likewise 'fromtimestamp(1685142348)' could mean the 'dt.datetime.' of that
+
+don't fix it by default, make it easy to fix by hand as needed
+    such as 'stty -ixon' for turning Control+S undo of Control+R on
+
+do make infinite Sh Input history
+    how about the Redis Query syntax
+        for the extras of Stamp, Pwd, ReturnCode etc
+
+do make a Vi Color mode that squeezes the punctuation to nothing
+
+much too much is wildly way too difficult in
+    Sh Bash Vi Emacs Less Watch Script Screen TMux
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md

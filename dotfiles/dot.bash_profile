@@ -1,11 +1,11 @@
-# ~/.zprofile
+# ~/.bash_profile
 
 
 # Load Ssh Keys and grow Sh Path
 
 ssh-add ~/.ssh/*id_rsa 2>/dev/null
 
-export PATH=$PATH:$HOME/bin
+export PATH=$PATH:$HOME/bin  # Ubuntu often does this for you
 
 
 # Name the next Pwd:  -, .., ~
@@ -20,19 +20,20 @@ alias ~='echo + cd "~" >&2 && cd ~ && (dirs -p |head -1)'
 
 # Preview ! History Expansion in Zsh Input Lines
 
-setopt histverify  # a la Bash:  shopt -s histverify
+shopt -s histverify  # a la Zsh:  setopt histverify
 
 : stty -ixon  && : 'define ⌃S to undo ⌃R, not XOff'  # history-incremental-search'es
 
 
 # Keep copies of the Sh Input lines indefinitely, in the order given
 
-type -f precmd >/dev/null  # a la Bash $PROMPT_COMMAND
-if [[ $? != 0 ]]; then
-    function precmd () {
-        fc -ln -1 >>~/.stdin.log  # no Pwd, no Date/Time Stamp, no Exit Code
-    }
-fi
+function precmd () {  # a la Zsh 'function precmd'
+    local xs=$?
+    HISTTIMEFORMAT= history 1 |cut -c8- >>~/.stdin.log  # no Pwd, no Date/Time, no Exit
+    return $xs
+}
+
+PROMPT_COMMAND="precmd;$PROMPT_COMMAND"
 
 
 # Autocorrect some inputs
@@ -69,9 +70,9 @@ function qol () { (source $(dirname $(which q))/qol "$@"); }
 #
 
 
-# Mix in ZProfile Extensions like for Cd, Ssh, etc
+# Mix in Bash Profile Extensions like for Cd, Ssh, etc
 
-if [[ -e ~/.ssh/zprofile ]]; then source ~/.ssh/zprofile; fi
+if [[ -e ~/.ssh/bash_profile ]]; then source ~/.ssh/bash_profile; fi
 
 
 # Prompt how to Scp
@@ -80,6 +81,8 @@ date
 echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 echo
 
+source ~/.bashrc
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.zprofile
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.bash_profile
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
