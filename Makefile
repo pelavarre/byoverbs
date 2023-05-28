@@ -8,19 +8,20 @@
 
 # Show examples and exit
 #
-#   cat Makefile |expand |grep '^[^ :]*:' |grep -v '^[.]PHONY:' |cut -d: -f1 |sort
-#   # don't help with:  black, default, flake8, python3, selftest
+#   cat Makefile |expand |grep '^[^ :]*:' |grep -v '^[.]PHONY:' |cut -d: -f1
+#   # don't help with:  default, black, flake8, shellcheck, selftest, p.py
 #
 
 default:
 	@echo
 	@echo 'make  # shows examples and exits'
 	@echo 'make help  # shows these help lines and exits'
+	@echo
 	@echo 'make push  # restyles & tests the source, then tells me to push it'
+	@echo "make pull  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo 'make bin  # puts bin dir files under test at home bin dir'
 	@echo 'make dotfiles  # updates local dotfiles dir from home dot files'
-	@echo "make pull  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo 'open https://twitter.com/intent/tweet?text=.@PELaVarre'
 	@echo
@@ -39,11 +40,12 @@ help:
 	@echo
 	@echo '  make  # shows these examples and exits'
 	@echo '  make help  # shows these help lines and exits'
+	@echo
 	@echo '  make push  # restyles & tests the source, then tells me to push it'
+	@echo "  make pull  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo '  make bin  # puts bin dir files under test at home bin dir'
 	@echo '  make dotfiles  # updates local dotfiles dir from home dot files'
-	@echo "  make pull  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo '  open https://twitter.com/intent/tweet?text=.@PELaVarre'
 	@echo
@@ -101,20 +103,21 @@ shellcheck:
 	bin/shellcheck.bash
 
 
-# Python M Pdb vs Syntax, Black to Style, Flake8 vs Typos
+#
+# Test the source
+#
 
-py=p.py
 
-python3:  # example usage:  make python3 py=bin/byotools.py
+selftest:
 	:
-	echo |python3 -m pdb $(py)
-	:
-	black $(py)
-	:
-	flake8 $(py)
-	:
-	:
-	python3 $(py)
+
+
+#
+# Create a small Py File
+#
+
+p.py:
+	printf 'def main():\n    print("Hello, World!")\n\n\nmain()\n' >p.py
 
 
 # Put Bin Dir Files under test at Home Bin Dir
@@ -136,15 +139,6 @@ dotfiles:
 	cp -p ~/.zprofile dotfiles/dot.zprofile
 	cp -p ~/.zshrc dotfiles/dot.zshrc
 	git diff || :
-
-
-#
-# Test the source
-#
-
-
-selftest:
-	:
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/Makefile
