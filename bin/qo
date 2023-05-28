@@ -20,6 +20,6 @@ else
 
     done
 
-    echo '+ git grep -i' "${parms[@]}" -- "$OLDPWD" >&2
-    git grep -i "${parms[@]}" -- "$OLDPWD"
+    echo '+ git grep -i' "${parms[@]}" -- "$ALTPWDS_0" "$ALTPWDS_1" >&2
+    git grep -i "${parms[@]}" -- "$ALTPWDS_0" "$ALTPWDS_1"
 fi

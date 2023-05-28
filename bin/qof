@@ -1,7 +1,7 @@
 if [[ $# == 0 ]]; then
-    echo "+ git ls-files $OLDPWD" >&2
-    git ls-files "$OLDPWD"
+    echo "+ git ls-files" "${ALTPWDS[@]}" >&2
+    git ls-files "$ALTPWDS_0" "$ALTPWDS_1"
 else
-    echo "+ git ls-files $OLDPWD |grep -i" "$@" >&2
-    git ls-files "$OLDPWD" |grep -i "$@"
+    echo "+ git ls-files" "$ALTPWDS_0" "$ALTPWDS_1" "|grep -i" "$@" >&2
+    git ls-files "$ALTPWDS_0" "$ALTPWDS_1" |grep -i "$@"
 fi

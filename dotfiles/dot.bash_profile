@@ -25,23 +25,33 @@ shopt -s histverify  # a la Zsh:  setopt histverify
 : stty -ixon  && : 'define ⌃S to undo ⌃R, not XOff'  # history-incremental-search'es
 
 
-# Keep copies of the Sh Input lines indefinitely, in the order given
-
-function precmd () {  # a la Zsh 'function precmd'
-    local xs=$?
-    HISTTIMEFORMAT= history 1 |cut -c8- >>~/.stdin.log  # no Pwd, no Date/Time, no Exit
-    return $xs
-}
-
-PROMPT_COMMAND="precmd;$PROMPT_COMMAND"
-
-
 # Autocorrect some inputs
 # Work inside the Terminal a la macOS > Preferences > Keyboard > Replace works outside
 
 function :/ { echo ':/  ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |tee >(pbcopy); }
 function :scf () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
+
+
+# Adopt the l, la, ll convention from Ubuntu
+
+function l () {
+    echo "+ alias l='ls -CF'" >&2
+    alias l='ls -CF'
+    return 1
+}
+
+function la () {
+    echo "+ alias la='ls -A'" >&2
+    alias la='ls -A'
+    return 1
+}
+
+function ll () {
+    echo "+ alias ll='ls -alF'" >&2
+    alias ll='ls -alF'
+    return 1
+}
 
 
 # Sandbox Python Extensions
@@ -54,15 +64,9 @@ function pips () {
 
 # Work the deep magic inside the Sh Process that Git SubProcesses can't reach
 
+function bh () { source $(dirname $(which q))/bh.source "$@"; }
 function qcd () { source $(dirname $(which q))/qcd.source "$@"; }
 function qp () { source $(dirname $(which q))/qp.source "$@"; }
-function zh () { source $(dirname $(which q))/zh.source "$@"; }
-
-function qo () { (source $(dirname $(which q))/qo "$@"); }
-function qof () { (source $(dirname $(which q))/qof "$@"); }
-function qoi () { (source $(dirname $(which q))/qoi "$@"); }
-function qoil () { (source $(dirname $(which q))/qoil "$@"); }
-function qol () { (source $(dirname $(which q))/qol "$@"); }
 
 
 #
@@ -70,7 +74,7 @@ function qol () { (source $(dirname $(which q))/qol "$@"); }
 #
 
 
-# Mix in Bash Profile Extensions like for Cd, Ssh, etc
+# Mix in Bash_Profile Extensions like for Sh Path, PushD, AltPwdS, & Ssh Aliases
 
 if [[ -e ~/.ssh/bash_profile ]]; then source ~/.ssh/bash_profile; fi
 

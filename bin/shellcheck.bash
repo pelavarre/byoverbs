@@ -31,6 +31,8 @@ cd bin/ || exit 1
 for SHFILE in *; do
     if [[ "$SHFILE" == "__pycache__" ]]; then
         :
+    elif [[ "$SHFILE" == "sh" ]]; then
+        :
     elif [[ "$SHFILE" == "zprofile" ]]; then
         :
     elif [[ "$SHFILE" =~ ^[^.]*$ ]]; then

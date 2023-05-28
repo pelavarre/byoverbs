@@ -1,9 +1,9 @@
 if [[ $# == 0 ]]; then
     set -xe
     pbpaste >v.cv
-    vim v.cv
-    cat v.cv |pbcopy
+    TERM= vim v.cv
+    <v.cv pbcopy
 else
     set -xe
-    vim "$@"
+    TERM= vim "$@"
 fi

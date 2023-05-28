@@ -25,22 +25,33 @@ setopt histverify  # a la Bash:  shopt -s histverify
 : stty -ixon  && : 'define ⌃S to undo ⌃R, not XOff'  # history-incremental-search'es
 
 
-# Keep copies of the Sh Input lines indefinitely, in the order given
-
-type -f precmd >/dev/null  # a la Bash $PROMPT_COMMAND
-if [[ $? != 0 ]]; then
-    function precmd () {
-        fc -ln -1 >>~/.stdin.log  # no Pwd, no Date/Time Stamp, no Exit Code
-    }
-fi
-
-
 # Autocorrect some inputs
 # Work inside the Terminal a la macOS > Preferences > Keyboard > Replace works outside
 
 function :/ { echo ':/  ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |tee >(pbcopy); }
 function :scf () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
+
+
+# Adopt the l, la, ll convention from Ubuntu
+
+function l () {
+    echo "+ alias l='ls -CF'" >&2
+    alias l='ls -CF'
+    return 1
+}
+
+function la () {
+    echo "+ alias la='ls -A'" >&2
+    alias la='ls -A'
+    return 1
+}
+
+function ll () {
+    echo "+ alias ll='ls -alF'" >&2
+    alias ll='ls -alF'
+    return 1
+}
 
 
 # Sandbox Python Extensions
@@ -57,19 +68,13 @@ function qcd () { source $(dirname $(which q))/qcd.source "$@"; }
 function qp () { source $(dirname $(which q))/qp.source "$@"; }
 function zh () { source $(dirname $(which q))/zh.source "$@"; }
 
-function qo () { (source $(dirname $(which q))/qo "$@"); }
-function qof () { (source $(dirname $(which q))/qof "$@"); }
-function qoi () { (source $(dirname $(which q))/qoi "$@"); }
-function qoil () { (source $(dirname $(which q))/qoil "$@"); }
-function qol () { (source $(dirname $(which q))/qol "$@"); }
-
 
 #
 # Wrap up
 #
 
 
-# Mix in ZProfile Extensions like for Cd, Ssh, etc
+# Mix in ZProfile Extensions like for Sh Path, PushD, AltPwdS, & Ssh Aliases
 
 if [[ -e ~/.ssh/zprofile ]]; then source ~/.ssh/zprofile; fi
 
@@ -81,5 +86,5 @@ echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 echo
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.zprofile
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot-zprofile
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
