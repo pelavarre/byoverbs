@@ -1,9 +1,15 @@
+if [[ "$STY" ]]; then
+    if "$(uname)" == "Darwin"; then
+        unset TERM
+    fi
+fi
+
 if [[ $# == 0 ]]; then
     set -xe
     pbpaste >v.cv
-    TERM= vim v.cv
+    vim v.cv
     <v.cv pbcopy
 else
     set -xe
-    TERM= vim "$@"
+    vim "$@"
 fi
