@@ -313,6 +313,8 @@ do make infinite Sh Input history
         for the extras of Stamp, Pwd, ReturnCode etc
 
 do make a Vi Color mode that squeezes the punctuation to nothing
+    bold could mean coined
+    bold could also mean break/ continue/ return
 
 much too much is wildly way too difficult in
     Sh Bash Vi Emacs Less Watch Script Screen TMux
