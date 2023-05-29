@@ -9,7 +9,7 @@ options:
   -h, --help  show this help message and exit
 
 quirks:
-  quits when told ⌃C ⇧Z ⇧Q, or ⌃C : Q ! Return, or ⌃Q
+  quits when told ⌃C ⇧Z ⇧Q, or ⌃C : Q ! Return, or ⌃Q ⇧N Return
 
 keystrokes:
   ⌃C ⌃G ⌃M ⌃N ⌃P Return Space
@@ -25,10 +25,10 @@ docs:
     /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
 
 large inputs:
-  git show && ./demos/vi2.py
-  make p.py && vi +':set t_ti= t_te=' p.py && ./demos/vi2.py
-  git grep --color=always def |less -FIRX && ./demos/vi2.py
-  cat ./demos/vi2.py |dd bs=1 count=10123 |tr '[ -~]' '.' |pbcopy && ./demos/vi2.py
+  git show && ./demos/vi2.py --
+  make p.py && vi +':set t_ti= t_te=' p.py && ./demos/vi2.py --
+  git grep --color=always def |less -FIRX && ./demos/vi2.py --
+  cat ./demos/vi2.py |dd bs=1 count=10123 |tr '[ -~]' '.' |pbcopy && ./demos/vi2.py --
 
 examples:
   ./demos/vi2.py --
@@ -71,60 +71,9 @@ def main():
     args = parse_vi2_py_args()
     main.args = args
 
-    # Reply to each Keystroke
-
-    t0 = dt.datetime.now()
-    t1 = t0
-    clocking = False
-
     stdio = sys.__stdout__  # '__stdout__' as per 'shutil.get_terminal_size'
-    with ByteTerminal(stdio) as bt:
-        bt.print("Press ⌃C to stop logging Millisecond Delays and Input Bytes")
-
-        line = None
-        while True:
-            while True:
-                read_twice = bt.read_twice(0)
-                if not read_twice:
-                    break
-
-                old_line = line
-                line = read_twice
-
-                t1 = dt.datetime.now()
-                t1t0 = t1 - t0
-                t0 = t1
-
-                # Print the Input Line
-
-                if clocking:
-                    clocking = False
-                    bt.print()
-
-                ms = int(t1t0.total_seconds() * 1000)
-                bt.print("{}, {}".format(ms, line))
-
-                if line == control(b"C"):
-                    if old_line == Esc:  # takes Esc ⌃C without quitting
-                        continue
-                    break
-
-            if line == control(b"C"):
-                break
-
-            # Print a Clock between Input Lines
-
-            t2 = dt.datetime.now()
-            t2t1 = t2 - t1
-            if t2t1 >= dt.timedelta(seconds=3):
-                t1 += dt.timedelta(seconds=1)
-                hms = t2.strftime("%H:%M:%S")
-
-                if not clocking:
-                    bt.print()
-
-                bt.write(b"\r" + hms.encode())
-                clocking = True
+    with ViTerminal(stdio) as vt:
+        vt.run_till_quit()
 
 
 def parse_vi2_py_args():
@@ -134,6 +83,194 @@ def parse_vi2_py_args():
     args = parser_parse_args(parser)  # prints help and exits zero, when asked
 
     return args
+
+
+#
+# TODO
+#
+
+
+class ViTerminal:
+    r"""TODO"""
+
+    def __init__(self, stdio):
+        bt = ByteTerminal(stdio)
+        self.bt = bt
+
+    def __enter__(self):
+        bt = self.bt
+        bt.__enter__()
+        return self
+
+    def __exit__(self, *exc_info):
+        bt = self.bt
+        bt.__exit__()
+        return self
+
+    def run_till_quit(self):
+        bt = self.bt
+
+        line = None
+        prompted = None
+        while True:
+            if not prompted:
+                prompted = True
+                bt.write(b"\x1B[K")
+                bt.print("Press ⇧Z⇧Q to quit, or ⇧Z⇧S, or ⇧Z⇧K, or ⌃C")
+
+            old = line
+            line = bt.read_twice()
+
+            if (old, line) == (b"Z", b"K"):
+                bt.print("⇧K")
+                prompted = False
+
+                bt.print("Press ⌃C to stop logging Millisecond Delays and Input Bytes")
+                bt_try_logging(bt)
+                bt.print()  # todo: prompt to Quit at each Screen of Input?
+
+                continue
+
+            if (old, line) == (b"Z", b"Q"):
+                bt.print("⇧Q")
+                break
+
+            if (old, line) == (b"Z", b"S"):
+                bt.print("⇧S")
+                prompted = False
+
+                bt.print("Press ⌃C to stop looping Keyboard back into Screen")
+                bt_try_loopback(bt)
+
+                size = os.get_terminal_size()
+                if size.lines > 2:
+                    y = size.lines - 2
+                    bt.write("\x1B[{y}H".format(y=y).encode())
+
+                bt.print()
+
+                continue
+
+            if old == b"Z":
+                bt.print(line)
+                bt.print("\a")
+                line = None
+
+                continue
+
+            if line == b"Z":
+                bt.print("⇧Z", end="")
+                bt.flush()
+
+                continue
+
+            if line == control(b"C"):
+                bt.print("⌃C")
+
+                continue
+
+            bt.print(line)
+            bt.print("\a")
+
+
+#
+# Loopback Keyboard into Screen
+#
+
+
+def bt_try_loopback(bt):
+    fd = bt.fd
+
+    esc_glyph = "\N{Broken Circle With Northwest Arrow}"
+
+    while True:
+        line = bt.read_twice(timeout=0)
+        if line is None:
+            continue
+
+        if line == b"\x1B":
+            os.write(fd, esc_glyph.encode())
+        else:
+            os.write(fd, line)
+
+        if line == control(b"C"):
+            break
+
+        # todo: predict the cost of this loop spinning tightly to poll frequently
+
+
+#
+# Test the ByteTerminal Class
+#
+
+
+def bt_try_logging(bt):
+    """todo"""
+
+    # Start up
+
+    line = None
+    clocking = False
+
+    t0 = dt.datetime.now()
+    t1 = t0
+
+    # Timestamp each Keystroke arriving whole,
+    # and timestamp each piece arriving separately, before the whole
+
+    while True:
+        while True:
+            read_twice = bt.read_twice(timeout=0)
+            if not read_twice:
+                break
+
+            old_line = line
+            line = read_twice
+
+            t1 = dt.datetime.now()
+            t1t0 = t1 - t0
+            t0 = t1
+
+            # Close the Clock if open
+
+            if clocking:
+                clocking = False
+                bt.print()
+
+            # Log the Keystroke
+
+            ms = int(t1t0.total_seconds() * 1000)
+            bt.print("{}, {}".format(ms, line))
+
+            # Quit at ⌃C, but not at Esc ⌃C  # todo: and not at ⌃C part of a Whole
+
+            if line == control(b"C"):
+                if old_line == Esc:  # takes Esc ⌃C without quitting
+                    continue
+                break
+
+        if line == control(b"C"):
+            break
+
+        # Print a Clock between Input Lines, like 3s after the last Print
+
+        t2 = dt.datetime.now()
+        t2t1 = t2 - t1
+        if t2t1 >= dt.timedelta(seconds=3):
+            t1 += dt.timedelta(seconds=1)
+            hms = t2.strftime("%H:%M:%S")
+
+            # Open the Clock if closed
+
+            if not clocking:
+                bt.print()
+
+            # Refresh the Clock
+
+            bt.write(b"\r" + hms.encode())
+            clocking = True
+
+        # todo: predict the cost of this loop spinning tightly to poll frequently
 
 
 #
@@ -212,7 +349,12 @@ class ByteTerminal:
 
         os.write(fd, line)
 
-    def read_twice(self, timeout):
+    def flush(self):
+        """Flush the 'def print' Buffer"""
+
+        sys.stdout.flush()
+
+    def read_twice(self, timeout=None):
         """Read each of the next whole Sequence, then the Sequence, else zero Bytes"""
 
         holds = self.holds
@@ -272,7 +414,7 @@ class ByteTerminal:
 
         return some
 
-    def kbhit(self, timeout):  # 'timeout' in seconds
+    def kbhit(self, timeout=None):  # 'timeout' in seconds
         """Wait for a whole Byte Sequence, else time out, but say if found"""
 
         fd = self.fd
@@ -293,7 +435,9 @@ class ByteTerminal:
             t1 = dt.datetime.now()
             t1t0 = (t1 - t0).total_seconds()
             if (not timeout) or (t1t0 < timeout):
-                alt_timeout = (timeout - t1t0) if timeout else 0
+                alt_timeout = None
+                if timeout is not None:
+                    alt_timeout = (timeout - t1t0) if timeout else 0
 
                 (rlist_, _, _) = select.select(rlist, wlist, xlist, alt_timeout)
                 if rlist_:
@@ -637,7 +781,7 @@ def sys_exit_if_testdoc(epilog):
 #
 
 
-# FIXME
+# todo: copy in dreams from:  demos/vi1.py, futures.md, etc
 
 
 #
