@@ -323,6 +323,8 @@ def shlex_quote_if(chars):
 
     return shchars
 
+    # todo: solve shlex_quote_if(chars="don't")
+
 
 #
 # Add some Def's to Type Str

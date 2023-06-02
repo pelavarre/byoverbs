@@ -1164,6 +1164,8 @@ Esc Esc should quit as well as ⌃C
 echoed as digits
 then as ⎋ [ digits ; digits ;
 
+less pain here from tides forcing auto-wrapped searches and auto-cancelled searches
+
 """
 
 
