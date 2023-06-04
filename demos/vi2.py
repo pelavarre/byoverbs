@@ -165,7 +165,8 @@ class ViTerminal:
                 prompted = False
                 self.bt_print_if("Press ⌃C to stop looping Keyboard into Screen")
 
-                ct_try_loopback(ct)
+                cst = ChordsScreenTest(ct)
+                cst.run_till_quit()
 
                 size = os.get_terminal_size()
                 if size.lines > 2:
@@ -212,39 +213,100 @@ class ViTerminal:
 
 
 #
+# Name Screen Output Bytes and Keyboard Input Bytes
+#
+
+
+CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP) of (Y, X)
+
+DSR = b"\x1B[6n"  # Device Status Report (DSR) call for CPR
+
+CprPatternYX = rb"\x1B[\\[]([0-9]+);([0-9]+)R"  # Cursor Position Report (CPR) of (Y, X)
+
+
+#
 # Loopback Keyboard Chords into the Screen
 #
 
 
-def ct_try_loopback(ct):
+class ChordsScreenTest:
     """Loopback Keyboard Chords into the Screen"""
 
-    bt = ct.bt
+    def __init__(self, ct):
+        self.ct = ct
 
-    esc_glyph = "\N{Broken Circle With Northwest Arrow}"
+        bt = ct.bt
 
-    while True:
-        read = ct.read()
-        if read is None:
-            continue
+        self.bt = bt
 
-        if read == b"\x1B":
-            if not main.args.quiet:
-                bt.write(esc_glyph.encode())
-        elif isinstance(read, bytes):
-            if len(read) != 1:
-                bt.write(read)
+    def run_till_quit(self):
+        """Loopback Keyboard Chords into the Screen"""
+
+        bt = self.bt
+        ct = self.ct
+
+        assert DSR == b"\x1B[6n"
+        assert CprPatternYX == rb"\x1B[\\[]([0-9]+);([0-9]+)R"
+
+        writes = bytearray()
+        yx_by_frame = 2 * [None]
+
+        # Read Bytes|Str
+
+        frame = None
+        while True:
+            read = ct.read()
+
+            # Warp the Cursor to the Frame of Bytes|Str
+
+            old_frame = frame
+            frame = int(isinstance(read, bytes))
+
+            if old_frame != frame:
+                yx = yx_by_frame[frame]
+                if yx is not None:
+                    cup = CUP_Y_X.format(*yx)
+                    cup = cup.encode()
+                    bt.write(cup)
+
+            # Capture and trace the Bytes, else write the Bytes in place of Str
+
+            if isinstance(read, bytes):
+                writes.extend(read)
+                rep = bytes(writes)
+                rep = repr(rep).encode()
+                bt.write(b"\r" + b"\x1B[K" + rep)
             else:
-                if not main.args.quiet:
-                    bt.write(read)
-        else:
-            line = chords_to_bytes(chords=read)
-            bt.write(line)
+                bt.write(writes)
+                writes.clear()
 
-        bt.flush()
+                # Quit after Control+C
 
-        if read == (Control + "C"):
-            break
+                if read == (Control + "C"):
+                    break
+
+            # Find the Cursor
+
+            bt.write(DSR)
+
+            cpr = bt.read()
+            m = re.match(rb"^" + CprPatternYX + rb"$", string=cpr)
+
+            (y, x) = (m.group(1), m.group(2))
+            (y, x) = (y.decode(), x.decode())
+            yx_by_frame[frame] = (y, x)
+
+            # Warp the Cursor to the Frame of Str, if need be
+
+            old_frame = frame
+            frame = int(isinstance("", bytes))
+
+            if old_frame != frame:
+                yx = yx_by_frame[frame]
+                if yx is not None:
+                    cup = CUP_Y_X.format(*yx)
+                    cup = cup.encode()
+                    bt.write(cup)
 
 
 #
@@ -258,9 +320,10 @@ class ChordsKeyboardTest:
     def __init__(self, ct):
         self.ct = ct
 
+        bt = ct.bt
         t0 = dt.datetime.now()
 
-        self.bt = ct.bt
+        self.bt = bt
         self.t0 = t0
         self.t1 = t0
         self.old_ms = None
@@ -273,15 +336,15 @@ class ChordsKeyboardTest:
 
         while True:
             if ct.kbhit(timeout=0):
-                line = self.log_kbhits()
-                if line == (Control + "C"):
+                read = self.read_verbosely()
+                if read == (Control + "C"):
                     break
 
             self.log_clock()
 
-            self.sleep_till_kbhit_or_clock()
+            self.sleep_till()
 
-    def log_kbhits(self):
+    def read_verbosely(self):
         """Timestamp Chars from the Terminal, and the Bytes inside them"""
 
         bt = self.bt
@@ -289,7 +352,7 @@ class ChordsKeyboardTest:
 
         # Fetch one Byte or some Words of Chars
 
-        line = ct.read()
+        read = ct.read()
 
         # Timestamp
 
@@ -307,17 +370,17 @@ class ChordsKeyboardTest:
 
         ms = int(t1t0.total_seconds() * 1000)
         if not ms:
-            bt.print("    {}, {!r}".format(ms, line))
+            bt.print("    {}, {!r}".format(ms, read))
         else:
             if self.old_ms == 0:
                 bt.print()
-            bt.print("{}, {!r}".format(ms, line))
+            bt.print("{}, {!r}".format(ms, read))
 
         self.old_ms = ms
 
         # Succeed
 
-        return line
+        return read
 
     def log_clock(self):
         """Timestamp no Chars and no Bytes from the Terminal"""
@@ -342,7 +405,7 @@ class ChordsKeyboardTest:
             hms = t2.strftime("%H:%M:%S")
             bt.write(b"\r" + hms.encode())
 
-    def sleep_till_kbhit_or_clock(self):
+    def sleep_till(self):
         """Yield Cpu while no Keyboard Input"""
 
         ct = self.ct
@@ -896,7 +959,7 @@ def bytes_take_esc_sequence(bytes_):
 
     assert bytes_.startswith(CSI), bytes_
 
-    m = re.match(CsiSequencePattern, string=bytes_)
+    m = re.match(rb"^" + CsiSequencePattern + rb"$", string=bytes_)
     if not m:
         return b""
 
@@ -915,7 +978,7 @@ def bytes_take_mouse_six_byte_report(bytes_):
     assert MouseSixByteReportPattern == b"\x1B\\[" rb"M..."  # MPR X Y
     assert len(MouseSixByteReportPattern) == 7
 
-    m = re.match(MouseSixByteReportPattern, string=bytes_)
+    m = re.match(rb"^" + MouseSixByteReportPattern + rb"$", string=bytes_)
     if not m:
         return b""
 
@@ -1199,12 +1262,11 @@ add_us_ascii_into_chords_by_bytes()
 
 _ = r"""
 
-warp the Cursor out, trace the Bytes
-warp the Cursor in, run the Str Func, sample the Cursor
+solve the never-quit at ⇧Z ⇧S Esc [ ←
+
+\x and \u and \U and \r character insert, in ChordsScreenTest, such as \r undelayed
 
 test \n \r \r\n bytes inside macOS Paste Buffer
-
-\x and \u and \U character insert
 
 ⌃C ⌃D ⌃\ should help you quit
 
