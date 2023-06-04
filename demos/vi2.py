@@ -106,12 +106,12 @@ def parse_vi2_py_args():
 
 
 #
-# TODO
+# Loop Terminal Input back as Terminal Output
 #
 
 
 class ViTerminal:
-    r"""TODO"""
+    r"""Loop Terminal Input back as Terminal Output"""
 
     def __init__(self, ct):
         bt = ct.bt
@@ -125,7 +125,9 @@ class ViTerminal:
         ct = self.ct
         bt = self.bt
 
+        old = None
         line = None
+
         prompted = None
         while True:
             if not prompted:
@@ -135,7 +137,9 @@ class ViTerminal:
 
             bt.flush()
 
-            old = line
+            if line and not isinstance(line, bytes):
+                old = line
+
             line = ct.read()
 
             if (old, line) == ("⇧Z", "⇧K"):
@@ -144,7 +148,8 @@ class ViTerminal:
                 prompted = False
                 self.bt_print_if("Press ⌃C to stop logging Millisecond Input Bytes")
 
-                ct_try_logging(ct)
+                ckt = ChordsKeyboardTest(ct)
+                ckt.run_till_quit()
 
                 self.bt_print_if()  # todo: prompt to Quit at each Screen of Input?
 
@@ -212,7 +217,7 @@ class ViTerminal:
 
 
 def ct_try_loopback(ct):
-    """TODO"""
+    """Loopback Keyboard Chords into the Screen"""
 
     bt = ct.bt
 
@@ -243,102 +248,144 @@ def ct_try_loopback(ct):
 
 
 #
-# Loop to try the ChordsTerminal Read Until till ⌃C
+# Test the ChordsTerminal Read Until till ⌃C
 #
 
 
-def ct_try_logging(ct):  # noqa  # C901 too complex  # todo
-    """TODO"""
+class ChordsKeyboardTest:
+    """Test the ChordsTerminal Read Until till ⌃C"""
 
-    bt = ct.bt
+    def __init__(self, ct):
+        self.ct = ct
 
-    # Start up
+        t0 = dt.datetime.now()
 
-    line = None
-    clocking = False
+        self.bt = ct.bt
+        self.t0 = t0
+        self.t1 = t0
+        self.old_ms = None
+        self.clocking = False
 
-    t0 = dt.datetime.now()
-    t1 = t0
+    def run_till_quit(self):
+        """Test the ChordsTerminal Read Until till ⌃C"""
 
-    # Timestamp each Keystroke arriving whole,
-    # and timestamp each piece arriving separately, before the whole
+        ct = self.ct
 
-    while True:
         while True:
-            if not ct.kbhit(timeout=0):
-                break
+            if ct.kbhit(timeout=0):
+                line = self.log_kbhits()
+                if line == (Control + "C"):
+                    break
 
-            old_line = line
-            line = ct.read()
+            self.log_clock()
 
-            t1 = dt.datetime.now()
-            t1t0 = t1 - t0
-            t0 = t1
+            self.sleep_till_kbhit_or_clock()
 
-            # Close the Clock if open
+    def log_kbhits(self):
+        """Timestamp Chars from the Terminal, and the Bytes inside them"""
 
-            if clocking:
-                clocking = False
+        bt = self.bt
+        ct = self.ct
+
+        # Fetch one Byte or some Words of Chars
+
+        line = ct.read()
+
+        # Timestamp
+
+        self.t1 = dt.datetime.now()
+        t1t0 = self.t1 - self.t0
+        self.t0 = self.t1
+
+        # Close the Clock Line if open
+
+        if self.clocking:
+            self.clocking = False
+            bt.print()
+
+        # Log the whole Keystroke as Words of Chars, or a Byte of it
+
+        ms = int(t1t0.total_seconds() * 1000)
+        if not ms:
+            bt.print("    {}, {!r}".format(ms, line))
+        else:
+            if self.old_ms == 0:
                 bt.print()
+            bt.print("{}, {!r}".format(ms, line))
 
-            # Log the whole Keystroke, or first log each piece of it
+        self.old_ms = ms
 
-            ms = int(t1t0.total_seconds() * 1000)
-            bt.print("{}, {}".format(ms, line))
+        # Succeed
 
-            # Quit at ⌃C, but not at Esc ⌃C  # todo: and not at ⌃C part of a Whole
+        return line
 
-            if line == (Control + "C"):
-                if old_line == Esc:  # takes Esc ⌃C without quitting
-                    continue
-                break
+    def log_clock(self):
+        """Timestamp no Chars and no Bytes from the Terminal"""
 
-        if line == (Control + "C"):
-            break
+        bt = self.bt
 
-        # Print a Clock between Input Lines, like 3s after the last Print
+        # Limit the rate of logging
 
         t2 = dt.datetime.now()
-        t2t1 = t2 - t1
+        t2t1 = t2 - self.t1
         if t2t1 >= dt.timedelta(seconds=3):
-            t1 += dt.timedelta(seconds=1)
-            hms = t2.strftime("%H:%M:%S")
+            self.t1 += dt.timedelta(seconds=1)
 
-            # Open the Clock if closed
+            # Print a Separator and open the Clock Line
 
-            if not clocking:
+            if not self.clocking:
+                self.clocking = True
                 bt.print()
 
             # Refresh the Clock
 
+            hms = t2.strftime("%H:%M:%S")
             bt.write(b"\r" + hms.encode())
-            clocking = True
 
-        # Kindly sleep explicitly across most of the time of printing nothing
+    def sleep_till_kbhit_or_clock(self):
+        """Yield Cpu while no Keyboard Input"""
 
-        if False:
-            t3 = dt.datetime.now()
-            timeout = t1 + dt.timedelta(seconds=3) - t3
+        ct = self.ct
+
+        next_clock = self.t1 + dt.timedelta(seconds=3)
+        t3 = dt.datetime.now()
+        if t3 > next_clock:
+            timeout = next_clock - t3
             timeout = timeout.total_seconds()
             if timeout > 0:
                 ct.kbhit(timeout=timeout)
 
-        # todo: predict the cost of this loop spinning tightly to poll frequently
-
 
 #
-# TODO
+# Read Terminal Input as Chars formed from Bytes of Terminal Input
+#
+#   "Esc", "Space", "Tab", and "Return" for b"\x1B", b" ", b"\t", and b"\r"
+#   "⇧Tab", "⌥Space", b"⇧←" for b"\x1B[Z", b"\xC2\xA0", b"\x1B[1;2C"
+#   "⌥3", "⇧F12" for b"\xC2\xA3", b"\x1B[\x33\x34\x7E"
+#   "⌥E E" for b"\xC2\xB4"
+#   etc
 #
 
 
 class ChordsTerminal:
-    """TODO"""
+    """Read Input as Chars, from a ByteTerminal"""
 
     def __init__(self, bt):
         self.bt = bt
 
         self.holds = bytearray()
         self.peeks = bytearray()
+
+        assert bt.tcgetattr is not None
+        self.try_me()
+
+    def try_me(self):
+        """Run a quick self-test"""
+
+        bt = self.bt
+
+        bt.write(b"")  # tests 'os.write'
+        self.kbhit(0)  # tests 'select.select'
 
     def read(self):
         """Read a piece of a Sequence, or a whole Sequence, or zero Bytes"""
@@ -348,41 +395,38 @@ class ChordsTerminal:
         holds = self.holds
         peeks = self.peeks
 
-        # Immediately read one part of a whole Sequence
+        # Read the last Bytes of a whole Sequence, else Bytes of the next Sequence
 
         index = 0
         while True:
             (seq, plus) = self.bytes_splitseq(holds)
-            assert holds[: len(peeks)] == peeks, (holds, peeks)
 
-            if (not seq) or (peeks and (len(peeks) < len(seq))):
-                peek = holds[len(peeks) :][:1]
-                peek = bytes(peek)
-                if peek:
-                    peeks.extend(peek)
+            enough_holds = holds[: len(seq)] if seq else holds
+            if enough_holds and (len(peeks) < len(enough_holds)):
+                old_peeks = enough_holds[len(peeks) :]
+                old_peeks = bytes(old_peeks)
 
-                    return peek
+                peeks.extend(old_peeks)
+                assert old_peeks and isinstance(old_peeks, bytes), repr(old_peeks)
 
-            # Else immediately read one whole Sequence
+                return old_peeks
+
+            # Read the Sequence as Chars of Words
 
             if seq:
                 seq_peeks = bytes(peeks)
+                assert seq_peeks == seq, (seq_peeks, seq)
 
                 peeks.clear()
                 holds[::] = plus
 
-                # Return the whole Sequence after each Byte only when multiple Bytes
-
-                if seq_peeks and (len(seq) == 1):
-                    assert seq_peeks == seq == b"\r", (seq_peeks, seq)
-
-                    continue  # indefinitely many loops
-
-                chords = bytes_to_chords_if(seq)
+                seq_decode = seq.decode()
+                chords = bytes_to_chords_else(seq, default=seq_decode)
+                assert chords and not isinstance(chords, bytes), repr(chords)
 
                 return chords
 
-            # Else wait once to read more Bytes
+            # Wait to read more Bytes
 
             kbhit = bt.kbhit(timeout=None)
             assert kbhit, kbhit
@@ -394,7 +438,7 @@ class ChordsTerminal:
             assert read, read
             holds.extend(read)
 
-    def kbhit(self, timeout=None):
+    def kbhit(self, timeout):
         """Peek a piece of a Sequence, or a whole Sequence, or zero Bytes"""
 
         bt = self.bt
@@ -403,53 +447,24 @@ class ChordsTerminal:
         holds = self.holds
         peeks = self.peeks
 
-        # Immediately peek one part of a whole Sequence
+        # Read the last Bytes of a whole Sequence, else Bytes of the next Sequence
 
-        index = 0
-        while True:
-            (seq, plus) = self.bytes_splitseq(holds)
-            assert holds[: len(peeks)] == peeks, (holds, peeks)
+        (seq, plus) = self.bytes_splitseq(holds)
 
-            if (not seq) or (peeks and (len(peeks) < len(seq))):
-                peek = holds[len(peeks) :][:1]
-                peek = bytes(peek)
-                if peek:
-                    # peeks.extend(peek)  # nope
+        enough_holds = holds[: len(seq)] if seq else holds
+        if enough_holds and (len(peeks) < len(enough_holds)):
+            return [stdio]
 
-                    return [stdio]
+        # Read the Sequence as Chars of Words
 
-            # Else immediately peek one whole Sequence
+        if seq:
+            return [stdio]
 
-            if seq:
-                seq_peeks = bytes(peeks)
+        # Wait to read more Bytes
 
-                # peeks.clear()  # nope
-                # holds[::] = plus  # nope
+        kbhit = bt.kbhit(timeout=timeout)
 
-                # Return the whole Sequence after each Byte only when multiple Bytes
-
-                if seq_peeks and (len(seq) == 1):
-                    assert seq_peeks == seq == b"\r", (seq_peeks, seq)
-
-                    continue  # indefinitely many loops
-
-                return [stdio]
-
-            # Else wait once to read more Bytes
-
-            if not bt.kbhit(timeout):
-                break
-
-            index += 1
-            assert index <= 1
-
-            read = bt.read()
-            assert read, read
-            holds.extend(read)
-
-        # Quit after timeout
-
-        return list()
+        return kbhit
 
     def bytes_splitseq(self, bytes_):
         """Split out one whole Byte Sequence, else zero Bytes"""
@@ -468,34 +483,44 @@ class ChordsTerminal:
 #
 
 
-def bytes_to_chords_if(bytes_):
-    """Return the Keyboard Chords as Words of Chars, else the Bytes unchanged"""
+def bytes_to_chords_else(bytes_, default):
+    """Find the Keyboard Bytes as Str Words of Keyboard Chords, else return unchanged"""
 
     if bytes_ in CHORDS_BY_BYTES.keys():
         chords = CHORDS_BY_BYTES[bytes_]
         return chords  # '⌥E E', etc
 
-    return bytes_
+    return default
 
 
 def chords_to_bytes(chords):
-    """TODO"""
+    """Find the Keyboard Bytes of the some Str Words of Keyboard Chords"""
 
     matches = list(_[0] for _ in CHORDS_BY_BYTES.items() if _[-1] == chords)
-    assert len(matches) == 1, repr(chords)
-    match = matches[-1]
+    assert len(matches) <= 1, (len(matches), repr(chords))
 
-    return match
+    if len(matches) == 1:
+        match = matches[-1]
+        return match
+
+    encode = chords.encode()
+    return encode
 
 
 CHORDS_BY_BYTES = dict()
 
+
 CHORDS_BY_BYTES[b"\0"] = "⌃Space"  # ⌃Space ⌃⌥Space ⌃⇧Space ⌃⇧2 ⌃⌥⇧2
 CHORDS_BY_BYTES[b"\t"] = "Tab"  # ⌃I ⌃⌥I ⌃⌥⇧I Tab ⌃Tab ⌥Tab ⌃⌥Tab
 CHORDS_BY_BYTES[b"\r"] = "Return"  # ⌃M ⌃⌥M ⌃⌥⇧M Return etc
+CHORDS_BY_BYTES[b"\x1B"] = "Esc"  # Esc ⌥Esc ⌥⇧Esc etc
 CHORDS_BY_BYTES[b" "] = "Space"  # Space ⇧Space
+CHORDS_BY_BYTES[b"\x7F"] = "Delete"  # Delete ⌥Delete ⌥⇧Delete etc
 
-# \r is also Return ⌃Return ⌥Return ⇧Return ⌃⌥Return ⌃⇧Return ⌥⇧Return ⌃⌥⇧Return
+# b"\r" is also Return ⌃Return ⌥Return ⇧Return ⌃⌥Return ⌃⇧Return ⌥⇧Return ⌃⌥⇧Return
+# b"\x1B" is also Esc ⌃Esc ⌥Esc ⇧Esc ⌃⌥Esc ⌃⇧Esc ⌥⇧Esc ⌃⌥⇧Esc
+# b"\x7F" is also Delete ⌃Delete ⌥Delete ⇧Delete ⌃⌥Delete ⌃⇧Delete ⌥⇧Delete ⌃⌥⇧Delete
+
 
 CHORDS_BY_BYTES[b"\x1B[Z"] = "⇧Tab"  # ⇧Tab ⌃⇧Tab ⌥⇧Tab ⌃⌥⇧Tab
 CHORDS_BY_BYTES[b"\xC2\xA0"] = "⌥Space"  # ⌥Space ⌥⇧Space
@@ -557,26 +582,26 @@ def add_us_ascii_into_chords_by_bytes():
 
 CHORDS_BY_BYTES.update(  # the Fn Key Caps at Mac
     {
-        b"\x1B\x4F\x50": "F1",
-        b"\x1B\x4F\x51": "F2",
-        b"\x1B\x4F\x52": "F3",
-        b"\x1B\x4F\x53": "F4",
-        b"\x1B\x5B\x31\x35\x7E": "F5",
-        b"\x1B\x5B\x31\x37\x7E": "F6",  # F6  # ⌥F1
-        b"\x1B\x5B\x31\x38\x7E": "F7",  # F7  # ⌥F2
-        b"\x1B\x5B\x31\x39\x7E": "F8",  # F8  # ⌥F3
-        b"\x1B\x5B\x32\x30\x7E": "F9",  # F9  # ⌥F4
-        b"\x1B\x5B\x32\x31\x7E": "F10",  # F10  # ⌥F5
-        b"\x1B\x5B\x32\x33\x7E": "⌥F6",  # F11  # ⌥F6  # macOS takes F11
-        b"\x1B\x5B\x32\x34\x7E": "F12",  # F12  # ⌥F7
-        b"\x1B\x5B\x32\x35\x7E": "⇧F5",  # ⌥F8  # ⇧F5
-        b"\x1B\x5B\x32\x36\x7E": "⇧F6",  # ⌥F9  # ⇧F6
-        b"\x1B\x5B\x32\x38\x7E": "⇧F7",  # ⌥F10  # ⇧F7
-        b"\x1B\x5B\x32\x39\x7E": "⇧F8",  # ⌥F11  # ⇧F8
-        b"\x1B\x5B\x33\x31\x7E": "⇧F9",  # ⌥F12  # ⇧F9
-        b"\x1B\x5B\x33\x32\x7E": "⇧F10",
-        b"\x1B\x5B\x33\x33\x7E": "⇧F11",
-        b"\x1B\x5B\x33\x34\x7E": "⇧F12",
+        b"\x1BOP": "F1",
+        b"\x1BOQ": "F2",
+        b"\x1BOR": "F3",
+        b"\x1BOS": "F4",
+        b"\x1B[15~": "F5",
+        b"\x1B[17~": "F6",  # F6  # ⌥F1
+        b"\x1B[18~": "F7",  # F7  # ⌥F2
+        b"\x1B[19~": "F8",  # F8  # ⌥F3
+        b"\x1B[20~": "F9",  # F9  # ⌥F4
+        b"\x1B[21~": "F10",  # F10  # ⌥F5
+        b"\x1B[23~": "⌥F6",  # F11  # ⌥F6  # macOS takes F11
+        b"\x1B[24~": "F12",  # F12  # ⌥F7
+        b"\x1B[25~": "⇧F5",  # ⌥F8  # ⇧F5
+        b"\x1B[26~": "⇧F6",  # ⌥F9  # ⇧F6
+        b"\x1B[28~": "⇧F7",  # ⌥F10  # ⇧F7
+        b"\x1B[29~": "⇧F8",  # ⌥F11  # ⇧F8
+        b"\x1B[31~": "⇧F9",  # ⌥F12  # ⇧F9
+        b"\x1B[32~": "⇧F10",
+        b"\x1B[33~": "⇧F11",
+        b"\x1B[34~": "⇧F12",
     }
 )
 
@@ -733,7 +758,7 @@ Shift = "\N{Upwards White Arrow}"  # ⇧
 Command = "\N{Place of Interest Sign}"  # ⌘
 
 
-EscSequencePattern = b"\x1B\\[" rb"[0123456789;<?]*" rb" ?[^ 0123456789;<?]"
+CsiSequencePattern = b"\x1B\\[" rb"[0123456789;<?]*" rb" ?[^ 0123456789;<?]"
 # solves many Ps of Pm, but not Pt
 # digits may start with "0"
 
@@ -767,7 +792,7 @@ def bytes_take_seq(bytes_):
             if not seq:
                 seq = bytes_take_text_sequence(bytes_)  # would misread C0 Sequence
 
-    return seq
+    return seq  # may be empty
 
 
 def bytes_take_text_sequence(bytes_):
@@ -791,12 +816,12 @@ def bytes_take_text_sequence(bytes_):
     return seq
 
 
-def bytes_take_control_sequence(bytes_):  # noqa  # C901 too complex  # todo
+def bytes_take_control_sequence(bytes_):
     """Take 1 whole C0 Control Sequence that starts these Bytes, else 0 Bytes"""
 
     assert Esc == b"\x1B"
     assert CSI == b"\x1B["
-    assert EscSequencePattern == b"\x1B\\[" rb"[0123456789;<?]*" rb" ?[^ 0123456789;<?]"
+    assert CsiSequencePattern == b"\x1B\\[" rb"[0123456789;<?]*" rb" ?[^ 0123456789;<?]"
 
     # Take nothing when given nothing
 
@@ -824,35 +849,62 @@ def bytes_take_control_sequence(bytes_):  # noqa  # C901 too complex  # todo
             return cr_plus
         return head
 
-    # Look to complete Esc with Byte, or Esc O with Byte, else fall through to CSI
+    # Take 1 whole C0 Esc Sequence that starts these Bytes, else 0 Bytes
 
-    assert head == b"\x1B", head  # Esc
+    seq = bytes_take_esc_sequence(bytes_)
 
-    assert SS3 == b"\x1BO"
+    return seq  # may be empty
 
-    length = 3 if bytes_.startswith(b"\x1BO") else 2  # 3 for SS3 else 2
-    if len(bytes_) < length:
+
+def bytes_take_esc_sequence(bytes_):
+    """Take 1 whole C0 Esc Sequence that starts these Bytes, else 0 Bytes"""
+
+    assert Esc == b"\x1B"
+
+    assert bytes_.startswith(Esc), bytes_
+
+    # Look for Esc and a Byte
+
+    if not bytes_[1:]:
         return b""
 
     esc_plus = bytes_[:2]
-    if esc_plus == b"\x1BO":  # SS3
+
+    # Look for Esc [ O and a Byte, like as the Single Shift Three (SS3) of F1 F2 F3 F4
+
+    assert SS3 == b"\x1BO"
+
+    if esc_plus == b"\x1BO":
+        if not bytes_[2:]:
+            return b""
+
         ss3_plus = bytes_[:3]
         return ss3_plus
 
+    # Look for Text Byte after Esc, else take it with Esc, else take Esc alone
+
     if esc_plus != b"\x1B[":  # CSI
-        assert esc_plus[-1] not in range(0x80, 0x100), esc_plus[-1]  # todo
+        if (esc_plus[-1:] in C0_BYTES) or (esc_plus[-1] >= 0x80):
+            return esc_plus[:1]
+
         return esc_plus
 
-    # Take nothing while Esc Sequence incomplete
+    # Look for more Bytes while Esc [ Sequence incomplete
 
-    m = re.match(EscSequencePattern, string=bytes_)
+    assert Esc == b"\x1B"
+    assert CSI == b"\x1B["
+
+    assert bytes_.startswith(CSI), bytes_
+
+    m = re.match(CsiSequencePattern, string=bytes_)
     if not m:
         return b""
 
     # Take one whole Esc Sequence
 
     seq = m.string[m.start() : m.end()]
-    assert seq[-1] not in range(0x80, 0x100), seq[-1]  # todo
+    if (seq[-1:] in C0_BYTES) or (seq[-1] >= 0x80):
+        return seq[:-1]  # settles for no end Byte
 
     return seq
 
@@ -874,28 +926,24 @@ def bytes_take_mouse_six_byte_report(bytes_):
 
 
 #
-# Bypass the Line Buffer to speak with the Screen and Keyboard of the Terminal
+# Read Terminal Input without line-buffering, & write \n Output as itself, not as \r\n
 #
 
 
 class BytesTerminal:
-    r"""Start/ Stop line-buffering Input and replacing \n Output with \r\n"""
+    r"""Read Input without line-buffering, & write \r Output as itself, not as \r\n"""
 
     def __init__(self, stdio):
         self.stdio = stdio
-
         self.fd = stdio.fileno()
         self.tcgetattr = None
-
-        self.holds = bytearray()
-        self.peeks = bytearray()
 
     def __enter__(self):
         r"""Stop line-buffering Input and stop replacing \n Output with \r\n"""
 
         fd = self.fd
-
         tcgetattr = self.tcgetattr
+
         if tcgetattr is None:
             tcgetattr = termios.tcgetattr(fd)
 
@@ -943,13 +991,13 @@ class BytesTerminal:
         print(*args, **alt_kwargs)
 
     def write(self, line):
-        """Write some Bytes without encoding or ending them"""
+        """Write some Bytes without encoding them, & without ending the Line"""
 
         fd = self.fd
         os.write(fd, line)
 
     def flush(self):
-        """Flush the 'def print' Buffer"""
+        """Flush the Output Buffer without waiting for the Line to end"""
 
         sys.stdout.flush()
 
@@ -967,9 +1015,11 @@ class BytesTerminal:
         # ⌘V ⌘V Paste Strokes sometimes arrived together in one read  # macOS 2023-03
 
     def kbhit(self, timeout=None):  # 'timeout' in seconds
-        """Wait till next Input Byte, else till Timeout"""
+        """Wait till next Input Byte, else till Timeout, else till forever"""
 
-        rlist = [self.stdio]
+        stdio = self.stdio
+
+        rlist = [stdio]
         wlist = list()
         xlist = list()
 
@@ -1133,7 +1183,7 @@ def sys_exit_if_testdoc(epilog):
 
 
 #
-# TODO
+# Complete the CHORDS_BY_BYTES
 #
 
 
@@ -1149,7 +1199,8 @@ add_us_ascii_into_chords_by_bytes()
 
 _ = r"""
 
-factor out peekahead_if
+warp the Cursor out, trace the Bytes
+warp the Cursor in, run the Str Func, sample the Cursor
 
 test \n \r \r\n bytes inside macOS Paste Buffer
 
@@ -1158,8 +1209,6 @@ test \n \r \r\n bytes inside macOS Paste Buffer
 ⌃C ⌃D ⌃\ should help you quit
 
 Esc should explain you owe us more input
-
-Esc Esc should quit as well as ⌃C
 
 echoed as digits
 then as ⎋ [ digits ; digits ;
