@@ -10,12 +10,18 @@ options:
   -q, --quiet  say less
 
 quirks:
-  quits when told ⌃C ⇧Z ⇧Q, or ⌃C : Q ! Return, or ⌃Q ⇧N Return
-  restores replacement-mode at exit, unless run as -q
+  quits when told ⌃C ⇧Z ⇧Q, or ⌃C ⌃L : Q ! Return
+  accepts ⇧Q V I Return without action or complaint
+  restores replacement-mode unstyled-cursor at exit, unless run as -q
 
 keystrokes:
-  ⌃C ⌃G ⌃M ⌃N ⌃P Return Space
-  $ + 0 ⇧G ⇧H ⇧K ⇧N ^ H J K L |
+  ⌃C ⌃D ⌃[ ⌃\
+  ⌃G ⌃M ⌃N ⌃P ⌃Q Return Space
+  $ + 0 1 2 3 4 5 6 7 8 9 ⇧G ⇧H ⇧K ⇧N ^ H J K L |
+  ⇧I ⇧R
+
+self-tests:
+  1 ⇧Z Q, 2 ⇧Z Q, etc
 
 escape-sequences:
   ⎋[d line-position-absolute ⎋[G cursor-character-absolute
@@ -23,9 +29,6 @@ escape-sequences:
   ⎋[4h insertion-mode ⎋[ 6q bar ⎋[4l replacement-mode ⎋[4 q skid ⎋[ q unstyled
   ⎋[L delete-line ⎋[M insert-line ⎋[P delete-character ⎋[@ insert-character
   ⎋[T scroll-up ⎋[S scroll-down
-
-self-tests:
-  ⇧Z ⇧T, 1 ⇧Z ⇧T, 2 ⇧Z ⇧T, etc
 
 docs:
   https://unicode.org/charts/PDF/U0000.pdf
@@ -119,109 +122,372 @@ class ViTerminal:
     def __init__(self, ct):
         bt = ct.bt
 
+        byte_echoes = bytearray()
+        char_holds = list()
+        digit_holds = list()
+        func_by_reads = self.form_func_by_reads()
+
         self.ct = ct
         self.bt = bt
 
-    def run_till_quit(self):  # noqa  # C901 too complex  # todo
-        """TODO"""
+        self.byte_echoes = byte_echoes
+        self.char_holds = char_holds
+        self.digit_holds = digit_holds
+        self.char_key_list = list()
+        self.char_key = None
+        self.int_else = None
+        self.func_by_reads = func_by_reads
+
+    def run_till_quit(self):
+        """Loop Terminal Input back as Terminal Output"""
+
+        while True:
+            read_func = self.read_func()
+            read_func()  # may raise SystemExit
+
+    def read_func(self):
+        """Read some Bytes, some Chars, or a whole Func"""
 
         ct = self.ct
+        char_holds = self.char_holds
+
+        # Read and echo
+
+        read = ct.read()
+
+        reads = read
+        if isinstance(read, str):
+            if char_holds:
+                reads = "".join(char_holds) + read
+                char_holds.clear()
+
+        self.echo_reads(reads)
+
+        # Take Decimal Digits as an Arg
+
+        int_else = None
+        digits = "".join(self.digit_holds)
+        if digits:
+            int_else = int(digits)
+
+        self.int_else = int_else
+
+        # Take the Bytes or Chars as another Arg
+
+        func = self.find_func_by_reads(reads)
+
+        # Succeed
+
+        return func
+
+    def echo_reads(self, reads):
+        """Echo every Byte received and every Word of Chars received"""
+
         bt = self.bt
 
-        old = None
-        read = None
+        byte_echoes = self.byte_echoes
+        digit_holds = self.digit_holds
 
-        prompted = None
-        while True:
-            if not prompted:
-                prompted = True
-                self.bt_write_if(b"\x1B[K")
-                self.bt_print_if("Press ⇧Z⇧Q to quit, or ⇧Z⇧S, or ⇧Z⇧K, or ⌃C")
+        digits = "".join(digit_holds)
 
-            bt.flush()
+        # Form a Python Repr to echo Bytes
 
-            if read and not isinstance(read, bytes):
-                old = read
+        if isinstance(reads, bytes):
+            byte_echoes.extend(reads)
+            status = bytes(byte_echoes)
+            status = repr(status)
 
-            read = ct.read()
+        # Form Digits followed by Words of Chars, to echo those
 
-            if (old, read) == ("⇧Z", "⇧K"):
-                self.bt_print_if("⇧K")
+        elif isinstance(reads, str):
+            byte_echoes.clear()
+            chars = reads
+            if digits:
+                if reads in "0123456789":
+                    chars = digits + reads
+                else:
+                    chars = digits + " " + reads
+            status = self.chars_to_status(chars)
 
-                prompted = False
-                self.bt_print_if("Press ⌃C to stop logging Millisecond Input Bytes")
+        # Echo no other Inputs
 
-                ckt = ChordsKeyboardTest(ct)
-                ckt.run_till_quit()
+        else:
+            assert False, repr(reads)
 
-                self.bt_print_if()  # todo: prompt to Quit at each Screen of Input?
+        # Rewrite the Status Row
 
-                continue
+        write = b"\r" + b"\x1B[K" + status.encode()
+        bt.write(write)
 
-            if (old, read) == ("⇧Z", "⇧Q"):
-                self.bt_print_if("⇧Q")
-                break
+    def chars_to_status(self, chars):
+        """Say how to echo Chars as Status"""
 
-            if (old, read) == ("⇧Z", "⇧S"):
-                self.bt_print_if("⇧S")
+        status = ""
+        for ch in chars:
+            if ch.encode() in C0_BYTES:
+                status += Control + chr(ord(ch) ^ 0x40)
+            else:
+                status += ch
 
-                prompted = False
-                self.bt_print_if("Press ⌃C to stop looping Keyboard into Screen")
+        return status
 
-                cst = ChordsScreenTest(ct)
-                cst.run_till_quit()
+    def find_func_by_reads(self, reads):
+        """Find the Func most closely named by Bytes and Words of Chars"""
 
-                size = os.get_terminal_size()
-                if size.lines > 2:
-                    y = size.lines - 2
-                    self.bt_write_if("\x1B[{y}H".format(y=y).encode())
+        func_by_reads = self.func_by_reads
+        char_key_list = self.char_key_list
 
-                self.bt_print_if()
+        if isinstance(reads, str):
+            char_key = reads
+            char_key_list.append(char_key)
 
-                continue
+            self.char_key = char_key
 
-            if old == "⇧Z":
-                self.bt_print_if(read)
-                bt.print("\a")
-                read = None
+        func_key = reads
+        if reads not in func_by_reads.keys():
+            func_key = type(reads)
+            assert func_key in func_by_reads.keys(), repr(func_key)
 
-                continue
+        func = func_by_reads[func_key]
 
-            if read == "⇧Z":
-                self.bt_print_if("⇧Z", end="")
+        return func
 
-                continue
+    def form_func_by_reads(self):
+        """Map Bytes and Words of Chars to Funcs"""
 
-            if read == "⌃C":
-                self.bt_print_if("⌃C")
+        func_by_reads = dict()
 
-                continue
+        func_by_reads[bytes] = self.shrug
+        func_by_reads[str] = self.slap_back_chars
 
-            self.bt_print_if(repr(read))
-            bt.write(b"\a")
+        # Map Words of Chars to Funcs
+
+        func_by_reads["⌃C"] = self.help_quit_if
+        func_by_reads["⌃D"] = self.help_quit_if
+        func_by_reads["⌃L"] = self.shrug
+        func_by_reads["⌃Q"] = self.hold_chars
+        func_by_reads["⌃\\"] = self.help_quit_if
+
+        func_by_reads["0"] = self.hold_digit
+        func_by_reads["1"] = self.hold_digit
+        func_by_reads["2"] = self.hold_digit
+        func_by_reads["3"] = self.hold_digit
+        func_by_reads["4"] = self.hold_digit
+        func_by_reads["5"] = self.hold_digit
+        func_by_reads["6"] = self.hold_digit
+        func_by_reads["7"] = self.hold_digit
+        func_by_reads["8"] = self.hold_digit
+        func_by_reads["9"] = self.hold_digit
+
+        func_by_reads[": Q ! Return"] = self.force_quit
+
+        func_by_reads["⇧Q V I Return"] = self.shrug
+
+        func_by_reads["⇧Z"] = self.hold_chars
+        func_by_reads["⇧Z Q"] = self.try_me
+        func_by_reads["⇧Z ⇧Q"] = self.force_quit
+
+        func_by_reads["Delete"] = self.step_back
+
+        # Map fewer Words of Chars to Funcs
+
+        keys = list(func_by_reads.keys())
+        for key in keys:
+            if isinstance(key, str):
+                splits = key.split()
+                for index in range(len(splits)):
+                    alt_key = " ".join(splits[:index])
+
+                    if alt_key not in keys:
+                        func_by_reads[alt_key] = self.hold_chars
+
+        # Succeed
+
+        return func_by_reads
+
+    def shrug(self):  # Vi ⌃L  # Vi Bytes
+        """Consciously make no reply"""
+
+        pass
+
+    def hold_digit(self):  # Vi 1 2 3 4 5 6 7 8 9, and Vi 0 too thereafter
+        """Wait till Digits complete"""
+
+        digit_holds = self.digit_holds
+        char_key = self.char_key
+
+        assert char_key in "0123456789", repr(char_key)
+
+        if not digit_holds:
+            if char_key == "0":
+                self.slap_back_chars()
+                return
+
+        digit_holds.extend(char_key)
+
+    def hold_chars(self):  # Vi ⇧Z etc
+        """Wait till Chars complete"""
+
+        char_holds = self.char_holds
+        char_key = self.char_key
+
+        assert isinstance(char_key, str), repr(char_key)
+
+        char_holds.extend(char_key)
+        char_holds.extend(" ")
+
+    def step_back(self):  # Vi Delete
+        """Undo the last Key given into a multiple Key Sequence"""
+
+        char_holds = self.char_holds
+        digit_holds = self.digit_holds
+
+        if char_holds:
+            char_holds[::] = char_holds[:-1]
+        elif digit_holds:
+            digit_holds[::] = digit_holds[:-1]
+        else:
+            self.slap_back_chars()
+
+    def help_quit_if(self):  # Vi ⌃C ⌃D ⌃\ etc
+        """Help more if shoved more"""
+
+        char_key = self.char_key
+        char_key_list = self.char_key_list
+        digit_holds = self.digit_holds
+
+        if char_key == "⌃C":
+            digit_holds.clear()
+
+        force = 0
+        if digit_holds:
+            force += 1
+        if char_key != "⌃C":
+            force += 1
+        if char_key_list[-2:] == [char_key, char_key]:
+            force += 1
+        if char_key_list[-3:] == [char_key, char_key, char_key]:
+            force += 1
+
+        if force >= 2:
+            self.slap_back_chars()
+        elif force >= 1:
+            self.help_quit()
+
+    def help_quit(self):  # Vi ⌃C ⌃D ⌃\ etc
+        """Help quit Vi"""
+
+        bt = self.bt
+
+        bt.print()
+
+        status = "Press ⇧Z ⇧Q to quit, or ⌃C ⇧Z ⇧Q"
+        write = b"\r" + b"\x1B[K" + status.encode()
+        bt.write(write)
+
+    def slap_back_chars(self):  # i'm afraid i can't do that, Dave.
+        """Say don't do that"""
+
+        bt = self.bt
+        ct = self.ct
+        char_key = self.char_key
+        char_key_list = self.char_key_list
+        digit_holds = self.digit_holds
+
+        char_key_list.extend(["Bel", "⌃C"])
+
+        reads = char_key + " " + "Bel"
+        self.echo_reads(reads)
+
+        digit_holds.clear()
+
+        bt.write(b"\a")
+
+        if ct.kbhit(timeout=0):
+            bt.print()  # cancelled Esc, Esc [, Return, etc
+
+    def force_quit(self):  # ⇧Z ⇧Q
+        """Force quit Vi, despite dirty Cache, etc"""
+
+        bt = self.bt
+        bt.print()
+
+        sys.exit()
 
     def bt_print_if(self, *args, **kwargs):
-        """Print Chars, if not running '--quiet'ly"""
+        """Print Chars, if not running quietly"""
 
         bt = self.bt
         if not main.args.quiet:
             bt.print(*args, **kwargs)
 
     def bt_write_if(self, bytes_):
-        """Write Bytes, if not running '--quiet'ly"""
+        """Write Bytes, if not running quietly"""
 
         bt = self.bt
         if not main.args.quiet:
             bt.write(bytes_)
 
+    def try_me(self):
+        """Run a quick thorough self-test"""
+
+        digit_holds = self.digit_holds
+        int_else = self.int_else
+
+        digit_holds.clear()
+
+        funcs_by_int = dict()
+
+        funcs_by_int[None] = self.try_keyboard
+        funcs_by_int[None] = self.try_screen  # last wins
+
+        funcs_by_int[1] = self.try_keyboard
+        funcs_by_int[2] = self.try_screen
+
+        if int_else not in funcs_by_int.keys():
+            self.slap_back_chars()
+            return
+
+        int_func = funcs_by_int[int_else]
+        int_func()
+
+    def try_keyboard(self):
+        """Test the ChordsTerminal Read till ⌃C"""
+
+        ct = self.ct
+
+        self.bt_print_if("Press ⌃C to stop our ChordsKeyboardTest")
+
+        ckt = ChordsKeyboardTest(ct)
+        ckt.run_till_quit()
+
+        self.bt_print_if()  # todo: prompt to Quit at each Screen of Input?
+
+    def try_screen(self):
+        """Test the BytesTerminal Write at a Chords Terminal, till ⌃C"""
+
+        ct = self.ct
+
+        self.bt_print_if("Press ⌃C to stop our ChordsScreenTest")
+
+        cst = ChordsScreenTest(ct)
+        cst.run_till_quit()
+
+        size = os.get_terminal_size()
+        if size.lines > 1:
+            y = size.lines - 1
+            self.bt_write_if("\x1B[{y}H".format(y=y).encode())
+
+        self.bt_print_if()
+
 
 #
-# Loopback Keyboard Chords into the Screen
+# Test the BytesTerminal Write at a Chords Terminal, till ⌃C
 #
 
 
 class ChordsScreenTest:
-    """Loopback Keyboard Chords into the Screen"""
+    """Test the BytesTerminal Write at a Chords Terminal, till ⌃C"""
 
     def __init__(self, ct):
         self.ct = ct
@@ -231,7 +497,7 @@ class ChordsScreenTest:
         self.bt = bt
 
     def run_till_quit(self):  # noqa  # C901 too complex
-        """Loopback Keyboard Chords into the Screen"""
+        """Test the BytesTerminal Write at a Chords Terminal, till ⌃C"""
 
         args_quiet = main.args.quiet
 
@@ -307,12 +573,12 @@ class ChordsScreenTest:
 
 
 #
-# Test the ChordsTerminal Read Until till ⌃C
+# Test the ChordsTerminal Read till ⌃C
 #
 
 
 class ChordsKeyboardTest:
-    """Test the ChordsTerminal Read Until till ⌃C"""
+    """Test the ChordsTerminal Read till ⌃C"""
 
     def __init__(self, ct):
         self.ct = ct
@@ -327,7 +593,7 @@ class ChordsKeyboardTest:
         self.clocking = False
 
     def run_till_quit(self):
-        """Test the ChordsTerminal Read Until till ⌃C"""
+        """Test the ChordsTerminal Read till ⌃C"""
 
         ct = self.ct
 
@@ -440,7 +706,7 @@ class ChordsTerminal:
         self.try_me()
 
     def try_me(self):
-        """Run a quick self-test"""
+        """Run a quick thorough self-test"""
 
         bt = self.bt
 
@@ -907,17 +1173,7 @@ def bytes_take_control_sequence(bytes_):
 
     # Take a C0 Control Byte by itself
 
-    if head not in b"\r" b"\x1B":
-        return head
-
-    # Look for CR LF after CR, else take CR LF, else take CR
-
-    if head == b"\r":
-        cr_plus = bytes_[:2]
-        if not cr_plus[1:]:
-            return b""
-        if cr_plus == b"\r\n":
-            return cr_plus
+    if head != b"\x1B":
         return head
 
     # Take 1 whole C0 Esc Sequence that starts these Bytes, else 0 Bytes
@@ -925,6 +1181,8 @@ def bytes_take_control_sequence(bytes_):
     seq = bytes_take_esc_sequence(bytes_)
 
     return seq  # may be empty
+
+    # in Output Bytes, people look for CR LF after CR, else take CR LF, else take CR
 
 
 def bytes_take_esc_sequence(bytes_):
@@ -1036,7 +1294,7 @@ class BytesTerminal:
         return self
 
     def try_me(self):
-        """Run a quick self-test"""
+        """Run a quick thorough self-test"""
 
         self.write(b"")  # tests 'os.write'
         self.kbhit(0)  # tests 'select.select'
@@ -1274,24 +1532,33 @@ add_us_ascii_into_chords_by_bytes()
 #
 
 
-# todo: copy in dreams from:  demos/vi1.py, futures.md, etc
-
 _ = r"""
 
-solve the Esc [ 1 d echoed without quoting
+map the usual Vi Keys to work
 
-solve the typing too fast slips the CPR of DSR
+track Insert/ Replace
+track Cursor Style
+cancel at Quit
 
-move the ⇧Z ⇧K, ⇧Z ⇧S, etc into ⇧Z ⇧T, 1 ⇧Z ⇧T, 2 ⇧Z ⇧T, etc
-still have a -q ⇧Z ⇧S that doesn't echo the Keystrokes
+track Bold and Color
+
+DSR CPR fetch Cursor
+take Cursor Row for Status Row
+⎋[y;xH ⎋[K update Status Row
+
+trace what people do to grow the sparse Area of known Screen
+notice when they move the Status Row
+
+save it as a 'vi.typescript' File of Color etc,
+with no movement except as needed to leap over sparse gaps
+
+help people bold the un-sparse, like to know when they've traced over it all
+
+--
 
 \x and \u and \U and \r character insert, in ChordsScreenTest, such as \r undelayed
 
 test \n \r \r\n bytes inside macOS Paste Buffer
-
-⌃C ⌃D ⌃\ should help you quit
-
-Esc should explain you owe us more input
 
 echoed as digits
 then as ⎋ [ digits ; digits ;
@@ -1299,6 +1566,8 @@ then as ⎋ [ digits ; digits ;
 less pain here from tides forcing auto-wrapped searches and auto-cancelled searches
 
 jump to color
+
+copy in older Vi dreams from:  demos/vi1.py, futures.md, etc
 
 """
 
