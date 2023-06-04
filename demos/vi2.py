@@ -24,6 +24,9 @@ escape-sequences:
   ⎋[L delete-line ⎋[M insert-line ⎋[P delete-character ⎋[@ insert-character
   ⎋[T scroll-up ⎋[S scroll-down
 
+self-tests:
+  ⇧Z ⇧T, 1 ⇧Z ⇧T, 2 ⇧Z ⇧T, etc
+
 docs:
   https://unicode.org/charts/PDF/U0000.pdf
   https://unicode.org/charts/PDF/U0080.pdf
@@ -803,13 +806,14 @@ CHORDS_BY_BYTES.update(  # the Option Punctuation-Mark strokes at Mac
 #
 
 
-BS = b"\b"  # Backspace  # BS
-CR = b"\r"  # Carriage Return   # CR
-LF = b"\n"  # Line Feed  # LF
-Esc = b"\x1B"  # Escape  # ESC
+BS = b"\b"  # Backspace
+CR = b"\r"  # Carriage Return
+LF = b"\n"  # Line Feed
+Esc = b"\x1B"  # Escape
 
-CSI = b"\x1B["  # Control Sequence Introducer  # CSI
-SS3 = b"\x1BO"  # Single Shift Three  # SS3
+CSI = b"\x1B["  # Control Sequence Introducer  # ended by rb"[\x30-\x7E]"
+OSC = b"\x1B]"  # Operating System Command  # ended by BEL, CR, Esc \ ST, etc
+SS3 = b"\x1BO"  # Single Shift Three
 
 C0_BYTES = b"".join(chr(_).encode() for _ in range(0, 0x20)) + b"\x7F"
 C1_BYTES = b"".join(chr(_).encode() for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
@@ -821,9 +825,11 @@ Shift = "\N{Upwards White Arrow}"  # ⇧
 Command = "\N{Place of Interest Sign}"  # ⌘
 
 
-CsiSequencePattern = b"\x1B\\[" rb"[0123456789;<?]*" rb" ?[^ 0123456789;<?]"
-# solves many Ps of Pm, but not Pt
-# digits may start with "0"
+CsiStartPattern = b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"  # leading Zeroes allowed
+CsiEndPattern = rb"[\x40-\x7E]"
+# as per 1991 ECMA-48_5th 5.4 Control Sequences
+# Csi Patterns solve many Pm, Pn, and Ps, but not the Pt of Esc ] OSC Ps ; Pt BEL
+
 
 MouseSixByteReportPattern = b"\x1B\\[" rb"M..."  # MPR X Y
 
@@ -882,10 +888,6 @@ def bytes_take_text_sequence(bytes_):
 def bytes_take_control_sequence(bytes_):
     """Take 1 whole C0 Control Sequence that starts these Bytes, else 0 Bytes"""
 
-    assert Esc == b"\x1B"
-    assert CSI == b"\x1B["
-    assert CsiSequencePattern == b"\x1B\\[" rb"[0123456789;<?]*" rb" ?[^ 0123456789;<?]"
-
     # Take nothing when given nothing
 
     if bytes_ == b"":
@@ -923,6 +925,8 @@ def bytes_take_esc_sequence(bytes_):
     """Take 1 whole C0 Esc Sequence that starts these Bytes, else 0 Bytes"""
 
     assert Esc == b"\x1B"
+    assert CsiStartPattern == b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"
+    assert CsiEndPattern == rb"[\x40-\x7E]"
 
     assert bytes_.startswith(Esc), bytes_
 
@@ -959,15 +963,21 @@ def bytes_take_esc_sequence(bytes_):
 
     assert bytes_.startswith(CSI), bytes_
 
-    m = re.match(rb"^" + CsiSequencePattern + rb"$", string=bytes_)
-    if not m:
+    m0 = re.match(rb"^" + CsiStartPattern + rb"$", string=bytes_)
+    if m0:
         return b""
 
-    # Take one whole Esc Sequence
+    # Take one whole Esc [ Sequence, or settle for Esc [ begun but cut short
 
-    seq = m.string[m.start() : m.end()]
-    if (seq[-1:] in C0_BYTES) or (seq[-1] >= 0x80):
-        return seq[:-1]  # settles for no end Byte
+    m1 = re.match(rb"^" + CsiStartPattern, string=bytes_)
+
+    start_seq = m1.string[m1.start() : m1.end()]
+    end_seq = m1.string[m1.end() :][:1]
+    seq = start_seq + end_seq
+
+    mn = re.match(rb"^" + CsiEndPattern + rb"$", string=end_seq)
+    if not mn:
+        return start_seq
 
     return seq
 
@@ -1262,7 +1272,12 @@ add_us_ascii_into_chords_by_bytes()
 
 _ = r"""
 
-solve the never-quit at ⇧Z ⇧S Esc [ ←
+solve the Esc [ 1 d echoed without quoting
+
+solve the typing too fast slips the CPR of DSR
+
+move the ⇧Z ⇧K, ⇧Z ⇧S, etc into ⇧Z ⇧T, 1 ⇧Z ⇧T, 2 ⇧Z ⇧T, etc
+still have a -q ⇧Z ⇧S that doesn't echo the Keystrokes
 
 \x and \u and \U and \r character insert, in ChordsScreenTest, such as \r undelayed
 
@@ -1276,6 +1291,8 @@ echoed as digits
 then as ⎋ [ digits ; digits ;
 
 less pain here from tides forcing auto-wrapped searches and auto-cancelled searches
+
+jump to color
 
 """
 
