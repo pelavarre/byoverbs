@@ -73,12 +73,12 @@ _ = time
 
 
 #
-# Run from the Sh command line
+# Run from the Sh Command Line
 #
 
 
 def main():
-    """Run from the Sh command line"""
+    """Run from the Sh Command Line"""
 
     args = parse_vi2_py_args()
     main.args = args
@@ -97,7 +97,7 @@ def main():
 
 
 def parse_vi2_py_args():
-    """Parse the Args from the Sh command line"""
+    """Parse the Args from the Sh Command Line"""
 
     parser = compile_argdoc()
     parser.add_argument("-q", "--quiet", dest="q", action="count", help="say less")
@@ -129,7 +129,7 @@ class ViTerminal:
         bt = self.bt
 
         old = None
-        line = None
+        read = None
 
         prompted = None
         while True:
@@ -140,12 +140,12 @@ class ViTerminal:
 
             bt.flush()
 
-            if line and not isinstance(line, bytes):
-                old = line
+            if read and not isinstance(read, bytes):
+                old = read
 
-            line = ct.read()
+            read = ct.read()
 
-            if (old, line) == ("⇧Z", "⇧K"):
+            if (old, read) == ("⇧Z", "⇧K"):
                 self.bt_print_if("⇧K")
 
                 prompted = False
@@ -158,11 +158,11 @@ class ViTerminal:
 
                 continue
 
-            if (old, line) == ("⇧Z", "⇧Q"):
+            if (old, read) == ("⇧Z", "⇧Q"):
                 self.bt_print_if("⇧Q")
                 break
 
-            if (old, line) == ("⇧Z", "⇧S"):
+            if (old, read) == ("⇧Z", "⇧S"):
                 self.bt_print_if("⇧S")
 
                 prompted = False
@@ -181,50 +181,38 @@ class ViTerminal:
                 continue
 
             if old == "⇧Z":
-                self.bt_print_if(line)
+                self.bt_print_if(read)
                 bt.print("\a")
-                line = None
+                read = None
 
                 continue
 
-            if line == "⇧Z":
+            if read == "⇧Z":
                 self.bt_print_if("⇧Z", end="")
 
                 continue
 
-            if line == "⌃C":
+            if read == "⌃C":
                 self.bt_print_if("⌃C")
 
                 continue
 
-            self.bt_print_if(line)
+            self.bt_print_if(repr(read))
             bt.write(b"\a")
 
     def bt_print_if(self, *args, **kwargs):
-        """TODO"""
+        """Print Chars, if not running '--quiet'ly"""
 
         bt = self.bt
         if not main.args.quiet:
             bt.print(*args, **kwargs)
 
-    def bt_write_if(self, line):
-        """TODO"""
+    def bt_write_if(self, bytes_):
+        """Write Bytes, if not running '--quiet'ly"""
 
         bt = self.bt
         if not main.args.quiet:
-            bt.write(line)
-
-
-#
-# Name Screen Output Bytes and Keyboard Input Bytes
-#
-
-
-CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP) of (Y, X)
-
-DSR = b"\x1B[6n"  # Device Status Report (DSR) call for CPR
-
-CprPatternYX = rb"\x1B[\\[]([0-9]+);([0-9]+)R"  # Cursor Position Report (CPR) of (Y, X)
+            bt.write(bytes_)
 
 
 #
@@ -242,8 +230,10 @@ class ChordsScreenTest:
 
         self.bt = bt
 
-    def run_till_quit(self):
+    def run_till_quit(self):  # noqa  # C901 too complex
         """Loopback Keyboard Chords into the Screen"""
+
+        args_quiet = main.args.quiet
 
         bt = self.bt
         ct = self.ct
@@ -265,12 +255,13 @@ class ChordsScreenTest:
             old_frame = frame
             frame = int(isinstance(read, bytes))
 
-            if old_frame != frame:
-                yx = yx_by_frame[frame]
-                if yx is not None:
-                    cup = CUP_Y_X.format(*yx)
-                    cup = cup.encode()
-                    bt.write(cup)
+            if not args_quiet:
+                if old_frame != frame:
+                    yx = yx_by_frame[frame]
+                    if yx is not None:
+                        cup = CUP_Y_X.format(*yx)
+                        cup = cup.encode()
+                        bt.write(cup)
 
             # Capture and trace the Bytes, else write the Bytes in place of Str
 
@@ -278,7 +269,8 @@ class ChordsScreenTest:
                 writes.extend(read)
                 rep = bytes(writes)
                 rep = repr(rep).encode()
-                bt.write(b"\r" + b"\x1B[K" + rep)
+                if not args_quiet:
+                    bt.write(b"\r" + b"\x1B[K" + rep)
             else:
                 bt.write(writes)
                 writes.clear()
@@ -290,26 +282,28 @@ class ChordsScreenTest:
 
             # Find the Cursor
 
-            bt.write(DSR)
+            if not args_quiet:
+                bt.write(DSR)
 
-            cpr = bt.read()
-            m = re.match(rb"^" + CprPatternYX + rb"$", string=cpr)
+                cpr_else = bt.read()
+                m = re.match(rb"^" + CprPatternYX + rb"$", string=cpr_else)
+                assert m, cpr_else  # todo: let my people type this fast
 
-            (y, x) = (m.group(1), m.group(2))
-            (y, x) = (y.decode(), x.decode())
-            yx_by_frame[frame] = (y, x)
+                (y, x) = (m.group(1), m.group(2))
+                (y, x) = (y.decode(), x.decode())
+                yx_by_frame[frame] = (y, x)
 
-            # Warp the Cursor to the Frame of Str, if need be
+                # Warp the Cursor to the Frame of Str, if need be
 
-            old_frame = frame
-            frame = int(isinstance("", bytes))
+                old_frame = frame
+                frame = int(isinstance("", bytes))
 
-            if old_frame != frame:
-                yx = yx_by_frame[frame]
-                if yx is not None:
-                    cup = CUP_Y_X.format(*yx)
-                    cup = cup.encode()
-                    bt.write(cup)
+                if old_frame != frame:
+                    yx = yx_by_frame[frame]
+                    if yx is not None:
+                        cup = CUP_Y_X.format(*yx)
+                        cup = cup.encode()
+                        bt.write(cup)
 
 
 #
@@ -542,6 +536,18 @@ class ChordsTerminal:
         assert (seq + plus) == bytes_, (seq, plus, bytes_)
 
         return (seq, plus)
+
+
+#
+# Name Screen Output Bytes and Keyboard Input Bytes
+#
+
+
+CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP) of (Y, X)
+
+DSR = b"\x1B[6n"  # Device Status Report (DSR) call for CPR
+
+CprPatternYX = rb"\x1B[\\[]([0-9]+);([0-9]+)R"  # Cursor Position Report (CPR) of (Y, X)
 
 
 #
@@ -802,7 +808,7 @@ CHORDS_BY_BYTES.update(  # the Option Punctuation-Mark strokes at Mac
 
 
 #
-# Define whole Byte Sequences
+# Define whole & partial Control Byte and Text Byte Sequences
 #
 
 
