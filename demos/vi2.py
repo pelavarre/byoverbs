@@ -12,12 +12,11 @@ options:
 quirks:
   quits when told ⌃C ⇧Z ⇧Q, or ⌃C ⌃L : Q ! Return
   accepts ⇧Q V I Return without action or complaint
-  restores replacement-mode unstyled-cursor at exit, unless run as -q
 
 keystrokes:
   ⌃C ⌃D ⌃L ⌃[ ⌃\
   1 2 3 4 5 6 7 8 9 0 ⇧H ⇧M ⇧L H J K L |
-  I ⇧R
+  ⇧C ⇧D ⇧R ⇧X CC DD A I R X
 
 self-tests:
   1 ⇧Z Q test of Keyboard, 2 ⇧Z Q test of Screen, etc
@@ -25,8 +24,8 @@ self-tests:
 escape-sequences:
   ⎋[d line-position-absolute ⎋[G cursor-character-absolute
   ⎋[1m bold ⎋[31m red ⎋[32m green ⎋[34m blue ⎋[38;5;130m orange ⎋[m plain
-  ⎋[4h insertion-mode ⎋[ 6q bar ⎋[4l replacement-mode ⎋[4 q skid ⎋[ q unstyled
-  ⎋[L delete-line ⎋[M insert-line ⎋[P delete-character ⎋[@ insert-character
+  ⎋[4h insertion-mode ⎋[6 q bar ⎋[4l replacement-mode ⎋[4 q skid ⎋[ q unstyled
+  ⎋[M delete-line ⎋[L insert-line ⎋[P delete-character ⎋[@ insert-character
   ⎋[T scroll-up ⎋[S scroll-down
 
 docs:
@@ -90,12 +89,7 @@ def main():
         ct = ChordsTerminal(bt)
         vt = ViTerminal(ct)
 
-        try:
-            vt.run_till_quit()
-        finally:
-            if not main.args.quiet:
-                bt.write(b"\x1B[4l")  # CSI Ps 06/12  # 4 replacement-mode
-                bt.write(b"\x1B[ q")  # CSI Ps SP 07/01  # unstyled cursor-style
+        vt.run_till_quit()
 
 
 def parse_vi2_py_args():
@@ -123,21 +117,39 @@ class ViTerminal:
         stdio = bt.stdio
         _ = stdio.fileno()
 
+        #
+
         byte_echoes = bytearray()
         char_holds = list()
         digit_holds = list()
+        exit_writes = list()
+
         func_by_reads = self.form_func_by_reads()
 
-        self.ct = ct
-        self.bt = bt
+        #
+
+        self.ct = ct  # ChordsTerminal
+        self.bt = bt  # BytesTerminal
         self.stdio = stdio
 
-        self.byte_echoes = byte_echoes
-        self.char_holds = char_holds
-        self.digit_holds = digit_holds
-        self.char_key_list = list()
-        self.char_key = None
-        self.func_by_reads = func_by_reads
+        self.byte_echoes = byte_echoes  # the Bytes held, till next Char
+        self.char_holds = char_holds  # the Words of Chars held, till next Func
+        self.digit_holds = digit_holds  # the Digits held, till next Func
+
+        self.char_key_list = list()  # the Names of Func's Read
+        self.char_key = None  # the Name of the last Func Read
+        self.func_by_reads = func_by_reads  # the Func's by Name
+
+        self.exit_writes = exit_writes
+
+    def __exit__(self, *exc_info):
+        """Cancel"""
+
+        bt = self.bt
+        exit_writes = self.exit_writes
+
+        write = b"".join(sorted(set(exit_writes)))
+        bt.write(write)
 
     def get_scrolling_columns(self):
         """Count Columns on Screen"""
@@ -166,35 +178,46 @@ class ViTerminal:
     def run_till_quit(self):
         """Loop Terminal Input back as Terminal Output"""
 
-        while True:
-            read_func = self.read_func()
-            read_func()  # may raise SystemExit
+        try:
+            while True:
+                self.read_func_run_func()  # may raise SystemExit
+        finally:
+            exc_info = sys.exc_info()
+            self.__exit__(*exc_info)
 
-    def read_func(self):
-        """Read some Bytes, some Chars, or a whole Func"""
+    def read_func_run_func(self, lookahead=None):
+        """Run the named Func"""
 
         ct = self.ct
         char_holds = self.char_holds
+        digit_holds = self.digit_holds
 
-        # Read and echo
+        assert not digit_holds, digit_holds
+        assert not char_holds, char_holds
 
-        read = ct.read()
+        lookahead_once = lookahead
+        while True:
+            if lookahead_once is not None:
+                read = lookahead_once
+                lookahead_once = None  # replace
+            else:
+                read = ct.read()
 
-        reads = read
-        if isinstance(read, str):
-            if char_holds:
-                reads = "".join(char_holds) + read
-                char_holds.clear()
+            reads = read
+            if isinstance(read, str):
+                if char_holds:
+                    reads = "".join(char_holds) + read
+                    char_holds.clear()
 
-        self.echo_reads(reads)
+            self.echo_reads(reads)
 
-        # Take the Bytes or Chars as another Arg
+            func = self.find_func_by_reads(reads)
+            func()  # may raise SystemExit
 
-        func = self.find_func_by_reads(reads)
-
-        # Succeed
-
-        return func
+            if isinstance(read, str):
+                if not digit_holds:
+                    if not char_holds:
+                        break
 
     def echo_reads(self, reads):
         """Echo every Byte received and every Word of Chars received"""
@@ -214,7 +237,9 @@ class ViTerminal:
 
         # Form Digits followed by Words of Chars, to echo those
 
-        elif isinstance(reads, str):
+        else:
+            assert isinstance(reads, str), reads
+
             byte_echoes.clear()
             chars = reads
 
@@ -227,15 +252,12 @@ class ViTerminal:
 
             status = self.chars_to_status(chars)
 
-        # Echo no other Inputs
-
-        else:
-            assert False, repr(reads)
-
-        # Rewrite the Status Row
+        # Rewrite the Status Row  # TODO: warp the Cursor there
 
         if not args_quiet:
-            write = b"\r" + b"\x1B[K" + status.encode()
+            write_chars = " " + status
+            write_chars += len(write_chars) * "\b"
+            write = write_chars.encode()
             bt.write(write)
 
     def chars_to_status(self, chars):
@@ -263,21 +285,19 @@ class ViTerminal:
             self.char_key = char_key
 
         func_key = reads
-        if reads not in func_by_reads.keys():
-            func_key = type(reads)
-            assert func_key in func_by_reads.keys(), repr(func_key)
-
-        func = func_by_reads[func_key]
+        if func_key in func_by_reads.keys():
+            func = func_by_reads[func_key]
+        else:
+            func = self.shrug
+            if not isinstance(reads, bytes):
+                func = self.slap_back_chars
 
         return func
 
     def form_func_by_reads(self):
-        """Map Bytes and Words of Chars to Funcs"""
+        """Map Words of Chars to Funcs"""
 
         func_by_reads = dict()
-
-        func_by_reads[bytes] = self.shrug
-        func_by_reads[str] = self.slap_back_chars
 
         # Map Words of Chars to Funcs
 
@@ -300,16 +320,26 @@ class ViTerminal:
 
         func_by_reads[": Q ! Return"] = self.force_quit
 
+        func_by_reads["A"] = self.go_right_insert
+        func_by_reads["C C"] = self.cut_row_insert
+        func_by_reads["D D"] = self.cut_row
         func_by_reads["H"] = self.go_left_n
+        func_by_reads["I"] = self.insert_till
         func_by_reads["J"] = self.go_down_n
         func_by_reads["K"] = self.go_up_n
         func_by_reads["L"] = self.go_right_n
+        func_by_reads["R"] = self.replace_once
+        func_by_reads["X"] = self.cut_right
 
         func_by_reads["⇧Q V I Return"] = self.shrug
 
+        func_by_reads["⇧C"] = self.cut_tail_insert
+        func_by_reads["⇧D"] = self.cut_tail_go_left
         func_by_reads["⇧H"] = self.go_high_n
         func_by_reads["⇧M"] = self.go_middle
         func_by_reads["⇧L"] = self.go_low_n
+        func_by_reads["⇧R"] = self.replace_till
+        func_by_reads["⇧X"] = self.cut_left_n
 
         func_by_reads["⇧Z"] = self.hold_chars
         func_by_reads["⇧Z Q"] = self.try_me_n
@@ -398,7 +428,7 @@ class ViTerminal:
         if char_holds:
             char_holds[::] = char_holds[:-1]
         elif digit_holds:
-            digit_holds[::] = digit_holds[:-1]
+            digit_holds[::] = digit_holds[:-1]  # classic Vi doesn't undo Digits
         else:
             self.slap_back_chars()
 
@@ -463,7 +493,8 @@ class ViTerminal:
         """Force quit Vi, despite dirty Cache, etc"""
 
         bt = self.bt
-        bt.print()
+
+        bt.write(b"\r")
 
         sys.exit()
 
@@ -537,6 +568,209 @@ class ViTerminal:
         chars = form.format(alt_n)
         write = chars.encode()
         bt.write(write)
+
+    #
+    # Insert, Replace, or View  # todo: Digits as Arg of Insert/ Replace
+    #
+
+    def cut_row(self):  # Vi D D
+        """FIXME"""
+
+        self.slap_back_chars()
+
+    def cut_right(self):  # Vi X
+        """FIXME"""
+
+        self.slap_back_chars()
+
+    def cut_tail_go_left(self):  # Vi ⇧D
+        """FIXME"""
+
+        self.slap_back_chars()
+
+    def cut_left_n(self):  # Vi ⇧X
+        """FIXME"""
+
+        self.slap_back_chars()
+
+    #
+    # Insert
+    #
+
+    def go_right_insert(self):  # Vi A
+        """FIXME"""
+
+        self.slap_back_chars()
+
+    def cut_row_insert(self):  # Vi C C
+        """FIXME"""
+
+        self.slap_back_chars()
+
+    def cut_tail_insert(self):  # Vi ⇧C
+        """FIXME"""
+
+        self.slap_back_chars()
+
+    def insert_till(self):  # Vi I
+        """Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
+
+        bt = self.bt
+        exit_writes = self.exit_writes
+
+        if self.pull_digits_chars():
+            self.slap_back_chars()
+            return
+
+        # Enter Insert Mode
+
+        exit_writes.append(b"\x1B[4l")  # CSI Ps 06/12  # 4 replacement-mode
+        exit_writes.append(b"\x1B[ q")  # CSI Ps Space 07/01  # unstyled cursor-style
+
+        bt.write(b"\x1B[4h")  # CSI Ps 06/08  # 4 insertion-mode
+        bt.write(b"\x1B[6 q")  # CSI Ps Space 07/01  # 6 bar cursor-style
+
+        # Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences
+
+        func_by_read = dict()
+        func_by_read["Delete"] = self.insert_delete
+        func_by_read["Return"] = self.insert_return
+
+        self.run_text_sequence(func_by_read)
+
+        # Exit Insert Mode gently, not abruptly
+
+        bt.write(b"\x1B[4l")
+        bt.write(b"\x1B[ q")
+        exit_writes.remove(b"\x1B[4l")
+        exit_writes.remove(b"\x1B[ q")
+
+    def insert_delete(self):
+        """Go Left, then Shift Left the Tail of this Row"""
+
+        bt = self.bt
+        bt.write(b"\b\x1B[P")
+
+        # todo: Vi I Delete at Left deletes Row
+
+    def insert_return(self):
+        """Insert new Row above this Row"""
+
+        bt = self.bt
+        bt.write(b"\x1B[L\x1B[B")
+
+        # todo: Vi I Return warps left
+        # todo: Vi I Return splits Row
+
+    #
+    # Replace
+    #
+
+    def replace_once(self):  # Vi R
+        """Replace once"""
+
+        self.slap_back_chars()
+
+    def replace_till(self):  # Vi ⇧R
+        """Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
+
+        bt = self.bt
+        exit_writes = self.exit_writes
+
+        if self.pull_digits_chars():
+            self.slap_back_chars()
+            return
+
+        # Enter Replace Mode
+
+        exit_writes.append(b"\x1B[ q")  # CSI Ps Space 07/01  # unstyled cursor-style
+
+        bt.write(b"\x1B[4l")  # CSI Ps 06/12  # 4 replacement-mode
+        bt.write(b"\x1B[4 q")  # CSI Ps Space 07/01  # 4 skid cursor-style
+
+        # Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences
+
+        func_by_read = dict()
+        func_by_read["Delete"] = self.replace_delete
+        func_by_read["Return"] = self.replace_return
+
+        self.run_text_sequence(func_by_read)
+
+        # Exit Replace Mode gently, not abruptly
+
+        bt.write(b"\x1B[ q")
+        exit_writes.remove(b"\x1B[ q")
+
+    def replace_delete(self):
+        """Go Left to Replace with Space"""
+
+        bt = self.bt
+        bt.write(b"\b \b")
+
+        # todo: Vi ⇧R Delete undoes Replace's but then just moves backwards
+
+    def replace_return(self):
+        """Insert new Row below this Row"""
+
+        bt = self.bt
+        bt.write(b"\x1B[B\x1B[L")
+
+        # todo: Vi ⇧R Return matches Vi I Return
+        # todo: Vi ⇧R Return warps left
+
+    #
+    # Insert or Replace
+    #
+
+    def run_text_sequence(self, func_by_read):
+        """Insert/ Replace Text till ⌃C, except for ⌃O and Control Sequences"""
+
+        bt = self.bt
+        ct = self.ct
+
+        text_set = set(chr(_) for _ in range(0x20, 0x7F))
+
+        # Read Bytes till Chars
+
+        byte_holds = bytearray()
+        while True:
+            read = ct.read()
+            if isinstance(read, bytes):
+                byte_holds.extend(read)
+
+                continue
+
+            bytes_write = bytes(byte_holds)
+            byte_holds.clear()
+
+            # Delete
+
+            if read in func_by_read.keys():
+                func = func_by_read[read]
+                func()
+
+                continue
+
+            # Close up, or temporarily close up
+
+            if read == "⌃C":
+                break
+
+            if read == "⌃O":
+                self.read_func_run_func()
+
+                continue
+
+            chars_write_set = set(bytes_write.decode())
+            diff_set = chars_write_set - text_set
+            if diff_set:
+                self.read_func_run_func(lookahead=read)
+
+                continue
+
+            # Write the Text Sequence to the Terminal
+
+            bt.write(bytes_write)
 
     #
     # Test
@@ -1661,11 +1895,10 @@ _ = r"""
 
 map the usual Vi Keys to work
 
-let the digits be 0x etc, uppercase if 0x
+digits Arg for ⇧A ⇧R A I R
+partial undo for D D, C C, X, ⇧X
 
-track Insert/ Replace
-track Cursor Style
-cancel at Quit
+let the digits be 0x etc, uppercase if 0x
 
 track Bold and Color
 
