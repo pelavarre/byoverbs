@@ -15,8 +15,8 @@ quirks:
 
 keystrokes:
   ⌃C ⌃D ⌃L ⌃[ ⌃\
-  1 2 3 4 5 6 7 8 9 0 ⇧H ⇧M ⇧L H J K L |
-  ⇧C ⇧D ⇧R ⇧X CC DD A I R X
+  $ 0 1 2 3 4 5 6 7 8 9 ⇧H ⇧M ⇧L H J K L |
+  ⇧C ⇧D ⇧R ⇧S ⇧X CC DD A I R S X
 
 self-tests:
   1 ⇧Z Q test of Keyboard, 2 ⇧Z Q test of Screen, etc
@@ -124,7 +124,7 @@ class ViTerminal:
         digit_holds = list()
         exit_writes = list()
 
-        func_by_reads = self.form_func_by_reads()
+        func_by_reads = self.form_func_by_reads_main()
 
         #
 
@@ -150,6 +150,12 @@ class ViTerminal:
 
         write = b"".join(sorted(set(exit_writes)))
         bt.write(write)
+
+        bt.print()
+
+        size = os.get_terminal_size()
+        y = size.lines
+        self.bt_write_if("\x1B[{y}H".format(y=y).encode())
 
     def get_scrolling_columns(self):
         """Count Columns on Screen"""
@@ -177,6 +183,11 @@ class ViTerminal:
 
     def run_till_quit(self):
         """Loop Terminal Input back as Terminal Output"""
+
+        bt = self.bt
+
+        bt.write(b"\x1B[A")  # todo: enter smoothly
+        self.help_quit()
 
         try:
             while True:
@@ -240,7 +251,6 @@ class ViTerminal:
         else:
             assert isinstance(reads, str), reads
 
-            byte_echoes.clear()
             chars = reads
 
             digits = "".join(digit_holds)
@@ -256,7 +266,15 @@ class ViTerminal:
 
         if not args_quiet:
             write_chars = " " + status
-            write_chars += len(write_chars) * "\b"
+            if not isinstance(reads, bytes):
+                byte_status = bytes(byte_echoes)
+                byte_status = repr(byte_status)
+                byte_write_chars = " " + byte_status
+                length = len(byte_write_chars + write_chars)
+                write_chars += length * "\b"
+
+                byte_echoes.clear()
+
             write = write_chars.encode()
             bt.write(write)
 
@@ -290,16 +308,18 @@ class ViTerminal:
         else:
             func = self.shrug
             if not isinstance(reads, bytes):
-                func = self.slap_back_chars
+                func = self.slap_back_chars  # Key Func not-found
 
         return func
 
-    def form_func_by_reads(self):
+    def form_func_by_reads_main(self):
         """Map Words of Chars to Funcs"""
 
         func_by_reads = dict()
 
         # Map Words of Chars to Funcs
+
+        # ⌃ @ABCDEFGHIJKLMNO PQRSTUVWXYZ[\]^_
 
         func_by_reads["⌃C"] = self.help_quit_if
         func_by_reads["⌃D"] = self.help_quit_if
@@ -307,7 +327,11 @@ class ViTerminal:
         func_by_reads["⌃Q"] = self.hold_chars
         func_by_reads["⌃\\"] = self.help_quit_if
 
-        func_by_reads["0"] = self.hold_digit
+        # Space !"#$%&'()*+,-./ 0123456789:;<=>?
+
+        func_by_reads["$"] = self.go_line_end_n
+
+        func_by_reads["0"] = self.go_row_start_if
         func_by_reads["1"] = self.hold_digit
         func_by_reads["2"] = self.hold_digit
         func_by_reads["3"] = self.hold_digit
@@ -318,34 +342,42 @@ class ViTerminal:
         func_by_reads["8"] = self.hold_digit
         func_by_reads["9"] = self.hold_digit
 
-        func_by_reads[": Q ! Return"] = self.force_quit
+        # @ABCDEFGHIJKLMNO PQRSTUVWXYZ[\]^_
 
-        func_by_reads["A"] = self.go_right_insert
-        func_by_reads["C C"] = self.cut_row_insert
-        func_by_reads["D D"] = self.cut_row
-        func_by_reads["H"] = self.go_left_n
-        func_by_reads["I"] = self.insert_till
-        func_by_reads["J"] = self.go_down_n
-        func_by_reads["K"] = self.go_up_n
-        func_by_reads["L"] = self.go_right_n
-        func_by_reads["R"] = self.replace_once
-        func_by_reads["X"] = self.cut_right
+        func_by_reads[": Q ! Return"] = self.force_quit
 
         func_by_reads["⇧Q V I Return"] = self.shrug
 
-        func_by_reads["⇧C"] = self.cut_tail_insert
-        func_by_reads["⇧D"] = self.cut_tail_go_left
+        func_by_reads["⇧C"] = self.cut_row_tail_n_insert
+        func_by_reads["⇧D"] = self.cut_row_tail_n_left
         func_by_reads["⇧H"] = self.go_high_n
         func_by_reads["⇧M"] = self.go_middle
         func_by_reads["⇧L"] = self.go_low_n
-        func_by_reads["⇧R"] = self.replace_till
+        func_by_reads["⇧R"] = self.replace_n_till
+        func_by_reads["⇧S"] = self.cut_row_n_insert
         func_by_reads["⇧X"] = self.cut_left_n
 
         func_by_reads["⇧Z"] = self.hold_chars
         func_by_reads["⇧Z Q"] = self.try_me_n
         func_by_reads["⇧Z ⇧Q"] = self.force_quit
 
+        # `abcdefghijklmno pqrstuvwxyz{|}~
+
+        func_by_reads["A"] = self.go_right_insert
+        func_by_reads["C C"] = self.cut_row_n_insert
+        func_by_reads["D D"] = self.cut_row_n
+        func_by_reads["H"] = self.go_left_n
+        func_by_reads["I"] = self.insert_n_till
+        func_by_reads["J"] = self.go_down_n
+        func_by_reads["K"] = self.go_up_n
+        func_by_reads["L"] = self.go_right_n
+        func_by_reads["R"] = self.replace_once
+        func_by_reads["S"] = self.cut_right_insert
+        func_by_reads["X"] = self.cut_right
+
         func_by_reads["|"] = self.go_column_n
+
+        # etc
 
         func_by_reads["Delete"] = self.step_back
 
@@ -384,9 +416,7 @@ class ViTerminal:
         assert char_key in "0123456789", repr(char_key)
 
         if not digit_holds:
-            if char_key == "0":
-                self.slap_back_chars()
-                return
+            assert char_key != "0", repr(char_key)
 
         digit_holds.extend(char_key)
 
@@ -407,6 +437,19 @@ class ViTerminal:
         digit_holds.clear()
 
         return digits
+
+    def bt_write_form_n(self, form, n=None):
+        """Write a Csi Pn F Byte Sequence with 0 or more Held Digits inside it"""
+
+        bt = self.bt
+
+        alt_n = n
+        if n is None:
+            alt_n = self.pull_digits_chars()  # may be empty
+
+        chars = form.format(alt_n)
+        write = chars.encode()
+        bt.write(write)
 
     def hold_chars(self):  # Vi ⇧Z etc
         """Wait till Chars complete"""
@@ -430,7 +473,7 @@ class ViTerminal:
         elif digit_holds:
             digit_holds[::] = digit_holds[:-1]  # classic Vi doesn't undo Digits
         else:
-            self.slap_back_chars()
+            self.slap_back_chars()  # todo: give them one Keystroke grace
 
     def help_quit_if(self):  # Vi ⌃C ⌃D ⌃\ etc
         """Help more if shoved more"""
@@ -453,7 +496,7 @@ class ViTerminal:
             force += 1
 
         if force >= 2:
-            self.slap_back_chars()
+            self.slap_back_chars()  # repeated Vi ⌃C ⌃D ⌃\ etc
         elif force >= 1:
             self.help_quit()
 
@@ -464,7 +507,7 @@ class ViTerminal:
 
         bt.print()
 
-        status = "Press ⇧Z ⇧Q to quit, or ⌃C ⇧Z ⇧Q"
+        status = "Press ⇧Z ⇧Q to quit, or ⌃C ⇧Z ⇧Q "  # trailing Space included
         write = b"\r" + b"\x1B[K" + status.encode()
         bt.write(write)
 
@@ -499,7 +542,7 @@ class ViTerminal:
         sys.exit()
 
     #
-    # Move the Cursor
+    # Move the Cursor relative to itself
     #
 
     def go_left_n(self):  # Vi H  # Vi ←
@@ -523,6 +566,19 @@ class ViTerminal:
         self.bt_write_form_n("\x1B[{}C")
 
     #
+    # Move the Cursor relative to the Screen
+    #
+
+    def go_row_start_if(self):  # Vi 0 when not-preceded by 1 2 3 4 5 6 7 8 9
+        """Move to Left of Row"""
+
+        digit_holds = self.digit_holds
+
+        if digit_holds:
+            self.hold_digit()
+            return
+
+        self.bt_write_form_n("\r")
 
     def go_column_n(self):  # Vi |  # Vi ⇧\
         """Move from Left of Row"""
@@ -538,7 +594,7 @@ class ViTerminal:
         """Move from Middle of Screen"""
 
         if self.pull_digits_chars():
-            self.slap_back_chars()
+            self.slap_back_chars()  # Vi ⇧M with Digits Arg
             return
 
         lines = self.get_scrolling_lines()
@@ -555,71 +611,115 @@ class ViTerminal:
         self.bt_write_form_n("\x1B[{}d", n=n)
 
     #
+    # Move the Cursor relative to the Line
+    #
 
-    def bt_write_form_n(self, form, n=None):
-        """Write a Csi Pn F Byte Sequence"""
+    def go_line_end_n(self):  # Vi $  # Vi ⇧4
+        """Move from Right of Line"""
+
+        columns = self.get_scrolling_columns()
+        n = self.pull_digits_int_else(default=1)
+
+        n1 = n - 1
+        self.bt_write_form_n("\x1B[{}B", n=n1)
+        self.bt_write_form_n("\x1B[{}G", n=columns)
+
+    #
+    # Cut Chars or Rows
+    #
+
+    def cut_right(self):  # Vi X
+        """Cut N Chars here and to the right"""
+
+        self.bt_write_form_n("\x1B[{}P")
+
+    def cut_left_n(self):  # Vi ⇧X
+        """Cut N Chars to the left"""
 
         bt = self.bt
 
-        alt_n = n
-        if n is None:
-            alt_n = self.pull_digits_chars()
+        n = self.pull_digits_int_else(default=1)
 
-        chars = form.format(alt_n)
-        write = chars.encode()
-        bt.write(write)
+        bt.write(n * b"\b")
+        self.bt_write_form_n("\x1B[{}P", n=n)
 
-    #
-    # Insert, Replace, or View  # todo: Digits as Arg of Insert/ Replace
-    #
+    def cut_row_n(self):  # Vi D D
+        """Cut N Rows here and below"""
 
-    def cut_row(self):  # Vi D D
-        """FIXME"""
+        self.bt_write_form_n("\x1B[{}M")
 
-        self.slap_back_chars()
+        # todo: Vi D D warps to Dent
 
-    def cut_right(self):  # Vi X
-        """FIXME"""
+    def cut_right_insert(self):  # Vi S
+        """Cut N Chars here and to the right, then Insert, as if Vi X I"""
 
-        self.slap_back_chars()
+        self.cut_right()
+        self.insert_n_till()
 
-    def cut_tail_go_left(self):  # Vi ⇧D
-        """FIXME"""
+    def cut_row_tail_n_left(self):  # Vi ⇧D
+        """Cut N - 1 Rows below, then Tail of Row here, then Go Left"""
 
-        self.slap_back_chars()
+        bt = self.bt
+        self.cut_row_tail_n()
+        bt.write(b"\b")
 
-    def cut_left_n(self):  # Vi ⇧X
-        """FIXME"""
+    def cut_row_tail_n_insert(self):  # Vi ⇧C
+        """Cut N - 1 Rows below, then Tail of Row here, then Insert"""
 
-        self.slap_back_chars()
+        self.cut_row_tail_n()
+        self.insert_n_till()
+
+    def cut_row_tail_n(self):
+        """Cut N - 1 Rows below, then Tail of Row here"""
+
+        bt = self.bt
+
+        n = self.pull_digits_int_else(default=1)
+
+        n1 = n - 1
+        if n1:
+            bt.write(b"\x1B[B")
+            self.bt_write_form_n("\x1B[{}M", n=n1)
+            bt.write(b"\x1B[A")
+
+        bt.write(b"\x1B[K")
+
+        self.insert_n_till()
+
+    def cut_row_n_insert(self):  # Vi ⇧S  # Vi C C
+        """Cut N Rows and Insert 1 Row here"""
+
+        bt = self.bt
+
+        bt.write(b"\r")
+        self.bt_write_form_n("\x1B[{}M")
+        bt.write(b"\x1B[L")
+
+        self.insert_n_till()
 
     #
     # Insert
     #
 
     def go_right_insert(self):  # Vi A
-        """FIXME"""
+        """Move right and then insert, as if Vi L I"""
 
-        self.slap_back_chars()
+        bt = self.bt
 
-    def cut_row_insert(self):  # Vi C C
-        """FIXME"""
+        if self.pull_digits_chars():
+            self.slap_back_chars()  # todo: Vi A with Digits Args
+            return
 
-        self.slap_back_chars()
+        bt.write(b"\x1B[C")
 
-    def cut_tail_insert(self):  # Vi ⇧C
-        """FIXME"""
-
-        self.slap_back_chars()
-
-    def insert_till(self):  # Vi I
+    def insert_n_till(self):  # Vi I
         """Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
 
         bt = self.bt
         exit_writes = self.exit_writes
 
         if self.pull_digits_chars():
-            self.slap_back_chars()
+            self.slap_back_chars()  # todo: Vi I with Digits Args
             return
 
         # Enter Insert Mode
@@ -632,10 +732,7 @@ class ViTerminal:
 
         # Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences
 
-        func_by_read = dict()
-        func_by_read["Delete"] = self.insert_delete
-        func_by_read["Return"] = self.insert_return
-
+        func_by_read = self.form_func_by_read_insert()
         self.run_text_sequence(func_by_read)
 
         # Exit Insert Mode gently, not abruptly
@@ -662,6 +759,15 @@ class ViTerminal:
         # todo: Vi I Return warps left
         # todo: Vi I Return splits Row
 
+    def form_func_by_read_insert(self):
+        """Map Single Words of Control Chars to Funcs while Inserting Text"""
+
+        func_by_read = dict()
+        func_by_read["Delete"] = self.insert_delete
+        func_by_read["Return"] = self.insert_return
+
+        return func_by_read
+
     #
     # Replace
     #
@@ -669,16 +775,19 @@ class ViTerminal:
     def replace_once(self):  # Vi R
         """Replace once"""
 
-        self.slap_back_chars()
+        self.replace_n_till(limit=1)
 
-    def replace_till(self):  # Vi ⇧R
+        # Vi R ⌃V ⌃O and our R ⌃V ⌃O work the same
+        # Vi R ⌃O works like Vi ⇧R ⌃V ⌃O ⌃C, vs our R ⌃O works like Vi ⇧R ⌃O
+
+    def replace_n_till(self, limit=None):  # Vi ⇧R
         """Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
 
         bt = self.bt
         exit_writes = self.exit_writes
 
         if self.pull_digits_chars():
-            self.slap_back_chars()
+            self.slap_back_chars()  # todo: Vi ⇧R with Digits Arg
             return
 
         # Enter Replace Mode
@@ -690,11 +799,8 @@ class ViTerminal:
 
         # Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences
 
-        func_by_read = dict()
-        func_by_read["Delete"] = self.replace_delete
-        func_by_read["Return"] = self.replace_return
-
-        self.run_text_sequence(func_by_read)
+        func_by_read = self.form_func_by_read_replace()
+        self.run_text_sequence(func_by_read, limit=limit)
 
         # Exit Replace Mode gently, not abruptly
 
@@ -718,11 +824,20 @@ class ViTerminal:
         # todo: Vi ⇧R Return matches Vi I Return
         # todo: Vi ⇧R Return warps left
 
+    def form_func_by_read_replace(self):
+        """Map Single Words of Control Chars to Funcs while Replacing Text"""
+
+        func_by_read = dict()
+        func_by_read["Delete"] = self.replace_delete
+        func_by_read["Return"] = self.replace_return
+
+        return func_by_read
+
     #
     # Insert or Replace
     #
 
-    def run_text_sequence(self, func_by_read):
+    def run_text_sequence(self, func_by_read, limit=None):
         """Insert/ Replace Text till ⌃C, except for ⌃O and Control Sequences"""
 
         bt = self.bt
@@ -743,7 +858,12 @@ class ViTerminal:
             bytes_write = bytes(byte_holds)
             byte_holds.clear()
 
-            # Delete
+            # Close up
+
+            if read == "⌃C":
+                break
+
+            # Delete, Return, etc
 
             if read in func_by_read.keys():
                 func = func_by_read[read]
@@ -751,15 +871,14 @@ class ViTerminal:
 
                 continue
 
-            # Close up, or temporarily close up
-
-            if read == "⌃C":
-                break
+            # Temporarily close up by explicit request
 
             if read == "⌃O":
                 self.read_func_run_func()
 
                 continue
+
+            # Temporarily close up by implicit request
 
             chars_write_set = set(bytes_write.decode())
             diff_set = chars_write_set - text_set
@@ -771,6 +890,13 @@ class ViTerminal:
             # Write the Text Sequence to the Terminal
 
             bt.write(bytes_write)
+
+            # Close up after limit
+
+            if limit:
+                break
+
+            # todo: take ⌃V as quoting non-text chars
 
     #
     # Test
@@ -804,7 +930,7 @@ class ViTerminal:
         funcs_by_int[2] = self.try_screen
 
         if digits_int_else not in funcs_by_int.keys():
-            self.slap_back_chars()
+            self.slap_back_chars()  # Test Func not-found
             return
 
         int_func = funcs_by_int[digits_int_else]
