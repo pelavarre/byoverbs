@@ -323,12 +323,17 @@ class ViTerminal:
 
         func_by_reads["⌃C"] = self.help_quit_if
         func_by_reads["⌃D"] = self.help_quit_if
+        func_by_reads["⌃H"] = self.step_back  # alias of "Delete", more PC than Mac
+        func_by_reads["⌃J"] = self.go_down_n  # alias of "J"
+        func_by_reads["⌃N"] = self.go_down_n  # another alias of "J", a la Emacs
+        func_by_reads["⌃P"] = self.go_up_n  # alias of "K", a la Emacs
         func_by_reads["⌃L"] = self.shrug
         func_by_reads["⌃Q"] = self.hold_chars
         func_by_reads["⌃\\"] = self.help_quit_if
 
         # Space !"#$%&'()*+,-./ 0123456789:;<=>?
 
+        func_by_reads["Space"] = self.go_ahead_n  # alias of "L", inverse of "Delete"
         func_by_reads["$"] = self.go_line_end_n
 
         func_by_reads["0"] = self.go_row_start_if
@@ -473,7 +478,7 @@ class ViTerminal:
         elif digit_holds:
             digit_holds[::] = digit_holds[:-1]  # classic Vi doesn't undo Digits
         else:
-            self.slap_back_chars()  # todo: give them one Keystroke grace
+            self.go_back_n()
 
     def help_quit_if(self):  # Vi ⌃C ⌃D ⌃\ etc
         """Help more if shoved more"""
@@ -614,6 +619,16 @@ class ViTerminal:
     # Move the Cursor relative to the Line
     #
 
+    def go_back_n(self):  # Vi Delete  # Vi ⌃H  # when no Digits or Chars Held
+        """Move back in the Char Stream of the Lines"""
+
+        self.go_left_n()  # todo: back up to previous Row from Leftmost Column
+
+    def go_ahead_n(self):  # Vi Space
+        """Move ahead in the Char Stream of the Lines"""
+
+        self.go_right_n()  # todo: spill over into next Row from Leftmost Column
+
     def go_line_end_n(self):  # Vi $  # Vi ⇧4
         """Move from Right of Line"""
 
@@ -621,7 +636,8 @@ class ViTerminal:
         n = self.pull_digits_int_else(default=1)
 
         n1 = n - 1
-        self.bt_write_form_n("\x1B[{}B", n=n1)
+        if n1:
+            self.bt_write_form_n("\x1B[{}B", n=n1)
         self.bt_write_form_n("\x1B[{}G", n=columns)
 
     #
@@ -2019,12 +2035,14 @@ add_us_ascii_into_chords_by_bytes()
 
 _ = r"""
 
-map the usual Vi Keys to work
+. and U redo and undo, though our Undo's will be partial
+
+--
 
 digits Arg for ⇧A ⇧R A I R
-partial undo for D D, C C, X, ⇧X
 
 let the digits be 0x etc, uppercase if 0x
+⌃V and \x and \u and \U and \a character insert
 
 track Bold and Color
 
@@ -2041,8 +2059,6 @@ with no movement except as needed to leap over sparse gaps
 help people bold the un-sparse, like to know when they've traced over it all
 
 --
-
-\x and \u and \U and \r character insert, in ChordsScreenTest, such as \r undelayed
 
 test \n \r \r\n bytes inside macOS Paste Buffer
 
