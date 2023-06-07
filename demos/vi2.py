@@ -84,12 +84,15 @@ def main():
     args = parse_vi2_py_args()
     main.args = args
 
-    stdio = sys.__stdout__  # '__stdout__' as per 'shutil.get_terminal_size'
+    stdio = sys.__stderr__
     with BytesTerminal(stdio) as bt:
         ct = ChordsTerminal(bt)
         vt = ViTerminal(ct)
 
         vt.run_till_quit()
+
+    # Sh Pipes nudge us to read Stdin, write Stdout, find Tty at Stderr
+    # Py ShUtil Get_Terminal_Size nudges us to lose Tty when not found at Stdout
 
 
 def parse_vi2_py_args():
@@ -145,34 +148,34 @@ class ViTerminal:
     def __exit__(self, *exc_info):
         """Cancel"""
 
+        bt = self.bt
         exit_writes = self.exit_writes
+
+        # Exit the Screen Modes entered
 
         write = b"".join(sorted(set(exit_writes)))
         self.write_if(write)
 
-        self.print_if()
+        # Close out same as 'def try_screen', when not running quietly
 
-        size = os.get_terminal_size()
-        y = size.lines
+        self.print_if()
+        y = bt.get_terminal_lines()
         self.write_if("\x1B[{y}H".format(y=y).encode())
 
     def get_scrolling_columns(self):
         """Count Columns on Screen"""
 
-        stdio = self.stdio
-
-        size = os.get_terminal_size(stdio.fileno())
-        columns = size.columns
+        bt = self.bt
+        columns = bt.get_terminal_columns()
 
         return columns
 
     def get_scrolling_lines(self):
         """Count Rows on Screen"""
 
-        stdio = self.stdio
-
-        size = os.get_terminal_size(stdio.fileno())
-        lines = size.lines
+        bt = self.bt
+        lines = bt.get_terminal_lines()
+        # lines -= 2  # todo: break out 1 or 2 Rows of Status
 
         return lines
 
@@ -1005,18 +1008,16 @@ class ViTerminal:
         """Test the BytesTerminal Write at a Chords Terminal, till ⌃C"""
 
         ct = self.ct
+        bt = self.bt
 
         self.print_if("Press ⌃C to stop our ChordsScreenTest")
 
         cst = ChordsScreenTest(ct)
         cst.run_till_quit()
 
-        size = os.get_terminal_size()
-        if size.lines > 1:
-            y = size.lines - 1
-            self.write_if("\x1B[{y}H".format(y=y).encode())
-
         self.print_if()
+        y = bt.get_terminal_lines()
+        self.write_if("\x1B[{y}H".format(y=y).encode())
 
 
 #
@@ -1853,12 +1854,6 @@ class BytesTerminal:
 
         return self
 
-    def try_me(self):
-        """Run a quick thorough self-test"""
-
-        self.write(b"")  # tests 'os.write'
-        self.kbhit(0)  # tests 'select.select'
-
     def __exit__(self, *exc_info):
         r"""Start line-buffering Input and start replacing \n Output with \r\n"""
 
@@ -1877,6 +1872,26 @@ class BytesTerminal:
         self.__exit__(*sys.exc_info())
         breakpoint()
         self.__enter__()
+
+    def get_terminal_columns(self):
+        """Count Columns on Screen"""
+
+        fd = self.fd
+        size = os.get_terminal_size(fd)  # often < 50 us
+        columns = size.columns
+
+        return columns
+
+    def get_terminal_lines(self):
+        """Count Rows on Screen"""
+
+        fd = self.fd
+        size = os.get_terminal_size(fd)  # often < 50 us
+        rows = size.lines
+
+        return rows
+
+        # 'shutil.get_terminal_size' often runs < 100 us
 
     def print(self, *args, **kwargs):
         """Work like Print, but end with '\r\n', not with '\n'"""
@@ -1923,6 +1938,12 @@ class BytesTerminal:
         (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout)
 
         return alt_rlist
+
+    def try_me(self):
+        """Run a quick thorough self-test"""
+
+        self.write(b"")  # tests 'os.write'
+        self.kbhit(0)  # tests 'select.select'
 
 
 #
@@ -2098,8 +2119,21 @@ up towards demo of reduce Python to Color Python
 
 --
 
-<< to cut left
->> to spill right
+un-BEL when we do know Cursor Position because we moved absolutely
+
+abs row known for ⇧H ⇧M ⇧L
+abs column known for | 0 $
+abs column known for ⇧S CC DD
+
+rel row/column known for H J K L
+rel row/column known for ⇧C ⇧D ⇧R ⇧S ⇧X CC DD A I R S X
+
+<F to cut left
+>F to spill right
+
+DSR CPR
+
+--
 
 persist qq @q as played ["@q"] = b"..."
 
