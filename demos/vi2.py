@@ -116,39 +116,33 @@ class ViTerminal:
     r"""Loop Terminal Input back as Terminal Output"""
 
     def __init__(self, ct):
-        bt = ct.bt
-        stdio = bt.stdio
-        _ = stdio.fileno()
-
         #
 
-        byte_echoes = bytearray()
+        bytes_key = bytearray()
         char_holds = list()
         digit_holds = list()
         exit_writes = list()
 
-        func_by_reads = self.form_func_by_reads_main()
+        func_by_chords = self.form_func_by_chords_main()
 
         #
 
         self.ct = ct  # ChordsTerminal
-        self.bt = bt  # BytesTerminal
-        self.stdio = stdio
 
-        self.byte_echoes = byte_echoes  # the Bytes held, till next Char
+        self.bytes_key = bytes_key  # the Bytes held, till next Char
         self.char_holds = char_holds  # the Words of Chars held, till next Func
         self.digit_holds = digit_holds  # the Digits held, till next Func
 
         self.chars_key_list = list()  # the Names of Func's Read
         self.chars_key = None  # the Name of the last Func Read
-        self.func_by_reads = func_by_reads  # the Func's by Name
+        self.func_by_chords = func_by_chords  # the Func's by Name
 
         self.exit_writes = exit_writes
 
     def __exit__(self, *exc_info):
         """Cancel"""
 
-        bt = self.bt
+        ct = self.ct
         exit_writes = self.exit_writes
 
         # Exit the Screen Modes entered
@@ -159,25 +153,10 @@ class ViTerminal:
         # Close out same as 'def try_screen', when not running quietly
 
         self.print_if()
+
+        bt = ct.bt
         y = bt.get_terminal_lines()
         self.write_if("\x1B[{y}H".format(y=y).encode())
-
-    def get_scrolling_columns(self):
-        """Count Columns on Screen"""
-
-        bt = self.bt
-        columns = bt.get_terminal_columns()
-
-        return columns
-
-    def get_scrolling_lines(self):
-        """Count Rows on Screen"""
-
-        bt = self.bt
-        lines = bt.get_terminal_lines()
-        # lines -= 2  # todo: break out 1 or 2 Rows of Status
-
-        return lines
 
     #
     # Launch and Quit
@@ -186,24 +165,32 @@ class ViTerminal:
     def run_till_quit(self):
         """Loop Terminal Input back as Terminal Output"""
 
-        bt = self.bt
+        ct = self.ct
 
         args_quiet = main.args.quiet
 
+        # Start up noisily, or not
+
         if not args_quiet:
-            bt.write(b"\x1B[A")  # todo: enter smoothly
+            ct.write(b"\x1B[A")  # todo: enter smoothly
             self.help_quit()
+
+        # Read enough Chords to choose a Func, and then run that Func
 
         try:
             while True:
-                self.read_func_run_func()  # may raise SystemExit
+                self.read_chords_run_func()  # may raise SystemExit
+
+        # Clean up at Exit
+
         finally:
             exc_info = sys.exc_info()
             self.__exit__(*exc_info)
 
-    def read_func_run_func(self, lookahead=None):
-        """Run the named Func"""
+    def read_chords_run_func(self, stale_chords=None):
+        """Read Chords till they name a Func, then run that Func"""
 
+        bytes_key = self.bytes_key
         ct = self.ct
         char_holds = self.char_holds
         digit_holds = self.digit_holds
@@ -211,59 +198,73 @@ class ViTerminal:
         assert not digit_holds, digit_holds
         assert not char_holds, char_holds
 
-        lookahead_once = lookahead
-        while True:
-            if lookahead_once is not None:
-                read = lookahead_once
-                lookahead_once = None  # replace
-            else:
-                read = ct.read()
+        # Cope if the Caller read some Chords ahead
 
-            reads = read
-            if isinstance(read, str):
+        fresh_chords = stale_chords
+        if stale_chords is None:
+            fresh_chords = ct.read_chords()
+
+        # Set up Funcs to say try again with more Char Chords
+
+        while True:
+            chords = fresh_chords
+            if isinstance(fresh_chords, str):
                 if char_holds:
-                    reads = "".join(char_holds) + read
+                    chords = "".join(char_holds) + fresh_chords
                     char_holds.clear()
 
-            self.echo_reads(reads)
+            # Echo the Bytes and Chars naming Funcs
 
-            func = self.find_func_by_reads(reads)
+            self.echo_chords(chords)
+
+            # Run the Func of Bytes, or the closing Func of Chars
+
+            func = self.find_func_by_chords(chords)
             func()  # may raise SystemExit
 
-            if isinstance(read, str):
+            if isinstance(fresh_chords, str):
+                bytes_key.clear()
+
+            # Quit after running the Funcs of Bytes, and the closing Func of Chars
+
+            if isinstance(fresh_chords, str):
                 if not digit_holds:
                     if not char_holds:
                         break
 
-    def echo_reads(self, reads):
-        """Echo every Byte received and every Word of Chars received"""
+            # Else read more Chords
 
-        bt = self.bt
-        byte_echoes = self.byte_echoes
+            fresh_chords = ct.read_chords()
+
+    def echo_chords(self, chords):
+        """Echo the collected Bytes and the collected Words of Chars"""
+
+        ct = self.ct
+        bytes_key = self.bytes_key
         digit_holds = self.digit_holds
 
         args_quiet = main.args.quiet
 
         # Form a Python Repr to echo Bytes
 
-        if isinstance(reads, bytes):
-            byte_echoes.extend(reads)
-            status = bytes(byte_echoes)
+        if isinstance(chords, bytes):
+            bytes_key.extend(chords)
+            status = bytes(bytes_key)
             status = repr(status)
 
         # Form Digits followed by Words of Chars, to echo those
 
         else:
-            assert isinstance(reads, str), reads
+            assert isinstance(chords, str), chords
 
-            chars = reads
+            chars = chords
 
             digits = "".join(digit_holds)
             if digits:
-                if reads in "0123456789":
-                    chars = digits + reads
+                if chords in "0123456789":
+                    chars = digits + chords
                 else:
-                    chars = digits + " " + reads
+                    chars = digits + " " + chords
 
             status = self.chars_to_status(chars)
 
@@ -271,17 +272,15 @@ class ViTerminal:
 
         if not args_quiet:
             write_chars = " " + status
-            if not isinstance(reads, bytes):
-                byte_status = bytes(byte_echoes)
+            if not isinstance(chords, bytes):
+                byte_status = bytes(bytes_key)
                 byte_status = repr(byte_status)
                 byte_write_chars = " " + byte_status
                 length = len(byte_write_chars + write_chars)
                 write_chars += length * "\b"
 
-                byte_echoes.clear()
-
             write = write_chars.encode()
-            bt.write(write)
+            ct.write(write)
 
     def chars_to_status(self, chars):
         """Say how to echo Chars as Status"""
@@ -295,115 +294,118 @@ class ViTerminal:
 
         return status
 
-    def find_func_by_reads(self, reads):
+    def find_func_by_chords(self, chords):
         """Find the Func most closely named by Bytes and Words of Chars"""
 
-        func_by_reads = self.func_by_reads
+        func_by_chords = self.func_by_chords
         chars_key_list = self.chars_key_list
 
         assert Esc == b"\x1B"
 
-        if isinstance(reads, str):
-            chars_key = reads
+        if isinstance(chords, str):
+            chars_key = chords
             chars_key_list.append(chars_key)
 
             self.chars_key = chars_key
 
-        func_key = reads
-        if func_key in func_by_reads.keys():
-            func = func_by_reads[func_key]
+        func_key = chords
+        if func_key in func_by_chords.keys():
+            func = func_by_chords[func_key]
         else:
-            if isinstance(reads, bytes):
+            if isinstance(chords, bytes):
                 func = self.shrug
             elif func_key.startswith("\x1B"):
-                func = self.write_chars_key_encode
+                func = self.write_bytes_key
             else:
                 func = self.slap_back_chars  # Key Func not-found
 
         return func
 
-    def form_func_by_reads_main(self):
+    def form_func_by_chords_main(self):
         """Map Words of Chars to Funcs"""
 
-        func_by_reads = dict()
+        func_by_chords = dict()
 
         # Map Words of Chars to Funcs
 
         # ⌃ @ABCDEFGHIJKLMNO PQRSTUVWXYZ[\]^_
 
-        func_by_reads["⌃C"] = self.help_quit_if
-        func_by_reads["⌃D"] = self.help_quit_if
-        func_by_reads["⌃H"] = self.step_back  # alias of "Delete", more PC than Mac
-        func_by_reads["⌃J"] = self.go_down_n  # alias of "J"
-        func_by_reads["⌃N"] = self.go_down_n  # another alias of "J", a la Emacs
-        func_by_reads["⌃P"] = self.go_up_n  # alias of "K", a la Emacs
-        func_by_reads["⌃L"] = self.shrug
-        func_by_reads["⌃Q"] = self.hold_chars
-        func_by_reads["⌃\\"] = self.help_quit_if
+        func_by_chords["⌃C"] = self.help_quit_if
+        func_by_chords["⌃D"] = self.help_quit_if
+        func_by_chords["⌃H"] = self.step_back  # alias of "Delete", more PC than Mac
+        func_by_chords["⌃J"] = self.go_down_n  # alias of "J"
+        func_by_chords["⌃N"] = self.go_down_n  # another alias of "J", a la Emacs
+        func_by_chords["⌃P"] = self.go_up_n  # alias of "K", a la Emacs
+        func_by_chords["⌃L"] = self.shrug
+        func_by_chords["⌃Q"] = self.hold_chars
+        func_by_chords["⌃\\"] = self.help_quit_if
 
         # Space !"#$%&'()*+,-./ 0123456789:;<=>?
 
-        func_by_reads["Space"] = self.go_ahead_n  # alias of "L", inverse of "Delete"
-        func_by_reads["$"] = self.go_line_end_n
+        func_by_chords["Space"] = self.go_ahead_n  # alias of "L", inverse of "Delete"
+        func_by_chords["$"] = self.go_line_end_n
 
-        func_by_reads["0"] = self.go_row_start_if
-        func_by_reads["1"] = self.hold_digit
-        func_by_reads["2"] = self.hold_digit
-        func_by_reads["3"] = self.hold_digit
-        func_by_reads["4"] = self.hold_digit
-        func_by_reads["5"] = self.hold_digit
-        func_by_reads["6"] = self.hold_digit
-        func_by_reads["7"] = self.hold_digit
-        func_by_reads["8"] = self.hold_digit
-        func_by_reads["9"] = self.hold_digit
+        func_by_chords["0"] = self.go_row_start_if
+        func_by_chords["1"] = self.hold_digit
+        func_by_chords["2"] = self.hold_digit
+        func_by_chords["3"] = self.hold_digit
+        func_by_chords["4"] = self.hold_digit
+        func_by_chords["5"] = self.hold_digit
+        func_by_chords["6"] = self.hold_digit
+        func_by_chords["7"] = self.hold_digit
+        func_by_chords["8"] = self.hold_digit
+        func_by_chords["9"] = self.hold_digit
 
         # @ABCDEFGHIJKLMNO PQRSTUVWXYZ[\]^_
 
-        func_by_reads[": Q ! Return"] = self.force_quit
+        func_by_chords[": Q ! Return"] = self.force_quit
 
-        func_by_reads["⇧Q V I Return"] = self.shrug
+        func_by_chords["⇧Q V I Return"] = self.shrug
 
-        func_by_reads["⇧C"] = self.cut_row_tail_n_insert
-        func_by_reads["⇧D"] = self.cut_row_tail_n_left
-        func_by_reads["⇧H"] = self.go_high_n
-        func_by_reads["⇧M"] = self.go_middle
-        func_by_reads["⇧L"] = self.go_low_n
-        func_by_reads["⇧R"] = self.replace_n_till
-        func_by_reads["⇧S"] = self.cut_row_n_insert
-        func_by_reads["⇧X"] = self.cut_left_n
+        func_by_chords["⇧C"] = self.cut_row_tail_n_insert
+        func_by_chords["⇧D"] = self.cut_row_tail_n_left
+        func_by_chords["⇧H"] = self.go_high_n
+        func_by_chords["⇧M"] = self.go_middle
+        func_by_chords["⇧L"] = self.go_low_n
+        func_by_chords["⇧R"] = self.replace_n_till
+        func_by_chords["⇧S"] = self.cut_row_n_insert
+        func_by_chords["⇧X"] = self.cut_left_n
 
-        func_by_reads["⇧Z"] = self.hold_chars
-        func_by_reads["⇧Z Q"] = self.try_me_n
-        func_by_reads["⇧Z ⇧Q"] = self.force_quit
+        func_by_chords["⇧Z"] = self.hold_chars
+        func_by_chords["⇧Z Q"] = self.try_me_n  # could also take 'Z ⇧Q' and 'Z Q'
+        func_by_chords["⇧Z ⇧Q"] = self.force_quit
 
         # `abcdefghijklmno pqrstuvwxyz{|}~
 
-        func_by_reads["A"] = self.go_right_insert
-        func_by_reads["C C"] = self.cut_row_n_insert
-        func_by_reads["D D"] = self.cut_row_n
-        func_by_reads["H"] = self.go_left_n
-        func_by_reads["I"] = self.insert_n_till
-        func_by_reads["J"] = self.go_down_n
-        func_by_reads["K"] = self.go_up_n
-        func_by_reads["L"] = self.go_right_n
-        func_by_reads["R"] = self.replace_once
-        func_by_reads["S"] = self.cut_right_insert
-        func_by_reads["X"] = self.cut_right
+        func_by_chords["A"] = self.go_right_insert
+        func_by_chords["C C"] = self.cut_row_n_insert
+        func_by_chords["D D"] = self.cut_row_n
+        func_by_chords["H"] = self.go_left_n
+        func_by_chords["I"] = self.insert_n_till
+        func_by_chords["J"] = self.go_down_n
+        func_by_chords["K"] = self.go_up_n
+        func_by_chords["L"] = self.go_right_n
+        func_by_chords["R"] = self.replace_once
+        func_by_chords["S"] = self.cut_right_insert
+        func_by_chords["X"] = self.cut_right
 
-        func_by_reads["|"] = self.go_column_n
+        func_by_chords["|"] = self.go_column_n
 
         # etc
 
-        func_by_reads["Delete"] = self.step_back
+        func_by_chords["Delete"] = self.step_back
 
-        func_by_reads["↑"] = self.go_up_n
-        func_by_reads["↓"] = self.go_down_n
-        func_by_reads["→"] = self.go_right_n
-        func_by_reads["←"] = self.go_left_n
+        func_by_chords["↑"] = self.go_up_n
+        func_by_chords["↓"] = self.go_down_n
+        func_by_chords["→"] = self.go_right_n
+        func_by_chords["←"] = self.go_left_n
+
+        func_by_chords["Fn⇧←"] = self.write_bytes_key  # ⎋[H
+        func_by_chords["Fn⇧→"] = self.write_bytes_key  # ⎋[F
 
         # Map fewer Words of Chars to Funcs
 
-        keys = list(func_by_reads.keys())
+        keys = list(func_by_chords.keys())
         for key in keys:
             if isinstance(key, str):
                 splits = key.split()
@@ -411,11 +413,11 @@ class ViTerminal:
                     alt_key = " ".join(splits[:index])
 
                     if alt_key not in keys:
-                        func_by_reads[alt_key] = self.hold_chars
+                        func_by_chords[alt_key] = self.hold_chars
 
         # Succeed
 
-        return func_by_reads
+        return func_by_chords
 
     def shrug(self):  # Vi ⌃L  # Vi Bytes
         """Consciously make no reply"""
@@ -423,7 +425,7 @@ class ViTerminal:
         pass
 
     def hold_digit(self):  # Vi 1 2 3 4 5 6 7 8 9, and Vi 0 too thereafter
-        """Wait till Digits complete"""
+        """Hold Digits till Digits complete"""
 
         digit_holds = self.digit_holds
         chars_key = self.chars_key
@@ -456,7 +458,7 @@ class ViTerminal:
     def write_digits(self, form):
         """Write a Csi Pn F Byte Sequence with zero or more Held Digits inside"""
 
-        bt = self.bt
+        ct = self.ct
 
         digits = self.pull_digits_chars()  # may be empty
 
@@ -464,12 +466,12 @@ class ViTerminal:
         chars = form.format(digits)
         write = chars.encode()
 
-        bt.write(write)
+        ct.write(write)
 
     def write_form_n(self, form, n):
         """Write a Csi Pn F Byte Sequence, but with the Digits of an Int inside"""
 
-        bt = self.bt
+        ct = self.ct
 
         assert isinstance(n, int), repr(n)
         assert n > 0, n
@@ -478,26 +480,31 @@ class ViTerminal:
         chars = form.format(n)
         write = chars.encode()
 
-        bt.write(write)
+        ct.write(write)
 
-    def write_chars_key_encode(self):
+    def write_bytes_key(self):
         """Write a Csi Pn F Byte Sequence given as Keyboard Input"""
 
-        bt = self.bt
-
+        ct = self.ct
+        bytes_key = self.bytes_key
         chars_key = self.chars_key
 
-        write = chars_key.encode()
-        bt.write(write)
+        assert b"\x1B" == Esc
+
+        encode = chars_key.encode()
+        if encode.startswith(b"\x1B"):
+            assert encode == bytes_key, (encode, bytes_key)
+
+        ct.write(bytes_key)
 
     def write(self, bytes_):
         """Write zero or more Bytes"""
 
-        bt = self.bt
-        bt.write(bytes_)
+        ct = self.ct
+        ct.write(bytes_)
 
     def hold_chars(self):  # Vi ⇧Z etc
-        """Wait till Chars complete"""
+        """Hold Char Chords till Chars complete"""
 
         char_holds = self.char_holds
         chars_key = self.chars_key
@@ -548,9 +555,9 @@ class ViTerminal:
     def help_quit(self):  # Vi ⌃C ⌃D ⌃\ etc
         """Help quit Vi"""
 
-        bt = self.bt
+        ct = self.ct
 
-        bt.print()
+        ct.print()
 
         status = "Press ⇧Z ⇧Q to quit, or ⌃C ⇧Z ⇧Q "  # trailing Space included
         write = b"\r" + b"\x1B[K" + status.encode()
@@ -559,7 +566,7 @@ class ViTerminal:
     def slap_back_chars(self):  # i'm afraid i can't do that, Dave.
         """Say don't do that"""
 
-        bt = self.bt
+        ct = self.ct
         ct = self.ct
         chars_key = self.chars_key
         chars_key_list = self.chars_key_list
@@ -567,22 +574,22 @@ class ViTerminal:
 
         chars_key_list.extend(["Bel", "⌃C"])
 
-        reads = chars_key + " " + "Bel"
-        self.echo_reads(reads)
+        chords = chars_key + " " + "Bel"
+        self.echo_chords(chords)
 
         digit_holds.clear()
 
-        bt.write(b"\a")
+        ct.write(b"\a")
 
         if ct.kbhit(timeout=0):
-            bt.print()  # cancelled Esc, Esc [, Return, etc
+            ct.print()  # cancelled Esc, Esc [, Return, etc
 
     def force_quit(self):  # ⇧Z ⇧Q
         """Force quit Vi, despite dirty Cache, etc"""
 
-        bt = self.bt
+        ct = self.ct
 
-        bt.write(b"\r")
+        ct.write(b"\r")
 
         sys.exit()
 
@@ -638,11 +645,13 @@ class ViTerminal:
     def go_middle(self):  # Vi ⇧M
         """Move from Middle of Screen"""
 
+        ct = self.ct
+
         if self.pull_digits_chars():
             self.slap_back_chars()  # Vi ⇧M with Digits Arg
             return
 
-        lines = self.get_scrolling_lines()
+        lines = ct.get_scrolling_rows()
         assert lines
         n = (lines + 1) // 2  # Row 2 of 1 2 3 4, Row 3 of 1 2 3 4 5, etc
         self.write_form_n("\x1B[{}d", n=n)
@@ -650,7 +659,9 @@ class ViTerminal:
     def go_low_n(self):  # Vi ⇧L
         """Move from Bottom of Screen"""
 
-        lines = self.get_scrolling_lines()
+        ct = self.ct
+
+        lines = ct.get_scrolling_rows()
         digits_int_else = self.pull_digits_int_else(default=1)
         n = (lines + 1 - digits_int_else) if (digits_int_else < lines) else 1
         self.write_form_n("\x1B[{}d", n=n)
@@ -672,7 +683,9 @@ class ViTerminal:
     def go_line_end_n(self):  # Vi $  # Vi ⇧4
         """Move from Right of Line"""
 
-        columns = self.get_scrolling_columns()
+        ct = self.ct
+
+        columns = ct.get_scrolling_columns()
         n = self.pull_digits_int_else(default=1)
 
         n1 = n - 1
@@ -692,11 +705,11 @@ class ViTerminal:
     def cut_left_n(self):  # Vi ⇧X
         """Cut N Chars to the left"""
 
-        bt = self.bt
+        ct = self.ct
 
         n = self.pull_digits_int_else(default=1)
 
-        bt.write(n * b"\b")
+        ct.write(n * b"\b")
         self.write_form_n("\x1B[{}P", n=n)
 
     def cut_row_n(self):  # Vi D D
@@ -715,9 +728,9 @@ class ViTerminal:
     def cut_row_tail_n_left(self):  # Vi ⇧D
         """Cut N - 1 Rows below, then Tail of Row here, then Go Left"""
 
-        bt = self.bt
+        ct = self.ct
         self.cut_row_tail_n()
-        bt.write(b"\b")
+        ct.write(b"\b")
 
     def cut_row_tail_n_insert(self):  # Vi ⇧C
         """Cut N - 1 Rows below, then Tail of Row here, then Insert"""
@@ -728,28 +741,28 @@ class ViTerminal:
     def cut_row_tail_n(self):
         """Cut N - 1 Rows below, then Tail of Row here"""
 
-        bt = self.bt
+        ct = self.ct
 
         n = self.pull_digits_int_else(default=1)
 
         n1 = n - 1
         if n1:
-            bt.write(b"\x1B[B")
+            ct.write(b"\x1B[B")
             self.write_form_n("\x1B[{}M", n=n1)
-            bt.write(b"\x1B[A")
+            ct.write(b"\x1B[A")
 
-        bt.write(b"\x1B[K")
+        ct.write(b"\x1B[K")
 
         self.insert_n_till()
 
     def cut_row_n_insert(self):  # Vi ⇧S  # Vi C C
         """Cut N Rows and Insert 1 Row here"""
 
-        bt = self.bt
+        ct = self.ct
 
-        bt.write(b"\r")
+        ct.write(b"\r")
         self.write_digits("\x1B[{}M")
-        bt.write(b"\x1B[L")
+        ct.write(b"\x1B[L")
 
         self.insert_n_till()
 
@@ -760,18 +773,18 @@ class ViTerminal:
     def go_right_insert(self):  # Vi A
         """Move right and then insert, as if Vi L I"""
 
-        bt = self.bt
+        ct = self.ct
 
         if self.pull_digits_chars():
             self.slap_back_chars()  # todo: Vi A with Digits Args
             return
 
-        bt.write(b"\x1B[C")
+        ct.write(b"\x1B[C")
 
     def insert_n_till(self):  # Vi I
         """Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
 
-        bt = self.bt
+        ct = self.ct
         exit_writes = self.exit_writes
 
         if self.pull_digits_chars():
@@ -783,46 +796,46 @@ class ViTerminal:
         exit_writes.append(b"\x1B[4l")  # CSI Ps 06/12  # 4 replacement-mode
         exit_writes.append(b"\x1B[ q")  # CSI Ps Space 07/01  # unstyled cursor-style
 
-        bt.write(b"\x1B[4h")  # CSI Ps 06/08  # 4 insertion-mode
-        bt.write(b"\x1B[6 q")  # CSI Ps Space 07/01  # 6 bar cursor-style
+        ct.write(b"\x1B[4h")  # CSI Ps 06/08  # 4 insertion-mode
+        ct.write(b"\x1B[6 q")  # CSI Ps Space 07/01  # 6 bar cursor-style
 
         # Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences
 
-        func_by_read = self.form_func_by_read_insert()
-        self.run_text_sequence(func_by_read)
+        func_by_chords = self.form_func_by_chords_insert()
+        self.run_text_sequence(func_by_chords)
 
         # Exit Insert Mode gently, not abruptly
 
-        bt.write(b"\x1B[4l")
-        bt.write(b"\x1B[ q")
+        ct.write(b"\x1B[4l")
+        ct.write(b"\x1B[ q")
         exit_writes.remove(b"\x1B[4l")
         exit_writes.remove(b"\x1B[ q")
 
     def insert_delete(self):
         """Go Left, then Shift Left the Tail of this Row"""
 
-        bt = self.bt
-        bt.write(b"\b\x1B[P")
+        ct = self.ct
+        ct.write(b"\b\x1B[P")
 
         # todo: Vi I Delete at Left deletes Row
 
     def insert_return(self):
         """Insert new Row above this Row"""
 
-        bt = self.bt
-        bt.write(b"\x1B[L\x1B[B")
+        ct = self.ct
+        ct.write(b"\x1B[L\x1B[B")
 
         # todo: Vi I Return warps left
         # todo: Vi I Return splits Row
 
-    def form_func_by_read_insert(self):
+    def form_func_by_chords_insert(self):
         """Map Single Words of Control Chars to Funcs while Inserting Text"""
 
-        func_by_read = dict()
-        func_by_read["Delete"] = self.insert_delete
-        func_by_read["Return"] = self.insert_return
+        func_by_chords = dict()
+        func_by_chords["Delete"] = self.insert_delete
+        func_by_chords["Return"] = self.insert_return
 
-        return func_by_read
+        return func_by_chords
 
     #
     # Replace
@@ -839,7 +852,7 @@ class ViTerminal:
     def replace_n_till(self, limit=None):  # Vi ⇧R
         """Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
 
-        bt = self.bt
+        ct = self.ct
         exit_writes = self.exit_writes
 
         if self.pull_digits_chars():
@@ -850,64 +863,63 @@ class ViTerminal:
 
         exit_writes.append(b"\x1B[ q")  # CSI Ps Space 07/01  # unstyled cursor-style
 
-        bt.write(b"\x1B[4l")  # CSI Ps 06/12  # 4 replacement-mode
-        bt.write(b"\x1B[4 q")  # CSI Ps Space 07/01  # 4 skid cursor-style
+        ct.write(b"\x1B[4l")  # CSI Ps 06/12  # 4 replacement-mode
+        ct.write(b"\x1B[4 q")  # CSI Ps Space 07/01  # 4 skid cursor-style
 
         # Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences
 
-        func_by_read = self.form_func_by_read_replace()
-        self.run_text_sequence(func_by_read, limit=limit)
+        func_by_chords = self.form_func_by_chords_replace()
+        self.run_text_sequence(func_by_chords, limit=limit)
 
         # Exit Replace Mode gently, not abruptly
 
-        bt.write(b"\x1B[ q")
+        ct.write(b"\x1B[ q")
         exit_writes.remove(b"\x1B[ q")
 
     def replace_delete(self):
         """Go Left to Replace with Space"""
 
-        bt = self.bt
-        bt.write(b"\b \b")
+        ct = self.ct
+        ct.write(b"\b \b")
 
         # todo: Vi ⇧R Delete undoes Replace's but then just moves backwards
 
     def replace_return(self):
         """Insert new Row below this Row"""
 
-        bt = self.bt
-        bt.write(b"\x1B[B\x1B[L")
+        ct = self.ct
+        ct.write(b"\x1B[B\x1B[L")
 
         # todo: Vi ⇧R Return matches Vi I Return
         # todo: Vi ⇧R Return warps left
 
-    def form_func_by_read_replace(self):
+    def form_func_by_chords_replace(self):
         """Map Single Words of Control Chars to Funcs while Replacing Text"""
 
-        func_by_read = dict()
-        func_by_read["Delete"] = self.replace_delete
-        func_by_read["Return"] = self.replace_return
+        func_by_chords = dict()
+        func_by_chords["Delete"] = self.replace_delete
+        func_by_chords["Return"] = self.replace_return
 
-        return func_by_read
+        return func_by_chords
 
     #
     # Insert or Replace
     #
 
-    def run_text_sequence(self, func_by_read, limit=None):
+    def run_text_sequence(self, func_by_chords, limit=None):
         """Insert/ Replace Text till ⌃C, except for ⌃O and Control Sequences"""
 
-        bt = self.bt
         ct = self.ct
 
         text_set = set(chr(_) for _ in range(0x20, 0x7F))
 
-        # Read Bytes till Chars
+        # Read Chords
 
         byte_holds = bytearray()
         while True:
-            read = ct.read()
-            if isinstance(read, bytes):
-                byte_holds.extend(read)
+            chords = ct.read_chords()
+            if isinstance(chords, bytes):
+                byte_holds.extend(chords)
 
                 continue
 
@@ -916,21 +928,21 @@ class ViTerminal:
 
             # Close up
 
-            if read == "⌃C":
+            if chords == "⌃C":
                 break
 
             # Delete, Return, etc
 
-            if read in func_by_read.keys():
-                func = func_by_read[read]
+            if chords in func_by_chords.keys():
+                func = func_by_chords[chords]
                 func()
 
                 continue
 
             # Temporarily close up by explicit request
 
-            if read == "⌃O":
-                self.read_func_run_func()
+            if chords == "⌃O":
+                self.read_chords_run_func()
 
                 continue
 
@@ -939,13 +951,13 @@ class ViTerminal:
             chars_write_set = set(bytes_write.decode())
             diff_set = chars_write_set - text_set
             if diff_set:
-                self.read_func_run_func(lookahead=read)
+                self.read_chords_run_func(stale_chords=chords)
 
                 continue
 
             # Write the Text Sequence to the Terminal
 
-            bt.write(bytes_write)
+            ct.write(bytes_write)
 
             # Close up after limit
 
@@ -961,16 +973,16 @@ class ViTerminal:
     def print_if(self, *args, **kwargs):
         """Print Chars, if not running quietly"""
 
-        bt = self.bt
+        ct = self.ct
         if not main.args.quiet:
-            bt.print(*args, **kwargs)
+            ct.print(*args, **kwargs)
 
     def write_if(self, bytes_):
         """Write Bytes, if not running quietly"""
 
-        bt = self.bt
+        ct = self.ct
         if not main.args.quiet:
-            bt.write(bytes_)
+            ct.write(bytes_)
 
     def try_me_n(self):
         """Run a quick thorough self-test"""
@@ -1008,7 +1020,6 @@ class ViTerminal:
         """Test the BytesTerminal Write at a Chords Terminal, till ⌃C"""
 
         ct = self.ct
-        bt = self.bt
 
         self.print_if("Press ⌃C to stop our ChordsScreenTest")
 
@@ -1016,6 +1027,8 @@ class ViTerminal:
         cst.run_till_quit()
 
         self.print_if()
+
+        bt = ct.bt
         y = bt.get_terminal_lines()
         self.write_if("\x1B[{y}H".format(y=y).encode())
 
@@ -1031,17 +1044,13 @@ class ChordsScreenTest:
     def __init__(self, ct):
         self.ct = ct
 
-        bt = ct.bt
-
-        self.bt = bt
-
     def run_till_quit(self):  # noqa  # C901 too complex
         """Test the BytesTerminal Write at a Chords Terminal, till ⌃C"""
 
         args_quiet = main.args.quiet
 
-        bt = self.bt
         ct = self.ct
+        bt = ct.bt
 
         assert DSR == b"\x1B[6n"
         assert CprPatternYX == rb"\x1B[\\[]([0-9]+);([0-9]+)R"
@@ -1049,16 +1058,16 @@ class ChordsScreenTest:
         writes = bytearray()
         yx_by_frame = 2 * [None]
 
-        # Read Bytes|Str
+        # Read Chords
 
         frame = None
         while True:
-            read = ct.read()
+            chords = ct.read_chords()
 
             # Warp the Cursor to the Frame of Bytes|Str
 
             old_frame = frame
-            frame = int(isinstance(read, bytes))
+            frame = int(isinstance(chords, bytes))
 
             if not args_quiet:
                 if old_frame != frame:
@@ -1066,29 +1075,29 @@ class ChordsScreenTest:
                     if yx is not None:
                         cup = CUP_Y_X.format(*yx)
                         cup = cup.encode()
-                        bt.write(cup)
+                        ct.write(cup)
 
             # Capture and trace the Bytes, else write the Bytes in place of Str
 
-            if isinstance(read, bytes):
-                writes.extend(read)
+            if isinstance(chords, bytes):
+                writes.extend(chords)
                 rep = bytes(writes)
                 rep = repr(rep).encode()
                 if not args_quiet:
-                    bt.write(b"\r" + b"\x1B[K" + rep)
+                    ct.write(b"\r" + b"\x1B[K" + rep)
             else:
-                bt.write(writes)
+                ct.write(writes)
                 writes.clear()
 
                 # Quit after Control+C
 
-                if read == (Control + "C"):
+                if chords == (Control + "C"):
                     break
 
             # Find the Cursor
 
             if not args_quiet:
-                bt.write(DSR)
+                bt.write(DSR)  # todo: read CPR through 'ct' to snoop '.row, .column'
 
                 cpr_else = bt.read()
                 m = re.match(rb"^" + CprPatternYX + rb"$", string=cpr_else)
@@ -1108,7 +1117,7 @@ class ChordsScreenTest:
                     if yx is not None:
                         cup = CUP_Y_X.format(*yx)
                         cup = cup.encode()
-                        bt.write(cup)
+                        ct.write(cup)
 
 
 #
@@ -1122,10 +1131,8 @@ class ChordsKeyboardTest:
     def __init__(self, ct):
         self.ct = ct
 
-        bt = ct.bt
         t0 = dt.datetime.now()
 
-        self.bt = bt
         self.t0 = t0
         self.t1 = t0
         self.old_ms = None
@@ -1149,12 +1156,11 @@ class ChordsKeyboardTest:
     def read_verbosely(self):
         """Timestamp Chars from the Terminal, and the Bytes inside them"""
 
-        bt = self.bt
         ct = self.ct
 
         # Fetch one Byte or some Words of Chars
 
-        read = ct.read()
+        read = ct.read_chords()
 
         # Timestamp
 
@@ -1166,17 +1172,17 @@ class ChordsKeyboardTest:
 
         if self.clocking:
             self.clocking = False
-            bt.print()
+            ct.print()
 
         # Log the whole Keystroke as Words of Chars, or a Byte of it
 
         ms = int(t1t0.total_seconds() * 1000)
         if not ms:
-            bt.print("    {}, {!r}".format(ms, read))
+            ct.print("    {}, {!r}".format(ms, read))
         else:
             if self.old_ms == 0:
-                bt.print()
-            bt.print("{}, {!r}".format(ms, read))
+                ct.print()
+            ct.print("{}, {!r}".format(ms, read))
 
         self.old_ms = ms
 
@@ -1187,7 +1193,7 @@ class ChordsKeyboardTest:
     def log_clock(self):
         """Timestamp no Chars and no Bytes from the Terminal"""
 
-        bt = self.bt
+        ct = self.ct
 
         # Limit the rate of logging
 
@@ -1200,12 +1206,12 @@ class ChordsKeyboardTest:
 
             if not self.clocking:
                 self.clocking = True
-                bt.print()
+                ct.print()
 
             # Refresh the Clock
 
             hms = t2.strftime("%H:%M:%S")
-            bt.write(b"\r" + hms.encode())
+            ct.write(b"\r" + hms.encode())
 
     def sleep_till(self):
         """Yield Cpu while no Keyboard Input"""
@@ -1222,7 +1228,7 @@ class ChordsKeyboardTest:
 
 
 #
-# Read Terminal Input as Chars formed from Bytes of Terminal Input
+# Write Output as Cursor Moves, read Input as Chars, onto a ByteTerminal
 #
 #   "Esc", "Space", "Tab", and "Return" for b"\x1B", b" ", b"\t", and b"\r"
 #   "⇧Tab", "⌥Space", b"⇧←" for b"\x1B[Z", b"\xC2\xA0", b"\x1B[1;2C"
@@ -1233,7 +1239,7 @@ class ChordsKeyboardTest:
 
 
 class ChordsTerminal:
-    """Read Input as Chars, from a ByteTerminal"""
+    """Write Output as Cursor Moves, read Input as Chars, onto a ByteTerminal"""
 
     def __init__(self, bt):
         self.bt = bt
@@ -1241,18 +1247,88 @@ class ChordsTerminal:
         self.holds = bytearray()
         self.peeks = bytearray()
 
-        assert bt.tcgetattr is not None
         self.try_me()
 
-    def try_me(self):
-        """Run a quick thorough self-test"""
+        self.row = None
+        self.column = None
+
+    def get_scrolling_columns(self):
+        """Count Columns on Screen"""
 
         bt = self.bt
+        columns = bt.get_terminal_columns()
 
-        bt.write(b"")  # tests 'os.write'
-        self.kbhit(0)  # tests 'select.select'
+        return columns
 
-    def read(self):
+    def get_scrolling_rows(self):
+        """Count Rows on Screen"""
+
+        bt = self.bt
+        lines = bt.get_terminal_lines()
+        # lines -= 2  # todo: break out 1 or 2 Rows of Status
+
+        return lines
+
+    def jump_to_row(self, row):
+        """Imagine moving the Cursor up or down to a chosen Row"""
+
+        rows = self.get_scrolling_rows()
+        capped_row = min(max(row, 1), rows)
+
+        self.row = capped_row
+
+        return capped_row
+
+    def jump_by_rows(self, rows):
+        """Imagine moving the Cursor up or down by a count of Rows"""
+
+        row = self.row
+        if row is not None:
+            self.jump_to_row(row + rows)
+
+    def jump_to_column(self, column):
+        """Imagine moving the Cursor left or right to a chosen Column"""
+
+        columns = self.get_scrolling_columns()
+        capped_column = min(max(column, 1), columns)
+
+        self.column = capped_column
+
+        return capped_column
+
+    def jump_by_columns(self, columns):
+        """Imagine moving the Cursor left or right by a count of Columns"""
+
+        column = self.column
+        if column is not None:
+            self.jump_to_column(column + columns)
+
+    def print(self, *args, **kwargs):
+        """Print Output as Cursor Moves, not only as Bytes"""
+
+        keys = sorted(set(kwargs.keys()) - set("end sep".split()))
+        assert not keys, keys  # rejects 'file=' & 'flush=', till we test those
+
+        sep = " "
+        if ("sep" in kwargs) and (kwargs["sep"] is not None):
+            sep = kwargs["sep"]
+
+        end = "\r\n"
+        if ("end" in kwargs) and (kwargs["end"] is not None):
+            end = kwargs["end"]
+
+        chars = sep.join(str(_) for _ in args) + end
+        bytes_ = chars.encode()
+
+        self.write(bytes_)
+
+    def write(self, bytes_):
+        """Write Output as Cursor Moves, not only as Bytes"""
+
+        bt = self.bt
+        bt.write(bytes_)
+
+    def read_chords(self):
         """Read a piece of a Sequence, or a whole Sequence, or zero Bytes"""
 
         bt = self.bt
@@ -1295,6 +1371,8 @@ class ChordsTerminal:
 
             kbhit = bt.kbhit(timeout=None)
             assert kbhit, kbhit
+
+            # Read more Bytes, just once
 
             index += 1
             assert index <= 1
@@ -1341,6 +1419,16 @@ class ChordsTerminal:
         assert (seq + plus) == bytes_, (seq, plus, bytes_)
 
         return (seq, plus)
+
+    def try_me(self):
+        """Run a quick thorough self-test"""
+
+        bt = self.bt
+
+        assert bt.tcgetattr is not None  # requires called between Bt Enter & Exit
+
+        bt.write(b"")  # tests 'os.write'
+        self.kbhit(0)  # tests 'select.select'
 
 
 #
@@ -1893,7 +1981,7 @@ class BytesTerminal:
 
         # 'shutil.get_terminal_size' often runs < 100 us
 
-    def print(self, *args, **kwargs):
+    def print(self, *args, **kwargs):  # 'bt.print' not much tested by ChordsTerminal
         """Work like Print, but end with '\r\n', not with '\n'"""
 
         alt_kwargs = dict(kwargs)
@@ -1908,7 +1996,7 @@ class BytesTerminal:
         fd = self.fd
         os.write(fd, bytes_)
 
-    def flush(self):
+    def flush(self):  # not much tested, though i did once feel we need this
         """Flush the Output Buffer without waiting for the Line to end"""
 
         sys.stdout.flush()
