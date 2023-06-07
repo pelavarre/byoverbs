@@ -22,11 +22,11 @@ self-tests:
   1 ⇧Z Q test of Keyboard, 2 ⇧Z Q test of Screen, etc
 
 escape-sequences:
-  ⎋[d line-position-absolute ⎋[G cursor-character-absolute
-  ⎋[1m bold ⎋[31m red ⎋[32m green ⎋[34m blue ⎋[38;5;130m orange ⎋[m plain
-  ⎋[4h insertion-mode ⎋[6 q bar ⎋[4l replacement-mode ⎋[4 q skid ⎋[ q unstyled
-  ⎋[M delete-line ⎋[L insert-line ⎋[P delete-character ⎋[@ insert-character
-  ⎋[T scroll-up ⎋[S scroll-down
+  ⎋[d line-position-absolute  ⎋[G cursor-character-absolute
+  ⎋[1m bold  ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange  ⎋[m plain
+  ⎋[4h insertion-mode  ⎋[6 q bar  ⎋[4l replacement-mode  ⎋[4 q skid  ⎋[ q unstyled
+  ⎋[M delete-line  ⎋[L insert-line  ⎋[P delete-character  ⎋[@ insert-character
+  ⎋[T scroll-up  ⎋[S scroll-down
 
 docs:
   https://unicode.org/charts/PDF/U0000.pdf
@@ -136,8 +136,8 @@ class ViTerminal:
         self.char_holds = char_holds  # the Words of Chars held, till next Func
         self.digit_holds = digit_holds  # the Digits held, till next Func
 
-        self.char_key_list = list()  # the Names of Func's Read
-        self.char_key = None  # the Name of the last Func Read
+        self.chars_key_list = list()  # the Names of Func's Read
+        self.chars_key = None  # the Name of the last Func Read
         self.func_by_reads = func_by_reads  # the Func's by Name
 
         self.exit_writes = exit_writes
@@ -145,17 +145,16 @@ class ViTerminal:
     def __exit__(self, *exc_info):
         """Cancel"""
 
-        bt = self.bt
         exit_writes = self.exit_writes
 
         write = b"".join(sorted(set(exit_writes)))
-        bt.write(write)
+        self.write_if(write)
 
-        bt.print()
+        self.print_if()
 
         size = os.get_terminal_size()
         y = size.lines
-        self.bt_write_if("\x1B[{y}H".format(y=y).encode())
+        self.write_if("\x1B[{y}H".format(y=y).encode())
 
     def get_scrolling_columns(self):
         """Count Columns on Screen"""
@@ -186,8 +185,11 @@ class ViTerminal:
 
         bt = self.bt
 
-        bt.write(b"\x1B[A")  # todo: enter smoothly
-        self.help_quit()
+        args_quiet = main.args.quiet
+
+        if not args_quiet:
+            bt.write(b"\x1B[A")  # todo: enter smoothly
+            self.help_quit()
 
         try:
             while True:
@@ -294,20 +296,25 @@ class ViTerminal:
         """Find the Func most closely named by Bytes and Words of Chars"""
 
         func_by_reads = self.func_by_reads
-        char_key_list = self.char_key_list
+        chars_key_list = self.chars_key_list
+
+        assert Esc == b"\x1B"
 
         if isinstance(reads, str):
-            char_key = reads
-            char_key_list.append(char_key)
+            chars_key = reads
+            chars_key_list.append(chars_key)
 
-            self.char_key = char_key
+            self.chars_key = chars_key
 
         func_key = reads
         if func_key in func_by_reads.keys():
             func = func_by_reads[func_key]
         else:
-            func = self.shrug
-            if not isinstance(reads, bytes):
+            if isinstance(reads, bytes):
+                func = self.shrug
+            elif func_key.startswith("\x1B"):
+                func = self.write_chars_key_encode
+            else:
                 func = self.slap_back_chars  # Key Func not-found
 
         return func
@@ -416,14 +423,14 @@ class ViTerminal:
         """Wait till Digits complete"""
 
         digit_holds = self.digit_holds
-        char_key = self.char_key
+        chars_key = self.chars_key
 
-        assert char_key in "0123456789", repr(char_key)
+        assert chars_key in "0123456789", repr(chars_key)
 
         if not digit_holds:
-            assert char_key != "0", repr(char_key)
+            assert chars_key != "0", repr(chars_key)
 
-        digit_holds.extend(char_key)
+        digit_holds.extend(chars_key)
 
     def pull_digits_int_else(self, default=None):
         """Clear the Digits, but return what they were, as an Int"""
@@ -443,28 +450,58 @@ class ViTerminal:
 
         return digits
 
-    def bt_write_form_n(self, form, n=None):
-        """Write a Csi Pn F Byte Sequence with 0 or more Held Digits inside it"""
+    def write_digits(self, form):
+        """Write a Csi Pn F Byte Sequence with zero or more Held Digits inside"""
 
         bt = self.bt
 
-        alt_n = n
-        if n is None:
-            alt_n = self.pull_digits_chars()  # may be empty
+        digits = self.pull_digits_chars()  # may be empty
 
-        chars = form.format(alt_n)
+        assert form.count("{}") == 1, repr(form)
+        chars = form.format(digits)
         write = chars.encode()
+
         bt.write(write)
+
+    def write_form_n(self, form, n):
+        """Write a Csi Pn F Byte Sequence, but with the Digits of an Int inside"""
+
+        bt = self.bt
+
+        assert isinstance(n, int), repr(n)
+        assert n > 0, n
+
+        assert form.count("{}") == 1, repr(form)
+        chars = form.format(n)
+        write = chars.encode()
+
+        bt.write(write)
+
+    def write_chars_key_encode(self):
+        """Write a Csi Pn F Byte Sequence given as Keyboard Input"""
+
+        bt = self.bt
+
+        chars_key = self.chars_key
+
+        write = chars_key.encode()
+        bt.write(write)
+
+    def write(self, bytes_):
+        """Write zero or more Bytes"""
+
+        bt = self.bt
+        bt.write(bytes_)
 
     def hold_chars(self):  # Vi ⇧Z etc
         """Wait till Chars complete"""
 
         char_holds = self.char_holds
-        char_key = self.char_key
+        chars_key = self.chars_key
 
-        assert isinstance(char_key, str), repr(char_key)
+        assert isinstance(chars_key, str), repr(chars_key)
 
-        char_holds.extend(char_key)
+        char_holds.extend(chars_key)
         char_holds.extend(" ")
 
     def step_back(self):  # Vi Delete
@@ -483,21 +520,21 @@ class ViTerminal:
     def help_quit_if(self):  # Vi ⌃C ⌃D ⌃\ etc
         """Help more if shoved more"""
 
-        char_key = self.char_key
-        char_key_list = self.char_key_list
+        chars_key = self.chars_key
+        chars_key_list = self.chars_key_list
         digit_holds = self.digit_holds
 
-        if char_key == "⌃C":
+        if chars_key == "⌃C":
             digit_holds.clear()
 
         force = 0
         if digit_holds:
             force += 1
-        if char_key != "⌃C":
+        if chars_key != "⌃C":
             force += 1
-        if char_key_list[-2:] == [char_key, char_key]:
+        if chars_key_list[-2:] == [chars_key, chars_key]:
             force += 1
-        if char_key_list[-3:] == [char_key, char_key, char_key]:
+        if chars_key_list[-3:] == [chars_key, chars_key, chars_key]:
             force += 1
 
         if force >= 2:
@@ -514,20 +551,20 @@ class ViTerminal:
 
         status = "Press ⇧Z ⇧Q to quit, or ⌃C ⇧Z ⇧Q "  # trailing Space included
         write = b"\r" + b"\x1B[K" + status.encode()
-        bt.write(write)
+        self.write(write)
 
     def slap_back_chars(self):  # i'm afraid i can't do that, Dave.
         """Say don't do that"""
 
         bt = self.bt
         ct = self.ct
-        char_key = self.char_key
-        char_key_list = self.char_key_list
+        chars_key = self.chars_key
+        chars_key_list = self.chars_key_list
         digit_holds = self.digit_holds
 
-        char_key_list.extend(["Bel", "⌃C"])
+        chars_key_list.extend(["Bel", "⌃C"])
 
-        reads = char_key + " " + "Bel"
+        reads = chars_key + " " + "Bel"
         self.echo_reads(reads)
 
         digit_holds.clear()
@@ -553,22 +590,22 @@ class ViTerminal:
     def go_left_n(self):  # Vi H  # Vi ←
         """Move Left"""
 
-        self.bt_write_form_n("\x1B[{}D")
+        self.write_digits("\x1B[{}D")
 
     def go_down_n(self):  # Vi J  # Vi ↓
         """Move Down"""
 
-        self.bt_write_form_n("\x1B[{}B")
+        self.write_digits("\x1B[{}B")
 
     def go_up_n(self):  # Vi K  # Vi ↑
         """Move Up"""
 
-        self.bt_write_form_n("\x1B[{}A")
+        self.write_digits("\x1B[{}A")
 
     def go_right_n(self):  # Vi L  # Vi →
         """Move Right"""
 
-        self.bt_write_form_n("\x1B[{}C")
+        self.write_digits("\x1B[{}C")
 
     #
     # Move the Cursor relative to the Screen
@@ -583,17 +620,17 @@ class ViTerminal:
             self.hold_digit()
             return
 
-        self.bt_write_form_n("\r")
+        self.write(b"\r")
 
     def go_column_n(self):  # Vi |  # Vi ⇧\
         """Move from Left of Row"""
 
-        self.bt_write_form_n("\x1B[{}G")
+        self.write_digits("\x1B[{}G")
 
     def go_high_n(self):  # Vi ⇧H
         """Move from Top of Screen"""
 
-        self.bt_write_form_n("\x1B[{}d")
+        self.write_digits("\x1B[{}d")
 
     def go_middle(self):  # Vi ⇧M
         """Move from Middle of Screen"""
@@ -605,7 +642,7 @@ class ViTerminal:
         lines = self.get_scrolling_lines()
         assert lines
         n = (lines + 1) // 2  # Row 2 of 1 2 3 4, Row 3 of 1 2 3 4 5, etc
-        self.bt_write_form_n("\x1B[{}d", n=n)
+        self.write_form_n("\x1B[{}d", n=n)
 
     def go_low_n(self):  # Vi ⇧L
         """Move from Bottom of Screen"""
@@ -613,7 +650,7 @@ class ViTerminal:
         lines = self.get_scrolling_lines()
         digits_int_else = self.pull_digits_int_else(default=1)
         n = (lines + 1 - digits_int_else) if (digits_int_else < lines) else 1
-        self.bt_write_form_n("\x1B[{}d", n=n)
+        self.write_form_n("\x1B[{}d", n=n)
 
     #
     # Move the Cursor relative to the Line
@@ -637,8 +674,8 @@ class ViTerminal:
 
         n1 = n - 1
         if n1:
-            self.bt_write_form_n("\x1B[{}B", n=n1)
-        self.bt_write_form_n("\x1B[{}G", n=columns)
+            self.write_form_n("\x1B[{}B", n=n1)
+        self.write_form_n("\x1B[{}G", n=columns)
 
     #
     # Cut Chars or Rows
@@ -647,7 +684,7 @@ class ViTerminal:
     def cut_right(self):  # Vi X
         """Cut N Chars here and to the right"""
 
-        self.bt_write_form_n("\x1B[{}P")
+        self.write_digits("\x1B[{}P")
 
     def cut_left_n(self):  # Vi ⇧X
         """Cut N Chars to the left"""
@@ -657,12 +694,12 @@ class ViTerminal:
         n = self.pull_digits_int_else(default=1)
 
         bt.write(n * b"\b")
-        self.bt_write_form_n("\x1B[{}P", n=n)
+        self.write_form_n("\x1B[{}P", n=n)
 
     def cut_row_n(self):  # Vi D D
         """Cut N Rows here and below"""
 
-        self.bt_write_form_n("\x1B[{}M")
+        self.write_digits("\x1B[{}M")
 
         # todo: Vi D D warps to Dent
 
@@ -695,7 +732,7 @@ class ViTerminal:
         n1 = n - 1
         if n1:
             bt.write(b"\x1B[B")
-            self.bt_write_form_n("\x1B[{}M", n=n1)
+            self.write_form_n("\x1B[{}M", n=n1)
             bt.write(b"\x1B[A")
 
         bt.write(b"\x1B[K")
@@ -708,7 +745,7 @@ class ViTerminal:
         bt = self.bt
 
         bt.write(b"\r")
-        self.bt_write_form_n("\x1B[{}M")
+        self.write_digits("\x1B[{}M")
         bt.write(b"\x1B[L")
 
         self.insert_n_till()
@@ -918,14 +955,14 @@ class ViTerminal:
     # Test
     #
 
-    def bt_print_if(self, *args, **kwargs):
+    def print_if(self, *args, **kwargs):
         """Print Chars, if not running quietly"""
 
         bt = self.bt
         if not main.args.quiet:
             bt.print(*args, **kwargs)
 
-    def bt_write_if(self, bytes_):
+    def write_if(self, bytes_):
         """Write Bytes, if not running quietly"""
 
         bt = self.bt
@@ -957,19 +994,19 @@ class ViTerminal:
 
         ct = self.ct
 
-        self.bt_print_if("Press ⌃C to stop our ChordsKeyboardTest")
+        self.print_if("Press ⌃C to stop our ChordsKeyboardTest")
 
         ckt = ChordsKeyboardTest(ct)
         ckt.run_till_quit()
 
-        self.bt_print_if()  # todo: prompt to Quit at each Screen of Input?
+        self.print_if()  # todo: prompt to Quit at each Screen of Input?
 
     def try_screen(self):
         """Test the BytesTerminal Write at a Chords Terminal, till ⌃C"""
 
         ct = self.ct
 
-        self.bt_print_if("Press ⌃C to stop our ChordsScreenTest")
+        self.print_if("Press ⌃C to stop our ChordsScreenTest")
 
         cst = ChordsScreenTest(ct)
         cst.run_till_quit()
@@ -977,9 +1014,9 @@ class ViTerminal:
         size = os.get_terminal_size()
         if size.lines > 1:
             y = size.lines - 1
-            self.bt_write_if("\x1B[{y}H".format(y=y).encode())
+            self.write_if("\x1B[{y}H".format(y=y).encode())
 
-        self.bt_print_if()
+        self.print_if()
 
 
 #
@@ -1375,6 +1412,12 @@ CHORDS_BY_BYTES[b"\x1B[D"] = "←"  # ← ⌃⌥← ⌃⇧← ⌥⇧← ⌃⌥�
 CHORDS_BY_BYTES[b"\x1Bb"] = "⌥←"
 CHORDS_BY_BYTES[b"\x1B[1;2D"] = "⇧←"
 
+CHORDS_BY_BYTES[b"\x1BOA"] = "↑"
+CHORDS_BY_BYTES[b"\x1BOB"] = "↓"
+CHORDS_BY_BYTES[b"\x1BOC"] = "→"
+CHORDS_BY_BYTES[b"\x1BOD"] = "←"
+# ⎋O replaces ⎋[ for ↑↓→← for b"\x1b[1?h" Application-Cursor-Keys till b"\x1b[1?l"
+
 
 def add_us_ascii_into_chords_by_bytes():
     """Add a US Ascii Keyboard into Chars by Bytes"""
@@ -1443,6 +1486,22 @@ CHORDS_BY_BYTES.update(  # the Fn Key Caps at Mac
         b"\x1B[34~": "⇧F12",
     }
 )
+
+CHORDS_BY_BYTES.update(  # the Fn Delete and Fn Arrows
+    {
+        b"\x1B[3~": "FnDelete",
+        b"\x1B[3;2~": "Fn⇧Delete",
+        b"\x1B[5~": "Fn⇧↑",
+        b"\x1B[6~": "Fn⇧↓",
+        b"\x1B[H": "Fn⇧←",
+        b"\x1BOH": "Fn←",
+        b"\x1BOF": "Fn→",
+        b"\x1B[F": "Fn⇧→",
+    }
+)
+# usual Tty codes Fn⇧↑ as Fn⇧↑, and Fn⇧↓ as Fn⇧↓, but gives Fn Arrows to macOS Terminal
+# some Tty codes Fn↑ as Fn⇧↑, and Fn↓ as Fn⇧↓, but gives Fn⇧ Arrows to macOS Terminal
+# todo: find where this is change is, in transcripts of macOS Vim
 
 CHORDS_BY_BYTES.update(  # the Option Digit strokes at Mac
     {
@@ -1828,11 +1887,11 @@ class BytesTerminal:
 
         print(*args, **alt_kwargs)
 
-    def write(self, line):
+    def write(self, bytes_):
         """Write some Bytes without encoding them, & without ending the Line"""
 
         fd = self.fd
-        os.write(fd, line)
+        os.write(fd, bytes_)
 
     def flush(self):
         """Flush the Output Buffer without waiting for the Line to end"""
@@ -2034,6 +2093,23 @@ add_us_ascii_into_chords_by_bytes()
 
 
 _ = r"""
+
+up towards demo of reduce Python to Color Python
+
+--
+
+<< to cut left
+>> to spill right
+
+persist qq @q as played ["@q"] = b"..."
+
+save sparse as played into TypeScript
+save sparse as scanned as TypeScript
+save full as pseudotty scanned as TypeScript
+save with delays into Py
+save as punctuation implied from Color into Py
+
+--
 
 . and U redo and undo, though our Undo's will be partial
 
