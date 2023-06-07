@@ -497,12 +497,6 @@ class ViTerminal:
 
         ct.write(bytes_key)
 
-    def write(self, bytes_):
-        """Write zero or more Bytes"""
-
-        ct = self.ct
-        ct.write(bytes_)
-
     def hold_chars(self):  # Vi ⇧Z etc
         """Hold Char Chords till Chars complete"""
 
@@ -560,8 +554,11 @@ class ViTerminal:
         ct.print()
 
         status = "Press ⇧Z ⇧Q to quit, or ⌃C ⇧Z ⇧Q "  # trailing Space included
-        write = b"\r" + b"\x1B[K" + status.encode()
-        self.write(write)
+        write = status.encode()
+
+        ct.write(b"\r")
+        ct.write(b"\x1B[K")
+        ct.write(write)
 
     def slap_back_chars(self):  # i'm afraid i can't do that, Dave.
         """Say don't do that"""
@@ -624,13 +621,14 @@ class ViTerminal:
     def go_row_start_if(self):  # Vi 0 when not-preceded by 1 2 3 4 5 6 7 8 9
         """Move to Left of Row"""
 
+        ct = self.ct
         digit_holds = self.digit_holds
 
         if digit_holds:
             self.hold_digit()
             return
 
-        self.write(b"\r")
+        ct.write(b"\r")
 
     def go_column_n(self):  # Vi |  # Vi ⇧\
         """Move from Left of Row"""
@@ -909,6 +907,7 @@ class ViTerminal:
     def run_text_sequence(self, func_by_chords, limit=None):
         """Insert/ Replace Text till ⌃C, except for ⌃O and Control Sequences"""
 
+        bytes_key = self.bytes_key
         ct = self.ct
 
         text_set = set(chr(_) for _ in range(0x20, 0x7F))
@@ -923,7 +922,7 @@ class ViTerminal:
 
                 continue
 
-            bytes_write = bytes(byte_holds)
+            bytes_key[::] = bytes(byte_holds)
             byte_holds.clear()
 
             # Close up
@@ -948,7 +947,7 @@ class ViTerminal:
 
             # Temporarily close up by implicit request
 
-            chars_write_set = set(bytes_write.decode())
+            chars_write_set = set(bytes_key.decode())
             diff_set = chars_write_set - text_set
             if diff_set:
                 self.read_chords_run_func(stale_chords=chords)
@@ -957,7 +956,7 @@ class ViTerminal:
 
             # Write the Text Sequence to the Terminal
 
-            ct.write(bytes_write)
+            ct.write(bytes_key)
 
             # Close up after limit
 
@@ -1084,7 +1083,9 @@ class ChordsScreenTest:
                 rep = bytes(writes)
                 rep = repr(rep).encode()
                 if not args_quiet:
-                    ct.write(b"\r" + b"\x1B[K" + rep)
+                    ct.write(b"\r")
+                    ct.write(b"\x1B[K")
+                    ct.write(rep)
             else:
                 ct.write(writes)
                 writes.clear()
@@ -1211,7 +1212,10 @@ class ChordsKeyboardTest:
             # Refresh the Clock
 
             hms = t2.strftime("%H:%M:%S")
-            ct.write(b"\r" + hms.encode())
+            encode = hms.encode()
+
+            ct.write(b"\r")
+            ct.write(encode)
 
     def sleep_till(self):
         """Yield Cpu while no Keyboard Input"""
@@ -1228,7 +1232,7 @@ class ChordsKeyboardTest:
 
 
 #
-# Write Output as Cursor Moves, read Input as Chars, onto a ByteTerminal
+# Write Output as Cursor Moves, read Input as Chars, onto a BytesTerminal
 #
 #   "Esc", "Space", "Tab", and "Return" for b"\x1B", b" ", b"\t", and b"\r"
 #   "⇧Tab", "⌥Space", b"⇧←" for b"\x1B[Z", b"\xC2\xA0", b"\x1B[1;2C"
@@ -1239,35 +1243,53 @@ class ChordsKeyboardTest:
 
 
 class ChordsTerminal:
-    """Write Output as Cursor Moves, read Input as Chars, onto a ByteTerminal"""
+    """Write Output as Cursor Moves, read Input as Chars, onto a BytesTerminal"""
 
     def __init__(self, bt):
         self.bt = bt
 
-        self.holds = bytearray()
-        self.peeks = bytearray()
+        self.holds = bytearray()  # the Holds received from the BytesTerminal Keyboard
+        self.peeks = bytearray()  # the Holds already returned
 
         self.try_me()
 
-        self.row = None
-        self.column = None
+        self.row = None  # the Row of the Cursor, if known
+        self.column = None  # the Column of the Cursor, if known
 
-    def get_scrolling_columns(self):
-        """Count Columns on Screen"""
+    #
+    # Write Output as Cursor Moves and Characters onto the Screen of a BytesTerminal
+    #
+
+    def print(self, *args, **kwargs):
+        """Print Output as Cursor Moves, not only as Bytes"""
+
+        keys = sorted(set(kwargs.keys()) - set("end sep".split()))
+        assert not keys, keys  # rejects 'file=' & 'flush=', till we test those
+
+        sep = " "
+        if ("sep" in kwargs) and (kwargs["sep"] is not None):
+            sep = kwargs["sep"]
+
+        end = "\r\n"
+        if ("end" in kwargs) and (kwargs["end"] is not None):
+            end = kwargs["end"]
+
+        chars = sep.join(str(_) for _ in args) + end
+        bytes_ = chars.encode()
+
+        self.write(bytes_)
+
+    def write(self, bytes_):
+        """Write Output as Cursor Moves, not only as Bytes"""
 
         bt = self.bt
-        columns = bt.get_terminal_columns()
 
-        return columns
+        # FIXME: break the bytes_ into sequences
+        # FIXME: hold the last incomplete sequence
+        # FIXME: move the Cursor or not
+        # FIXME: teach C D > < to go to movement else Bel
 
-    def get_scrolling_rows(self):
-        """Count Rows on Screen"""
-
-        bt = self.bt
-        lines = bt.get_terminal_lines()
-        # lines -= 2  # todo: break out 1 or 2 Rows of Status
-
-        return lines
+        bt.write(bytes_)
 
     def jump_to_row(self, row):
         """Imagine moving the Cursor up or down to a chosen Row"""
@@ -1303,33 +1325,29 @@ class ChordsTerminal:
         if column is not None:
             self.jump_to_column(column + columns)
 
-    def print(self, *args, **kwargs):
-        """Print Output as Cursor Moves, not only as Bytes"""
-
-        keys = sorted(set(kwargs.keys()) - set("end sep".split()))
-        assert not keys, keys  # rejects 'file=' & 'flush=', till we test those
-
-        sep = " "
-        if ("sep" in kwargs) and (kwargs["sep"] is not None):
-            sep = kwargs["sep"]
-
-        end = "\r\n"
-        if ("end" in kwargs) and (kwargs["end"] is not None):
-            end = kwargs["end"]
-
-        chars = sep.join(str(_) for _ in args) + end
-        bytes_ = chars.encode()
-
-        self.write(bytes_)
-
-    def write(self, bytes_):
-        """Write Output as Cursor Moves, not only as Bytes"""
+    def get_scrolling_columns(self):
+        """Count Columns on Screen"""
 
         bt = self.bt
-        bt.write(bytes_)
+        columns = bt.get_terminal_columns()
 
-    def read_chords(self):
-        """Read a piece of a Sequence, or a whole Sequence, or zero Bytes"""
+        return columns
+
+    def get_scrolling_rows(self):
+        """Count Rows on Screen"""
+
+        bt = self.bt
+        lines = bt.get_terminal_lines()
+        # lines -= 2  # todo: break out 1 or 2 Rows of Status
+
+        return lines
+
+    #
+    # Read Input as Chars in from the Keyboard of a BytesTerminal
+    #
+
+    def read_chords(self):  # like return each of b'\x1B', b'[', b'A', and "↑", in turn
+        """Read each Byte, and then a whole Word of Chars"""
 
         bt = self.bt
 
@@ -2204,6 +2222,10 @@ add_us_ascii_into_chords_by_bytes()
 _ = r"""
 
 up towards demo of reduce Python to Color Python
+
+--
+
+assert b"\x1B[K" etc eq their Ecma names
 
 --
 
