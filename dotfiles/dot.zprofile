@@ -18,9 +18,9 @@ alias ~='echo + cd "~" >&2 && cd ~ && (dirs -p |head -1)'
 : shopt -s autocd 2>/dev/null  # Bash
 
 
-# Preview ! History Expansion in Zsh Input Lines
+# Make the Editing of Command-Line Input History less painful
 
-setopt histverify  # a la Bash:  shopt -s histverify
+setopt histverify  # Preview ! History Expansion  # a la Bash:  shopt -s histverify
 
 : stty -ixon  && : 'define ⌃S to undo ⌃R, not XOff'  # history-incremental-search'es
 
@@ -28,7 +28,7 @@ setopt histverify  # a la Bash:  shopt -s histverify
 # Autocorrect some inputs
 # Work inside the Terminal a la macOS > Preferences > Keyboard > Replace works outside
 
-function :/ { echo ':/  ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |tee >(pbcopy); }
+function /: { echo '/:  ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |tee >(pbcopy); }
 function :scf () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
 
@@ -66,6 +66,7 @@ function pips () {
 
 function qcd () { source $(dirname $(which q))/qcd.source "$@"; }  # cd
 function qp () { source $(dirname $(which q))/qp.source "$@"; }  # popd
+
 function zh () { source $(dirname $(which q))/zh.source "$@"; }  # history -t
 
 function qo () { source $(dirname $(which q))/qo "$@"; }  # "${...[@]}"
@@ -90,6 +91,13 @@ if [[ -e ~/.ssh/zprofile ]]; then source ~/.ssh/zprofile; fi
 date
 echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 echo
+
+
+# Calm the Ls Light-Mode Colors
+
+if dircolors >/dev/null 2>&1; then  # for Linux
+    eval $(dircolors <(dircolors -p |sed 's,1;,0;,g'))  && : 'no bold for light mode'
+fi
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot-zprofile

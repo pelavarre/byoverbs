@@ -18,9 +18,9 @@ alias ~='echo + cd "~" >&2 && cd ~ && (dirs -p |head -1)'
 : shopt -s autocd 2>/dev/null  # Bash
 
 
-# Preview ! History Expansion in Zsh Input Lines
+# Make the Editing of Command-Line Input History less painful
 
-shopt -s histverify  # a la Zsh:  setopt histverify
+shopt -s histverify  # Preview ! History Expansion  # a la Zsh:  setopt histverify
 
 : stty -ixon  && : 'define ⌃S to undo ⌃R, not XOff'  # history-incremental-search'es
 
@@ -28,7 +28,7 @@ shopt -s histverify  # a la Zsh:  setopt histverify
 # Autocorrect some inputs
 # Work inside the Terminal a la macOS > Preferences > Keyboard > Replace works outside
 
-function :/ { echo ':/  ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |tee >(pbcopy); }
+function /: { echo ':/  ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |tee >(pbcopy); }
 function :scf () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
 
@@ -64,9 +64,10 @@ function pips () {
 
 # Work the deep magic inside the Sh Process that Git SubProcesses can't reach
 
-function qcd () { source $(dirname $(which q))/qcd.source "$@"; }  # cd
-function qp () { source $(dirname $(which q))/qp.source "$@"; }  # popd
-function zh () { source $(dirname $(which q))/zh.source "$@"; }  # history -t
+function bh () { source $(dirname $(which q))/bh.source "$@"; }
+
+function qcd () { source $(dirname $(which q))/qcd.source "$@"; }
+function qp () { source $(dirname $(which q))/qp.source "$@"; }
 
 function qo () { source $(dirname $(which q))/qo "$@"; }  # "${...[@]}"
 function qof () { source $(dirname $(which q))/qof "$@"; }
@@ -91,7 +92,17 @@ date
 echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 echo
 
+
+# Run Bash R C now, in case not before
+
 source ~/.bashrc
+
+
+# Calm the Ls Light-Mode Colors
+
+if dircolors >/dev/null 2>&1; then  # for Linux
+    eval $(dircolors <(dircolors -p |sed 's,1;,0;,g'))  && : 'no bold for light mode'
+fi
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.bash_profile
