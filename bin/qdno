@@ -1,2 +1,8 @@
+if ! git diff "$@" >/dev/null 2>&1; then
+    set -e
+    echo '+ git checkout >/dev/null' >&2
+    git checkout >/dev/null
+fi
+
 set -xe
 git diff --name-only "$@"
