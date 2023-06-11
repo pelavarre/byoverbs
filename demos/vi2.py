@@ -536,15 +536,17 @@ class ViTerminal:
         """Show some of the ChordsTerminal Cache of BytesTerminal"""
 
         ct = self.ct
-        ct.print("{},{}".format(ct.row, ct.column))
+        ct.print("  {},{}  ".format(ct.row, ct.column), end="")
 
         # todo: print into Status Rows
 
     def redraw(self):  # Vi ⌃L
-        """Invalidate the ChordsTerminal Cache of BytesTerminal"""
+        """Call for Refresh of the ChordsTerminal Cache of BytesTerminal"""
 
         ct = self.ct
         ct.redraw()
+
+        # no Refresh happens till after Read of CPR
 
     def hold_digit(self):  # Vi 1 2 3 4 5 6 7 8 9, and Vi 0 too thereafter
         """Hold Digits till Digits complete"""
@@ -769,7 +771,14 @@ class ViTerminal:
     def line_n_start(self):  # Vi ⇧G
         """Go down from Top of File, to the Nth Line Start"""
 
-        self.row_high_n_line_start()
+        ct = self.ct
+        rows = ct.get_scrolling_rows()
+        n = self.pull_digits_int_else(default=rows)
+
+        assert VPA_Y == "\x1B[{}d"
+
+        self.write_form_n("\x1B[{}d", n)
+        self.line_start()
 
     def row_high_n_line_start(self):  # Vi ⇧H
         """Go down from Top of Screen, to the Nth Line Start"""
@@ -802,12 +811,12 @@ class ViTerminal:
         ct = self.ct
         rows = ct.get_scrolling_rows()
 
-        digits_int_else = self.pull_digits_int_else(default=1)
+        n = self.pull_digits_int_else(default=1)
 
         assert VPA_Y == "\x1B[{}d"
 
-        n = (rows + 1 - digits_int_else) if (digits_int_else < rows) else 1
-        self.write_form_n("\x1B[{}d", n=n)
+        alt_n = (rows + 1 - n) if (n < rows) else 1
+        self.write_form_n("\x1B[{}d", n=alt_n)
         self.line_start()
 
     #
@@ -859,7 +868,8 @@ class ViTerminal:
             # Go to end of the Row above
 
             ct.write(b"\x1B[A")
-            assert ct.row == (row - 1), (ct.row, row)
+            if ct.row is not None:
+                assert ct.row == (row - 1), (ct.row, row)
             self.line_end()
             alt_n -= 1
 
@@ -1025,20 +1035,31 @@ class ViTerminal:
         ct = self.ct
         n = self.pull_digits_int_else(default=1)
 
+        row = ct.row
+        rows = ct.get_scrolling_rows()
+
         assert CR == b"\r"
-        assert DCH_N == "\x1B[{}P"
         assert CUD == b"\x1B[B"
+        assert DCH_N == "\x1B[{}P"
         assert CUU_N == "\x1B[{}A"
 
-        for _ in range(n):  # TODO: stop Dedent at Bottom of Screen
-            ct.write(b"\r")
-            self.write_form_n("\x1B[{}P", n=4)
-            ct.write(b"\x1B[B")
+        alt_n = n
+        if row is not None:
+            alt_n = min(n, rows + 1 - row)
 
-        self.write_form_n("\x1B[{}A", n)
+        for i in range(alt_n):
+            ct.write(b"\r")
+            if i:
+                ct.write(b"\x1B[B")
+            self.write_form_n("\x1B[{}P", n=4)
+
+        if alt_n > 1:
+            alt_n1 = alt_n - 1
+            self.write_form_n("\x1B[{}A", n=alt_n1)
+
         self.line_start()
 
-        # Vi < < doesn't delete non-Space Chars
+        # Vi < < doesn't delete non-Space Chars at Left Margin
 
     def row_n_tail_cut_column_minus(self):  # Vi ⇧D
         """Cut N - 1 Rows below, then Tail of Row here, then go left"""
@@ -1083,6 +1104,22 @@ class ViTerminal:
         exit_writes = self.exit_writes
         n = self.pull_digits_int_else(default=1)
 
+        row = ct.row
+        rows = ct.get_scrolling_rows()
+
+        assert SM_IRM == b"\x1B[4h"
+        assert CR == b"\r"
+        assert CUD == b"\x1B[B"
+        assert CUU_N == "\x1B[{}A"
+        assert RM_IRM == b"\x1B[4l"
+
+        ct = self.ct
+        exit_writes = self.exit_writes
+
+        alt_n = n
+        if row is not None:
+            alt_n = min(n, rows + 1 - row)
+
         assert SM_IRM == b"\x1B[4h"
         assert CR == b"\r"
         assert CUD == b"\x1B[B"
@@ -1098,12 +1135,15 @@ class ViTerminal:
 
         # Insert 4 Spaces  # todo: classic Vi can indent by "\t" too
 
-        for _ in range(n):  # TODO: stop Indent at Bottom of Screen
+        for i in range(alt_n):
             ct.write(b"\r")
+            if i:
+                ct.write(b"\x1B[B")
             ct.write(4 * b" ")
-            ct.write(b"\x1B[B")
 
-        self.write_form_n("\x1B[{}A", n)
+        if alt_n > 1:
+            alt_n1 = alt_n - 1
+            self.write_form_n("\x1B[{}A", n=alt_n1)
         self.line_start()
 
         # Exit Insert Mode, if entered
@@ -1112,7 +1152,7 @@ class ViTerminal:
             ct.write(b"\x1B[4l")
             exit_writes.remove(b"\x1B[4l")
 
-        # Vi < < doesn't delete non-Space Chars
+        # Vi > > doesn't delete non-Space Chars at Right Margin
 
     def row_n_tail_cut_insert(self):  # Vi ⇧C
         """Cut N - 1 Rows below, then Tail of Row, and then insert, as if Vi ⇧D I"""
@@ -1688,8 +1728,8 @@ class ChordsTerminal:
         self.row = None  # the Row of the Cursor, if known
         self.column = None  # the Column of the Cursor, if known
 
-    def redraw(self):  # # Vi ⌃L
-        """Invalidate the ChordsTerminal Cache of BytesTerminal"""
+    def redraw(self):  # Vi ⌃L
+        """Call for Refresh of the ChordsTerminal Cache of BytesTerminal"""
 
         assert DSR_FOR_CPR == b"\x1B[6n"
 
@@ -1697,6 +1737,8 @@ class ChordsTerminal:
         self.column = None
 
         self.write(b"\x1B[6n")
+
+        # no Refresh happens till after Read of CPR
 
     #
     # Write Output as Mock Moves above a BytesTerminal
@@ -2772,8 +2814,11 @@ add_us_ascii_into_chords_by_bytes()
 
 _ = r"""  # up towards demo of reduce Python to Color Python
 
+TODO: success in arrow excuses repeat in that direction from bell
 
-Y should be y$
+TODO: fail ⇧C ⇧D ⇧S and such at Bottom of Screen
+
+Y should be Y $ not Y Y
 as per Vim:  help Y
 
 --
@@ -2838,6 +2883,10 @@ less pain here from tides forcing auto-wrapped searches and auto-cancelled searc
 jump to color
 
 copy in older Vi dreams from:  demos/vi1.py, futures.md, etc
+
+--
+
+add patch on the side to test random match to real Vi
 
 """
 
