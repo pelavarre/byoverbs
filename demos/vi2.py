@@ -14,11 +14,11 @@ quirks:
   accepts ⇧Q V I Return without action or complaint
 
 keystrokes:
-  ⌃C ⌃D ⌃L ⌃[ ⌃\
-  $ 0 1 2 3 4 5 6 7 8 9 ⇧H ⇧M ⇧L H J K L |
-  ⇧C ⇧D ⇧R ⇧S ⇧X CC DD A I R S X
+  ⌃C ⌃D ⌃H ⌃J ⌃L Return ⌃N ⌃P ⌃[ ⌃\
+  Space $ + - 0 1 2 3 4 5 6 7 8 9 ⇧H ⇧M ⇧L H J K L |
+  ⇧C ⇧D ⇧G ⇧I ⇧O ⇧R ⇧S ⇧X ^ _ C$ CC D$ DD A I O R S X
 
-self-tests:
+self-tests:  # todo: could be 2 ⇧M or 2 ^
   1 ⇧Z Q test of Keyboard, 2 ⇧Z Q test of Screen, etc
 
 escape-sequences:
@@ -145,6 +145,8 @@ class ViTerminal:
         ct = self.ct
         exit_writes = self.exit_writes
 
+        assert CUP_Y == "\x1B[{}H"
+
         # Exit the Screen Modes entered
 
         write = b"".join(sorted(set(exit_writes)))
@@ -156,7 +158,7 @@ class ViTerminal:
 
         bt = ct.bt
         y = bt.get_terminal_lines()
-        self.write_if("\x1B[{y}H".format(y=y).encode())
+        self.write_if("\x1B[{}H".format(y).encode())
 
     #
     # Launch and Quit
@@ -166,13 +168,14 @@ class ViTerminal:
         """Loop Terminal Input back as Terminal Output"""
 
         ct = self.ct
-
         args_quiet = main.args.quiet
+
+        assert CUU == b"\x1B[A"
 
         # Start up noisily, or not
 
         if not args_quiet:
-            ct.write(b"\x1B[A")  # todo: enter smoothly
+            ct.write(b"\x1B[A")
             self.help_quit()
 
         # Read enough Chords to choose a Func, and then run that Func
@@ -242,7 +245,6 @@ class ViTerminal:
         ct = self.ct
         bytes_key = self.bytes_key
         digit_holds = self.digit_holds
-
         args_quiet = main.args.quiet
 
         # Form a Python Repr to echo Bytes
@@ -309,6 +311,11 @@ class ViTerminal:
             self.chars_key = chars_key
 
         func_key = chords
+        if isinstance(chords, str):
+            chord = chords.split()[-1]
+            if chord in ("⌃H", "Delete"):
+                func_key = chord
+
         if func_key in func_by_chords.keys():
             func = func_by_chords[func_key]
         else:
@@ -328,24 +335,66 @@ class ViTerminal:
 
         # Map Words of Chars to Funcs
 
-        # ⌃ @ABCDEFGHIJKLMNO PQRSTUVWXYZ[\]^_
+        #
+        # Map Funcs at Words of ⌃ @ABCDEFGHIJKLMNO PQRSTUVWXYZ[\]^_
+        #
 
+        # ["⌃@"]
+        # ["⌃A"]
+        # ["⌃B"]
         func_by_chords["⌃C"] = self.help_quit_if
         func_by_chords["⌃D"] = self.help_quit_if
-        func_by_chords["⌃H"] = self.step_back  # alias of "Delete", more PC than Mac
-        func_by_chords["⌃J"] = self.go_down_n  # alias of "J"
-        func_by_chords["⌃N"] = self.go_down_n  # another alias of "J", a la Emacs
-        func_by_chords["⌃P"] = self.go_up_n  # alias of "K", a la Emacs
-        func_by_chords["⌃L"] = self.shrug
-        func_by_chords["⌃Q"] = self.hold_chars
+        # ["⌃E"]
+        # ["⌃F"]
+        # ["⌃G"] = self.
+        func_by_chords["⌃H"] = self.cancel_if  # alias of Mac Delete at PC Backspace
+        # ["Tab"] = self.visit_minus_n
+        func_by_chords["⌃J"] = self.row_plus_n  # alias of Vi J at Vi ⌃J
+        # ["⌃K"]
+        func_by_chords["⌃L"] = self.shrug  # = self.redraw
+        func_by_chords["Return"] = self.line_n_plus_start
+        func_by_chords["⌃N"] = self.row_plus_n  # alias of Vi J at Emacs ⌃N
+        # ["⌃O"] = self.visit_plus_n
+        func_by_chords["⌃P"] = self.row_minus_n  # alias of Vi K at Emacs ⌃P
+        # ["⌃Q"]  # collides with:  stty ixon
+        # ["⌃R"]
+        # ["⌃S"]  # collides with:  stty ixoff
+        # ["⌃T"]
+        # ["⌃U"]
+        # ["⌃V"]
+        # ["⌃W"]
+        # ["⌃X"]
+        # ["⌃Y"]
+        # ["⌃Z"] = self.suspend  # FIXME  # TODO
+
+        # ["Esc"]  # collides with C0 Esc Sequences
         func_by_chords["⌃\\"] = self.help_quit_if
+        # ["⌃]"]
+        # ["⌃^"]
+        # ["⌃_"]
 
-        # Space !"#$%&'()*+,-./ 0123456789:;<=>?
+        #
+        # Map Funcs at Words of Space !"#$%&'()*+,-./ 0123456789:;<=>?
+        #
 
-        func_by_chords["Space"] = self.go_ahead_n  # alias of "L", inverse of "Delete"
-        func_by_chords["$"] = self.go_line_end_n
+        func_by_chords["Space"] = self.char_plus_n  # inverse of Vi Delete at Vi Space
+        # ["!"]
+        # ['"']
+        # ["#"]
+        func_by_chords["$"] = self.line_n_plus_end  # like Vi _, but Line End
+        # ["%"]
+        # ["&"]
+        # ["'"]
+        # ["("]
+        # [")"]
+        # ["*"]
+        func_by_chords["+"] = self.line_n_plus_start
+        # [","]
+        func_by_chords["-"] = self.line_n_minus_start
+        # ["."]
+        # ["/"]
 
-        func_by_chords["0"] = self.go_row_start_if
+        func_by_chords["0"] = self.column_first_if
         func_by_chords["1"] = self.hold_digit
         func_by_chords["2"] = self.hold_digit
         func_by_chords["3"] = self.hold_digit
@@ -356,54 +405,115 @@ class ViTerminal:
         func_by_chords["8"] = self.hold_digit
         func_by_chords["9"] = self.hold_digit
 
-        # @ABCDEFGHIJKLMNO PQRSTUVWXYZ[\]^_
+        # [": !"] = self.system  # FIXME  # TODO
+        # [";"]
+        # ["<"] = self.row_n_dedent
+        # ["="]
+        # [">"] = self.row_n_indent
+        # ["?"]
 
         func_by_chords[": Q ! Return"] = self.force_quit
 
+        #
+        # Map Funcs at Words of @ABCDEFGHIJKLMNO PQRSTUVWXYZ[\]^_
+        #
+
+        # ["@"] = self.replay_x
+
+        # ["⇧A"] = self.row_end_insert_n_till  # "A"ppend
+        # ["⇧B"] = self.word_minus_n
+        func_by_chords["⇧C"] = self.row_n_tail_cut_insert  # "C"change
+        func_by_chords["⇧D"] = self.row_n_tail_cut_column_minus  # "D"elete
+        # ["⇧E"] = self.word_end_n
+        # ["⇧F"] = self.find_x_minus
+        func_by_chords["⇧G"] = self.line_n_start
+        func_by_chords["⇧H"] = self.row_high_n_line_start  # "H"igh
+        func_by_chords["⇧I"] = self.row_start_insert_n_till  # "Insert"
+        # ["⇧J"] = self.line_n_join
+        # ["⇧K"]
+        func_by_chords["⇧L"] = self.row_low_n_line_start  # "L"ow
+        func_by_chords["⇧M"] = self.row_middle_line_start_once  # "M"iddle
+        # ["⇧N"] = self.match_minus
+        func_by_chords["⇧O"] = self.row_end_return_insert_n_till  # "O"pen
+
         func_by_chords["⇧Q V I Return"] = self.shrug
 
-        func_by_chords["⇧C"] = self.cut_row_tail_n_insert
-        func_by_chords["⇧D"] = self.cut_row_tail_n_left
-        func_by_chords["⇧H"] = self.go_high_n
-        func_by_chords["⇧M"] = self.go_middle
-        func_by_chords["⇧L"] = self.go_low_n
-        func_by_chords["⇧R"] = self.replace_n_till
-        func_by_chords["⇧S"] = self.cut_row_n_insert
-        func_by_chords["⇧X"] = self.cut_left_n
+        func_by_chords["⇧R"] = self.replace_n_till  # "R"eplace
+        func_by_chords["⇧S"] = self.row_n_cut_insert  # "S"ubstitute
+        # ["⇧T"] = self.upto_x_minus
+        # ["⇧U"]
+        # ["⇧V"]
+        # ["⇧W"] = self.word_plus_n
+        func_by_chords["⇧X"] = self.column_minus_n_cut  # e"X"cise
+        # ["⇧Y"] = self.row_tail_copy
 
-        func_by_chords["⇧Z"] = self.hold_chars
         func_by_chords["⇧Z Q"] = self.try_me_n  # could also take 'Z ⇧Q' and 'Z Q'
         func_by_chords["⇧Z ⇧Q"] = self.force_quit
 
-        # `abcdefghijklmno pqrstuvwxyz{|}~
+        # ["["]
+        # ["\\"]
+        # ["]"]
+        func_by_chords["^"] = self.line_start_once  # rhymes with 're.search(r"^ *",'
+        func_by_chords["_"] = self.line_n1_plus_start  # like Vi $, but Start
 
-        func_by_chords["A"] = self.go_right_insert
-        func_by_chords["C C"] = self.cut_row_n_insert
-        func_by_chords["D D"] = self.cut_row_n
-        func_by_chords["H"] = self.go_left_n
-        func_by_chords["I"] = self.insert_n_till
-        func_by_chords["J"] = self.go_down_n
-        func_by_chords["K"] = self.go_up_n
-        func_by_chords["L"] = self.go_right_n
-        func_by_chords["R"] = self.replace_once
-        func_by_chords["S"] = self.cut_right_insert
-        func_by_chords["X"] = self.cut_right
+        #
+        # Map Funcs at Words of `abcdefghijklmno pqrstuvwxyz{|}~
+        #
 
-        func_by_chords["|"] = self.go_column_n
+        # ["`"]
 
-        # etc
+        func_by_chords["A"] = self.column_plus_insert_n_till  # "a"ppend
+        # ["B"]
+        func_by_chords["C $"] = self.row_n_tail_cut_insert
+        func_by_chords["C C"] = self.row_n_cut_insert  # "c"hange
+        func_by_chords["D $"] = self.row_n_tail_cut_column_minus
+        func_by_chords["D D"] = self.row_n_cut  # "d"elete
+        # ["E"]
+        # ["F"] = self.find_x_plus
+        # ["G"]
+        func_by_chords["H"] = self.column_minus_n
+        func_by_chords["I"] = self.insert_n_till  # "i"nsert
+        func_by_chords["J"] = self.row_plus_n
+        func_by_chords["K"] = self.row_minus_n
+        func_by_chords["L"] = self.column_plus_n
+        # ["M"]
+        # ["N"] = self.match_plus
+        func_by_chords["O"] = self.row_below_return_insert_n_till  # "o"pen
+        # ["P"]
+        # ["Q"]
+        func_by_chords["R"] = self.replace_once  # "r"eplace
+        func_by_chords["S"] = self.column_plus_n_cut_insert  # "s"ubstitute
+        # ["T"] = self.upto_x_plus
+        # ["U"]
+        # ["V"]
+        func_by_chords["X"] = self.column_plus_n_cut  # e"x"cise
+        # ["W"]
+        # ["X"]
+        # ["Y"]
+        # ["Z"]
 
-        func_by_chords["Delete"] = self.step_back
+        # ["{"]
+        func_by_chords["|"] = self.column_n
+        # ["}"]
+        # ["~"]
 
-        func_by_chords["↑"] = self.go_up_n
-        func_by_chords["↓"] = self.go_down_n
-        func_by_chords["→"] = self.go_right_n
-        func_by_chords["←"] = self.go_left_n
+        #
+        # Map Funcs at Words from outside the US Ascii Text Characters
+        #
+
+        func_by_chords["Delete"] = self.cancel_if
+
+        func_by_chords["↑"] = self.row_minus_n
+        func_by_chords["↓"] = self.row_plus_n
+        func_by_chords["→"] = self.column_plus_n
+        func_by_chords["←"] = self.column_minus_n
 
         func_by_chords["Fn⇧←"] = self.write_bytes_key  # ⎋[H
         func_by_chords["Fn⇧→"] = self.write_bytes_key  # ⎋[F
 
+        #
         # Map fewer Words of Chars to Funcs
+        #
 
         keys = list(func_by_chords.keys())
         for key in keys:
@@ -431,7 +541,6 @@ class ViTerminal:
         chars_key = self.chars_key
 
         assert chars_key in "0123456789", repr(chars_key)
-
         if not digit_holds:
             assert chars_key != "0", repr(chars_key)
 
@@ -459,13 +568,11 @@ class ViTerminal:
         """Write a Csi Pn F Byte Sequence with zero or more Held Digits inside"""
 
         ct = self.ct
-
         digits = self.pull_digits_chars()  # may be empty
 
         assert form.count("{}") == 1, repr(form)
         chars = form.format(digits)
         write = chars.encode()
-
         ct.write(write)
 
     def write_form_n(self, form, n):
@@ -479,7 +586,6 @@ class ViTerminal:
         assert form.count("{}") == 1, repr(form)
         chars = form.format(n)
         write = chars.encode()
-
         ct.write(write)
 
     def write_bytes_key(self):
@@ -490,7 +596,6 @@ class ViTerminal:
         chars_key = self.chars_key
 
         assert b"\x1B" == Esc
-
         encode = chars_key.encode()
         if encode.startswith(b"\x1B"):
             assert encode == bytes_key, (encode, bytes_key)
@@ -508,18 +613,18 @@ class ViTerminal:
         char_holds.extend(chars_key)
         char_holds.extend(" ")
 
-    def step_back(self):  # Vi Delete
-        """Undo the last Key given into a multiple Key Sequence"""
+    def cancel_if(self):  # Vi Delete  # Vi ⌃H
+        """Cancel a Word and its Digits, else go to start of N Chars before here"""
 
         char_holds = self.char_holds
         digit_holds = self.digit_holds
 
         if char_holds:
-            char_holds[::] = char_holds[:-1]
-        elif digit_holds:
-            digit_holds[::] = digit_holds[:-1]  # classic Vi doesn't undo Digits
-        else:
-            self.go_back_n()
+            char_holds.clear()
+            digit_holds.clear()
+            return
+
+        self.char_minus_n()
 
     def help_quit_if(self):  # Vi ⌃C ⌃D ⌃\ etc
         """Help more if shoved more"""
@@ -551,11 +656,13 @@ class ViTerminal:
 
         ct = self.ct
 
-        ct.print()
+        assert CR == b"\r"
+        assert EL == b"\x1B[K"
 
         status = "Press ⇧Z ⇧Q to quit, or ⌃C ⇧Z ⇧Q "  # trailing Space included
         write = status.encode()
 
+        ct.print()
         ct.write(b"\r")
         ct.write(b"\x1B[K")
         ct.write(write)
@@ -564,12 +671,16 @@ class ViTerminal:
         """Say don't do that"""
 
         ct = self.ct
-        ct = self.ct
+        # ct.bt.breakpoint()  # jitter Sat 10/Jun
+
         chars_key = self.chars_key
         chars_key_list = self.chars_key_list
         digit_holds = self.digit_holds
+        args_quiet = main.args.quiet
 
         chars_key_list.extend(["Bel", "⌃C"])
+
+        assert BEL == b"\a"
 
         chords = chars_key + " " + "Bel"
         self.echo_chords(chords)
@@ -577,15 +688,15 @@ class ViTerminal:
         digit_holds.clear()
 
         ct.write(b"\a")
-
-        if ct.kbhit(timeout=0):
-            ct.print()  # cancelled Esc, Esc [, Return, etc
+        if not args_quiet:
+            if ct.kbhit(timeout=0):
+                ct.print()  # cancelled Esc, Esc [, Return, etc
 
     def force_quit(self):  # ⇧Z ⇧Q
         """Force quit Vi, despite dirty Cache, etc"""
 
         ct = self.ct
-
+        assert CR == b"\r"
         ct.write(b"\r")
 
         sys.exit()
@@ -594,32 +705,37 @@ class ViTerminal:
     # Move the Cursor relative to itself
     #
 
-    def go_left_n(self):  # Vi H  # Vi ←
-        """Move Left"""
+    def column_minus_n(self):  # Vi H  # Vi ←
+        """Go Left"""
 
+        assert CUB_N == "\x1B[{}D"
         self.write_digits("\x1B[{}D")
 
-    def go_down_n(self):  # Vi J  # Vi ↓
-        """Move Down"""
+    def column_plus_n(self):  # Vi L  # Vi →
+        """Go Right"""
+
+        assert CUF_N == "\x1B[{}C"
+        self.write_digits("\x1B[{}C")
+
+    def row_plus_n(self):  # Vi J  # Vi ↓
+        """Go Down"""
+
+        assert CUD_N == "\x1B[{}B"
 
         self.write_digits("\x1B[{}B")
 
-    def go_up_n(self):  # Vi K  # Vi ↑
-        """Move Up"""
+    def row_minus_n(self):  # Vi K  # Vi ↑
+        """Go Up"""
 
+        assert CUU_N == "\x1B[{}A"
         self.write_digits("\x1B[{}A")
-
-    def go_right_n(self):  # Vi L  # Vi →
-        """Move Right"""
-
-        self.write_digits("\x1B[{}C")
 
     #
     # Move the Cursor relative to the Screen
     #
 
-    def go_row_start_if(self):  # Vi 0 when not-preceded by 1 2 3 4 5 6 7 8 9
-        """Move to Left of Row"""
+    def column_first_if(self):  # Vi 0 when not-preceded by 1 2 3 4 5 6 7 8 9
+        """Go to First Column of Row"""
 
         ct = self.ct
         digit_holds = self.digit_holds
@@ -628,120 +744,198 @@ class ViTerminal:
             self.hold_digit()
             return
 
+        assert CR == b"\r"
         ct.write(b"\r")
 
-    def go_column_n(self):  # Vi |  # Vi ⇧\
-        """Move from Left of Row"""
+    def column_n(self):  # Vi |  # Vi ⇧\
+        """Go from Left of Row"""
+
+        assert CHA_X == "\x1B[{}G"
 
         self.write_digits("\x1B[{}G")
 
-    def go_high_n(self):  # Vi ⇧H
-        """Move from Top of Screen"""
+    def line_n_start(self):  # Vi ⇧G
+        """Go down from Top of File, to the Nth Line Start"""
+
+        self.row_high_n_line_start()
+
+    def row_high_n_line_start(self):  # Vi ⇧H
+        """Go down from Top of Screen, to the Nth Line Start"""
+
+        assert VPA_Y == "\x1B[{}d"
 
         self.write_digits("\x1B[{}d")
+        self.line_start()
 
-    def go_middle(self):  # Vi ⇧M
-        """Move from Middle of Screen"""
+    def row_middle_line_start_once(self):  # Vi ⇧M
+        """Go to Middle Row of Screen, to its Line Start, only without Digits"""
 
         ct = self.ct
+        rows = ct.get_scrolling_rows()
 
-        if self.pull_digits_chars():
+        if self.pull_digits_chars():  # FIXME: TODO: better hide of Easter Egg Self Test
             self.slap_back_chars()  # Vi ⇧M with Digits Arg
             return
 
-        lines = ct.get_scrolling_rows()
-        assert lines
-        n = (lines + 1) // 2  # Row 2 of 1 2 3 4, Row 3 of 1 2 3 4 5, etc
-        self.write_form_n("\x1B[{}d", n=n)
+        assert VPA_Y == "\x1B[{}d"
 
-    def go_low_n(self):  # Vi ⇧L
-        """Move from Bottom of Screen"""
+        assert rows
+        n = (rows + 1) // 2  # Row 2 of 1 2 3 4, Row 3 of 1 2 3 4 5, etc
+        self.write_form_n("\x1B[{}d", n=n)
+        self.line_start()
+
+    def row_low_n_line_start(self):  # Vi ⇧L
+        """Go up from Bottom of Screen, to the -Nth Line Start"""
 
         ct = self.ct
+        rows = ct.get_scrolling_rows()
 
-        lines = ct.get_scrolling_rows()
         digits_int_else = self.pull_digits_int_else(default=1)
-        n = (lines + 1 - digits_int_else) if (digits_int_else < lines) else 1
+
+        assert VPA_Y == "\x1B[{}d"
+
+        n = (rows + 1 - digits_int_else) if (digits_int_else < rows) else 1
         self.write_form_n("\x1B[{}d", n=n)
+        self.line_start()
 
     #
     # Move the Cursor relative to the Line
     #
 
-    def go_back_n(self):  # Vi Delete  # Vi ⌃H  # when no Digits or Chars Held
-        """Move back in the Char Stream of the Lines"""
+    def char_minus_n(self):  # Vi Delete  # Vi ⌃H  # when no Chars Held
+        """Go to start of N Chars before here"""
 
-        self.go_left_n()  # todo: back up to previous Row from Leftmost Column
+        self.column_minus_n()
 
-    def go_ahead_n(self):  # Vi Space
-        """Move ahead in the Char Stream of the Lines"""
+        # TODO: back up to previous Row from Leftmost Column
 
-        self.go_right_n()  # todo: spill over into next Row from Leftmost Column
+    def char_plus_n(self):  # Vi Space
+        """Go to end of N Chars here"""
 
-    def go_line_end_n(self):  # Vi $  # Vi ⇧4
-        """Move from Right of Line"""
+        self.column_plus_n()
 
-        ct = self.ct
+        # TODO: spill over into next Row from Leftmost Column
 
-        columns = ct.get_scrolling_columns()
+    def line_n_minus_start(self):  # Vi -
+        """Go to the top-left of N Lines above here"""
+
+        assert CUU_N == "\x1B[{}A"
+
+        self.write_digits("\x1B[{}A")
+        self.line_start()
+
+    def line_n1_plus_start(self):  # Vi _  # Vi ⇧-
+        """Go to the bottom-left of N Lines here"""
+
         n = self.pull_digits_int_else(default=1)
+
+        assert CUD_N == "\x1B[{}B"
 
         n1 = n - 1
         if n1:
             self.write_form_n("\x1B[{}B", n=n1)
+        self.line_start()
+
+    def line_n_plus_start(self):  # Vi +  # Vi ⇧=
+        """Go to the bottom-left of N Lines below here"""
+
+        assert CUD_N == "\x1B[{}B"
+
+        self.write_digits("\x1B[{}B")
+        self.line_start()
+
+    def line_start_once(self):  # Vi ^
+        """Go to Line Start, only without Digits"""
+
+        if self.pull_digits_chars():
+            self.slap_back_chars()  # Vi ^ with Digits Arg
+            return
+
+        self.line_start()
+
+    def line_start(self):
+        """Go to Line Start"""
+
+        if self.pull_digits_chars():
+            self.slap_back_chars()  # Vi ^ with Digits Arg
+            return
+
+        ct = self.ct
+        assert CR == b"\r"
+        ct.write(b"\r")
+
+        # classic Vi goes to first non-Space Char
+
+    def line_n_plus_end(self):  # Vi $  # Vi ⇧4
+        """Go to the bottom-right of N Lines here"""
+
+        n = self.pull_digits_int_else(default=1)
+
+        assert CUD_N == "\x1B[{}B"
+
+        n1 = n - 1
+        if n1:
+            self.write_form_n("\x1B[{}B", n=n1)
+        self.line_end()
+
+    def line_end(self):
+        """Go to Line End"""
+
+        ct = self.ct
+        columns = ct.get_scrolling_columns()
+        assert CHA_X == "\x1B[{}G"
         self.write_form_n("\x1B[{}G", n=columns)
+
+        # classic Vi goes to last non-Space Char
 
     #
     # Cut Chars or Rows
     #
 
-    def cut_right(self):  # Vi X
-        """Cut N Chars here and to the right"""
+    def column_plus_n_cut(self):  # Vi X
+        """Cut N Chars here and to the right, from this Row"""
 
+        assert DCH_N == "\x1B[{}P"
         self.write_digits("\x1B[{}P")
 
-    def cut_left_n(self):  # Vi ⇧X
-        """Cut N Chars to the left"""
+    def column_minus_n_cut(self):  # Vi ⇧X
+        """Cut N Chars to the left, from this Row"""
 
         ct = self.ct
-
         n = self.pull_digits_int_else(default=1)
+
+        assert BS == b"\b"
+        assert DCH_N == "\x1B[{}P"
 
         ct.write(n * b"\b")
         self.write_form_n("\x1B[{}P", n=n)
 
-    def cut_row_n(self):  # Vi D D
-        """Cut N Rows here and below"""
+        # TODO: delete less if Column known as too far left
 
+    def row_n_cut(self):  # Vi D D
+        """Cut N Rows here and below, and go to Line Start"""
+
+        assert DL_N == "\x1B[{}M"
         self.write_digits("\x1B[{}M")
+        self.line_start()
 
-        # todo: Vi D D warps to Dent
-
-    def cut_right_insert(self):  # Vi S
-        """Cut N Chars here and to the right, then Insert, as if Vi X I"""
-
-        self.cut_right()
-        self.insert_n_till()
-
-    def cut_row_tail_n_left(self):  # Vi ⇧D
+    def row_n_tail_cut_column_minus(self):  # Vi ⇧D
         """Cut N - 1 Rows below, then Tail of Row here, then Go Left"""
 
         ct = self.ct
-        self.cut_row_tail_n()
+        self.row_n_tail_cut()
         ct.write(b"\b")
 
-    def cut_row_tail_n_insert(self):  # Vi ⇧C
-        """Cut N - 1 Rows below, then Tail of Row here, then Insert"""
-
-        self.cut_row_tail_n()
-        self.insert_n_till()
-
-    def cut_row_tail_n(self):
+    def row_n_tail_cut(self):
         """Cut N - 1 Rows below, then Tail of Row here"""
 
         ct = self.ct
-
         n = self.pull_digits_int_else(default=1)
+
+        assert CUD == b"\x1B[B"
+        assert DL_N == "\x1B[{}M"
+        assert CUU == b"\x1B[A"
+        assert EL == b"\x1B[K"
 
         n1 = n - 1
         if n1:
@@ -751,12 +945,30 @@ class ViTerminal:
 
         ct.write(b"\x1B[K")
 
+    #
+    # Work a bit and then Insert
+    #
+
+    def column_plus_n_cut_insert(self):  # Vi S
+        """Cut N Chars here, and then insert, as if Vi X I"""
+
+        self.column_plus_n_cut()
         self.insert_n_till()
 
-    def cut_row_n_insert(self):  # Vi ⇧S  # Vi C C
-        """Cut N Rows and Insert 1 Row here"""
+    def row_n_tail_cut_insert(self):  # Vi ⇧C
+        """Cut N - 1 Rows below, then Tail of Row, and then insert, as if Vi ⇧D I"""
+
+        self.row_n_tail_cut()
+        self.insert_n_till()
+
+    def row_n_cut_insert(self):  # Vi ⇧S  # Vi C C
+        """Cut N Rows but then start a new Row here, as if D D ⇧O"""
 
         ct = self.ct
+
+        assert CR == b"\r"
+        assert DL_N == "\x1B[{}M"
+        assert IL == b"\x1B[L"
 
         ct.write(b"\r")
         self.write_digits("\x1B[{}M")
@@ -764,12 +976,8 @@ class ViTerminal:
 
         self.insert_n_till()
 
-    #
-    # Insert
-    #
-
-    def go_right_insert(self):  # Vi A
-        """Move right and then insert, as if Vi L I"""
+    def column_plus_insert_n_till(self):  # Vi A
+        """Go right and then insert, as if Vi 1 L I"""
 
         ct = self.ct
 
@@ -777,7 +985,49 @@ class ViTerminal:
             self.slap_back_chars()  # todo: Vi A with Digits Args
             return
 
+        assert CUF == b"\x1B[C"
+
         ct.write(b"\x1B[C")
+
+        self.insert_n_till()
+
+    def row_start_insert_n_till(self):  # Vi ⇧I
+        """Go to Line Start and then insert, as if Vi ^ I"""
+
+        self.line_start()
+        self.insert_n_till()
+
+    def row_end_return_insert_n_till(self):  # Vi ⇧O
+        """Insert a new Row above this Row, as if Vi 0 I Return ↑"""
+
+        ct = self.ct
+
+        assert IL == b"\x1B[L"
+        assert CR == b"\r"
+
+        ct.write(b"\x1B[L")
+        ct.write(b"\r")
+
+        self.insert_n_till()
+
+    def row_below_return_insert_n_till(self):  # Vi O
+        """Insert a new Row below this Row, as if Vi $ A Return"""
+
+        ct = self.ct
+
+        assert CUD == b"\x1B[B"
+        assert IL == b"\x1B[L"
+        assert CR == b"\r"
+
+        ct.write(b"\x1B[B")
+        ct.write(b"\x1B[L")
+        ct.write(b"\r")
+
+        self.insert_n_till()
+
+    #
+    # Insert
+    #
 
     def insert_n_till(self):  # Vi I
         """Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
@@ -789,12 +1039,15 @@ class ViTerminal:
             self.slap_back_chars()  # todo: Vi I with Digits Args
             return
 
+        assert SM_IRM == b"\x1B[4h"
+        assert RM_IRM == b"\x1B[4l"
+
         # Enter Insert Mode
 
         exit_writes.append(b"\x1B[4l")  # CSI Ps 06/12  # 4 replacement-mode
-        exit_writes.append(b"\x1B[ q")  # CSI Ps Space 07/01  # unstyled cursor-style
-
         ct.write(b"\x1B[4h")  # CSI Ps 06/08  # 4 insertion-mode
+
+        exit_writes.append(b"\x1B[ q")  # CSI Ps Space 07/01  # unstyled cursor-style
         ct.write(b"\x1B[6 q")  # CSI Ps Space 07/01  # 6 bar cursor-style
 
         # Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences
@@ -805,25 +1058,32 @@ class ViTerminal:
         # Exit Insert Mode gently, not abruptly
 
         ct.write(b"\x1B[4l")
-        ct.write(b"\x1B[ q")
         exit_writes.remove(b"\x1B[4l")
+
+        ct.write(b"\x1B[ q")
         exit_writes.remove(b"\x1B[ q")
 
     def insert_delete(self):
         """Go Left, then Shift Left the Tail of this Row"""
 
         ct = self.ct
+        assert DCH_N == "\x1B[{}P"
         ct.write(b"\b\x1B[P")
 
-        # todo: Vi I Delete at Left deletes Row
+        # TODO: Vi I Delete in first Column deletes Line-Break
 
     def insert_return(self):
         """Insert new Row above this Row"""
 
         ct = self.ct
-        ct.write(b"\x1B[L\x1B[B")
 
-        # todo: Vi I Return warps left
+        assert CUD == b"\x1B[B"
+        assert IL == b"\x1B[L"
+
+        ct.write(b"\x1B[B")
+        ct.write(b"\x1B[L")
+        self.line_start()
+
         # todo: Vi I Return splits Row
 
     def form_func_by_chords_insert(self):
@@ -859,9 +1119,9 @@ class ViTerminal:
 
         # Enter Replace Mode
 
-        exit_writes.append(b"\x1B[ q")  # CSI Ps Space 07/01  # unstyled cursor-style
-
         ct.write(b"\x1B[4l")  # CSI Ps 06/12  # 4 replacement-mode
+
+        exit_writes.append(b"\x1B[ q")  # CSI Ps Space 07/01  # unstyled cursor-style
         ct.write(b"\x1B[4 q")  # CSI Ps Space 07/01  # 4 skid cursor-style
 
         # Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences
@@ -886,10 +1146,15 @@ class ViTerminal:
         """Insert new Row below this Row"""
 
         ct = self.ct
-        ct.write(b"\x1B[B\x1B[L")
 
-        # todo: Vi ⇧R Return matches Vi I Return
-        # todo: Vi ⇧R Return warps left
+        assert CUD == b"\x1B[B"
+        assert IL == b"\x1B[L"
+
+        ct.write(b"\x1B[B")
+        ct.write(b"\x1B[L")
+        self.line_start()
+
+        # todo: Vi ⇧R Return matches Vi I Return, but records replacements
 
     def form_func_by_chords_replace(self):
         """Map Single Words of Control Chars to Funcs while Replacing Text"""
@@ -1020,6 +1285,8 @@ class ViTerminal:
 
         ct = self.ct
 
+        assert CUP_Y == "\x1B[{}H"
+
         self.print_if("Press ⌃C to stop our ChordsScreenTest")
 
         cst = ChordsScreenTest(ct)
@@ -1029,7 +1296,7 @@ class ViTerminal:
 
         bt = ct.bt
         y = bt.get_terminal_lines()
-        self.write_if("\x1B[{y}H".format(y=y).encode())
+        self.write_if("\x1B[{}H".format(y).encode())
 
 
 #
@@ -1046,11 +1313,11 @@ class ChordsScreenTest:
     def run_till_quit(self):  # noqa  # C901 too complex
         """Test the BytesTerminal Write at a Chords Terminal, till ⌃C"""
 
-        args_quiet = main.args.quiet
-
         ct = self.ct
         bt = ct.bt
+        args_quiet = main.args.quiet
 
+        assert CUP_Y_X == "\x1B[{};{}H"
         assert DSR == b"\x1B[6n"
         assert CprPatternYX == rb"\x1B[\\[]([0-9]+);([0-9]+)R"
 
@@ -1072,7 +1339,7 @@ class ChordsScreenTest:
                 if old_frame != frame:
                     yx = yx_by_frame[frame]
                     if yx is not None:
-                        cup = CUP_Y_X.format(*yx)
+                        cup = "\x1B[{};{}H".format(*yx)
                         cup = cup.encode()
                         ct.write(cup)
 
@@ -1083,6 +1350,9 @@ class ChordsScreenTest:
                 rep = bytes(writes)
                 rep = repr(rep).encode()
                 if not args_quiet:
+                    assert CR == b"\r"
+                    assert EL == b"\x1B[K"
+
                     ct.write(b"\r")
                     ct.write(b"\x1B[K")
                     ct.write(rep)
@@ -1116,7 +1386,7 @@ class ChordsScreenTest:
                 if old_frame != frame:
                     yx = yx_by_frame[frame]
                     if yx is not None:
-                        cup = CUP_Y_X.format(*yx)
+                        cup = "\x1B[{};{}H".format(*yx)
                         cup = cup.encode()
                         ct.write(cup)
 
@@ -1214,6 +1484,8 @@ class ChordsKeyboardTest:
             hms = t2.strftime("%H:%M:%S")
             encode = hms.encode()
 
+            assert CR == b"\r"
+
             ct.write(b"\r")
             ct.write(encode)
 
@@ -1265,6 +1537,8 @@ class ChordsTerminal:
 
         keys = sorted(set(kwargs.keys()) - set("end sep".split()))
         assert not keys, keys  # rejects 'file=' & 'flush=', till we test those
+
+        assert CRLF == b"\r\n"
 
         sep = " "
         if ("sep" in kwargs) and (kwargs["sep"] is not None):
@@ -1338,9 +1612,10 @@ class ChordsTerminal:
 
         bt = self.bt
         lines = bt.get_terminal_lines()
-        # lines -= 2  # todo: break out 1 or 2 Rows of Status
 
-        return lines
+        rows = lines  # todo: split off 1 or 2 Rows of Status below Scrolling
+
+        return rows
 
     #
     # Read Input as Chars in from the Keyboard of a BytesTerminal
@@ -1454,11 +1729,40 @@ class ChordsTerminal:
 #
 
 
-CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP) of (Y, X)
+CUU_N = "\x1B[{}A"  # 04/01 Cursor Up (CUU) of N
+CUU = b"\x1B[A"
+CUD_N = "\x1B[{}B"  # 04/02 Cursor Down (CUD) of N
+CUD = b"\x1B[B"
+CUF_N = "\x1B[{}C"  # 04/03 Cursor Right (CUF) of N
+CUF = b"\x1B[C"
+CUB_N = "\x1B[{}D"  # 04/04 Cursor Left (CUB) of N
 
-DSR = b"\x1B[6n"  # Device Status Report (DSR) call for CPR
+CHA_X = "\x1B[{}G"  # 04/07 Cursor Character Absolute (CHA)
 
-CprPatternYX = rb"\x1B[\\[]([0-9]+);([0-9]+)R"  # Cursor Position Report (CPR) of (Y, X)
+CUP_Y_X = "\x1B[{};{}H"  # 04/08 Cursor Position (CUP) of Y X
+CUP_Y = "\x1B[{}H"
+CUP = b"\x1B[H"
+
+EL = b"\x1B[K"  # 04/11 Erase In Line (EL) of no Ps
+IL = b"\x1B[L"  # 04/12 Insert Line (IL)
+DL_N = "\x1B[{}M"  # 04/13 Delete Line (DL) of N
+DCH_N = "\x1B[{}P"  # 05/00 Delete Character (DCH)
+
+VPA_Y = "\x1B[{}d"  # 06/04 Line Position Absolute (VPA)
+SM_IRM = b"\x1B[4h"  # 06/08 Set Mode (SM)  # 4 Insertion Replacement Mode (IRM)
+RM_IRM = b"\x1B[4l"  # 06/12 Reset Mode (RM)  # 4 Insertion Replacement Mode (IRM)
+
+DSR = b"\x1B[6n"  # 06/14 Device Status Report (DSR) call for CPR
+
+
+# 07/00..07/14 Private or Experimental Use
+
+"\x1B[ q"  # 02/00 07/01  # Cursor No Style
+"\x1B[4 q"  # 02/00 07/01  # Cursor Style 4 Skid
+"\x1B[6 q"  # 02/00 07/01  # Cursor Style 6 Bar
+
+
+CprPatternYX = rb"\x1B[\\[]([0-9]+);([0-9]+)R"  # 04/18 Cursor Pos~ Report (CPR) of Y X
 
 
 #
@@ -1600,15 +1904,15 @@ CHORDS_BY_BYTES.update(  # the Fn Delete and Fn Arrows
         b"\x1B[3;2~": "Fn⇧Delete",
         b"\x1B[5~": "Fn⇧↑",
         b"\x1B[6~": "Fn⇧↓",
-        b"\x1B[H": "Fn⇧←",
+        b"\x1B[H": "Fn⇧←",  # collides w 04/08 Cursor Position (CUP)
         b"\x1BOH": "Fn←",
         b"\x1BOF": "Fn→",
-        b"\x1B[F": "Fn⇧→",
+        b"\x1B[F": "Fn⇧→",  # collides w 04/06 Cursor Preceding Line (CPL)
     }
 )
 # usual Tty codes Fn⇧↑ as Fn⇧↑, and Fn⇧↓ as Fn⇧↓, but gives Fn Arrows to macOS Terminal
 # some Tty codes Fn↑ as Fn⇧↑, and Fn↓ as Fn⇧↓, but gives Fn⇧ Arrows to macOS Terminal
-# todo: find where this is change is, in transcripts of macOS Vim
+# todo: find where this change is, in transcripts of macOS Vim
 
 CHORDS_BY_BYTES.update(  # the Option Digit strokes at Mac
     {
@@ -1745,17 +2049,20 @@ CHORDS_BY_BYTES.update(  # the Option Punctuation-Mark strokes at Mac
 #
 
 
-BS = b"\b"  # Backspace
-CR = b"\r"  # Carriage Return
-LF = b"\n"  # Line Feed
-Esc = b"\x1B"  # Escape
+BEL = b"\a"  # 00/07 Bell
+BS = b"\b"  # 00/08 Backspace
+CR = b"\r"  # 00/13 Carriage Return
+CRLF = b"\r\n"  # 00/13 00/10 Carriage Return + Line Feed
+LF = b"\n"  # 00/10 Line Feed
+Esc = b"\x1B"  # 01/11 Escape
 
-CSI = b"\x1B["  # Control Sequence Introducer  # ended by rb"[\x30-\x7E]"
-OSC = b"\x1B]"  # Operating System Command  # ended by BEL, CR, Esc \ ST, etc
-SS3 = b"\x1BO"  # Single Shift Three
+CSI = b"\x1B["  # 01/11 05/11 Control Sequence Introducer  # till rb"[\x30-\x7E]"
+OSC = b"\x1B]"  # 01/11 05/13 Operating System Command  # till BEL, CR, Esc \ ST, etc
+SS3 = b"\x1BO"  # 01/11 04/15 Single Shift Three
 
 C0_BYTES = b"".join(chr(_).encode() for _ in range(0, 0x20)) + b"\x7F"
 C1_BYTES = b"".join(chr(_).encode() for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
+# the Text Bytes of the first 0x80 (128) Bytes are the Bytes not-in the C0_BYTES
 
 
 Control = "\N{Up Arrowhead}"  # ⌃
@@ -1767,7 +2074,7 @@ Command = "\N{Place of Interest Sign}"  # ⌘
 CsiStartPattern = b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"  # leading Zeroes allowed
 CsiEndPattern = rb"[\x40-\x7E]"
 # as per 1991 ECMA-48_5th 5.4 Control Sequences
-# Csi Patterns solve many Pm, Pn, and Ps, but not the Pt of Esc ] OSC Ps ; Pt BEL
+# Csi Patterns define many Pm, Pn, and Ps, but not the Pt of Esc ] OSC Ps ; Pt BEL
 
 
 MouseSixByteReportPattern = b"\x1B\\[" rb"M..."  # MPR X Y
@@ -2002,6 +2309,8 @@ class BytesTerminal:
     def print(self, *args, **kwargs):  # 'bt.print' not much tested by ChordsTerminal
         """Work like Print, but end with '\r\n', not with '\n'"""
 
+        assert CRLF == b"\r\n"
+
         alt_kwargs = dict(kwargs)
         if ("end" not in kwargs) or (kwargs["end"] is None):
             alt_kwargs["end"] = "\r\n"
@@ -2219,9 +2528,11 @@ add_us_ascii_into_chords_by_bytes()
 #
 
 
-_ = r"""
+_ = r"""  # up towards demo of reduce Python to Color Python
 
-up towards demo of reduce Python to Color Python
+
+Y should be y$
+as per Vim:  help Y
 
 --
 
