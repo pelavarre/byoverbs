@@ -86,10 +86,7 @@ def main():
     main.args = args
 
     stdio = sys.__stderr__
-    with BytesTerminal(stdio) as bt:
-        ct = ChordsTerminal(bt)
-        vt = ViTerminal(ct)
-
+    with ViTerminal(stdio) as vt:
         vt.run_till_quit()
 
     # Sh Pipes nudge us to read Stdin, write Stdout, find Tty at Stderr
@@ -116,27 +113,38 @@ def parse_vi2_py_args():
 class ViTerminal:
     r"""Loop Terminal Input back as Terminal Output"""
 
-    def __init__(self, ct):
-        bytes_key = bytearray()
-        char_holds = list()
-        digit_holds = list()
-        exit_writes = list()
+    def __init__(self, stdio):
+        self.ct = ChordsTerminal(stdio)
 
-        func_by_chords = self.form_func_by_chords_main()
-
-        #
-
-        self.ct = ct  # ChordsTerminal
-
-        self.bytes_key = bytes_key  # the Bytes held, till next Char
-        self.char_holds = char_holds  # the Words of Chars held, till next Func
-        self.digit_holds = digit_holds  # the Digits held, till next Func
+        self.bytes_key = bytearray()  # the Bytes held, till next Char
+        self.char_holds = list()  # the Words of Chars held, till next Func
+        self.digit_holds = list()  # the Digits held, till next Func
 
         self.chars_key_list = list()  # the Names of Func's Read
         self.chars_key = None  # the Name of the last Func Read
-        self.func_by_chords = func_by_chords  # the Func's by Name
+        self.func_by_chords = self.form_func_by_chords_main()  # the Func's by Name
 
-        self.exit_writes = exit_writes
+    def __enter__(self):
+        ct = self.ct
+
+        ct.__enter__()
+
+        return self
+
+    def __exit__(self, *exc_info):
+        ct = self.ct
+        bt = ct.bt
+
+        assert CUP_Y1 == "\x1B[{}H"
+
+        y = bt.get_terminal_lines()
+
+        self.print_if()
+        self.write_if("\x1B[{}H".format(y).encode())
+
+        exit_ = ct.__exit__()
+
+        return exit_
 
     def pid_suspend(self):  # Vi ⌃Z F G Return
         """Release the Screen & Keyboard, pause this Process Pid, re-acquire"""
@@ -144,13 +152,17 @@ class ViTerminal:
         ct = self.ct
         bt = ct.bt
 
-        # Place the Cursor
+        assert CUP_Y1 == "\x1B[{}H"
+        assert ED == b"\x1B[J"
 
-        bt.print()
+        # Suspend as if 5 L ⌃Z
+        # to make room for:  "", "zsh: suspended...", "% fg", "[1]...cont...", ""
+
+        self.print_if()
         y = bt.get_terminal_lines()
-        alt_y = max(y - 2, 1)
-        bt.write("\x1B[{}H".format(alt_y).encode())
-        bt.write(b"\x1B[J")
+        alt_y = max(y - 4, 1)
+        self.write_if("\x1B[{}H".format(alt_y).encode())
+        self.write_if(b"\x1B[J")
 
         # Suspend and resume this Process Pid
 
@@ -163,27 +175,6 @@ class ViTerminal:
 
         # todo: this hangs inside its 'os.kill' if i call Vi Py from Py or Zsh or Bash
 
-    def __exit__(self, *exc_info):
-        """Cancel"""
-
-        ct = self.ct
-        bt = ct.bt
-        exit_writes = self.exit_writes
-
-        assert CUP_Y1 == "\x1B[{}H"
-
-        # Exit the Screen Modes entered
-
-        write = b"".join(sorted(set(exit_writes)))
-        self.write_if(write)
-
-        # Close out same as 'def try_screen', when not running quietly
-
-        self.print_if()
-
-        y = bt.get_terminal_lines()
-        self.write_if("\x1B[{}H".format(y).encode())
-
     #
     # Launch and Quit
     #
@@ -191,7 +182,6 @@ class ViTerminal:
     def run_till_quit(self):
         """Loop Terminal Input back as Terminal Output"""
 
-        ct = self.ct
         args_quiet = main.args.quiet
 
         assert CUU == b"\x1B[A"
@@ -199,20 +189,13 @@ class ViTerminal:
         # Start up noisily, or not
 
         if not args_quiet:
-            ct.write(b"\x1B[A")
+            self.write_if(b"\x1B[A")
             self.help_quit()
 
         # Read enough Chords to choose a Func, and then run that Func
 
-        try:
-            while True:
-                self.read_chords_run_func()  # may raise SystemExit
-
-        # Clean up at Exit
-
-        finally:
-            exc_info = sys.exc_info()
-            self.__exit__(*exc_info)
+        while True:
+            self.read_chords_run_func()  # may raise SystemExit
 
     def read_chords_run_func(self, stale_chords=None):
         """Read Chords till they name a Func, then run that Func"""
@@ -1127,39 +1110,25 @@ class ViTerminal:
         """Indent N Rows here"""
 
         ct = self.ct
-        exit_writes = self.exit_writes
         n = self.pull_digits_int_else(default=1)
 
         row = ct.row
         rows = ct.get_scrolling_rows()
 
-        assert SM_IRM == b"\x1B[4h"
-        assert CR == b"\r"
-        assert CUD == b"\x1B[B"
-        assert CUU_N == "\x1B[{}A"
-        assert RM_IRM == b"\x1B[4l"
-
-        ct = self.ct
-        exit_writes = self.exit_writes
-
         alt_n = n
         if row is not None:
             alt_n = min(n, rows + 1 - row)
 
-        assert SM_IRM == b"\x1B[4h"
+        assert SM_IRM == b"\x1B[4h"  # without CS_6_BAR
+        assert RM_IRM == b"\x1B[4l"  # without CS_NONE
+
         assert CR == b"\r"
         assert CUD == b"\x1B[B"
         assert CUU_N == "\x1B[{}A"
-        assert RM_IRM == b"\x1B[4l"
 
-        # Enter Insert Mode, if need be
+        # Insert 4 Spaces
 
-        with_inserting = b"\x1B[4l" not in exit_writes
-        if with_inserting:
-            exit_writes.append(b"\x1B[4l")
-            ct.write(b"\x1B[4h")
-
-        # Insert 4 Spaces  # todo: classic Vi can indent by "\t" too
+        with_inserting = ct.write_before_if(b"\x1B[4h", after=b"\x1B[4l")
 
         for i in range(alt_n):
             ct.write(b"\r")
@@ -1172,13 +1141,11 @@ class ViTerminal:
             self.write_form_n("\x1B[{}A", n=alt_n1)
         self.line_start()
 
-        # Exit Insert Mode, if entered
-
-        if with_inserting:
-            ct.write(b"\x1B[4l")
-            exit_writes.remove(b"\x1B[4l")
+        ct.write_after_if(with_inserting)
 
         # Vi > > doesn't delete non-Space Chars at Right Margin
+
+        # Vi can indent by Tabs, and by more or less than 4 Spaces
 
     def row_n_tail_cut_insert(self):  # Vi ⇧C
         """Cut N - 1 Rows below, then Tail of Row, and then insert, as if Vi ⇧D I"""
@@ -1258,7 +1225,6 @@ class ViTerminal:
         """Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
 
         ct = self.ct
-        exit_writes = self.exit_writes
 
         if self.pull_digits_chars():
             self.slap_back_chars()  # todo: Vi I with Digits Args
@@ -1267,26 +1233,23 @@ class ViTerminal:
         assert SM_IRM == b"\x1B[4h"
         assert RM_IRM == b"\x1B[4l"
 
+        assert CS_NONE == b"\x1B[ q"
+        assert CS_6_BAR == b"\x1B[6 q"
+
         # Enter Insert Mode
 
-        exit_writes.append(b"\x1B[4l")
-        ct.write(b"\x1B[4h")
-
-        exit_writes.append(b"\x1B[ q")
-        ct.write(b"\x1B[6 q")
+        with_inserting = ct.write_before_if(b"\x1B[4h", after=b"\x1B[4l")
+        with_cs_6_bar = ct.write_before_if(b"\x1B[6 q", after=b"\x1B[ q")
 
         # Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences
 
         func_by_chords = self.form_func_by_chords_insert()
         self.run_text_sequence(func_by_chords)
 
-        # Exit Insert Mode gently, not abruptly
+        # Exit Insert Mode
 
-        ct.write(b"\x1B[4l")
-        exit_writes.remove(b"\x1B[4l")
-
-        ct.write(b"\x1B[ q")
-        exit_writes.remove(b"\x1B[ q")
+        ct.write_after_if(with_cs_6_bar)
+        ct.write_after_if(with_inserting)
 
     def insert_delete(self):
         """Go left, then Shift Left the Tail of this Row"""
@@ -1336,28 +1299,31 @@ class ViTerminal:
         """Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
 
         ct = self.ct
-        exit_writes = self.exit_writes
 
         if self.pull_digits_chars():
             self.slap_back_chars()  # todo: Vi ⇧R with Digits Arg
             return
 
+        assert SM_IRM == b"\x1B[4h"
+        assert RM_IRM == b"\x1B[4l"
+
+        assert CS_NONE == b"\x1B[ q"
+        assert CS_4_SKID == b"\x1B[4 q"
+
         # Enter Replace Mode
 
-        ct.write(b"\x1B[4l")
-
-        exit_writes.append(b"\x1B[ q")
-        ct.write(b"\x1B[4 q")
+        with_replacing = ct.write_before_if(b"\x1B[4l", after=b"\x1B[4h")
+        with_cs_4_skid = ct.write_before_if(b"\x1B[4 q", after=b"\x1B[ q")
 
         # Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences
 
         func_by_chords = self.form_func_by_chords_replace()
         self.run_text_sequence(func_by_chords, limit=limit)
 
-        # Exit Replace Mode gently, not abruptly
+        # Exit Replace Mode
 
-        ct.write(b"\x1B[ q")
-        exit_writes.remove(b"\x1B[ q")
+        ct.write_after_if(with_cs_4_skid)
+        ct.write_after_if(with_replacing)
 
     def replace_delete(self):
         """Go left to Replace with Space"""
@@ -1742,13 +1708,14 @@ class ChordsKeyboardTest:
 class ChordsTerminal:
     """Write Output as Mock Moves, read Input as Chars, above a BytesTerminal"""
 
-    def __init__(self, bt):
-        self.bt = bt
+    def __init__(self, stdio):
+        self.bt = BytesTerminal(stdio)
 
         self.holds = bytearray()  # the Holds received from the BytesTerminal Keyboard
         self.peeks = bytearray()  # the Holds already returned
 
-        self.try_me()
+        self.enter_writes = list()  # contexts to reopen after a temporary exit
+        self.exit_writes = list()  # contexts to close before last exit
 
         self.writes = bytearray()  # Bytes written but not yet parsed
         self.row = None  # the Row of the Cursor, if known
@@ -1756,17 +1723,89 @@ class ChordsTerminal:
 
     def __enter__(self):
         bt = self.bt
+        enter_writes = self.enter_writes
+
         bt.__enter__()
+        for write in enter_writes:
+            self.write(write)
+
+        self.try_me()
+
+        return self
+
+    def try_me(self):
+        """Run a quick thorough self-test"""
+
+        bt = self.bt
+
+        assert bt.tcgetattr is not None  # requires called between Bt Enter & Exit
+
+        bt.write(b"")  # tests 'os.write'
+        self.kbhit(0)  # tests 'select.select'
 
     def __exit__(self, *exc_info):
         bt = self.bt
+        exit_writes = self.exit_writes
+
+        for write in exit_writes:
+            self.write(write)
+        exit_ = bt.__exit__()
 
         self.row = None
         self.column = None
 
-        exit_ = bt.__exit__()
-
         return exit_
+
+    def write_before_if(self, before, after):
+        """Write if not written already and return the pair, else return None"""
+
+        enter_writes = self.enter_writes
+        exit_writes = self.exit_writes
+
+        assert SM_IRM == b"\x1B[4h"
+        assert RM_IRM == b"\x1B[4l"
+
+        assert CS_NONE == b"\x1B[ q"
+
+        if before in enter_writes:
+            return
+
+        alt_before = before
+        alt_after = after
+
+        if before == b"\x1B[4l":  # remains in RM_IRM after exit
+            if before not in exit_writes:
+                alt_before = b""
+                alt_after = b""
+
+        self.write(before)  # may be in Exit Writes
+
+        if after == b"\x1B[ q":  # exits to enclosing Enter Write
+            if after in exit_writes:
+                index = exit_writes.index(after)
+                alt_after = enter_writes[-1 - index]
+
+        enter_writes.append(alt_before)
+        exit_writes.insert(0, alt_after)
+
+        return (alt_before, alt_after)
+
+    def write_after_if(self, before_after):
+        """Write the After if wrote the Before"""
+
+        enter_writes = self.enter_writes
+        exit_writes = self.exit_writes
+
+        if before_after:
+            (before, after) = before_after
+
+            self.write(after)
+
+            assert before in enter_writes, before
+            assert after in exit_writes, after
+
+            enter_writes.remove(before)
+            exit_writes.remove(after)
 
     def redraw(self):  # Vi ⌃L
         """Call for Refresh of the ChordsTerminal Cache of BytesTerminal"""
@@ -2035,16 +2074,6 @@ class ChordsTerminal:
 
         return (seq, plus)
 
-    def try_me(self):
-        """Run a quick thorough self-test"""
-
-        bt = self.bt
-
-        assert bt.tcgetattr is not None  # requires called between Bt Enter & Exit
-
-        bt.write(b"")  # tests 'os.write'
-        self.kbhit(0)  # tests 'select.select'
-
 
 #
 # Name Screen Output Bytes and Keyboard Input Bytes
@@ -2066,6 +2095,7 @@ CUP_Y_X = "\x1B[{};{}H"  # 04/08 Cursor Position (CUP) of Y X
 CUP_Y1 = "\x1B[{}H"
 CUP = b"\x1B[H"
 
+ED = b"\x1B[J"  # 04/10 Erase in Page (ED) of no Ps
 EL = b"\x1B[K"  # 04/11 Erase In Line (EL) of no Ps
 IL = b"\x1B[L"  # 04/12 Insert Line (IL)
 DL_N = "\x1B[{}M"  # 04/13 Delete Line (DL) of N
@@ -2080,9 +2110,9 @@ DSR_FOR_CPR = b"\x1B[6n"  # 06/14 Device Status Report (DSR) call for CPR
 
 # 07/00..07/14 Private or Experimental Use
 
-"\x1B[ q"  # 02/00 07/01  # Cursor No Style
-"\x1B[4 q"  # 02/00 07/01  # Cursor Style 4 Skid
-"\x1B[6 q"  # 02/00 07/01  # Cursor Style 6 Bar
+CS_NONE = b"\x1B[ q"  # 02/00 07/01  # Cursor No Style
+CS_4_SKID = b"\x1B[4 q"  # 02/00 07/01  # Cursor Style 4 Skid
+CS_6_BAR = b"\x1B[6 q"  # 02/00 07/01  # Cursor Style 6 Bar
 
 
 CprPatternYX = rb"\x1B[\\[]([0-9]+);([0-9]+)R"  # 04/18 Cursor Pos~ Report (CPR) of Y X
