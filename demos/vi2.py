@@ -18,7 +18,7 @@ keystrokes:
   Space $ + - 0 1 2 3 4 5 6 7 8 9 ⇧H ⇧M ⇧L H J K L |
   ⇧C ⇧D ⇧G ⇧I ⇧O ⇧R ⇧S ⇧X ^ _ C$ CC D$ DD A I O R S X
 
-self-tests:  # todo: could be 2 ⇧M or 2 ^
+self-tests:  # TODO: could be 2 ⇧M or 2 ^
   1 ⇧Z Q test of Keyboard, 2 ⇧Z Q test of Screen, etc
 
 escape-sequences:
@@ -270,7 +270,7 @@ class ViTerminal:
 
             status = self.chars_to_status(chars)
 
-        # Rewrite the Status Row  # TODO: warp the Cursor there
+        # Rewrite the Status Row  # todo: warp the Cursor there
 
         if not args_quiet:
             write_chars = " " + status
@@ -365,7 +365,7 @@ class ViTerminal:
         # ["⌃W"]
         # ["⌃X"]
         # ["⌃Y"]
-        # ["⌃Z"] = self.suspend  # FIXME  # TODO
+        # ["⌃Z"] = self.suspend  # TODO
 
         # ["Esc"]  # collides with C0 Esc Sequences
         func_by_chords["⌃\\"] = self.help_quit_if
@@ -405,11 +405,11 @@ class ViTerminal:
         func_by_chords["8"] = self.hold_digit
         func_by_chords["9"] = self.hold_digit
 
-        # [": !"] = self.system  # FIXME  # TODO
+        # [": !"] = self.system  # TODO
         # [";"]
-        # ["<"] = self.row_n_dedent
+        func_by_chords["< <"] = self.row_n_dedent
         # ["="]
-        # [">"] = self.row_n_indent
+        func_by_chords["> >"] = self.row_n_indent
         # ["?"]
 
         func_by_chords[": Q ! Return"] = self.force_quit
@@ -773,7 +773,7 @@ class ViTerminal:
         ct = self.ct
         rows = ct.get_scrolling_rows()
 
-        if self.pull_digits_chars():  # FIXME: TODO: better hide of Easter Egg Self Test
+        if self.pull_digits_chars():
             self.slap_back_chars()  # Vi ⇧M with Digits Arg
             return
 
@@ -919,6 +919,27 @@ class ViTerminal:
         self.write_digits("\x1B[{}M")
         self.line_start()
 
+    def row_n_dedent(self):  # Vi < <
+        """Dedent N Rows here"""
+
+        ct = self.ct
+        n = self.pull_digits_int_else(default=1)
+
+        assert CR == b"\r"
+        assert DCH_N == "\x1B[{}P"
+        assert CUD == b"\x1B[B"
+        assert CUU_N == "\x1B[{}A"
+
+        for _ in range(n):
+            ct.write(b"\r")
+            self.write_form_n("\x1B[{}P", n=4)
+            ct.write(b"\x1B[B")
+
+        self.write_form_n("\x1B[{}A", n)
+        self.line_start()
+
+        # Vi < < doesn't delete non-Space Chars
+
     def row_n_tail_cut_column_minus(self):  # Vi ⇧D
         """Cut N - 1 Rows below, then Tail of Row here, then Go Left"""
 
@@ -954,6 +975,44 @@ class ViTerminal:
 
         self.column_plus_n_cut()
         self.insert_n_till()
+
+    def row_n_indent(self):  # Vi > >
+        """Indent N Rows here"""
+
+        ct = self.ct
+        exit_writes = self.exit_writes
+        n = self.pull_digits_int_else(default=1)
+
+        assert SM_IRM == b"\x1B[4h"
+        assert CR == b"\r"
+        assert CUD == b"\x1B[B"
+        assert CUU_N == "\x1B[{}A"
+        assert RM_IRM == b"\x1B[4l"
+
+        # Enter Insert Mode, if need be
+
+        with_inserting = b"\x1B[4l" not in exit_writes
+        if with_inserting:
+            exit_writes.append(b"\x1B[4l")
+            ct.write(b"\x1B[4h")
+
+        # Insert 4 Spaces  # todo: classic Vi can indent by "\t" too
+
+        for _ in range(n):
+            ct.write(b"\r")
+            ct.write(4 * b" ")
+            ct.write(b"\x1B[B")
+
+        self.write_form_n("\x1B[{}A", n)
+        self.line_start()
+
+        # Exit Insert Mode, if entered
+
+        if with_inserting:
+            ct.write(b"\x1B[4l")
+            exit_writes.remove(b"\x1B[4l")
+
+        # Vi < < doesn't delete non-Space Chars
 
     def row_n_tail_cut_insert(self):  # Vi ⇧C
         """Cut N - 1 Rows below, then Tail of Row, and then insert, as if Vi ⇧D I"""
@@ -1044,11 +1103,11 @@ class ViTerminal:
 
         # Enter Insert Mode
 
-        exit_writes.append(b"\x1B[4l")  # CSI Ps 06/12  # 4 replacement-mode
-        ct.write(b"\x1B[4h")  # CSI Ps 06/08  # 4 insertion-mode
+        exit_writes.append(b"\x1B[4l")
+        ct.write(b"\x1B[4h")
 
-        exit_writes.append(b"\x1B[ q")  # CSI Ps Space 07/01  # unstyled cursor-style
-        ct.write(b"\x1B[6 q")  # CSI Ps Space 07/01  # 6 bar cursor-style
+        exit_writes.append(b"\x1B[ q")
+        ct.write(b"\x1B[6 q")
 
         # Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences
 
@@ -1070,7 +1129,7 @@ class ViTerminal:
         assert DCH_N == "\x1B[{}P"
         ct.write(b"\b\x1B[P")
 
-        # TODO: Vi I Delete in first Column deletes Line-Break
+        # todo: Vi I Delete in first Column deletes Line-Break
 
     def insert_return(self):
         """Insert new Row above this Row"""
@@ -1119,10 +1178,10 @@ class ViTerminal:
 
         # Enter Replace Mode
 
-        ct.write(b"\x1B[4l")  # CSI Ps 06/12  # 4 replacement-mode
+        ct.write(b"\x1B[4l")
 
-        exit_writes.append(b"\x1B[ q")  # CSI Ps Space 07/01  # unstyled cursor-style
-        ct.write(b"\x1B[4 q")  # CSI Ps Space 07/01  # 4 skid cursor-style
+        exit_writes.append(b"\x1B[ q")
+        ct.write(b"\x1B[4 q")
 
         # Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences
 
