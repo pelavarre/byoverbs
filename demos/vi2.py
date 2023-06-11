@@ -62,6 +62,7 @@ import difflib
 import os
 import re
 import select
+import signal
 import string
 import struct
 import sys
@@ -137,10 +138,36 @@ class ViTerminal:
 
         self.exit_writes = exit_writes
 
+    def pid_suspend(self):  # Vi ⌃Z F G Return
+        """Release the Screen & Keyboard, pause this Process Pid, re-acquire"""
+
+        ct = self.ct
+        bt = ct.bt
+
+        # Place the Cursor
+
+        bt.print()
+        y = bt.get_terminal_lines()
+        alt_y = max(y - 2, 1)
+        bt.write("\x1B[{}H".format(alt_y).encode())
+        bt.write(b"\x1B[J")
+
+        # Suspend and resume this Process Pid
+
+        pid = os.getpid()
+        signal_ = signal.SIGTSTP
+
+        ct.__exit__(*sys.exc_info())
+        os.kill(pid, signal_)
+        ct.__enter__()
+
+        # todo: this hangs inside its 'os.kill' if i call Vi Py from Py or Zsh or Bash
+
     def __exit__(self, *exc_info):
         """Cancel"""
 
         ct = self.ct
+        bt = ct.bt
         exit_writes = self.exit_writes
 
         assert CUP_Y1 == "\x1B[{}H"
@@ -154,7 +181,6 @@ class ViTerminal:
 
         self.print_if()
 
-        bt = ct.bt
         y = bt.get_terminal_lines()
         self.write_if("\x1B[{}H".format(y).encode())
 
@@ -363,7 +389,7 @@ class ViTerminal:
         # ["⌃W"]
         # ["⌃X"]
         # ["⌃Y"]
-        # ["⌃Z"] = self.suspend  # TODO
+        func_by_chords["⌃Z"] = self.pid_suspend
 
         # ["Esc"]  # collides with C0 Esc Sequences
         func_by_chords["⌃\\"] = self.help_quit_if
@@ -1728,6 +1754,20 @@ class ChordsTerminal:
         self.row = None  # the Row of the Cursor, if known
         self.column = None  # the Column of the Cursor, if known
 
+    def __enter__(self):
+        bt = self.bt
+        bt.__enter__()
+
+    def __exit__(self, *exc_info):
+        bt = self.bt
+
+        self.row = None
+        self.column = None
+
+        exit_ = bt.__exit__()
+
+        return exit_
+
     def redraw(self):  # Vi ⌃L
         """Call for Refresh of the ChordsTerminal Cache of BytesTerminal"""
 
@@ -2563,6 +2603,8 @@ class BytesTerminal:
             when = termios.TCSADRAIN
             termios.tcsetattr(fd, when, tcgetattr)
 
+            # self.flush()
+
     def breakpoint(self):
         """Exit, breakpoint, and try to enter again"""
 
@@ -2607,10 +2649,11 @@ class BytesTerminal:
         fd = self.fd
         os.write(fd, bytes_)
 
-    def flush(self):  # not much tested, though i did once feel we need this
+    def flush(self):  # todo: not much tested
         """Flush the Output Buffer without waiting for the Line to end"""
 
-        sys.stdout.flush()
+        stdio = self.stdio
+        stdio.flush()
 
     def read(self):
         """Read one or more Bytes"""
