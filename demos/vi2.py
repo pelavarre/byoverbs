@@ -14,11 +14,11 @@ quirks:
   accepts ⇧Q V I Return without action or complaint
 
 keystrokes:
-  ⌃C ⌃D ⌃G ⌃H ⌃J ⌃L Return ⌃N ⌃P ⌃\
+  ⌃C ⌃D ⌃G ⌃H ⌃J ⌃L Return ⌃N ⌃P ⌃\ ↑ ↓ → ←
   Space $ + - 0 1 2 3 4 5 6 7 8 9 ⇧H ⇧M ⇧L H J K L |
   ⇧C ⇧D ⇧G ⇧I ⇧O ⇧R ⇧S ⇧X ^ _ C$ CC D$ DD A I O R S X
 
-self-tests:  # TODO: could be 2 ⇧M or 2 ^
+self-tests:
   1 ⇧Z Q test of Keyboard, 2 ⇧Z Q test of Screen, etc
 
 escape-sequences:
@@ -120,8 +120,8 @@ class ViTerminal:
         self.char_holds = list()  # the Words of Chars held, till next Func
         self.digit_holds = list()  # the Digits held, till next Func
 
-        self.chars_key_list = list()  # the Names of Func's Read
         self.chars_key = None  # the Name of the last Func Read
+        self.chars_key_list = list()  # the Names of Func's Read
         self.func_by_chords = self.form_func_by_chords_main()  # the Func's by Name
 
     def __enter__(self):
@@ -277,7 +277,7 @@ class ViTerminal:
 
             status = self.chars_to_status(chars)
 
-        # Rewrite the Status Row  # todo: warp the Cursor there
+        # Rewrite the Status Row
 
         if not args_quiet:
             write_chars = " " + status
@@ -290,6 +290,8 @@ class ViTerminal:
 
             write = write_chars.encode()
             ct.write(write)
+
+        # todo: Place the Status Row outside the Scrolling Rows
 
     def chars_to_status(self, chars):
         """Say how to echo Chars as Status"""
@@ -412,7 +414,7 @@ class ViTerminal:
         func_by_chords["8"] = self.hold_digit
         func_by_chords["9"] = self.hold_digit
 
-        # [": !"] = self.system  # TODO
+        # [": !"] = self.system
         # [";"]
         func_by_chords["< <"] = self.row_n_dedent
         # ["="]
@@ -446,7 +448,7 @@ class ViTerminal:
         func_by_chords["⇧Q V I Return"] = self.shrug
 
         func_by_chords["⇧R"] = self.replace_n_till  # "R"eplace
-        func_by_chords["⇧S"] = self.row_n_cut_insert  # "S"ubstitute
+        func_by_chords["⇧S"] = self.row_n_cut_split_insert  # "S"ubstitute
         # ["⇧T"] = self.upto_x_minus
         # ["⇧U"]
         # ["⇧V"]
@@ -472,7 +474,7 @@ class ViTerminal:
         func_by_chords["A"] = self.column_plus_insert_n_till  # "a"ppend
         # ["B"]
         func_by_chords["C $"] = self.row_n_tail_cut_insert
-        func_by_chords["C C"] = self.row_n_cut_insert  # "c"hange
+        func_by_chords["C C"] = self.row_n_cut_split_insert  # "c"hange
         func_by_chords["D $"] = self.row_n_tail_cut_column_minus
         func_by_chords["D D"] = self.row_n_cut  # "d"elete
         # ["E"]
@@ -547,7 +549,7 @@ class ViTerminal:
         ct = self.ct
         ct.print("  {},{}  ".format(ct.row, ct.column), end="")
 
-        # todo: print into Status Rows
+        # todo: Place the Status Row outside the Scrolling Rows
 
     def redraw(self):  # Vi ⌃L
         """Call for Refresh of the ChordsTerminal Cache of BytesTerminal"""
@@ -562,6 +564,7 @@ class ViTerminal:
 
         digit_holds = self.digit_holds
         chars_key = self.chars_key
+        chars_key_list = self.chars_key_list
 
         assert chars_key in "0123456789", repr(chars_key)
         if not digit_holds:
@@ -569,16 +572,19 @@ class ViTerminal:
 
         digit_holds.extend(chars_key)
 
-    def pull_digits_int_else(self, default=None):
-        """Clear the Digits, but return what they were, as an Int"""
+        assert chars_key_list[-1:] == [chars_key], (chars_key_list[-1:], chars_key)
+        chars_key_list[::] = chars_key_list[:-1]
+
+    def pull_digits_int(self, default):
+        """Read then clear the Digits, and return the Int of them, else the Default"""
 
         digits = self.pull_digits_chars()
-        digits_int_else = int(digits) if digits else default
+        int_else = int(digits) if digits else default
 
-        return digits_int_else
+        return int_else
 
     def pull_digits_chars(self):
-        """Clear the Digits, but return what they were, as Chars"""
+        """Read then clear the Digits, and return them as zero or more Chars"""
 
         digit_holds = self.digit_holds
 
@@ -587,7 +593,7 @@ class ViTerminal:
 
         return digits
 
-    def write_digits(self, form):
+    def write_form_digits(self, form):
         """Write a Csi Pn F Byte Sequence with zero or more Held Digits inside"""
 
         ct = self.ct
@@ -690,6 +696,16 @@ class ViTerminal:
         ct.write(b"\x1B[K")
         ct.write(write)
 
+    def slap_back_once(self):
+        """Slap back if starting out wrong, but don't slap back repeats"""
+
+        chars_key = self.chars_key
+        chars_key_list = self.chars_key_list
+        if chars_key_list[-2:] == [chars_key, chars_key]:
+            return  # inside Vi Py of ⌃H ⌃J Return ⌃N ⌃P Delete ↑ ↓ → ← $ + - H J K L _
+
+        self.slap_back_chars()
+
     def slap_back_chars(self):  # i'm afraid i can't do that, Dave.
         """Say don't do that"""
 
@@ -731,27 +747,53 @@ class ViTerminal:
     def column_minus_n(self):  # Vi H  # Vi ←
         """Go left"""
 
+        ct = self.ct
+        column = ct.column
+        if column == 1:
+            self.slap_back_once()
+            return
+
         assert CUB_N == "\x1B[{}D"
-        self.write_digits("\x1B[{}D")
+        self.write_form_digits("\x1B[{}D")
 
     def column_plus_n(self):  # Vi L  # Vi →
         """Go right"""
 
-        assert CUF_N == "\x1B[{}C"
-        self.write_digits("\x1B[{}C")
+        ct = self.ct
+        column = ct.column
+        columns = ct.get_scrolling_columns()
+        if column == columns:
+            self.slap_back_once()
+            return
 
-    def row_plus_n(self):  # Vi J  # Vi ↓
+        assert CUF_N == "\x1B[{}C"
+        self.write_form_digits("\x1B[{}C")
+
+    def row_minus_n(self):  # Vi K  # Vi ⌃P  # Vi ↑
+        """Go up"""
+
+        ct = self.ct
+        row = ct.row
+        if row == 1:
+            self.slap_back_once()
+            return
+
+        assert CUU_N == "\x1B[{}A"
+        self.write_form_digits("\x1B[{}A")
+
+    def row_plus_n(self):  # Vi J  # Vi ⌃J  # Vi ⌃N  # Vi ↓
         """Go down"""
+
+        ct = self.ct
+        row = ct.row
+        rows = ct.get_scrolling_rows()
+        if row == rows:
+            self.slap_back_once()
+            return
 
         assert CUD_N == "\x1B[{}B"
 
-        self.write_digits("\x1B[{}B")
-
-    def row_minus_n(self):  # Vi K  # Vi ↑
-        """Go up"""
-
-        assert CUU_N == "\x1B[{}A"
-        self.write_digits("\x1B[{}A")
+        self.write_form_digits("\x1B[{}B")
 
     #
     # Move the Cursor relative to the Screen
@@ -775,14 +817,14 @@ class ViTerminal:
 
         assert CHA_X == "\x1B[{}G"
 
-        self.write_digits("\x1B[{}G")
+        self.write_form_digits("\x1B[{}G")
 
     def line_n_start(self):  # Vi ⇧G
         """Go down from Top of File, to the Nth Line Start"""
 
         ct = self.ct
         rows = ct.get_scrolling_rows()
-        n = self.pull_digits_int_else(default=rows)
+        n = self.pull_digits_int(default=rows)
 
         assert VPA_Y == "\x1B[{}d"
 
@@ -794,7 +836,7 @@ class ViTerminal:
 
         assert VPA_Y == "\x1B[{}d"
 
-        self.write_digits("\x1B[{}d")
+        self.write_form_digits("\x1B[{}d")
         self.line_start()
 
     def row_middle_line_start_once(self):  # Vi ⇧M
@@ -814,13 +856,14 @@ class ViTerminal:
         self.write_form_n("\x1B[{}d", n=n)
         self.line_start()
 
+        # classic Vi ⇧M drops Digits without Beep
+
     def row_low_n_line_start(self):  # Vi ⇧L
         """Go up from Bottom of Screen, to the -Nth Line Start"""
 
         ct = self.ct
         rows = ct.get_scrolling_rows()
-
-        n = self.pull_digits_int_else(default=1)
+        n = self.pull_digits_int(default=1)
 
         assert VPA_Y == "\x1B[{}d"
 
@@ -829,123 +872,159 @@ class ViTerminal:
         self.line_start()
 
     #
-    # Move the Cursor relative to the Line
+    # Move the Cursor relative to the Chars
     #
 
     def char_minus_n(self):  # Vi Delete  # Vi ⌃H  # when no Chars Held
         """Go to start of N Chars before here"""
 
         ct = self.ct
+        column = ct.column
+        columns = ct.get_scrolling_columns()
+        row = ct.row
+        n = self.pull_digits_int(default=1)
 
-        assert CUU == b"\x1B[A"
         assert CUB_N == "\x1B[{}D"
+        assert CUU_N == "\x1B[{}A"
+        assert CUF_N == "\x1B[{}C"
 
-        # Move as far as Left of Row, but then give up, if Column unknown
+        # Move indefinitely far left, and not at all up, if Column unknown
 
-        if ct.column is None:
-            self.column_minus_n()
+        if column is None:
+            self.write_form_n("\x1B[{}D", n)
             return
 
-        # Go back as if through Chars, not so simply as by Columns
+        # Slap back moving left from first Char
 
-        n = self.pull_digits_int_else(default=1)
+        if (row, column) == (1, 1):
+            self.slap_back_once()
+            return
+
+        # Plan the moves
 
         alt_n = n
-        while alt_n:
-            assert alt_n > 0, alt_n
+        if row is not None:
+            max_n = ((row - 1) * columns) + (column - 1)
+            alt_n = min(max_n, n)
 
-            # Go left inside this Row
+        steps = alt_n // columns
+        slips = alt_n % columns
 
-            column = ct.column
-            if column > 1:
-                left_n = min(column - 1, alt_n)
-                alt_n -= left_n
-                self.write_form_n("\x1B[{}D", n=left_n)
-                assert ct.column == (column - left_n), (ct.column, column, left_n)
+        if slips < column:
+            x = column - slips
+            ups = steps
+            lefts = slips
+            rights = 0
+        else:
+            x = (columns + 1) - (slips - (column - 1))
+            ups = steps + 1
+            lefts = 0
+            rights = x - column
 
-                continue
+        # Make the moves
 
-            # Cope if no Rows above
+        slips = 0
+        if lefts:
+            self.write_form_n("\x1B[{}D", n=lefts)
+            slips += lefts
+        if ups:
+            self.write_form_n("\x1B[{}A", n=ups)
+            slips += ups * columns
+        if rights:
+            self.write_form_n("\x1B[{}C", n=rights)
+            slips -= rights
 
-            row = ct.row
-            if row == 1:
-                if n == alt_n:
-                    self.slap_back_chars()  # Vi Delete or ⌃H at Start of File
-
-                return
-
-            # Go to end of the Row above
-
-            ct.write(b"\x1B[A")
-            if ct.row is not None:
-                assert ct.row == (row - 1), (ct.row, row)
-            self.line_end()
-            alt_n -= 1
+        assert ct.column == x, (ct.column, x, slips, alt_n, lefts, ups, rights)
+        assert slips == alt_n, (slips, alt_n, lefts, ups, rights)
 
     def char_plus_n(self):  # Vi Space
-        """Go to end of N Chars here"""
+        """Go to end of N Chars before here"""
 
         ct = self.ct
+        column = ct.column
+        columns = ct.get_scrolling_columns()
+        row = ct.row
+        rows = ct.get_scrolling_rows()
+        n = self.pull_digits_int(default=1)
 
-        assert CUD == b"\x1B[B"
         assert CUF_N == "\x1B[{}C"
-        assert CR == b"\r"
+        assert CUD_N == "\x1B[{}B"
+        assert CUB_N == "\x1B[{}D"
 
-        # Move as far as Right of Row, but then give up, if Column unknown
+        # Move indefinitely far right, and not at all down, if Column unknown
 
-        if ct.column is None:
-            self.column_plus_n()
+        if column is None:
+            self.write_form_n("\x1B[{}C", n)
             return
 
-        # Go ahead as if through Chars, not so simply as by Columns
+        # Slap back moving right from last Char
 
-        n = self.pull_digits_int_else(default=1)
+        if (row, column) == (rows, columns):
+            self.slap_back_once()
+            return
+
+        # Plan the moves
 
         alt_n = n
-        while alt_n:
-            assert alt_n > 0, alt_n
+        if row is not None:
+            max_n = ((rows - row) * columns) + (columns - column)
+            alt_n = min(max_n, n)
 
-            # Go right inside this Row
+        steps = alt_n // columns
+        slips = alt_n % columns
 
-            column = ct.column
-            columns = ct.get_scrolling_columns()
-            if column < columns:
-                right_n = min(columns - column, alt_n)
-                alt_n -= right_n
-                self.write_form_n("\x1B[{}C", n=right_n)
-                assert ct.column == (column + right_n), (ct.column, column, right_n)
+        if slips <= (columns - column):
+            x = column + slips
+            downs = steps
+            rights = slips
+            lefts = 0
+        else:
+            x = (column + slips) - columns
+            downs = steps + 1
+            rights = 0
+            lefts = column - x
 
-                continue
+        # Make the moves
 
-            # Cope if no Rows belows
+        slips = 0
+        if rights:
+            self.write_form_n("\x1B[{}C", n=rights)
+            slips += rights
+        if downs:
+            self.write_form_n("\x1B[{}B", n=downs)
+            slips += downs * columns
+        if lefts:
+            self.write_form_n("\x1B[{}D", n=lefts)
+            slips -= lefts
 
-            row = ct.row
-            rows = ct.get_scrolling_rows()
-            if row == rows:
-                if n == alt_n:
-                    self.slap_back_chars()  # Vi Space at End of File
-
-                return
-
-            # Go to Start of the Row below (not to the indented Start of Line)
-
-            ct.write(b"\x1B[B")
-            assert ct.row == (row + 1), (ct.row, row)
-            ct.write(b"\r")
-            alt_n -= 1
+        assert ct.column == x, (ct.column, x, slips, alt_n, rights, downs, lefts)
+        assert slips == alt_n, (slips, alt_n, rights, downs, lefts)
 
     def line_n_minus_start(self):  # Vi -
         """Go to the top-left of N Lines above here"""
 
+        ct = self.ct
+        row = ct.row
+        if row == 1:
+            self.slap_back_once()
+            return
+
         assert CUU_N == "\x1B[{}A"
 
-        self.write_digits("\x1B[{}A")
+        self.write_form_digits("\x1B[{}A")
         self.line_start()
 
     def line_n1_plus_start(self):  # Vi _  # Vi ⇧-
         """Go to the bottom-left of N Lines here"""
 
-        n = self.pull_digits_int_else(default=1)
+        ct = self.ct
+        row = ct.row
+        rows = ct.get_scrolling_rows()
+        if row == rows:
+            self.slap_back_once()
+            return
+
+        n = self.pull_digits_int(default=1)
 
         assert CUD_N == "\x1B[{}B"
 
@@ -954,15 +1033,22 @@ class ViTerminal:
             self.write_form_n("\x1B[{}B", n=n1)
         self.line_start()
 
-    def line_n_plus_start(self):  # Vi +  # Vi ⇧=
+    def line_n_plus_start(self):  # Vi +  # Vi ⇧=  # Vi Return
         """Go to the bottom-left of N Lines below here"""
+
+        ct = self.ct
+        row = ct.row
+        rows = ct.get_scrolling_rows()
+        if row == rows:
+            self.slap_back_once()
+            return
 
         assert CUD_N == "\x1B[{}B"
 
-        self.write_digits("\x1B[{}B")
+        self.write_form_digits("\x1B[{}B")
         self.line_start()
 
-    def line_start_once(self):  # Vi ^
+    def line_start_once(self):  # Vi ^  # Vi ⇧6
         """Go to Line Start, only without Digits"""
 
         if self.pull_digits_chars():
@@ -970,6 +1056,8 @@ class ViTerminal:
             return
 
         self.line_start()
+
+        # classic Vi ^ drops Digits without Beep
 
     def line_start(self):
         """Go to Line Start"""
@@ -987,7 +1075,15 @@ class ViTerminal:
     def line_n_plus_end(self):  # Vi $  # Vi ⇧4
         """Go to the bottom-right of N Lines here"""
 
-        n = self.pull_digits_int_else(default=1)
+        n = self.pull_digits_int(default=1)
+
+        if n > 1:
+            ct = self.ct
+            row = ct.row
+            rows = ct.get_scrolling_rows()
+            if row == rows:
+                self.slap_back_once()
+                return
 
         assert CUD_N == "\x1B[{}B"
 
@@ -1014,14 +1110,14 @@ class ViTerminal:
         """Cut N Chars here and to the right, from this Row"""
 
         assert DCH_N == "\x1B[{}P"
-        self.write_digits("\x1B[{}P")
+        self.write_form_digits("\x1B[{}P")
 
     def column_minus_n_cut(self):  # Vi ⇧X
         """Cut N Chars to the left, from this Row"""
 
         ct = self.ct
         column = ct.column
-        n = self.pull_digits_int_else(default=1)
+        n = self.pull_digits_int(default=1)
 
         assert BS == b"\b"
         assert DCH_N == "\x1B[{}P"
@@ -1035,14 +1131,16 @@ class ViTerminal:
         """Cut N Rows here and below, and go to Line Start"""
 
         assert DL_N == "\x1B[{}M"
-        self.write_digits("\x1B[{}M")
+        self.write_form_digits("\x1B[{}M")
         self.line_start()
+
+        # classic Vi D D beeps vs Digits in the last Row
 
     def row_n_dedent(self):  # Vi < <
         """Dedent N Rows here"""
 
         ct = self.ct
-        n = self.pull_digits_int_else(default=1)
+        n = self.pull_digits_int(default=1)
 
         row = ct.row
         rows = ct.get_scrolling_rows()
@@ -1077,11 +1175,13 @@ class ViTerminal:
         self.row_n_tail_cut()
         ct.write(b"\b")
 
+        # classic Vi ⇧D beeps vs Digits in the last Row
+
     def row_n_tail_cut(self):
         """Cut N - 1 Rows below, then Tail of Row here"""
 
         ct = self.ct
-        n = self.pull_digits_int_else(default=1)
+        n = self.pull_digits_int(default=1)
 
         assert CUD == b"\x1B[B"
         assert DL_N == "\x1B[{}M"
@@ -1110,7 +1210,7 @@ class ViTerminal:
         """Indent N Rows here"""
 
         ct = self.ct
-        n = self.pull_digits_int_else(default=1)
+        n = self.pull_digits_int(default=1)
 
         row = ct.row
         rows = ct.get_scrolling_rows()
@@ -1144,7 +1244,6 @@ class ViTerminal:
         ct.write_after_if(with_inserting)
 
         # Vi > > doesn't delete non-Space Chars at Right Margin
-
         # Vi can indent by Tabs, and by more or less than 4 Spaces
 
     def row_n_tail_cut_insert(self):  # Vi ⇧C
@@ -1153,7 +1252,9 @@ class ViTerminal:
         self.row_n_tail_cut()
         self.insert_n_till()
 
-    def row_n_cut_insert(self):  # Vi ⇧S  # Vi C C
+        # classic Vi ⇧C beeps vs Digits in the last Row
+
+    def row_n_cut_split_insert(self):  # Vi ⇧S  # Vi C C
         """Cut N Rows but then start a new Row here, as if D D ⇧O"""
 
         ct = self.ct
@@ -1163,10 +1264,12 @@ class ViTerminal:
         assert IL == b"\x1B[L"
 
         ct.write(b"\r")
-        self.write_digits("\x1B[{}M")
+        self.write_form_digits("\x1B[{}M")
         ct.write(b"\x1B[L")
 
         self.insert_n_till()
+
+        # classic Vi ⇧S beeps vs Digits in the last Row, ditto Vi C C
 
     def column_plus_insert_n_till(self):  # Vi A
         """Go right and then insert, as if Vi 1 L I"""
@@ -1289,6 +1392,10 @@ class ViTerminal:
 
     def replace_once(self):  # Vi R
         """Replace once"""
+
+        if self.pull_digits_chars():
+            self.slap_back_chars()  # todo: Vi R with Digits Args
+            return
 
         self.replace_n_till(limit=1)
 
@@ -1442,7 +1549,7 @@ class ViTerminal:
     def try_me_n(self):
         """Run a quick thorough self-test"""
 
-        digits_int_else = self.pull_digits_int_else()
+        n_else = self.pull_digits_int(default=None)
 
         funcs_by_int = dict()
 
@@ -1452,11 +1559,11 @@ class ViTerminal:
         funcs_by_int[1] = self.try_keyboard
         funcs_by_int[2] = self.try_screen
 
-        if digits_int_else not in funcs_by_int.keys():
+        if n_else not in funcs_by_int.keys():
             self.slap_back_chars()  # Test Func not-found
             return
 
-        int_func = funcs_by_int[digits_int_else]
+        int_func = funcs_by_int[n_else]
         int_func()
 
     def try_keyboard(self):
@@ -2887,27 +2994,30 @@ add_us_ascii_into_chords_by_bytes()
 
 _ = r"""  # up towards demo of reduce Python to Color Python
 
-TODO: success in arrow excuses repeat in that direction from bell
-
-TODO: fail ⇧C ⇧D ⇧S and such at Bottom of Screen
-
-Y should be Y $ not Y Y
-as per Vim:  help Y
+--screenlog FILE
+to fill the Screen but know the Chars
+⇧Z ⇧Z to save a copy
 
 --
 
-assert b"\x1B[K" etc eq their Ecma names
+underline the row of the Cursor to show Insert/ Replace
+
+status row for the ChordsScreenTest
+move self-tests into 2 ⇧M or 2 ^ as less occupied that ⇧Z Q
+
+status row for ⌃G
+status row for tracing writes to ChordsTerminal
+variably many status rows
+
+:! could be an input line outside of scrolling
+/ could be an input line outside of scrolling
 
 --
 
-un-BEL when we do know Cursor Position because we moved absolutely
+mm '' 'm marks of Cursor Position
 
-abs row known for ⇧H ⇧M ⇧L
-abs column known for | 0 $
-abs column known for ⇧S CC DD
-
-rel row/column known for H J K L
-rel row/column known for ⇧C ⇧D ⇧R ⇧S ⇧X CC DD A I R S X
+⇧Y should be Y $ not Y Y
+as per Vim Help at:  help Y
 
 --
 
@@ -2932,7 +3042,6 @@ let the digits be 0x etc, uppercase if 0x
 
 track Bold and Color
 
-DSR CPR fetch Cursor
 take Cursor Row for Status Row
 ⎋[y;xH ⎋[K update Status Row
 
@@ -2948,16 +3057,13 @@ help people bold the un-sparse, like to know when they've traced over it all
 
 test \n \r \r\n bytes inside macOS Paste Buffer
 
-echoed as digits
-then as ⎋ [ digits ; digits ;
-
 less pain here from tides forcing auto-wrapped searches and auto-cancelled searches
 
 jump to color
 
-copy in older Vi dreams from:  demos/vi1.py, futures.md, etc
-
 --
+
+copy in older Vi dreams from:  demos/vi1.py, futures.md, etc
 
 add patch on the side to test random match to real Vi
 
