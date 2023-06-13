@@ -36,7 +36,7 @@ LAZY_IMPORT_NAMES = """
     __main__
 
     argparse collections copy decimal difflib functools
-    getpass glob hashlib html importlib itertools json
+    getpass glob hashlib html importlib itertools json math
     os pathlib pdb platform pprint random re
     select shlex shutil signal stat string subprocess sys
     termios textwrap time traceback tty unicodedata urllib xml

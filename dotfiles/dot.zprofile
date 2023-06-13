@@ -67,6 +67,7 @@ function pips () {
 function qcd () { source $(dirname $(which q))/qcd.source "$@"; }  # cd
 function qp () { source $(dirname $(which q))/qp.source "$@"; }  # popd
 
+function fh () { cat ~/.*.log; }
 function zh () { source $(dirname $(which q))/zh.source "$@"; }  # history -t
 
 function qo () { source $(dirname $(which q))/qo "$@"; }  # "${...[@]}"

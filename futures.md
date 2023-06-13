@@ -205,7 +205,8 @@ default to whence -a including Aliases & Funcs of Bash & Zsh
 
 it's got an early index of source code in it, i might should catch that up
 
-## Quickly Now
+## Later Now
+### 1 - Quickly Now
 
 i gather notes here when they reach me, then later i spread them out above
 
@@ -254,7 +255,7 @@ i gather notes here when they reach me, then later i spread them out above
 + 'dotfiles/bash\_profile'
 + screen for SyntaxErrors, and auto-repair needs 1 trailing ':' or a few '))'
 
-## More
+### 2 - More
 
 Git Commit Messages drafted, not pushed
 
@@ -290,7 +291,7 @@ Cal Py for 2022-10-19, 2022-11-07 looked wrong to me
     cal.py 2022-10-19  # should work, and offer min equivalent 'cal' lines
     cal.py 20221019  # should work, and offer min equivalent 'cal' lines
 
-## Still more
+### 3 - Still more
 
 demos/vi.py --  # X x ZZ etc
 screenlog.0, typescript are both precedents - replaced, not appended
@@ -318,6 +319,15 @@ do make a Vi Color mode that squeezes the punctuation to nothing
 
 much too much is wildly way too difficult in
     Sh Bash Vi Emacs Less Watch Script Screen TMux
+
+### 4 - Yet more
+
+bh, fh, zh, qlf - take Sh Args as meaning pipe out through 'grep -i -e'
+
+write the 2nd half of the Sh History in LogFmt style
+
+    x=0 t=2023-06-13T17:29:47.038436-07:00 ps1=jqdoe@linux-jqdoe-1:~/Public/byoverbs$
+    ls
 
 ## Copied from
 

@@ -65,6 +65,7 @@ function pips () {
 # Work the deep magic inside the Sh Process that Git SubProcesses can't reach
 
 function bh () { source $(dirname $(which q))/bh.source "$@"; }
+function fh () { cat ~/.*.log; }
 
 function qcd () { source $(dirname $(which q))/qcd.source "$@"; }
 function qp () { source $(dirname $(which q))/qp.source "$@"; }

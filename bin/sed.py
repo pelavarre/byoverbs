@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# sed -iEXT FILE
+
 """
 usage: sed.py [--h] ...
 
