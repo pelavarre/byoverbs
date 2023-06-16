@@ -59,6 +59,7 @@ push: pull
 	: press ⌃D to execute, or ⌃C to quit
 	cat - >/dev/null
 	git push
+	exit 0
 	:
 
 pull: black flake8 shellcheck selftest
@@ -73,6 +74,7 @@ pull: black flake8 shellcheck selftest
 	git status --short --ignored
 	git describe --always --dirty
 	:
+	exit 0
 
 
 #
@@ -101,6 +103,7 @@ flake8:
 shellcheck:
 	mkdir -p tmp/
 	bin/shellcheck.bash
+	exit 0
 
 
 #
@@ -126,6 +129,8 @@ p.py:
 bin:
 	rm -fr bin/__pycache__/
 	cp -pR bin/* ~/bin/.
+	bash -c 'diff -bpru <(ls -1 ~/bin |grep -v ^__pycache__$$) <(ls -1 bin)'
+	exit 0
 
 
 # Publish many $HOME DotFiles
@@ -139,6 +144,7 @@ dotfiles:
 	cp -p ~/.zprofile dotfiles/dot.zprofile
 	cp -p ~/.zshrc dotfiles/dot.zshrc
 	git diff || :
+	exit 0
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/Makefile

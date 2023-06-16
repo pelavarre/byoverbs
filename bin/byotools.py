@@ -52,6 +52,11 @@ class ArgumentParser:
     def __init__(self):
         self.parser = compile_argdoc()
 
+    def __getattr__(self, name):
+        parser = self.parser
+        attr = getattr(parser, name)
+        return attr
+
     def parse_args(self):
         parser = self.parser
         args = parser_parse_args(parser)
@@ -501,7 +506,7 @@ def subprocess_run_oneline(shline):
 
     assert not run.stderr, run.stderr
 
-    stdout = run.stdout.decode()
+    stdout = run.stdout.decode()  # not errors="surrogateescape"
     lines = stdout.splitlines()
 
     assert len(lines) == 1, repr(lines[:3])
@@ -509,6 +514,26 @@ def subprocess_run_oneline(shline):
     line = lines[-1]
 
     return line
+
+
+def subprocess_run_stdout(shline, errors):
+    """Take Output from SubProcess Run Shell=False Check=True"""
+
+    argv = shlex.split(shline)
+
+    run = subprocess.run(
+        argv,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        errors=errors,
+        check=True,
+    )
+
+    stdout = run.stdout  # Bytes|Str
+    assert not run.stderr, run.stderr
+
+    return stdout
 
 
 #

@@ -322,12 +322,26 @@ much too much is wildly way too difficult in
 
 ### 4 - Yet more
 
-bh, fh, zh, qlf - take Sh Args as meaning pipe out through 'grep -i -e'
+
+shq
+for shquery.py
+:
+shq dedent
+shq dent
+shq strip, shq lstrip, shq rstrip
+:
+delete my ~/bin: dedent, dent
+
 
 write the 2nd half of the Sh History in LogFmt style
+    x=0 t=2023-06-13T17:29:47.038436-07:00 p=jqdoe@linux-jqdoe-1:~/Public/byoverbs$
 
-    x=0 t=2023-06-13T17:29:47.038436-07:00 ps1=jqdoe@linux-jqdoe-1:~/Public/byoverbs$
-    ls
+
+bh, fh, zh, qlf - take Sh Args as meaning pipe out through 'grep -i -e'
+
+
+figure out where U+2028 Line-Separator marks enter the Os Copy-Paste Buffer
+
 
 ## Copied from
 
