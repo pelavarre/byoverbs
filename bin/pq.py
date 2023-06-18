@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
 r"""
-usage: pq.py [-h] [WORD ...]
+usage: pq.py [-h] [-n] [WORD ...]
 
 edit the Os Copy/Paste Buffer else other Stdin/ Stdout
 
 positional arguments:
-  WORD        word of the Pq Programming Language
+  WORD              word of the Pq Programming Language
 
 options:
-  -h, --help  show this help message and exit
+  -h, --help        show this help message and exit
+  -n, --open-ended  don't close the last output line
 
 quirks:
-  always closes the last Line of Chars in output
   often does the same work as ' |jq'
 
 words:
@@ -74,7 +74,7 @@ examples:
 import argparse
 import ast
 import io
-import pprint
+import json
 import subprocess
 import sys
 import textwrap
@@ -95,7 +95,7 @@ def main():
 
     func = pq_compile_to_func(words)
 
-    with PyQueryVm() as pqv:
+    with PyQueryVm(open_ended=args.open_ended) as pqv:
         main.pqv = pqv
 
         func()
@@ -107,8 +107,13 @@ def parse_pq_args():
     assert argparse.ZERO_OR_MORE == "*"
 
     parser = byo.ArgumentParser()
+
     words_help = "word of the Pq Programming Language"
     parser.add_argument("words", metavar="WORD", nargs="*", help=words_help)
+
+    n_help = "don't close the last output line"
+    parser.add_argument("-n", "--open-ended", action="count", help=n_help)
+
     args = parser.parse_args()  # often prints help & exits zero
 
     return args
@@ -121,6 +126,9 @@ def parse_pq_args():
 
 class PyQueryVm:
     """Define the Runtime Context of the Pq Programming Language"""
+
+    def __init__(self, open_ended):
+        self.open_ended = open_ended
 
     def __enter__(self):
         """Sponge up the Stdin of Chars, and open up the Stdout of Chars"""
@@ -154,6 +162,7 @@ class PyQueryVm:
     def __exit__(self, *exc_info):
         """Sponge up the Stdin of Chars, and open up the Stdout of Chars"""
 
+        open_ended = self.open_ended
         stdout = self.stdout
 
         # Revert to Sys Stdin Stdout, for debug etc
@@ -169,9 +178,13 @@ class PyQueryVm:
 
         # Forward what we wrote
 
-        ochars = stdout.read()
-        if ochars:
-            assert ochars.endswith("\n"), repr(ochars[-9:])
+        alt_ochars = stdout.read()
+
+        ochars = alt_ochars
+        if alt_ochars:
+            assert alt_ochars.endswith("\n"), repr(ochars[-9:])
+            if open_ended:
+                ochars = alt_ochars[: -len("\n")]
 
         if not sys.stdout.isatty():
             sys.stdout.write(ochars)
@@ -400,6 +413,21 @@ def file_enumerate():  # |pq enumerate  # [Line] -> [IndexedLine]
         print(*opair)
 
 
+def file_join():  # |pq join  # [Word] -> Line
+    r"""Replace each Line-Ending with one Space"""
+
+    byo.sys_stderr_print(r'''>>> " ".join() + "\n"''')
+
+    ichars = sys.stdin.read()
+    ilines = ichars.splitlines()
+
+    ochars = ""
+    if ilines:
+        ochars = " ".join(ilines) + "\n"
+
+    sys.stdout.write(ochars)
+
+
 def file_para_gather(sep=":"):  # |pq gather  # [TaggedLine] -> [TaggedPara]
     """Print the Non-Blank Dent plus a Colon to start the Para, then Dent with Spaces"""
 
@@ -468,21 +496,6 @@ def file_para_spread(sep):  # |pq spread  # [TaggedPara] -> [TaggedLine]
             print(opart)
 
 
-def file_join():  # |pq join  # [Word] -> Line
-    r"""Replace each Line-Ending with one Space"""
-
-    byo.sys_stderr_print(r'''>>> " ".join() + "\n"''')
-
-    ichars = sys.stdin.read()
-    ilines = ichars.splitlines()
-
-    ochars = ""
-    if ilines:
-        ochars = " ".join(ilines) + "\n"
-
-    sys.stdout.write(ochars)
-
-
 def file_reversed():  # |pq reversed  # [Line] -> [OppositeLine]
     """Reverse the Lines"""
 
@@ -537,6 +550,18 @@ def file_split():  # |pq split  # [[Word]] -> [Word]
 #
 
 
+def file_eval():  # |pq .  # Dict|[Value] -> Dict|[Value]
+    """Clone a Dict or List"""
+
+    byo.sys_stderr_print(">>> ast.literal_eval(_)")
+
+    ichars = sys.stdin.read()
+    ieval = ast.literal_eval(ichars)
+
+    olit = json.dumps(ieval, indent=2) + "\n"
+    sys.stdout.write(olit)
+
+
 def file_eval_keys():  # |pq keys  # Dict|[Value] -> [Key|Index]
     """Pick out the Keys of a Dict Lit, else the Indices of a List Lit"""
 
@@ -552,7 +577,7 @@ def file_eval_keys():  # |pq keys  # Dict|[Value] -> [Key|Index]
         ilist = ieval
         olist = list(range(len(ilist)))
 
-    olit = pprint.pprint(olist)
+    olit = json.dumps(olist, indent=2) + "\n"
     sys.stdout.write(olit)
 
 
@@ -572,7 +597,7 @@ def file_eval_values():  # |pq values  # Dict[Key,Value]|[Value] -> [Value]
     else:
         olist = ieval
 
-    olit = pprint.pprint(olist)
+    olit = json.dumps(olist, indent=2) + "\n"
     sys.stdout.write(olit)
 
 
@@ -605,32 +630,33 @@ def line_eval_print():  # |pq eval  # [Lit] -> [Any]
 #
 
 
-FUNC_BY_WORD = dict()
-
-FUNC_BY_WORD["_"] = line_print
-FUNC_BY_WORD["casefold"] = line_casefold
-FUNC_BY_WORD["decode"] = line_eval_decode
-FUNC_BY_WORD["dedent"] = file_dedent
-FUNC_BY_WORD["dent"] = line_dent
-FUNC_BY_WORD["encode"] = line_lit_encode
-FUNC_BY_WORD["enumerate"] = file_enumerate
-FUNC_BY_WORD["eval"] = line_eval_print
-FUNC_BY_WORD["expandtabs"] = line_expandtabs
-FUNC_BY_WORD["gather"] = file_para_gather
-FUNC_BY_WORD["join"] = file_join
-FUNC_BY_WORD["keys"] = file_eval_keys
-FUNC_BY_WORD["len"] = line_len_lit
-FUNC_BY_WORD["lower"] = line_lower
-FUNC_BY_WORD["lstrip"] = line_lstrip
-FUNC_BY_WORD["repr"] = line_repr_lit
-FUNC_BY_WORD["reversed"] = file_reversed
-FUNC_BY_WORD["rstrip"] = line_rstrip
-FUNC_BY_WORD["sorted"] = file_sorted
-FUNC_BY_WORD["split"] = file_split
-FUNC_BY_WORD["spread"] = file_para_spread
-FUNC_BY_WORD["strip"] = line_strip
-FUNC_BY_WORD["upper"] = line_upper
-FUNC_BY_WORD["values"] = file_eval_values
+FUNC_BY_WORD = {
+    ".": file_eval,
+    "_": line_print,
+    "casefold": line_casefold,
+    "decode": line_eval_decode,
+    "dedent": file_dedent,
+    "dent": line_dent,
+    "encode": line_lit_encode,
+    "enumerate": file_enumerate,
+    "eval": line_eval_print,
+    "expandtabs": line_expandtabs,
+    "gather": file_para_gather,
+    "join": file_join,
+    "keys": file_eval_keys,
+    "len": line_len_lit,
+    "lower": line_lower,
+    "lstrip": line_lstrip,
+    "repr": line_repr_lit,
+    "reversed": file_reversed,
+    "rstrip": line_rstrip,
+    "sorted": file_sorted,
+    "split": file_split,
+    "spread": file_para_spread,
+    "strip": line_strip,
+    "upper": line_upper,
+    "values": file_eval_values,
+}
 
 
 #
@@ -705,6 +731,14 @@ _ = """
   echo abc |pq split |hexdump -C
   echo abc |pq spread |hexdump -C
   echo abc |pq strip |hexdump -C
+
+  echo '[0, 11, 22]' |pq . |cat -
+  echo '[0, 11, 22]' |pq keys |cat -
+  echo '[0, 11, 22]' |pq values |cat -
+
+  echo '{"a":11, "b":22}' |pq . |cat -
+  echo '{"a":11, "b":22}' |pq keys |cat -
+  echo '{"a":11, "b":22}' |pq values |cat -
 
 """
 
