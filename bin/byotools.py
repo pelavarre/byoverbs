@@ -19,6 +19,7 @@ import datetime as dt
 import difflib
 import os
 import pdb
+import re
 import shlex
 import signal
 import string
@@ -596,6 +597,13 @@ def sys_exit_if_argdoc_ne(parser):
             os.environ["COLUMNS"] = with_columns
 
     parser_doc = parser_doc.replace("optional arguments:", "options:")
+
+    pattern = r"\[([^ ]*) \[([^ ])* [.][.][.]\]\]\n"  # matches '[WORD [WORD ...]]' etc
+    m = re.search(pattern, string=parser_doc)
+    if m:
+        assert m.group(1) != m.group(2), m.groups()
+        repl = "[{} ...]\n".format(m.group(1))  # replaces with '[WORD ...]\n', etc
+        parser_doc = re.sub(pattern, repl=repl, string=parser_doc, count=1)
 
     parser_filename = "ArgumentParser(...)"
     want_filename = parser_filename

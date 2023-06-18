@@ -323,14 +323,37 @@ much too much is wildly way too difficult in
 ### 4 - Yet more
 
 
-shq
-for shquery.py
-:
-shq dedent
-shq dent
-shq strip, shq lstrip, shq rstrip
-:
-delete my ~/bin: dedent, dent
+develop pqext.py, then fold it in
+    --e short for --ext=.py to print the Py Code but don't run it
+
+    chars = sys.stdin.read()
+    words = chars.split()
+    int_ = len(words)
+    print(int_)
+
+    chars = sys.stdin.read()
+    bytes_ = chars.encode()
+    int_ = len(bytes_)
+    print(int_)
+
+    chars = sys.stdin.read()
+    lines = chars.splitlines()
+    int_ = len(lines)
+    print(int_)
+
+    chars = sys.stdin.read()
+    lines = chars.splitlines()
+    items = list()
+    for line in lines:
+        items.append(line)
+    chars_ = "\n".join(items) + "\n"
+    sys.stdout.write(chars_)
+
+    chars = sys.stdin.read()
+    chars_ = chars
+    if chars:
+        chars_ = textwrap.dedent(chars) + "\n"
+    sys.stdout.write(chars_)
 
 
 write the 2nd half of the Sh History in LogFmt style
