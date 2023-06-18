@@ -47,7 +47,7 @@ examples:
   echo '⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |pq encode |pq decode |cat -
 
   echo a b c |pq split |cat -
-  echo a b c |pq split |pq join |cat -
+  ls |pq join |cat -
 
   ls -1 |pq enumerate |cat -  # numbered up from '0 ', like '|nl -v0 |expand' does
   ls -1 |cat -n |pq repr |cat -  # numbered up from '1\t'
@@ -60,14 +60,15 @@ examples:
 
   ls -1 -F -rt |pq so && pq nu && pbpaste  # ok if 'so' 'nu' is only Sort & Enumerate
 
+  git grep -Hn '^def ' |pq gather |less -FIRX  # print one Paragraph of Hits per File
+  git grep -Hn '^def ' |pq gather |pq spread |cat -  # undo Gather with Spread
+
   pq help  # fails, but dumps vocabulary
 """
 
 # code reviewed by people, and by Black and Flake8
 
 # todo: --strict to reject abbreviated keywords, such as 'sort' for 'sorted'
-# todo: git grep -H '^def ' |pq gather |cat -  # make one Paragraph of Hits per File
-# todo: git grep -H '^def ' |pq gather |pq spread |cat -  # undo Gather with Spread
 
 
 import argparse
@@ -287,7 +288,7 @@ def line_lit_encode():  # |pq encode  # [Line] -> [Bytes]
 def line_expandtabs():  # |pq expandtabs  # [Line] -> [Line]
     """Replace the "\t" U+0009 Tab's in each Line with 1 to 8 Spaces"""
 
-    byo.sys_stderr_print(">>> _.expandtabs()")
+    byo.sys_stderr_print(">>> _.expandtabs(tabsize=8)")  # some forbid explicit TabSize
 
     ichars = sys.stdin.read()
     for iline in ichars.splitlines():
@@ -399,17 +400,85 @@ def file_enumerate():  # |pq enumerate  # [Line] -> [IndexedLine]
         print(*opair)
 
 
+def file_para_gather(sep=":"):  # |pq gather  # [TaggedLine] -> [TaggedPara]
+    """Print the Non-Blank Dent plus a Colon to start the Para, then Dent with Spaces"""
+
+    byo.sys_stderr_print(""">>> gather(_, sep=":")""")
+
+    dent = 4 * " "
+
+    ichars = sys.stdin.read()
+    ilines = ichars.splitlines()
+
+    opart = None
+    for iline in ilines:
+        if not iline:  # todo:
+            if opart is not None:
+                print()
+            opart = None
+
+            continue
+
+        iparts = iline.partition(sep)
+
+        ipart = iparts[0]
+        if opart != ipart:
+            opart = ipart  # may be empty, is not None
+            print()
+            print(opart + sep)
+
+        print(dent + iparts[-1])
+
+    if opart is not None:
+        print()
+
+
+def file_para_spread(sep):  # |pq spread  # [TaggedPara] -> [TaggedLine]
+    """Print the 1 Head Line of each Para as a Non-Blank Dent of each Tail Line"""
+
+    assert sep == ":"
+    byo.sys_stderr_print(""">>> spread(_, sep=":")""")
+
+    dent = 4 * " "
+
+    ichars = sys.stdin.read()
+    ilines = ichars.splitlines()
+
+    opart = None
+    tailed = None
+    for iline in ilines:
+        if not iline:
+            continue
+
+        if iline.startswith(dent):
+            tailed = dent
+            oline = opart + sep + iline[len(dent) :]
+            print(oline)
+        else:
+            if opart is not None:
+                if tailed is None:
+                    print(opart)
+
+            iparts = iline.partition(sep)
+            opart = iparts[0]
+            tailed = None
+
+    if opart is not None:
+        if tailed is None:
+            print(opart)
+
+
 def file_join():  # |pq join  # [Word] -> Line
     r"""Replace each Line-Ending with one Space"""
 
-    byo.sys_stderr_print(">>> _.join()")
+    byo.sys_stderr_print(r'''>>> " ".join() + "\n"''')
 
     ichars = sys.stdin.read()
     ilines = ichars.splitlines()
 
     ochars = ""
     if ilines:
-        ochars = "\n".join(ilines) + "\n"
+        ochars = " ".join(ilines) + "\n"
 
     sys.stdout.write(ochars)
 
@@ -471,6 +540,8 @@ def file_split():  # |pq split  # [[Word]] -> [Word]
 def file_eval_keys():  # |pq keys  # Dict|[Value] -> [Key|Index]
     """Pick out the Keys of a Dict Lit, else the Indices of a List Lit"""
 
+    byo.sys_stderr_print(">>> _.keys()")
+
     ichars = sys.stdin.read()
     ieval = ast.literal_eval(ichars)
 
@@ -487,6 +558,8 @@ def file_eval_keys():  # |pq keys  # Dict|[Value] -> [Key|Index]
 
 def file_eval_values():  # |pq values  # Dict[Key,Value]|[Value] -> [Value]
     """Pick out the Values of a Dict Lit, else clone a List"""
+
+    byo.sys_stderr_print(">>> _.values()")
 
     ichars = sys.stdin.read()
     ieval = ast.literal_eval(ichars)
@@ -543,16 +616,18 @@ FUNC_BY_WORD["encode"] = line_lit_encode
 FUNC_BY_WORD["enumerate"] = file_enumerate
 FUNC_BY_WORD["eval"] = line_eval_print
 FUNC_BY_WORD["expandtabs"] = line_expandtabs
+FUNC_BY_WORD["gather"] = file_para_gather
 FUNC_BY_WORD["join"] = file_join
 FUNC_BY_WORD["keys"] = file_eval_keys
 FUNC_BY_WORD["len"] = line_len_lit
 FUNC_BY_WORD["lower"] = line_lower
 FUNC_BY_WORD["lstrip"] = line_lstrip
 FUNC_BY_WORD["repr"] = line_repr_lit
-FUNC_BY_WORD["rstrip"] = line_rstrip
 FUNC_BY_WORD["reversed"] = file_reversed
+FUNC_BY_WORD["rstrip"] = line_rstrip
 FUNC_BY_WORD["sorted"] = file_sorted
 FUNC_BY_WORD["split"] = file_split
+FUNC_BY_WORD["spread"] = file_para_spread
 FUNC_BY_WORD["strip"] = line_strip
 FUNC_BY_WORD["upper"] = line_upper
 FUNC_BY_WORD["values"] = file_eval_values
@@ -576,12 +651,14 @@ _ = """
   echo -n |pq dent |hexdump -C
   echo -n |pq enumerate |hexdump -C
   echo -n |pq expandtabs |hexdump -C
+  echo -n |pq gather |hexdump -C
   echo -n |pq join |hexdump -C
   echo -n |pq lstrip |hexdump -C
-  echo -n |pq rstrip |hexdump -C
   echo -n |pq reversed |hexdump -C
+  echo -n |pq rstrip |hexdump -C
   echo -n |pq sorted |hexdump -C
   echo -n |pq split |hexdump -C
+  echo -n |pq spread |hexdump -C
   echo -n |pq strip |hexdump -C
 
   echo |pq _ |hexdump -C
@@ -589,12 +666,14 @@ _ = """
   echo |pq dent |hexdump -C
   echo |pq enumerate |hexdump -C
   echo |pq expandtabs |hexdump -C
+  echo |pq gather |hexdump -C
   echo |pq join |hexdump -C
   echo |pq lstrip |hexdump -C
-  echo |pq rstrip |hexdump -C
   echo |pq reversed |hexdump -C
+  echo |pq rstrip |hexdump -C
   echo |pq sorted |hexdump -C
   echo |pq split |hexdump -C
+  echo |pq spread |hexdump -C
   echo |pq strip |hexdump -C
 
   echo -n abc |pq _ |hexdump -C
@@ -602,12 +681,14 @@ _ = """
   echo -n abc |pq dent |hexdump -C
   echo -n abc |pq enumerate |hexdump -C
   echo -n abc |pq expandtabs |hexdump -C
+  echo -n abc |pq gather |hexdump -C
   echo -n abc |pq join |hexdump -C
   echo -n abc |pq lstrip |hexdump -C
-  echo -n abc |pq rstrip |hexdump -C
   echo -n abc |pq reversed |hexdump -C
+  echo -n abc |pq rstrip |hexdump -C
   echo -n abc |pq sorted |hexdump -C
   echo -n abc |pq split |hexdump -C
+  echo -n abc |pq spread |hexdump -C
   echo -n abc |pq strip |hexdump -C
 
   echo abc |pq _ |hexdump -C
@@ -615,12 +696,14 @@ _ = """
   echo abc |pq dent |hexdump -C
   echo abc |pq enumerate |hexdump -C
   echo abc |pq expandtabs |hexdump -C
+  echo abc |pq gather |hexdump -C
   echo abc |pq join |hexdump -C
   echo abc |pq lstrip |hexdump -C
-  echo abc |pq rstrip |hexdump -C
   echo abc |pq reversed |hexdump -C
+  echo abc |pq rstrip |hexdump -C
   echo abc |pq sorted |hexdump -C
   echo abc |pq split |hexdump -C
+  echo abc |pq spread |hexdump -C
   echo abc |pq strip |hexdump -C
 
 """
