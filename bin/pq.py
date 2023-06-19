@@ -90,6 +90,8 @@ import byotools as byo
 def main():
     """Edit the Os Copy/Paste Buffer else other Stdin/ Stdout"""
 
+    sys.stdout = open("/dev/stdout", "w", encoding="utf-8")  # allows Unicode in Help
+
     args = parse_pq_args()  # often prints help & exits zero
     words = args.words
 
