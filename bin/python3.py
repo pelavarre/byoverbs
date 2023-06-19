@@ -27,15 +27,16 @@ examples:
   : : Feb/2015 Python 3.4.3  # micro release date
   : Sep/2015 Python 3.5  # minor release date
   : : Jun/2016 Python 3.5.2  # micro release date
-  : Dec/2016 Python 3.6  # minor release date
+  : Dec/2016 Python 3.6  # minor release date  # <- Ubuntu 2018
   : : Mar/2018 Python 3.6.5  # micro release date
+  : : Dec/2018 Python 3.6.8  # micro release date
   : : Jul/2019 Python 3.6.9  # micro release date
   : : Dec/2019 Python 3.6.10  # micro release date
   : Dec/2016 CPython 3.6  # minor release date  # Dict Keys ordered by Insertion
   : Jun/2018 Python 3.7  # minor release date  # Dict Keys ordered by Insertion
   : : Mar/2019 Python 3.7.3  # micro release date
   : : Dec/2019 Python 3.7.6  # micro release date
-  : Oct/2019 Python 3.8  # minor release date
+  : Oct/2019 Python 3.8  # minor release date  # <- Ubuntu 2020
   : : Feb/2020 Python 3.8.2  # micro release date
   : : May/2021 Python 3.8.10  # micro release date
   : Oct/2020 Python 3.9  # minor release date
@@ -43,7 +44,7 @@ examples:
   : : Apr/2021 Python 3.9.4  # micro release date
   : : May/2021 Python 3.9.5  # micro release date
   : : Jun/2021 Python 3.9.6  # micro release date
-  : Oct/2021 Python 3.10  # minor release date
+  : Oct/2021 Python 3.10  # minor release date  # <- Ubuntu 2022
   : : Mar/2022 Python 3.10.4  # micro release date
   : : Jun/2022 Python 3.10.5  # micro release date
   : : Aug/2022 Python 3.10.6  # micro release date

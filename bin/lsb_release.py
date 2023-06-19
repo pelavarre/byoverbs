@@ -26,9 +26,9 @@ examples:
 
   :
   : Apr/2016 Xenial Ubuntu Linux 16.04 LTS  # major release date
-  : Apr/2018 Bionic Ubuntu Linux 18.04 LTS  # major release date
-  : Apr/2020 Focal Ubuntu Linux 20.04 LTS  # major release date
-  : Apr/2022 Jammy Ubuntu Linux 22.04 LTS  # major release date
+  : Apr/2018 Bionic Ubuntu Linux 18.04 LTS  # major release date  # -> 2016 Python 3.6
+  : Apr/2020 Focal Ubuntu Linux 20.04 LTS  # major release date  # -> 2019 Python 3.8
+  : Apr/2022 Jammy Ubuntu Linux 22.04 LTS  # major release date  # -> 2021 Python 3.10
   :
 """
 
