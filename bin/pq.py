@@ -27,41 +27,41 @@ examples:
   setopt interactive_comments
 
   echo abcde |pq _ |cat -  # abcdef
-  echo abcde |pq dent |pq dent |cat -  # the 14 Chars '        abcde\n'
+  echo abcde |pq dent dent |cat -  # the 14 Chars '        abcde\n'
 
   echo bBß |pq upper |cat -  # BBSS
   echo bBß |pq lower |cat -  # bbß
   echo bBß |pq casefold |cat -  # bbss
 
-  echo '    abc d e  ' |pq lstrip |pq repr |cat -  # 'abc d e  '
-  echo '    abc d e  ' |pq rstrip |pq repr |cat -  # '    abc d e'
-  echo '    abc d e  ' |pq strip |pq repr |cat -  # 'abc d e'
+  echo '    abc d e  ' |pq lstrip repr |cat -  # 'abc d e  '
+  echo '    abc d e  ' |pq rstrip repr |cat -  # '    abc d e'
+  echo '    abc d e  ' |pq strip repr |cat -  # 'abc d e'
 
   echo '⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |pq encode |cat -
-  echo '⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |pq encode |pq decode |cat -
+  echo '⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |pq encode decode |cat -
 
   echo "'abc' 'de'"
   echo "'abc' 'de'" |pq eval |cat -
-  echo "'abc' 'de'" |pq eval |pq repr |cat -
-  echo "'abc' 'de'" |pq eval |pq repr |pq eval |cat -
+  echo "'abc' 'de'" |pq eval repr |cat -
+  echo "'abc' 'de'" |pq eval repr eval |cat -
 
   echo a b c |pq split |cat -
-  echo a b c |pq split |pq len |cat -
+  echo a b c |pq split len |cat -
   ls |pq join |cat -
 
   ls -1 |pq enumerate |cat -  # numbered up from '0 ', like '|nl -v0 |expand' does
   ls -1 |cat -n |pq repr |cat -  # numbered up from '1\t'
-  ls -1 |cat -n |pq expandtabs |pq repr |cat -  # numbered up from '1  '
+  ls -1 |cat -n |pq expandtabs repr |cat -  # numbered up from '1  '
 
   ls -1 -F -rt
   ls -1 -F -rt |pq reversed && pbpaste  # show Reversed
   ls -1 -F -rt |pq sorted && pbpaste  # show Sorted
-  ls -1 -F -rt |pq sorted && pq enumerate && pbpaste  # show Numbered and Sorted
+  ls -1 -F -rt |pq sorted enumerate && pbpaste  # show Numbered and Sorted
 
-  ls -1 -F -rt |pq so && pq nu && pbpaste  # ok if 'so' 'nu' is only Sort & Enumerate
+  ls -1 -F -rt |pq so nu && pbpaste  # ok if 'so' 'nu' is only Sort & Enumerate
 
   git grep -Hn '^def ' |pq gather |less -FIRX  # print one Paragraph of Hits per File
-  git grep -Hn '^def ' |pq gather |pq spread |cat -  # undo Gather with Spread
+  git grep -Hn '^def ' |pq gather spread |cat -  # undo Gather with Spread
 
   pq help  # fails, but dumps vocabulary
 """
@@ -95,12 +95,21 @@ def main():
     args = parse_pq_args()  # often prints help & exits zero
     words = args.words
 
-    func = pq_compile_to_func(words)
+    funcs = list()
+    for word in words:
+        func = pq_word_to_func(word)
+        funcs.append(func)
 
     with PyQueryVm(open_ended=args.open_ended) as pqv:
         main.pqv = pqv
 
-        func()
+        for index, func in enumerate(funcs):
+            if index:
+                pqv.close_open_stdio()
+
+            func()
+
+    # Jul/2019 Python 3.6.9 needed explicit Stdout Encoding, other Python's can test it
 
 
 def parse_pq_args():
@@ -135,6 +144,9 @@ class PyQueryVm:
     def __enter__(self):
         """Sponge up the Stdin of Chars, and open up the Stdout of Chars"""
 
+        self.with_stdin = sys.stdin
+        self.with_stdout = sys.stdout
+
         # Sponge in the Stdin of Chars
 
         if not sys.stdin.isatty():
@@ -154,7 +166,6 @@ class PyQueryVm:
 
         stdout = io.StringIO()
 
-        self.stdout = stdout
         sys.stdout = stdout
 
         # Succeed
@@ -165,14 +176,16 @@ class PyQueryVm:
         """Sponge up the Stdin of Chars, and open up the Stdout of Chars"""
 
         open_ended = self.open_ended
-        stdout = self.stdout
+        stdout = sys.stdout
 
         # Revert to Sys Stdin Stdout, for debug etc
 
-        sys.stdin = sys.__stdin__
-        sys.stdout = sys.__stdout__
+        sys.stdin = self.with_stdin
+        sys.stdout = self.with_stdout
 
         # Read what we wrote
+
+        stdout.flush()
 
         offset_0 = 0
         whence_set = io.SEEK_SET
@@ -192,6 +205,29 @@ class PyQueryVm:
             sys.stdout.write(ochars)
         else:
             subprocess.run("pbcopy", input=ochars, errors="surrogateescape", check=True)
+
+    def close_open_stdio(self):
+        """Flush the Stdout back into the Stdin, like to run more Code"""
+
+        stdout = sys.stdout
+
+        # Read what we wrote
+
+        stdout.flush()
+
+        offset_0 = 0
+        whence_set = io.SEEK_SET
+        stdout.seek(offset_0, whence_set)
+
+        # Forward what we wrote
+
+        sys.stdin = sys.stdout
+
+        # Sponge out the Stdout of Chars
+
+        stdout = io.StringIO()
+
+        sys.stdout = stdout
 
     def breakpoint(self):
         """Reconnect Stdio till Exit from Breakpoint, and breakpoint once"""
@@ -214,15 +250,8 @@ class PyQueryVm:
 #
 
 
-def pq_compile_to_func(words):
-    """Compile words of Pq down to a single Func to call"""
-
-    # Make sense of a single Pq Word
-
-    assert words, repr(words)
-    assert len(words) == 1, (len(words), words)
-
-    word = words[-1]
+def pq_word_to_func(word):
+    """Compile 1 word of Pq down to 1 Func to call"""
 
     # Overload Word Fragments to mean Exact Match, else StartsWith, else In
 

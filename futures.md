@@ -322,6 +322,9 @@ much too much is wildly way too difficult in
 
 ### 4 - Yet more
 
+curate a tracked history of |pq to say if 'len' means '-b', '-c', '-w', 'l' of '|wc'
+
+catch the nonzero exit from qcaa to make extra backup of .git/COMMIT_EDITMSG
 
 develop pqext.py, then fold it in
     --e short for --ext=.py to print the Py Code but don't run it
