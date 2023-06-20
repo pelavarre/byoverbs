@@ -17,7 +17,7 @@ quirks:
 
 words:
   _ dent casefold expandtabs lower lstrip rstrip strip upper  # [Line] -> [Line]
-  encode len repr  # [Line] -> [Lit] -> [Line]
+  encode repr  # [Line] -> [Lit] -> [Line]
   dedent enumerate join reversed sorted split  # ... -> Line|[IndexedLine|Line|Word]
   decode encode eval len keys repr values  # ... -> [Any|Bytes|Index|Int|Key|Line|Value]
 
@@ -28,16 +28,10 @@ examples:
 
   echo abcde |pq _ |cat -  # abcdef
   echo abcde |pq dent |pq dent |cat -  # the 14 Chars '        abcde\n'
-  echo abcde |pq len |cat -  # 5
 
   echo bBß |pq upper |cat -  # BBSS
   echo bBß |pq lower |cat -  # bbß
   echo bBß |pq casefold |cat -  # bbss
-
-  echo "'abc' 'de'"
-  echo "'abc' 'de'" |pq eval |cat -
-  echo "'abc' 'de'" |pq eval |pq repr |cat -
-  echo "'abc' 'de'" |pq eval |pq repr |pq eval |cat -
 
   echo '    abc d e  ' |pq lstrip |pq repr |cat -  # 'abc d e  '
   echo '    abc d e  ' |pq rstrip |pq repr |cat -  # '    abc d e'
@@ -46,7 +40,13 @@ examples:
   echo '⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |pq encode |cat -
   echo '⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |pq encode |pq decode |cat -
 
+  echo "'abc' 'de'"
+  echo "'abc' 'de'" |pq eval |cat -
+  echo "'abc' 'de'" |pq eval |pq repr |cat -
+  echo "'abc' 'de'" |pq eval |pq repr |pq eval |cat -
+
   echo a b c |pq split |cat -
+  echo a b c |pq split |pq len |cat -
   ls |pq join |cat -
 
   ls -1 |pq enumerate |cat -  # numbered up from '0 ', like '|nl -v0 |expand' does
@@ -311,18 +311,6 @@ def line_expandtabs():  # |pq expandtabs  # [Line] -> [Line]
         print(oline)
 
 
-def line_len_lit():  # |pq len  # [Line] -> [Int]
-    """Count the Chars in each Line"""
-
-    byo.sys_stderr_print(">>> len(_)")
-
-    ichars = sys.stdin.read()
-    for iline in ichars.splitlines():
-        oint = len(iline)
-        olit = str(oint)
-        print(olit)
-
-
 def line_lower():  # |pq lower  # [Line] -> [Line]
     """Lower the Chars in each Line"""
 
@@ -397,7 +385,7 @@ def line_upper():  # |pq upper  # [Line] -> [Line]
 def file_dedent():  # |pq dedent  # [Line] -> Str -> [Line]
     """Strip the Blank Columns that start every Line of Chars"""
 
-    byo.sys_stderr_print(">>> textwrap.dedent(_)")
+    byo.sys_stderr_print(">>> textwrap.dedent(c)")
 
     ichars = sys.stdin.read()
     ochars = textwrap.dedent(ichars)
@@ -407,7 +395,7 @@ def file_dedent():  # |pq dedent  # [Line] -> Str -> [Line]
 def file_enumerate():  # |pq enumerate  # [Line] -> [IndexedLine]
     """Count off every Line of the Chars, up from 0"""
 
-    byo.sys_stderr_print(">>> enumerate(_)")
+    byo.sys_stderr_print(">>> enumerate(r)")
 
     ichars = sys.stdin.read()
     ilines = ichars.splitlines()
@@ -418,7 +406,7 @@ def file_enumerate():  # |pq enumerate  # [Line] -> [IndexedLine]
 def file_join():  # |pq join  # [Word] -> Line
     r"""Replace each Line-Ending with one Space"""
 
-    byo.sys_stderr_print(r'''>>> " ".join() + "\n"''')
+    byo.sys_stderr_print(r'''>>> " ".join(r) + "\n"''')
 
     ichars = sys.stdin.read()
     ilines = ichars.splitlines()
@@ -430,10 +418,22 @@ def file_join():  # |pq join  # [Word] -> Line
     sys.stdout.write(ochars)
 
 
+def file_len_lit():  # |pq len  # [Line] -> Int
+    """Count the Lines of the File"""
+
+    byo.sys_stderr_print(">>> len(r)")
+
+    ichars = sys.stdin.read()
+    ilines = ichars.splitlines()
+    oint = len(ilines)
+    olit = str(oint)
+    print(olit)
+
+
 def file_para_gather(sep=":"):  # |pq gather  # [TaggedLine] -> [TaggedPara]
     """Print the Non-Blank Dent plus a Colon to start the Para, then Dent with Spaces"""
 
-    byo.sys_stderr_print(""">>> gather(_, sep=":")""")
+    byo.sys_stderr_print(""">>> gather(r, sep=":")""")
 
     dent = 4 * " "
 
@@ -467,7 +467,7 @@ def file_para_spread(sep):  # |pq spread  # [TaggedPara] -> [TaggedLine]
     """Print the 1 Head Line of each Para as a Non-Blank Dent of each Tail Line"""
 
     assert sep == ":"
-    byo.sys_stderr_print(""">>> spread(_, sep=":")""")
+    byo.sys_stderr_print(""">>> spread(r, sep=":")""")
 
     dent = 4 * " "
 
@@ -501,7 +501,7 @@ def file_para_spread(sep):  # |pq spread  # [TaggedPara] -> [TaggedLine]
 def file_reversed():  # |pq reversed  # [Line] -> [OppositeLine]
     """Reverse the Lines"""
 
-    byo.sys_stderr_print(">>> reversed(_)")
+    byo.sys_stderr_print(">>> reversed(r)")
 
     ichars = sys.stdin.read()
     ilines = ichars.splitlines()
@@ -518,7 +518,7 @@ def file_reversed():  # |pq reversed  # [Line] -> [OppositeLine]
 def file_sorted():  # |pq sorted  # [Line] -> [SortedLine]
     """Sort the Lines"""
 
-    byo.sys_stderr_print(">>> sorted(_)")
+    byo.sys_stderr_print(">>> sorted(r)")
 
     ichars = sys.stdin.read()
     ilines = ichars.splitlines()
@@ -535,7 +535,7 @@ def file_sorted():  # |pq sorted  # [Line] -> [SortedLine]
 def file_split():  # |pq split  # [[Word]] -> [Word]
     """Split each Line into Words"""
 
-    byo.sys_stderr_print(">>> _.split()")
+    byo.sys_stderr_print(">>> c.split()")
 
     ichars = sys.stdin.read()
     iwords = ichars.split()
@@ -555,7 +555,7 @@ def file_split():  # |pq split  # [[Word]] -> [Word]
 def file_eval():  # |pq .  # Dict|[Value] -> Dict|[Value]
     """Clone a Dict or List"""
 
-    byo.sys_stderr_print(">>> ast.literal_eval(_)")
+    byo.sys_stderr_print(">>> ast.literal_eval(c)")
 
     ichars = sys.stdin.read()
     ieval = ast.literal_eval(ichars)
@@ -567,15 +567,15 @@ def file_eval():  # |pq .  # Dict|[Value] -> Dict|[Value]
 def file_eval_keys():  # |pq keys  # Dict|[Value] -> [Key|Index]
     """Pick out the Keys of a Dict Lit, else the Indices of a List Lit"""
 
-    byo.sys_stderr_print(">>> _.keys()")
-
     ichars = sys.stdin.read()
     ieval = ast.literal_eval(ichars)
 
     if hasattr(ieval, "get"):
+        byo.sys_stderr_print(">>> d.keys()")
         idict = ieval
         olist = list(idict.keys())
     else:
+        byo.sys_stderr_print(">>> list(range(len(l)))")
         ilist = ieval
         olist = list(range(len(ilist)))
 
@@ -586,17 +586,17 @@ def file_eval_keys():  # |pq keys  # Dict|[Value] -> [Key|Index]
 def file_eval_values():  # |pq values  # Dict[Key,Value]|[Value] -> [Value]
     """Pick out the Values of a Dict Lit, else clone a List"""
 
-    byo.sys_stderr_print(">>> _.values()")
-
     ichars = sys.stdin.read()
     ieval = ast.literal_eval(ichars)
 
     # main.pqv.breakpoint()  # jitter Sat 17/Jun
 
     if hasattr(ieval, "get"):
+        byo.sys_stderr_print(">>> d.values()")
         idict = ieval
         olist = list(idict.values())
     else:
+        byo.sys_stderr_print(">>> l.values()")
         olist = ieval
 
     olit = json.dumps(olist, indent=2) + "\n"
@@ -646,7 +646,7 @@ FUNC_BY_WORD = {
     "gather": file_para_gather,
     "join": file_join,
     "keys": file_eval_keys,
-    "len": line_len_lit,
+    "len": file_len_lit,
     "lower": line_lower,
     "lstrip": line_lstrip,
     "repr": line_repr_lit,
