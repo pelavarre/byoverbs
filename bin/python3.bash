@@ -1,5 +1,9 @@
 set -e
 
+DIR=$(dirname "$0")
+function black_ () { "$DIR"/black "$@"; }
+function flake8_ () { "$DIR"/flake8 "$@"; }
+
 last=$#
 py=p.py
 if [[ $last != 0 ]]; then
@@ -21,8 +25,8 @@ done
 set -xe
 
 echo |python3 -m pdb $py
-black $py
-flake8 $py
+black_ $py
+flake8_ $py
 :
 :
 python3 "$@"

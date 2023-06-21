@@ -1,1 +1,2 @@
-python3 $(dirname "$0")/pq.py "$@"
+DIR=$(dirname "$0")
+python3 "$DIR"/pq.py "$@"
