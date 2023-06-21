@@ -39,8 +39,9 @@ examples:
   : Oct/2019 Python 3.8  # minor release date  # <- Ubuntu 2020
   : : Feb/2020 Python 3.8.2  # micro release date
   : : May/2021 Python 3.8.10  # micro release date
-  : Oct/2020 Python 3.9  # minor release date
+  : Oct/2020 Python 3.9  # minor release date  # <- G Cloud Shell 2023
   : : Dec/2020 Python 3.9.1  # micro release date
+  : : Feb/2021 Python 3.9.2  # micro release date
   : : Apr/2021 Python 3.9.4  # micro release date
   : : May/2021 Python 3.9.5  # micro release date
   : : Jun/2021 Python 3.9.6  # micro release date
