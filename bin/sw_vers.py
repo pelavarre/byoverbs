@@ -41,12 +41,25 @@ import byotools as byo
 byo.sys_exit_if()  # prints examples or help and exits, else returns args
 
 run = subprocess.run(
-    "sw_vers", stdin=subprocess.PIPE, stdout=subprocess.PIPE, check=True
+    "sw_vers", stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
 )
-stdout = run.stdout.decode()
-lines = stdout.splitlines()
 
-vxk = dict(_.replace(":", "").split("\t") for _ in lines)
+assert not run.returncode, run.returncode
+assert run.stdout, run.stderr
+assert not run.stderr, run.stderr
+
+stdout = run.stdout.decode()
+wide_lines = stdout.splitlines()
+
+old_tt = "\t\t"
+new_t = "\t"
+lines = list(_.replace(old_tt, new_t) for _ in wide_lines)  # needed since 2022 Ventura
+
+pairs = list(_.replace(":", "").split("\t") for _ in lines)
+lens = list(len(_) for _ in pairs)
+assert set(lens) == set([2]), (lens, pairs, lines)
+
+vxk = dict(pairs)
 product_version = vxk["ProductVersion"]
 major = product_version.split(".")[0]
 
@@ -65,7 +78,8 @@ else:
     got = got.split("#")[0]
     got = got.strip()
 
-    alt_got = "{}, patched up to its {}".format(got, product_version)
+    got_form = "{}, patched up to {}, more detail at:  sw_vers"
+    alt_got = got_form.format(got, product_version)
 
     print(alt_got)
 

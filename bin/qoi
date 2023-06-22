@@ -1,3 +1,5 @@
+set -x
+
 if [[ $# == 0 ]]; then
 
     echo '+ git grep' >&2
@@ -24,3 +26,5 @@ else
     echo '+ git grep' "${parms[@]}" -- "${ALTPWDS[@]}" >&2
     git grep "${parms[@]}" -- "${ALTPWDS[@]}"
 fi
+
+# note: Bash unsets the "${ALTPWDS[@]}" unless you run this Code as a Bash Func

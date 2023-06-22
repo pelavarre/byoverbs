@@ -124,11 +124,11 @@ def parser_parse_args(parser):
     sys_exit_if_argdoc_ne(parser)  # prints diff & exits nonzero, when Arg Doc wrong
     sys_exit_if_testdoc()  # prints examples & exits if no args
 
-    sh_args = sys.argv[1:]
-    if sh_args == ["--"]:  # helps ArgParse as needed when no Positional Args
-        sh_args = ""
+    shargs = sys.argv[1:]
+    if shargs == ["--"]:  # helps ArgParse as needed when no Positional Args
+        shargs = ""
 
-    args = parser.parse_args(sh_args)  # prints helps and exits, else returns args
+    args = parser.parse_args(shargs)  # prints helps and exits, else returns args
 
     return args
 
@@ -291,27 +291,37 @@ SHLEX_QUOTABLE_CHARS = SHLEX_COLD_CHARS + " !#&()*;<>?[]^{|}~"
 SHLEX_QUOTABLE_CHARS = "".join(sorted(SHLEX_QUOTABLE_CHARS))  # omits " $ ' \ `
 
 
-def shlex_parms_dash_h_etc(parms):
+def shlex_parms_dash_h_etc(shargs, opts=["-h", "--help"]):
     """Return Truthy if '--help' or '--hel' or ... '--h' before '--'"""
 
-    for parm in parms:
-        if parm == "--":  # ignores '--help' etc after '--'
+    for opt in opts:
+        single = opt.startswith("-") and not opt.startswith("--")
+        double = opt.startswith("--") and not opt.startswith("---")
+        assert single or double, repr(opt)
+
+    for sharg in shargs:
+        if sharg == "--":  # ignores '--help' etc after '--'
             break
 
-        if parm.startswith("--h") and "--help".startswith(parm):
-            return True
+        for opt in opts:
+            double = opt.startswith("--") and not opt.startswith("---")
+            if sharg == opt:
+                return True
+            if double and sharg[len("--") :]:
+                if opt.startswith(sharg):
+                    return True
 
 
 def shlex_parms_one_posarg():
     """Accept one Arg without "-" Dash Options, preceded by a "--" Sep or not"""
 
-    sh_args = sys.argv[1:]
+    shargs = sys.argv[1:]
     if sys.argv[1:][:1] == ["--"]:
-        sh_args = sys.argv[2:]
+        shargs = sys.argv[2:]
 
     parm = None
-    if len(sh_args) == 1:
-        parm = sh_args[-1]
+    if len(shargs) == 1:
+        parm = shargs[-1]
         if parm.startswith("-"):
             parm = None
 
@@ -555,21 +565,24 @@ def sys_exit_if():
 
     sys_exit_if_testdoc()  # prints examples & exits if no args
 
-    sys_exit_if_argdoc()  # prints help lines & exits if "--h" arg, but ignores "-h"
+    sys_exit_if_helpdoc()  # prints help & exits zero for:  -h, --help
 
     sys_exit_if_not_implemented()  # raises unhandled exception if arg isn't just:  --
 
 
-def sys_exit_if_argdoc():
+def sys_exit_if_helpdoc(opts=["-h", "--help"]):
     """Print help lines and exit, if -h, --h, --he, --hel, --help"""
 
     doc = ast_fetch_argdoc()
 
-    sh_args = sys.argv[1:]
-    if shlex_parms_dash_h_etc(sh_args):
+    shargs = sys.argv[1:]
+    if shlex_parms_dash_h_etc(shargs, opts=opts):
         print(doc)
 
         sys.exit()
+
+    # byo.sys_exit_if_helpdoc()  # prints help & exits zero for:  -h, --help
+    # byo.sys_exit_if_helpdoc(["--help"])  # ignores "-h", but prints & exits for "--h"
 
 
 def sys_exit_if_argdoc_ne(parser):
@@ -635,8 +648,8 @@ def sys_exit_if_argdoc_ne(parser):
 def sys_exit_if_not_implemented():
     """Exit by raising unhandled NotImplementedError() if given options or args"""
 
-    sh_args = sys.argv[1:]
-    if sh_args != ["--"]:
+    shargs = sys.argv[1:]
+    if shargs != ["--"]:
         raise NotImplementedError(sys.argv[1:])
 
 
@@ -645,8 +658,8 @@ def sys_exit_if_testdoc():
 
     testdoc = ast_fetch_testdoc()
 
-    sh_args = sys.argv[1:]
-    if not sh_args:
+    shargs = sys.argv[1:]
+    if not shargs:
         print()
         print(testdoc)
         print()

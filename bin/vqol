@@ -1,10 +1,12 @@
-qgl=$(dirname "$0")/qgl
+qol=$(dirname "$0")/qol
 if [[ $# == 1 ]]; then
     set -xe
     # shellcheck disable=SC2046  # Quote this to prevent word splitting
-    vim $($qgl "$@") +"/$1"
+    vim $($qol "$@") +"/$1"
 else
     set -xe
     # shellcheck disable=SC2046  # Quote this to prevent word splitting
-    vim $($qgl "$@")
+    vim $($qol "$@")
 fi
+
+# note: Bash unsets the "${ALTPWDS[@]}" unless you run this Code as a Bash Func

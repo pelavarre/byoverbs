@@ -62,10 +62,10 @@ function pips () {
 }
 
 
-# Work the deep magic inside the Sh Process that Git SubProcesses can't reach
+# Work the deep magic inside the Sh Process that Git SubProcesses can't reach,
+# provided that $(which q) is a Sh File, not a Sh Func
 
 function bh () { source $(dirname $(which q))/bh.source "$@"; }
-function fh () { cat ~/.*.log; }
 
 function qcd () { source $(dirname $(which q))/qcd.source "$@"; }
 function qp () { source $(dirname $(which q))/qp.source "$@"; }
@@ -75,6 +75,7 @@ function qof () { source $(dirname $(which q))/qof "$@"; }
 function qoi () { source $(dirname $(which q))/qoi "$@"; }
 function qoil () { source $(dirname $(which q))/qoil "$@"; }
 function qol () { source $(dirname $(which q))/qol "$@"; }
+function vqol () { source $(dirname $(which q))/vqol "$@"; }
 
 
 #

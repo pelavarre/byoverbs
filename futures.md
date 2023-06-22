@@ -369,6 +369,12 @@ bh, fh, zh, qlf - take Sh Args as meaning pipe out through 'grep -i -e'
 figure out where U+2028 Line-Separator marks enter the Os Copy-Paste Buffer
 
 
+credit Vi Py for ⌃F ⌃B inside Insert/ Replace
+
+
+add Style Md of 'shargs', 'pairs', 'vxk', etc
+
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md

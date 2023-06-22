@@ -137,6 +137,7 @@ bin:
 
 .PHONY: dotfiles  # make input:  ls -d ./dotfiles
 dotfiles:
+	cp -p ~/.bash_profile dotfiles/dot.bash_profile
 	cp -p ~/.emacs dotfiles/dot.emacs
 	# cp -p ~/.gitconfig dotfiles/dot.gitconfig  # nope, '[user]' differs
 	cp -p ~/.hushlogin dotfiles/dot.hushlogin

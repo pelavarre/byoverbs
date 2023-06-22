@@ -24,3 +24,5 @@ else
     echo '+ git grep -l' "${parms[@]}" -- "${ALTPWDS[@]}" >&2
     git grep -l "${parms[@]}" -- "${ALTPWDS[@]}"
 fi
+
+# note: Bash unsets the "${ALTPWDS[@]}" unless you run this Code as a Bash Func

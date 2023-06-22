@@ -71,8 +71,7 @@ def parse_open_py_args_else():
     parser = compile_open_py_argdoc_else()
 
     byo.sys_exit_if_testdoc()  # prints examples & exits if no args
-
-    byo.sys_exit_if_argdoc()  # prints help lines & exits if "--h" arg, but ignores "-h"
+    byo.sys_exit_if_helpdoc()  # prints help & exits zero for:  -h, --help
 
     args = parser.parse_args()  # prints helps and exits, else returns
 

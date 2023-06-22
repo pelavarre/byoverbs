@@ -5,3 +5,5 @@ else
     echo "+ git ls-files" "${ALTPWDS[@]}" "|grep -i" "$@" >&2
     git ls-files "${ALTPWDS[@]}" |grep -i "$@"
 fi
+
+# note: Bash unsets the "${ALTPWDS[@]}" unless you run this Code as a Bash Func

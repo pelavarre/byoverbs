@@ -240,7 +240,7 @@ def parse_cal_py_args_else():
 
     byo.sys_exit_if_testdoc()  # prints examples & exits if no args
 
-    byo.sys_exit_if_argdoc()  # prints help lines & exits if "--h" arg, but ignores "-h"
+    byo.sys_exit_if_helpdoc(["--help"])  # ignores "-h", but prints & exits for "--h"
 
     args = parser.parse_args()  # prints helps and exits, else returns args
     assert not args.help, args
