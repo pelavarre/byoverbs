@@ -16,7 +16,7 @@ quirks:
   often does the same work as ' |jq'
 
 words:
-  _ dent casefold expandtabs lower lstrip rstrip strip upper  # [Line] -> [Line]
+  _ dent casefold expandtabs lower lstrip rstrip strip tee upper  # [Line] -> [Line]
   encode repr  # [Line] -> [Lit] -> [Line]
   dedent enumerate join reversed sorted split  # ... -> Line|[IndexedLine|Line|Word]
   decode encode eval len keys repr values  # ... -> [Any|Bytes|Index|Int|Key|Line|Value]
@@ -70,6 +70,8 @@ examples:
 # code reviewed by people, and by Black and Flake8
 
 # todo: --strict to reject abbreviated keywords, such as 'sort' for 'sorted'
+# todo: --ext=.py to print the Code without running it
+# todo: -fiqv to tune the Runs of this Code
 
 
 import argparse
@@ -289,6 +291,18 @@ def line_print():  # |pq _  # [Line] -> [Line]
     ichars = sys.stdin.read()
     for iline in ichars.splitlines():
         print(iline)
+
+
+def line_tee():  # |pq tee  # [Line] -> [Line]
+    """Close the last Line if not closed, but dump them all into '/dev/tty'"""
+
+    byo.sys_stderr_print(">>> pq.tee(_)")
+
+    with open("/dev/tty", "w") as teeing:
+        ichars = sys.stdin.read()
+        for iline in ichars.splitlines():
+            print(iline, file=teeing)
+            print(iline)
 
 
 #
@@ -699,6 +713,7 @@ FUNC_BY_WORD = {
     "split": file_split,
     "spread": file_para_spread,
     "strip": line_strip,
+    "tee": line_tee,
     "upper": line_upper,
     "values": file_eval_values,
 }
@@ -731,6 +746,7 @@ _ = """
   echo -n |pq split |hexdump -C
   echo -n |pq spread |hexdump -C
   echo -n |pq strip |hexdump -C
+  echo -n |pq tee |hexdump -C
 
   echo |pq _ |hexdump -C
   echo |pq dedent |hexdump -C
@@ -746,6 +762,7 @@ _ = """
   echo |pq split |hexdump -C
   echo |pq spread |hexdump -C
   echo |pq strip |hexdump -C
+  echo |pq tee |hexdump -C
 
   echo -n abc |pq _ |hexdump -C
   echo -n abc |pq dedent |hexdump -C
@@ -761,6 +778,7 @@ _ = """
   echo -n abc |pq split |hexdump -C
   echo -n abc |pq spread |hexdump -C
   echo -n abc |pq strip |hexdump -C
+  echo -n abc |pq tee |hexdump -C
 
   echo abc |pq _ |hexdump -C
   echo abc |pq dedent |hexdump -C
@@ -776,6 +794,7 @@ _ = """
   echo abc |pq split |hexdump -C
   echo abc |pq spread |hexdump -C
   echo abc |pq strip |hexdump -C
+  echo abc |pq tee |hexdump -C
 
   echo '[0, 11, 22]' |pq . |cat -
   echo '[0, 11, 22]' |pq keys |cat -
