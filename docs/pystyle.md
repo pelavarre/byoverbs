@@ -43,21 +43,21 @@ If you've got a meaningful Name for a thing, then you speak it, life is good
 
 But for the rest of the time, naming the thing after its data type can keep you moving
 
-bytes_: Bytes
-ch: Str of Len 1, not 0, not more
-i, j, k: Index | Int
-chars: Str with or without trailing Line-End
-line: Str with or without trailing Line-End, when spoken of as 1 Line of 0..N Lines
-lines: [Line]
-pairs: Dict Items
-sep: Str working as a Separator
-text: Str without trailing Line-End
-vxk: Dict, in the sense of Value-by-Key
-words: [Str], when each Str contains no Sep
+bytes_: Bytes<br>
+ch: Str of Len 1, not 0, not more<br>
+i, j, k: Index | Int<br>
+chars: Str with or without trailing Line-End<br>
+line: Str with or without trailing Line-End, when spoken of as 1 Line of 0..N Lines<br>
+lines: [Line]<br>
+pairs: Dict Items<br>
+sep: Str working as a Separator<br>
+text: Str without trailing Line-End<br>
+vxk: Dict, in the sense of Value-by-Key<br>
+words: [Str], when each Str contains no Sep<br>
 
-{v}\_by\_{k}:  Dict[k,v]
-{v}_list: [v] in the cases when {v}s doesn't work as a Name
-{v}_set: Set[v]
+{v}\_by\_{k}:  Dict[k,v]<br>
+{v}_list: [v] in the cases when {v}s doesn't work as a Name<br>
+{v}_set: Set[v]<br>
 
 ## Copied from
 
