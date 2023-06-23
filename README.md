@@ -11,6 +11,9 @@ Vi Py doesn't slap you with the Bel so much
 1. no slap while you're repeating the movement that brought you to an edge
 2. no slap when you press ⌃C just once to know where you're starting
 
+Vi Py doesn't leap to take your input too literally
+1. does take your ⌃F/ ⌃B request for screen advance/retreat during Insert/ Replace
+
 ### Vi C0 Escape Sequences
 
 Vi Py lets you type C0 Escape Sequences straight into the Screen,

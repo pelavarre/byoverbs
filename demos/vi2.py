@@ -350,11 +350,11 @@ class ViTerminal:
 
         # ["⌃@"]
         # ["⌃A"]
-        # ["⌃B"]
+        # ["⌃B"] = self.screen_retreat
         func_by_chords["⌃C"] = self.help_quit_if
-        func_by_chords["⌃D"] = self.help_quit_if
+        func_by_chords["⌃D"] = self.help_quit_if  # self.screen_half_advance
         # ["⌃E"]
-        # ["⌃F"]
+        # ["⌃F"] = self.screen_advance
         func_by_chords["⌃G"] = self.disclose
         func_by_chords["⌃H"] = self.cancel_if  # alias of Mac Delete at PC Backspace
         # ["Tab"] = self.visit_minus_n
@@ -369,7 +369,7 @@ class ViTerminal:
         # ["⌃R"]
         # ["⌃S"]  # collides with:  stty ixoff
         # ["⌃T"]
-        # ["⌃U"]
+        # ["⌃U"] = self.screen_half_retreat
         # ["⌃V"]
         # ["⌃W"]
         # ["⌃X"]
