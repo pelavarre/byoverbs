@@ -61,7 +61,8 @@ examples:
   ls -1 -F -rt |pq so nu && pbpaste  # ok if 'so' 'nu' is only Sort & Enumerate
 
   git grep -Hn '^def ' |pq gather |less -FIRX  # print one Paragraph of Hits per File
-  git grep -Hn '^def ' |pq gather spread |cat -  # undo Gather with Spread
+  git grep -Hn '^def ' |pq gather spread |less -FIRX  # undo Gather with Spread
+  git grep -H '^$' bin/*.py |pq gather |cat -  # Gather nothing when no non-empty Hits
 
   pq help  # fails, but dumps vocabulary
 """
@@ -469,16 +470,20 @@ def file_para_gather(sep=":"):  # |pq gather  # [TaggedLine] -> [TaggedPara]
     ichars = sys.stdin.read()
     ilines = ichars.splitlines()
 
+    # Visit each Line
+
     opart = None
     for iline in ilines:
-        if not iline:  # todo:
-            if opart is not None:
-                print()
-            opart = None
-
+        if not iline:  # drops empty Lines that shouldn't be
             continue
 
         iparts = iline.partition(sep)
+        if not iparts[1]:  # drops Line without Sep that shouldn't be
+            continue
+        if not iparts[-1]:  # drops empty Hits on purpose
+            continue
+
+        # Print an Empty Line and the Non-Blank Dent plus a Colon to start the Para
 
         ipart = iparts[0]
         if opart != ipart:
@@ -486,13 +491,20 @@ def file_para_gather(sep=":"):  # |pq gather  # [TaggedLine] -> [TaggedPara]
             print()
             print(opart + sep)
 
+        # Dent each Hit of the Para with 4 Spaces
+
         print(dent + iparts[-1])
+
+    # Print an Empty Line before each Para, and after 1 or more Paras
 
     if opart is not None:
         print()
 
+    # todo: less auto round-off in '|pq gather' ?
+    # todo: cope well with ":" Colons in Pathnames, such as:  bin/:h, bin/:v
 
-def file_para_spread(sep):  # |pq spread  # [TaggedPara] -> [TaggedLine]
+
+def file_para_spread(sep=":"):  # |pq spread  # [TaggedPara] -> [TaggedLine]
     """Print the 1 Head Line of each Para as a Non-Blank Dent of each Tail Line"""
 
     assert sep == ":"
@@ -503,28 +515,30 @@ def file_para_spread(sep):  # |pq spread  # [TaggedPara] -> [TaggedLine]
     ichars = sys.stdin.read()
     ilines = ichars.splitlines()
 
+    # Visit each Line
+
     opart = None
-    tailed = None
     for iline in ilines:
-        if not iline:
+        if not iline:  # drops empty Lines that should be, plus any extras
             continue
 
-        if iline.startswith(dent):
-            tailed = dent
+        # Capture each Para Title
+
+        if not iline.startswith(dent):
+            iparts = iline.partition(sep)
+            if (not iparts[1]) or iparts[-1]:  # drops Line when not Title and not Hit
+                continue
+
+            opart = iparts[0]  # drops Title if no Hits for it
+
+        # Print each Hit Dented by 4 Spaces as Para Title plus Sep plus Hit
+
+        else:
             oline = opart + sep + iline[len(dent) :]
             print(oline)
-        else:
-            if opart is not None:
-                if tailed is None:
-                    print(opart)
 
-            iparts = iline.partition(sep)
-            opart = iparts[0]
-            tailed = None
-
-    if opart is not None:
-        if tailed is None:
-            print(opart)
+    # todo: less auto round-off in '|pq spread' ?
+    # todo: cope well with ":" Colons in Pathnames, such as:  bin/:h, bin/:v
 
 
 def file_reversed():  # |pq reversed  # [Line] -> [OppositeLine]
