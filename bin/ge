@@ -1,7 +1,7 @@
 set -e
 
 shline='grep -i '
-while [ $# != 0 ]; do
+while [[ $# != 0 ]]; do
     if [[ "$1" =~ ^-.*$ ]]; then
         shline="$shline $1"
     else
