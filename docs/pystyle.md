@@ -43,19 +43,25 @@ If you've got a meaningful Name for a thing, then you speak it, life is good
 
 But for the rest of the time, naming the thing after its data type can keep you moving
 
+byte_: 1 Byte<br>
 bytes_: Bytes<br>
-ch: Str of Len 1, not 0, not more<br>
+ch: 1 Str of Len 1, not 0, not more<br>
 i, j, k: Index | Int<br>
 chars: Str with or without trailing Line-End<br>
 line: Str with or without trailing Line-End, when spoken of as 1 Line of 0..N Lines<br>
 lines: [Line]<br>
+pair: 1 Dict Item<br>
 pairs: Dict Items<br>
-sep: Str working as a Separator<br>
-text: Str without trailing Line-End<br>
+sep: 1 Str working as a Separator<br>
+sharg: 1 of the Sh Args
+shargs: the 0 or more Sh Args found at:  sys.argv[1:]
+text: 1 Str without trailing Line-End<br>
 vxk: Dict, in the sense of Value-by-Key<br>
+word: 1 Str, when the Str contains no Sep<br>
 words: [Str], when each Str contains no Sep<br>
 
 {v}\_by\_{k}:  Dict[k,v]<br>
+{v}_else: a thing which may be a thing, or else None<br>
 {v}_list: [v] in the cases when {v}s doesn't work as a Name<br>
 {v}_set: Set[v]<br>
 
