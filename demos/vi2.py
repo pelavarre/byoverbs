@@ -3,7 +3,7 @@
 r"""
 usage: vi2.py [-h] [-q]
 
-edit the Screen in reply to Keyboard Chord Sequences
+view & change bytes of screen, memory, pipe, or file, in reply to keyboard chords
 
 options:
   -h, --help   show this help message and exit
@@ -23,6 +23,8 @@ self-tests:
 
 escape-sequences:
   ⎋[d line-position-absolute  ⎋[G cursor-character-absolute
+  ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[m plain
+
   ⎋[1m bold  ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange  ⎋[m plain
   ⎋[4h insertion-mode  ⎋[6 q bar  ⎋[4l replacement-mode  ⎋[4 q skid  ⎋[ q unstyled
   ⎋[M delete-line  ⎋[L insert-line  ⎋[P delete-character  ⎋[@ insert-character

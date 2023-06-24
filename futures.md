@@ -372,7 +372,12 @@ figure out where U+2028 Line-Separator marks enter the Os Copy-Paste Buffer
 credit Vi Py for ⌃F ⌃B inside Insert/ Replace
 
 
-add Style Md of 'shargs', 'pairs', 'vxk', etc
+breakpoint well inside a Stdin/ Stdout Sh Pipe Py Filter ??
+
+
+### 5 - Fifth traunch
+
+repeat count for I/R/A etc should be record/ replay macro
 
 
 ## Copied from

@@ -98,6 +98,8 @@ def main():
     args = parse_pq_args()  # often prints help & exits zero
     words = args.words
 
+    assert words, repr(words)
+
     funcs = list()
     for word in words:
         func = pq_word_to_func(word)
