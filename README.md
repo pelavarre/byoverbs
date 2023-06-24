@@ -181,7 +181,9 @@ you don't have to press ⌃O ⌃F and ⌃O ⌃B for that effect
 Same story for ⌃D and ⌃U to page just half as far, down and up
 
 The D and C inside Vi Py do let you cut to movement, for example you can D ⌃O and you can C ⌃I.
-Bizarrely, Classic Vim blocks you from making such choices.
+Bizarrely, Classic Vim requires you to move there, set a Mark, and move back,
+like by way of } } 2 ⌃O M M 2 ⌃I D ' M.
+Vi Py D ⌃O and C ⌃O is lots less intricate than all that
 
 ### Vi Py repeating Replace and Insert
 
@@ -190,7 +192,7 @@ Vi Py doesn't block you from including movement in your repeated Replace and Ins
 Like you can start with 3 I and mix ← ↑ → ↓ Arrow Keys into your Input ended with ⌃C,
 and then V Py does work the same
 as if you told Vi Q Q I ⌃C 3 @ Q to record/ replay all your Input.
-Vi Py 3 I is lots less intricate than Classic Vim starts with Q Q and ends with ⌃C 3 @ Q
+Vi Py 3 I is lots less intricate than all that
 
 Vi Py 3 I also still works if you stop the Replace or Insert with ⌃C,
 unlike Classic Vim that cancels the Repeat 3
