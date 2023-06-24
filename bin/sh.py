@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import sys
-
 import sh.__main__
 
-sh.__main__.main(sys.argv)
+
+sh.__main__.main()
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/sh.py

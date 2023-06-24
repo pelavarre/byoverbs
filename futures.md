@@ -379,6 +379,8 @@ breakpoint well inside a Stdin/ Stdout Sh Pipe Py Filter ??
 
 repeat count for I/R/A etc should be record/ replay macro
 
+add an 'eqol' for 'vqol', as we have 'eqgl' for 'vqgl'
+
 
 ## Copied from
 

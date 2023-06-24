@@ -1,11 +1,11 @@
-# bin/zprofile
+# bin/bash_profile
 
 
 # Work the deep magic inside the Sh Process that Git SubProcesses can't reach,
 # provided that $(which q) is a Sh File, not a Sh Func
 
+function bh () { source $(dirname $(which q))/bh.source "$@"; }  # HistTimeForm~ history
 function fh () { cat ~/.*.log; }
-function zh () { source $(dirname $(which q))/zh.source "$@"; }  # history -t
 
 function qcd () { source $(dirname $(which q))/qcd.source "$@"; }  # cd
 function qp () { source $(dirname $(which q))/qp.source "$@"; }  # popd

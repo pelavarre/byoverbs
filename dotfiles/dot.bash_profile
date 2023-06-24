@@ -65,12 +65,14 @@ function pips () {
 # Work the deep magic inside the Sh Process that Git SubProcesses can't reach,
 # provided that $(which q) is a Sh File, not a Sh Func
 
-function bh () { source $(dirname $(which q))/bh.source "$@"; }
+function bh () { source $(dirname $(which q))/bh.source "$@"; }  # HistTimeForm~ history
+function fh () { cat ~/.*.log; }
 
-function qcd () { source $(dirname $(which q))/qcd.source "$@"; }
-function qp () { source $(dirname $(which q))/qp.source "$@"; }
+function qcd () { source $(dirname $(which q))/qcd.source "$@"; }  # cd
+function qp () { source $(dirname $(which q))/qp.source "$@"; }  # popd
 
-function qo () { source $(dirname $(which q))/qo "$@"; }  # "${...[@]}"
+function eqol () { source $(dirname $(which q))/vqol "$@"; }  # "${ALTPWDS[@]}"
+function qo () { source $(dirname $(which q))/qo "$@"; }
 function qof () { source $(dirname $(which q))/qof "$@"; }
 function qoi () { source $(dirname $(which q))/qoi "$@"; }
 function qoil () { source $(dirname $(which q))/qoil "$@"; }

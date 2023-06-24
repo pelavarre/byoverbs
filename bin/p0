@@ -1,2 +1,0 @@
-set -xe
-python3 -i -c '' "$@"

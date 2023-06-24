@@ -1,4 +1,6 @@
 _ = """
+  zsh -f
+
   bind 'set enable-bracketed-paste off' 2>/dev/null || unset zle_bracketed_paste
   bind -p || bindkey
 """

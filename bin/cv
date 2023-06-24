@@ -1,7 +1,12 @@
+#!/bin/bash
+
 if [ -t 0 ]; then
     set -xe
     pbpaste
-else
+elif [-t 1 ]; then
     set -xe
     pbcopy
+else
+    set -xe
+    tee >(pbcopy)
 fi
