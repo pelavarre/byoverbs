@@ -211,7 +211,7 @@ def ast_func_to_py(func):
     """Convert to Py Source Chars from Func"""
 
     funcname = func.__name__
-    def_tag = "def {}".format(funcname)
+    def_tag = "def {}(".format(funcname)
 
     modulename = func.__module__
     module = sys.modules[modulename]
@@ -233,6 +233,8 @@ def ast_func_to_py(func):
     assert py, (funcname, pyfile)
 
     return py
+
+    # finds wrong Func or no Func when source isn't Black'ened, such as:  def func ():
 
 
 #

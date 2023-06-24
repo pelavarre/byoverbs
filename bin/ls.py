@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 
 """
-usage: ls.py [--help] [-a] [-1 | -C | -m | -l | -lh] [--py] [TOP ...]
+usage: ls.py [--help] [-a] [-1 | -C | -m | -l | -lh | --full-time] [--py] [TOP ...]
 
 show the files and dirs inside a dir
 
 positional arguments:
-  TOP     the name of a dir or file to show
+  TOP          the name of a dir or file to show
 
 options:
-  --help  show this help message and exit
-  -a      show '.*' hidden files and dirs too
-  -1      show as one column of one file or dir per line
-  -C      show as multiple columns
-  -m      show as comma separated names
-  -l      show as many columns of one file or dir per line
-  -lh     like -l but round off byte counts to k M G T P E Z Y R Q etc
-  --py    show the code without running it
+  --help       show this help message and exit
+  -a           show '.*' hidden files and dirs too
+  -1           show as one column of one file or dir per line (default for Stdout Pipe)
+  -C           show as columns of names (default for Stdout Tty)
+  -m           show as lines of comma separated names
+  -l           show as many columns of one file or dir per line
+  -lh          like -l but round off byte counts to k M G T P E Z Y R Q etc
+  --full-time  like -l but detail date/time as "%Y-%m-%d %H:%M:%S.%f %z"
+  --py         show the code without running it
 
 quirks:
   goes well with Cp, MkDir, Ls, Mv, Rm, RmDir, Touch
@@ -24,20 +25,22 @@ quirks:
 
 examples:
 
-  ls.py --  # counts off the '%m%d$(qjd)' Revisions, else the '$(qjd)' Revisions
+  ls.py --  # ls -alF -rt
+  ls.py /tmp  # ls -alF -rt /tmp
+  ls.py /tmp/*  # ls -adlF -rt /tmp/*
 
-  ls.py # runs the Code for:  ls -1
-  ls.py --py  # shows the Code for:  ls -1
-  ls.py -C --py  # shows the Code for Ls C, which is also the code for:  ls
+  ls.py |cat -  # runs the Code for:  ls -1
+  ls.py --py |cat -  # shows the Code for:  ls -1
+  ls.py -C --py  # shows the Code for Ls C, which is the Code for:  ls
 
-  ls.py --py >.p.py  # name the Code
-  python3 .p.py  # run the named Code
-  cat -n .p.py |expand  # show the numbered Sourcelines of the named Code
+  ls.py -1 --py >p.py  # name the Code
+  python3 p.py  # run the named Code
+  cat p.py |cat -n |expand  # show the numbered Sourcelines of the named Code
 
   python3 -c "$(ls.py -1 --py)"  # runs the Code as shown
 
   find ./* -prune  # like 'ls', but with different corruption of File and Dir Names
-  ls -1rt |grep $(date +%m%d$(qjd)) |cat -n |expand
+  ls -1rt |tail -1  # the File or Dir most recently touched, if any
 """
 
 # code reviewed by people, and by Black and Flake8
@@ -57,48 +60,37 @@ import byotools as byo
 def main():
     """Run from the Sh Command Line"""
 
-    # Plan to count off the '%m%d$(qjd)' backup copies of Dirs and Files in the Stack
-
-    jqd = byo.subprocess_run_oneline("git config user.initials")
-    shjqd = byo.shlex_quote_if(jqd)
-
-    ttyline_0 = "ls -1rt |grep $(date +%m%d{jqd}) |cat -n |expand".format(jqd=shjqd)
-    shline_0 = "bash -c {!r}".format(ttyline_0)
-
-    ttyline_1 = "ls -1rt |grep {jqd} |cat -n |expand".format(jqd=shjqd)
-    shline_1 = "bash -c {!r}".format(ttyline_1)
-
-    # Maybe choose to do other things
-
-    args = parse_ls_py_args()  # prints help & exits, when need be
-
+    args = parse_ls_py_args()  # prints help & exits zero for:  -h, --help
     main.args = args
 
-    if any(list(vars(args).values())):
+    # Compile Sh Args to Python and run it, if any Dash or Dash-Dash Options in Sh Args
+
+    options = dict(vars(args))
+    del options["tops"]
+
+    if any(options.values()):
         run_ls_args(args)
 
         sys.exit()
 
-    # Search up the '%m%d$(qjd)' revisions
+    # Else run our default ShLine
 
-    byo.sys_stderr_print("+ {}".format(ttyline_0))
-    argv_0 = shlex.split(shline_0)
-    run_0 = subprocess.run(
-        argv_0,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=True,
+    shargv = shlex.split("ls -alF -rt") + args.tops
+    if args.tops[1:]:
+        shargv = shlex.split("ls -adlF -rt") + args.tops
+
+    shline = " ".join(byo.shlex_quote_if(_) for _ in shargv)  # todo: unglob '*' etc
+
+    byo.sys_stderr_print("+ {}".format(shline))
+
+    run = subprocess.run(
+        shargv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
-    os.write(sys.stdout.fileno(), run_0.stdout)
-    os.write(sys.stderr.fileno(), run_0.stderr)
 
-    # Else fail over to also search up the '$(qjd)' revisions
+    os.write(sys.stdout.fileno(), run.stdout)
+    os.write(sys.stderr.fileno(), run.stderr)  # deferred past all Stdout
 
-    if not run_0.stdout:
-        byo.sys_stderr_print("+ {}".format(ttyline_1))
-        argv_1 = shlex.split(shline_1)
-        _ = subprocess.run(argv_1, stdin=subprocess.PIPE, check=True)
+    sys.exit(run.returncode)
 
 
 def parse_ls_py_args():
@@ -106,38 +98,40 @@ def parse_ls_py_args():
 
     # Collect Help Lines
 
-    top_help = "the name of a dir or file to show"
+    help_top = "the name of a dir or file to show"
 
     help_help = "show this help message and exit"
-    a_help = "show '.*' hidden files and dirs too"
+    help_a = "show '.*' hidden files and dirs too"
 
-    _1_help = "show as one column of one file or dir per line"
-    C_help = "show as multiple columns"
-    l_help = "show as many columns of one file or dir per line"
+    help_1 = "show as one column of one file or dir per line (default for Stdout Pipe)"
+    help_C = "show as columns of names (default for Stdout Tty)"
+    help_l = "show as many columns of one file or dir per line"
     mm = "k M G T P E Z Y R Q"  # Metric Multipliers
-    lh_help = "like -l but round off byte counts to " + mm + " etc"
-    m_help = "show as comma separated names"
+    help_lh = "like -l but round off byte counts to " + mm + " etc"
+    help_m = "show as lines of comma separated names"
 
-    py_help = "show the code without running it"
+    help_full_time = 'like -l but detail date/time as "%%Y-%%m-%%d %%H:%%M:%%S.%%f %%z"'
+    help_py = "show the code without running it"
 
     # Form Parser
 
     parser = byo.compile_argdoc(drop_help=True)
 
     assert argparse.ZERO_OR_MORE == "*"
-    parser.add_argument("tops", metavar="TOP", nargs="*", help=top_help)
+    parser.add_argument("tops", metavar="TOP", nargs="*", help=help_top)
 
-    parser.add_argument("--help", action="count", help=help_help)
-    parser.add_argument("-a", action="count", help=a_help)
+    parser.add_argument("--help", action="count", help=help_help)  # not at "-h"
+    parser.add_argument("-a", action="count", help=help_a)
 
     sub = parser.add_mutually_exclusive_group()
-    sub.add_argument("-1", dest="one", action="count", help=_1_help)
-    sub.add_argument("-C", action="count", help=C_help)
-    sub.add_argument("-m", action="count", help=m_help)
-    sub.add_argument("-l", action="count", help=l_help)
-    sub.add_argument("-lh", action="count", help=lh_help)
+    sub.add_argument("-1", dest="alt_one", action="count", help=help_1)
+    sub.add_argument("-C", dest="alt_cee", action="count", help=help_C)
+    sub.add_argument("-m", action="count", help=help_m)
+    sub.add_argument("-l", dest="alt_ell", action="count", help=help_l)
+    sub.add_argument("-lh", action="count", help=help_lh)
+    sub.add_argument("--full-time", action="count", help=help_full_time)
 
-    parser.add_argument("--py", action="count", help=py_help)
+    parser.add_argument("--py", action="count", help=help_py)
 
     # Run Parser
 
@@ -147,6 +141,22 @@ def parse_ls_py_args():
 
         sys.exit(0)
 
+    # Gather context for choosing a default Style
+
+    styles = [args.alt_one, args.alt_cee, args.alt_ell, args.lh, args.m, args.full_time]
+    styles = list(bool(_) for _ in styles)
+
+    sum_styles = sum(styles)
+    assert sum_styles <= 1, (sum_styles, styles)  # because 'mutually_exclusive_group'
+
+    stdout_isatty = sys.stdout.isatty()
+
+    # Succeed
+
+    args.one = args.alt_one or ((not sum_styles) and (not stdout_isatty))
+    args.cee = args.alt_cee or ((not sum_styles) and stdout_isatty)
+    args.ell = args.alt_ell or args.full_time
+
     return args
 
 
@@ -155,44 +165,48 @@ def run_ls_args(args):
 
     # Default to 'ls -1', despite Sh Ls defaulting to 'ls -C'
 
-    explicit_styles = (args.one, args.C, args.l, args.lh, args.m)
-    args_one = args.one if any(bool(_) for _ in explicit_styles) else True
-
     tops = args.tops
+
+    explicit_styles = (args.one, args.cee, args.ell, args.lh, args.m)
+    args_one = args.one if any(bool(_) for _ in explicit_styles) else True
 
     # Pick the Code to show or run
 
     if args_one:
         (opt, func, kwargs) = parse_ls_1_args(args)
-
     else:
         kwargs = dict(tops=tops)
-        if args.C:
-            opt = "-C"  # show as multiple columns
+
+        if args.cee:
+            opt = "-C"  # show as columns of names
             func = ls_by_ljust
-        elif args.l:
-            opt = "-l"  # show as many columns of one file or dir per line
+        elif args.ell:
+            opt = "-l"  # show one file or dir per line as many columns
+            if args.full_time:
+                opt = "--full-time"
             func = ls_by_row
         elif args.lh:
             opt = "-lh"  # like -l but round off byte counts to k M G T P E Z Y R Q etc
             func = ls_by_row_humane
         elif args.m:
-            opt = "-m"  # show as comma separated names
+            opt = "-m"  # show as lines of comma separated names
             func = ls_by_comma_space
         else:
             assert False, args  # unreached
 
     # Form the Code, then show it or run it
 
-    echo_py = echo_ls_func_tops(opt, tops=tops, func=func)
-    run_ls_opt_kwargs_func_tops(opt, kwargs=kwargs, func=func, echo_py=echo_py)
+    title_py = opt_form_title_py(opt, tops=tops, func=func)
+    opt_show_or_exec_py(opt, kwargs=kwargs, func=func, title_py=title_py)
 
 
 def parse_ls_1_args(args):
+    """Pick out 1 Opt, its 1 Func, and its KwArgs"""
+
     opt = "-1"  # show as one column of one file or dir per line
 
     tops = args.tops
-    tops_0 = tops[0] if tops else None
+    top_else = tops[0] if tops else None
 
     stat_by_top = fetch_os_stat_by_top(tops)  # always called, sometimes needed
     isdirs = list(stat.S_ISDIR(_.st_mode) for _ in stat_by_top.values())
@@ -204,20 +218,18 @@ def parse_ls_1_args(args):
     elif not tops[1:]:  # if one Top
         if all(isdirs):
             func = ls_dir_by_line
-            kwargs = dict(top=tops_0)
+            kwargs = dict(top=top_else)
         else:
-            func = ls_file_etc_by_line
-            kwargs = dict(item=tops_0)
+            func = ls_file_by_line
+            kwargs = dict(file_=top_else)
 
     else:  # else many Tops
         if all(isdirs):
             func = ls_top_dirs_by_line
             kwargs = dict(tops=tops)
-
         elif not any(isdirs):
-            func = ls_top_files_etc_by_line
-            kwargs = dict(items=tops)
-
+            func = ls_files_by_line
+            kwargs = dict(files=tops)
         else:
             func = ls_tops_by_line
             kwargs = dict(tops=tops)
@@ -239,7 +251,7 @@ def fetch_os_stat_by_top(tops):
     return stat_by_top
 
 
-def echo_ls_func_tops(opt, tops, func):
+def opt_form_title_py(opt, tops, func):
     """Echo the Sh Line into a Py Comment, minus '.py' '--py' details"""
 
     args = main.args
@@ -257,14 +269,14 @@ def echo_ls_func_tops(opt, tops, func):
     if shtops:
         shline += " " + " ".join(shtops)
 
-    echo_py = "# {}".format(shline)
+    title_py = "# {}".format(shline)
     if func is ls_tops_by_line:
-        echo_py = '"""{}"""'.format(shline)
+        title_py = '"""{}"""'.format(shline)
 
-    return echo_py
+    return title_py
 
 
-def run_ls_opt_kwargs_func_tops(opt, kwargs, func, echo_py):
+def opt_show_or_exec_py(opt, kwargs, func, title_py):
     """Form the Code, then show it or run it"""
 
     # Fetch the Code
@@ -275,9 +287,9 @@ def run_ls_opt_kwargs_func_tops(opt, kwargs, func, echo_py):
 
     lines = func_py.splitlines()
 
-    forward_kwargs_etc(lines, kwargs=kwargs)
-    apply_dash_a(lines)
-    infer_boilerplates(lines, func=func, echo_py=echo_py)
+    lines_forward_kwargs_etc(lines, kwargs=kwargs)
+    lines_apply_dash_a(lines)
+    lines_infer_boilerplates(lines, func=func, title_py=title_py)
 
     lines[::] = list(_ for _ in lines if _ is not None)  # deletes dropped Sourcelines
 
@@ -285,10 +297,10 @@ def run_ls_opt_kwargs_func_tops(opt, kwargs, func, echo_py):
 
     py = "\n".join(lines)
 
-    run_ls_py(py)
+    py_exec_or_show(py)
 
 
-def forward_kwargs_etc(lines, kwargs):
+def lines_forward_kwargs_etc(lines, kwargs):
     """Forward the KwArgs, after dropping the Func's DocString"""
 
     assert lines[0].startswith('"""')
@@ -299,7 +311,7 @@ def forward_kwargs_etc(lines, kwargs):
         lines[1:1] = [kv_py]
 
 
-def apply_dash_a(lines):
+def lines_apply_dash_a(lines):
     """Correct the Code to run for Ls with or without '-a'"""
 
     args = main.args
@@ -310,14 +322,21 @@ def apply_dash_a(lines):
 
     lines[::] = list(_ for _ in lines if _ is not None)  # deletes dropped Sourcelines
 
+    startswith_dot_ok = args.a
     if not args.a:
         chars = "\n".join(lines)
-        chars = chars.replace('[".", ".."] + ', "")
+
+        old = '[".", ".."] + '
+        if old in chars:
+            startswith_dot_ok = True
+            new = ""
+            chars = chars.replace(old, new)
+
         lines[::] = chars.splitlines()
 
     # Stop caring if Item Starts With Dot, when yes:  ls -a
 
-    if args.a:
+    if startswith_dot_ok:
         for i, line in enumerate(lines):
             if line.strip() == 'if not item.startswith("."):':
                 lines[i] = None
@@ -329,7 +348,7 @@ def apply_dash_a(lines):
                     assert not lines[i + 2].startswith(_4_DENT), repr(lines[i + 2])
 
 
-def infer_boilerplates(lines, func, echo_py):
+def lines_infer_boilerplates(lines, func, title_py):
     """Choose Hash Bang, DocString, Imports, and sometimes drop all the Blank Lines"""
 
     # Pull in the Imports apparently mentioned, 3rd of all
@@ -342,7 +361,7 @@ def infer_boilerplates(lines, func, echo_py):
 
     # Insert the DocString to Echo Bash, 2nd of all
 
-    lines[0:0] = ["", echo_py, ""]
+    lines[0:0] = ["", title_py, ""]
 
     # Mark these Sourcelines as Py Sourcelines, 1st of all
 
@@ -357,7 +376,7 @@ def infer_boilerplates(lines, func, echo_py):
                 lines[i] = None
 
 
-def run_ls_py(py):
+def py_exec_or_show(py):
     """Show the Code or run it"""
 
     args = main.args
@@ -374,12 +393,12 @@ def run_ls_py(py):
 
 
 #
-# Just find and print
+# Find & print Columns of Names, in the ways of:  ls -1
 #
 
 
 def ls_here_by_line():
-    """Show the Item Names of the Os GetCwd, one per Line"""
+    """Show the Working Dir as a Column of one File or Dir per Line"""
 
     for item in sorted([".", ".."] + os.listdir()):
         if not item.startswith("."):
@@ -387,24 +406,24 @@ def ls_here_by_line():
 
 
 def ls_dir_by_line(top):
-    """Show the the Item Names of one Dir, one per Line"""
+    """Show a Dir as a Column of one File or Dir per Line"""
 
     for item in sorted([".", ".."] + os.listdir(top)):
         if not item.startswith("."):
             print(item)
 
 
-def ls_file_etc_by_line(item):
-    """Show the Item Name of one File Etc, as one Line"""
+def ls_file_by_line(file_):
+    """Show the Name of one File"""
 
-    _ = os.stat(item)
-    assert not os.path.isdir(item), (item,)
+    _ = os.stat(file_)
+    assert not os.path.isdir(file_), (file_,)
 
-    print(item)
+    print(file_)
 
 
 def ls_top_dirs_by_line(tops):
-    """Show the Item Names of two or more Dirs"""
+    """Show some Dirs, each as the Label of a Column of one File or Dir per Line"""
 
     sep = None
     for top in tops:
@@ -419,18 +438,18 @@ def ls_top_dirs_by_line(tops):
                 print(item)
 
 
-def ls_top_files_etc_by_line(items):
-    """Show the Item Names of two or more Files Etc"""
+def ls_files_by_line(files):
+    """Show some Files as a Column of one File per Line"""
 
-    for item in sorted(items):
-        _ = os.stat(item)
-        assert not os.path.isdir(item), (item,)
+    for file_ in sorted(files):
+        _ = os.stat(file_)
+        assert not os.path.isdir(file_), (file_,)
 
-        print(item)
+        print(file_)
 
 
 def ls_tops_by_line(tops):
-    """Show the Item Names of two or more Files Etc or Dirs, at one per Line"""
+    """Show the Files, one per Line, and then the Dirs, each as Label of a Column"""
 
     sep = None
 
@@ -454,8 +473,13 @@ def ls_tops_by_line(tops):
                 print(item)
 
 
+#
+# Find & print Rows of Columns, in the ways of:  ls -l, ls -lh, ls --full-time
+#
+
+
 def ls_by_row(tops):
-    """Show the Items in detail, one per Line"""
+    """Show as many columns of one file or dir per line"""
 
     raise NotImplementedError("def ls_by_row")
 
@@ -467,20 +491,25 @@ def ls_by_row_humane(tops):
 
 
 #
-# Find and print, but also pack in more Names per Terminal Row
+# Find & print Names, but pack in more than one per Terminal Row, in the way of:  ls -m
+#
+
+
+def ls_by_comma_space(top):
+    """Show as Lines of Comma separated Names"""
+
+    raise NotImplementedError("def ls_by_comma_space")
+
+
+#
+# Find & print Names, but pack in more than one per Terminal Row, in the way of:  ls -C
 #
 
 
 def ls_by_ljust(top):
-    """Show the Item Names, a few per Line"""
+    """Show as Columns of Names"""
 
     raise NotImplementedError("def ls_by_ljust")
-
-
-def ls_by_comma_space(top):
-    """Show the Item Names, separated by ', ' or ', \n' Comma Space Line-Break"""
-
-    raise NotImplementedError("def ls_by_comma_space")
 
 
 #
@@ -488,62 +517,62 @@ def ls_by_comma_space(top):
 #
 
 
-PY_AUTHOR_TESTS = """
+PY_SH_TESTS = """
 
     bind 'set enable-bracketed-paste off' 2>/dev/null; unset zle_bracketed_paste
+    setopt interactive_comments
+
+    make bin
 
     ls -1
     ls.py -1
     ls.py -1 --py
+    ls.py --py |cat -  # -1 style because Stdout IsAtty False
+
+    ls.py --py >p.py
+    python3 p.py
+    cat p.py |cat -n |expand
+
+    python3 -c "$(ls.py -1 --py)"
 
     ls -1a
     ls.py -1a
     ls.py -1a --py
 
-    ls.py -1a
-    ls.py -1a --py
-    ls.py -1 --py
     ls
     ls.py -C --py
-
-    ls.py --py
-
-    ls.py --py >.p.py
-    python3 .p.py
-    cat -n .p.py |expand
+    ls.py --py  # -C style because Stdout IsATty True
 
     ls -1 Makefile
-    ls.py Makefile
-    ls.py Makefile --py
+    ls.py -1 Makefile
+    ls.py -1 Makefile --py
 
-    touch .p.py
-    ls -1 .p.py
-    ls.py .p.py
-
-    ls /dev/null/supercali  &&: exits 1 because 'Not a directory'
+    ls /dev/null/supercali  # exits 1 because 'Not a directory'
     echo + exit $?
-    ls.py -1 /dev/null/supercali  &&: exits 1 because NotADirectoryError
+    ls.py -1 /dev/null/supercali  # exits 1 because NotADirectoryError
     echo + exit $?
-    ls.py -1 /dev/null/supercali --py
+    ls.py -1 /dev/null/supercali --py  # exits 1 because NotADirectoryError
+    echo + exit $?
 
-    ls -1 demos/
-    ls.py -1 demos/
-    ls.py -1 demos/ --py
-
-    ls -1 demos/ demos/
-    ls.py -1 demos/ demos/
-    ls.py -1 demos/ demos/ --py
+    ls -1 docs/
+    ls.py -1 docs/
+    ls.py -1 docs/ --py
 
     ls -1 futures.md Makefile
     ls.py -1 futures.md Makefile
     ls.py -1 futures.md Makefile --py
 
-    ls -1 demos/ futures.md Makefile
-    ls.py -1 demos/ futures.md Makefile
-    ls.py -1 demos/ futures.md Makefile --py
+    ls -1 docs/ futures.md Makefile
+    ls.py -1 docs/ futures.md Makefile
+    ls.py -1 docs/ futures.md Makefile --py
 
-    python3 -c "$(ls.py -1 --py)"
+    ls -l
+    ls.py -l
+    ls.py -l --py
 
+    ls --full-time
+    ls.py --full-time
+    ls.py --full-time --py
 """
 
 
