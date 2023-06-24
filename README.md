@@ -7,16 +7,16 @@ We make you feel like someone competent is looking out for you.
 We break you free from working inside the Sh Terminal with nothing but rotted-out tools
 
 We keep our Doc ahead of our Tests, we keep our Tests ahead of our Code.
-If you see something wrong, say something, please.
-Odds on we'll fix it faster if you're up talking it out
+If you see something, say something, please.
+Odds on we'll fix broken things faster if you're up talking them out with us
 
-## Ls
+## Ls Py
 
 To report sub-second last-modified Date/Time at Mac without Linux 'ls --full-time', try
 
     bin/ls.py --full-time
 
-## Missing Man Pages
+## Man Py
 
 To dump the concrete examples missing from merely official Man Pages,
 call our Py Files with no Sh Arguments
@@ -39,13 +39,21 @@ We bury the conveniences for us behind an explicit double-dash mark of no Sh Arg
 
     ... and so on ...
 
-## Pq
+## Md5Sum Py
+
+For when you remember 'md5sum' from Linux and don't find it at Mac, try
+
+    bin/md5sum bin/md5sum
+
+Careful, it will hang silently if you give it no Filename, same as at Linux
+
+## Pq Py
 
 To build Sh Pipe Filters out of Python, in place of Awk and Jq, try
 
     bin/pq.py
 
-## Screen
+## Screen Py
 
 To spell out which 'screen -r' Sh Command Line will reach each detached Screen, try
 
@@ -58,6 +66,13 @@ To run 'sh screen', but with ⌃B Esc ... Esc to mean move around, try
 To get 256-Color Vi Py while recording your Font and Color experience,
 just run Screen Py and Vi Py in place of the buggy Screen and Vi that Apple ships
 
+Working in Python
+
+    bin/vi.py p.py
+    bin/screen.py vi.py p.py
+    bin/screen.py bash -c "TERM=$TERM vi.py p.py"
+    bin/screen.py stty.py size
+
 Left broken by Apple macOS
 
     bin/vi p.py  # spec: 256-Color Orange for Python 'def' keyword
@@ -68,19 +83,20 @@ Left broken by Apple macOS
 
     bin/screen.py stty size  # bug: (0, 0) inside Python Import Tty
 
-Working in Python
-
-    bin/vi.py p.py
-    bin/screen.py vi.py p.py
-    bin/screen.py bash -c "TERM=$TERM vi.py p.py"
-    bin/screen.py stty.py size
-
-Size works in Python because Csi 07/04 Private reports Column x Rows anyhow
+Stty Py Size can work in Python no worries, because Csi 07/04 Private reports Column x Rows anyhow
 
     bin/screen.py
     printf '\e[18t' && python3 -c 'import sys; print(repr(sys.stdin.read()))'
 
-## Tac
+## Sha256 Py
+
+For when you remember 'md5sum' from Linux and don't find 'sha256' in your Linux or Mac, try
+
+    bin/sha256 bin/sha256
+
+Careful, it will hang silently if you give it no Filename, same as at Linux Md5Sum
+
+## Tac Py
 
 For when you remember 'tac' from Linux and don't find it at Mac, try
 
@@ -94,7 +110,7 @@ For when your Linux Tac inserts a last Line left open into the 2nd-to-last Line,
 
     echo -n a b c |tr ' ' '\n' |bin/tac.py
 
-## Tail R
+## Tail Py
 
 For when you remember 'tail -r' from Mac and don't find it at Linux, try
 
@@ -104,43 +120,42 @@ For when your Mac Tac inserts a last Line left open into the 2nd-to-last Line, t
 
     echo -n a b c |tr ' ' '\n' |bin/tail.py -r
 
+## Vi Py
 
-## Vi
+To run a variation of Vi that you can  quickly write trivial Python to reprogram, try one of
 
-To run a variation of Vi that you can easily quickly write Python to reprogram, try
-
-    vi.py
-    ls -1 |vi.py - >ls1.txt
-    pbpaste |vi.py - |pbcopy
-    vi.py /dev/tty
+    vi.py  # edit Memory on Screen
+    ls -1 |vi.py - >ls1.txt  # edit a Sh Pipe
+    pbpaste |vi.py - |pbcopy  # edit the macOS Copy/Paste Buffer
+    vi.py /dev/tty  # edit the Screen
 
 Vi Py helps you edit Screen, Memory, Os Copy/Paste Buffer, Pipe, or File -
-not just the Memory or File of classic Vi
+not just the Memory or File of Classic Vim
 
 ### Vi Py Mouse
 
-Click your mouse on the Screen, and Classic Vi does nothing, ugh.
+Click your mouse on the Screen, and Classic Vim does nothing, ugh, sorry, so very misleading.
 Vi Py tells you what sequence of Keyboard Chords to press to go there.
-Vi Py teaches you Vim Golf by playing Vim Golf well for you.
-Vi Py and Classic Vi move the Cursor to the Mouse if you press Option Click.
+Get it? Vi Py works to teach you Vim Golf by playing Vim Golf well for you.
+Vi Py and Classic Vim move the Cursor to the Mouse if you press Option Click
 
 ### Vi Py Esc Key and ⌃C Key Chord
 
 Vi Py doesn't block you from typing out the C0 Escape Sequences you know.
-Vi Py doesn't make you go learn what Vi Py Keyboard Chords will inject them.
+Vi Py doesn't make you go learn what Vi Py Keyboard Chords will inject the C0 Escape Sequences
 
-You have to learn one new thing:
+You might feel you do have to learn one new thing:
 you press ⌃C to stop Replacing or Inserting, to go back to Moving.
-Pressing ⌃C to go back to Moving works in Classic Vi too,
+Pressing ⌃C to go back to Moving works in Classic Vim too,
 but maybe you didn't know that.
-Like bugs in their ':set cursorline' makes this hard to see correctly.
+Like bugs in their ':set cursorline' makes this truth hard to demo plainly
 
-With Vi Py, beyond Classic Vi, you can type out an C0 Escape Sequence
+With Vi Py, beyond Classic Vim, you can type out an C0 Escape Sequence
 
     ⎋[1m Bold, ⎋[3m Italic, ⎋[4m Underline, ⎋[m Plain
     ⎋[31m Red, ⎋[32m Green, ⎋[34m Blue, ⎋[m Colorless
 
-If you forget this difference between Vi Py and Classic Vi,
+If you forget this difference between Vi Py and Classic Vim,
 you can press Esc twice, and then Replacing or Inserting still stops,
 same as if you did press ⌃C
 
@@ -163,7 +178,10 @@ while you're replacing and inserting
 Like you can press ⌃F to page down, ⌃B to page up,
 you don't have to press ⌃O ⌃F and ⌃O ⌃B for that effect
 
-Same story for ⌃D and ⌃U to page just half as far, down and up.
+Same story for ⌃D and ⌃U to page just half as far, down and up
+
+The D and C inside Vi Py do let you cut to movement, for example you can D ⌃O and you can C ⌃I.
+Bizarrely, Classic Vim blocks you from making such choices.
 
 ### Vi Py repeating Replace and Insert
 
@@ -172,10 +190,10 @@ Vi Py doesn't block you from including movement in your repeated Replace and Ins
 Like you can start with 3 I and mix ← ↑ → ↓ Arrow Keys into your Input ended with ⌃C,
 and then V Py does work the same
 as if you told Vi Q Q I ⌃C 3 @ Q to record/ replay all your Input.
-Vi Py 3 I is lots less intricate than Classic Vi starts with Q Q and ends with ⌃C 3 @ Q
+Vi Py 3 I is lots less intricate than Classic Vim starts with Q Q and ends with ⌃C 3 @ Q
 
 Vi Py 3 I also still works if you stop the Replace or Insert with ⌃C,
-unlike Classic Vi that cancels the Repeat 3
+unlike Classic Vim that cancels the Repeat 3
 unless you end with the Replace or Insert with Esc
 
 Same story for ⇧R, R, and same story for ⇧I, ⇧O, A, I, and O
@@ -187,8 +205,9 @@ Vi Py lets you edit the Sh Pipe you put it inside of
     ls -1 |vi.py - >ls1.txt
     pbpaste |vi.py - |pbcopy
 
-By contrast, Classic Vi forces you to name an output File,
-and then work separately to pipe that output File to where you need it to go
+By contrast, Classic Vim forces you to name an output File,
+and then work separately afterwards,
+to pipe that output File to where you need it to go
 
     ls -1 |vi -
     pbpaste |vi -
@@ -199,7 +218,7 @@ and then work separately to pipe that output File to where you need it to go
 Your Terminal has a main Screen and an alternate Screen.
 
 Vi Py defaults to work on your main Screen,
-same as Classic Less and Classic Vi learned to do intricately and late
+same as Classic Less and Classic Vim learned to do intricately and late
 
     ls -1 |less -FIRX
     ls -1 |vi - +':set t_ti= t_te='
@@ -216,28 +235,68 @@ so long as your Terminal's Secure Sandbox blocks Vi Py from reading your Screen,
 then Vi Py can only save the Texts you told it to replace or insert,
 it can't know what you put on Screen before running Vi Py
 
-You can tell Vi Py to record Color and Font for you
+You can tell the Sh to record Color and Font for you
 
-    vi --script
+    script
 
-You can edit the recording as it happens, just call Vi Py again from inside Vi Py
+You can tell us to record Color and Font more accurately for you
+
+    script.py --
+
+You can edit the recording as it happens, by calling Vi Py again from inside Vi Py
+
+    vi.py /dev/tty
 
 You can tell Vi Py to edit Text Files that include C0 Escape Sequences
-to mark your choices of Color and Font
+marking your choices of Color and Font
 
     vi.py screenlog.0  # from Sh:  screen -L
     vi.py typescript  # from Sh:  script
 
+## Less Available Sh Terminal Work
+
+You can find more things to love in here, if you dig deeper,
+but these things are only actually worthwhile for more people,
+not obviously worthwhile
+
+### 15 Flavours of Sh Pipe
+
+We lack the patience required to spell out as much of Sh Pipe Filters
+as should be at your fingertips.
+Our 15 single-letter abbreviations for 15 Classic Sh Pipe Filters show up at
+
+    % ls bin/?
+    bin/a	bin/d	bin/f	bin/h	bin/p	bin/s	bin/u	bin/x
+    bin/c	bin/e	bin/g	bin/n	bin/q	bin/t	bin/v
+    % 
+
+On the side, we worked up 4 more Sh Pipe Filters, arguably Classic
+
+    bin/cv  bin/mo  bin/xd  bin/xn1
+
+Our 'bin/cv' Sh Filter in particular unifies Mac 'pbpaste' and 'pbcopy'.
+Place it where you need it in your Sh Pipe and then
+it figures out if you meant 'pbpaste' or 'pbcopy',
+by whether you left Stdin or Stdout or both or neither as a Dev Tty
+
+    echo abc |cv
+    cv
+    echo xyz |cv |tr '[a-z]' '[A-Z]'
+    cv
+
+### 57 Flavours of Git
+
+We lack the patience required to spell out as much of Git
+as should be at your fingertips.
+Our 57 single-letter abbreviations for 57 Words of Git show up at
+
+    ls bin/q*
+
 ## Come back tomorrow
 
-As yet, we're more working to show off what you can afford to fix,
-not so much working to come fix it for you
-
-If you need something fixed now, come talk to us enough
-and we might fix it soon - Many many fixes are easy to write in Python
-
-We don't have all our own Code and Docs here all synched up
-lately - Come talk to us enough and we'll fix the bugs that bother you
+We keep our Doc ahead of our Tests, we keep our Tests ahead of our Code.
+If you see something, say something, please.
+Odds on we'll fix broken things faster if you're up talking them out with us
 
 ## Copied from
 
