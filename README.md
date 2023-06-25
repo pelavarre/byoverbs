@@ -10,11 +10,25 @@ We keep our Doc ahead of our Tests, we keep our Tests ahead of our Code.
 If you see something, say something, please.
 Odds on we'll fix broken things faster if you're up talking them out with us
 
+Run our code, read our code, fork it when you please.
+You've "brought your own verb" - B Y O - when you install it or fork it
+
 ## Ls Py
 
-To report sub-second last-modified Date/Time at Mac without Linux 'ls --full-time', try
+Classic Ls rounds off last-modified Date/Time to whole local seconds.
+To report sub-second time at Mac without Linux 'ls --full-time', try
 
     bin/ls.py --full-time
+
+Classic Sh shoves on you to run the Code without reading it first.
+We give you the Code when you ask for it
+
+    % bin/ls.py -1 --py
+    # ls -1
+    import os
+    for item in sorted(os.listdir()):
+        print(item)
+    % 
 
 ## Man Py
 
