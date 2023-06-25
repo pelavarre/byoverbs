@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 """
-usage: ls.py [--help] [-a] [-1 | -C | -m | -l | -lh | --full-time] [--py] [TOP ...]
+usage: ls.py [--help] [-a] [-d] [-1 | -C | -m | -l | -lh | --full-time] [--py]
+             [TOP ...]
 
 show the files and dirs inside of dirs
 
@@ -11,7 +12,8 @@ positional arguments:
 options:
   --help       show this help message and exit
   -a           show '.*' hidden files and dirs too
-  -1           show as one column of one file or dir per line (default for Stdout Pipe)
+  -d           show the top dirs as items of a higher dir, not their insides
+  -1           show as one column of file or dir names (default for Stdout Pipe)
   -C           show as columns of names (default for Stdout Tty)
   -m           show as lines of comma separated names
   -l           show as many columns of one file or dir per line
@@ -47,6 +49,7 @@ examples:
 
 
 import argparse
+import datetime as dt
 import os
 import shlex
 import stat
@@ -102,11 +105,12 @@ def parse_ls_py_args():
 
     help_help = "show this help message and exit"
     help_a = "show '.*' hidden files and dirs too"
+    help_d = "show the top dirs as items of a higher dir, not their insides"
 
-    help_1 = "show as one column of one file or dir per line (default for Stdout Pipe)"
-    help_C = "show as columns of names (default for Stdout Tty)"
-    help_l = "show as many columns of one file or dir per line"
-    mm = "k M G T P E Z Y R Q"  # Metric Multipliers
+    help_one = "show as one column of file or dir names (default for Stdout Pipe)"
+    help_cee = "show as columns of names (default for Stdout Tty)"
+    help_ell = "show as many columns of one file or dir per line"
+    mm = "k M G T P E Z Y R Q"  # Metric Multipliers  # wikipedia.org/wiki/Metric_prefix
     help_lh = "like -l but round off byte counts to " + mm + " etc"
     help_m = "show as lines of comma separated names"
 
@@ -122,12 +126,13 @@ def parse_ls_py_args():
 
     parser.add_argument("--help", action="count", help=help_help)  # not at "-h"
     parser.add_argument("-a", action="count", help=help_a)
+    parser.add_argument("-d", action="count", help=help_d)
 
     sub = parser.add_mutually_exclusive_group()
-    sub.add_argument("-1", dest="alt_one", action="count", help=help_1)
-    sub.add_argument("-C", dest="alt_cee", action="count", help=help_C)
+    sub.add_argument("-1", dest="alt_one", action="count", help=help_one)
+    sub.add_argument("-C", dest="alt_cee", action="count", help=help_cee)
     sub.add_argument("-m", action="count", help=help_m)
-    sub.add_argument("-l", dest="alt_ell", action="count", help=help_l)
+    sub.add_argument("-l", dest="alt_ell", action="count", help=help_ell)
     sub.add_argument("-lh", action="count", help=help_lh)
     sub.add_argument("--full-time", action="count", help=help_full_time)
 
@@ -155,7 +160,7 @@ def parse_ls_py_args():
 
     args.one = args.alt_one or ((not sum_styles) and (not stdout_isatty))
     args.cee = args.alt_cee or ((not sum_styles) and stdout_isatty)
-    args.ell = args.alt_ell or args.full_time
+    args.ell = args.alt_ell or args.full_time or args.lh
 
     return args
 
@@ -173,26 +178,19 @@ def run_ls_args(args):
     # Pick the Code to show or run
 
     if args_one:
-        (opt, func, kwargs) = parse_ls_1_args(args)
-    else:
+        (opt, func, kwargs) = parse_ls_one_args(args)
+    elif args.ell:
+        (opt, func, kwargs) = parse_ls_ell_args(args)
+    elif args.cee:
+        opt = "-C"  # show as columns of names
+        func = ls_by_ljust
         kwargs = dict(tops=tops)
-
-        if args.cee:
-            opt = "-C"  # show as columns of names
-            func = ls_by_ljust
-        elif args.ell:
-            opt = "-l"  # show one file or dir per line as many columns
-            if args.full_time:
-                opt = "--full-time"
-            func = ls_by_row
-        elif args.lh:
-            opt = "-lh"  # like -l but round off byte counts to k M G T P E Z Y R Q etc
-            func = ls_by_row_humane
-        elif args.m:
-            opt = "-m"  # show as lines of comma separated names
-            func = ls_by_comma_space
-        else:
-            assert False, args  # unreached
+    elif args.m:
+        opt = "-m"  # show as lines of comma separated names
+        func = ls_by_comma_space
+        kwargs = dict(tops=tops)
+    else:
+        assert False, args  # unreached
 
     # Form the Code, then show it or run it
 
@@ -200,10 +198,10 @@ def run_ls_args(args):
     opt_show_or_exec_py(opt, kwargs=kwargs, func=func, title_py=title_py)
 
 
-def parse_ls_1_args(args):
-    """Pick out 1 Opt, its 1 Func, and its KwArgs"""
+def parse_ls_one_args(args):
+    """Pick out the '-1' Option, its 1 Func, and its KwArgs"""
 
-    opt = "-1"  # show as one column of one file or dir per line
+    opt = "-1"  # show as one column of file or dir names
 
     tops = args.tops
     top_else = tops[0] if tops else None
@@ -212,26 +210,71 @@ def parse_ls_1_args(args):
     isdirs = list(stat.S_ISDIR(_.st_mode) for _ in stat_by_top.values())
 
     if not tops:  # if no Tops
-        func = ls_here_by_line
+        func = ls_here_by_name
         kwargs = dict()
 
     elif not tops[1:]:  # if one Top
         if all(isdirs):
-            func = ls_dir_by_line
+            func = ls_dir_by_name
             kwargs = dict(top=top_else)
         else:
-            func = ls_file_by_line
+            func = ls_file_by_name
             kwargs = dict(file_=top_else)
 
     else:  # else many Tops
         if all(isdirs):
-            func = ls_top_dirs_by_line
+            func = ls_top_dirs_by_name
             kwargs = dict(tops=tops)
         elif not any(isdirs):
-            func = ls_files_by_line
+            func = ls_files_by_name
             kwargs = dict(files=tops)
         else:
-            func = ls_tops_by_line
+            func = ls_tops_by_name
+            kwargs = dict(tops=tops)
+
+    return (opt, func, kwargs)
+
+
+def parse_ls_ell_args(args):
+    """Pick out the '-l' or '-lh' or '--full-time' Option, its 1 Func, and its KwArgs"""
+
+    assert args.ell, args
+    if args.full_time:
+        opt = "--full-time"  # like -l but detail date/time as "%Y-%m-%d %H:%M:%S.%f %z"
+        raise NotImplementedError("--full-time")
+    elif args.lh:
+        opt = "-lh"  # like -l but round off byte counts to k M G T P E Z Y R Q etc
+        raise NotImplementedError("-lh")
+    else:
+        opt = "-1"  # show as many columns of one file or dir per line
+
+    tops = args.tops
+    top_else = tops[0] if tops else None
+
+    stat_by_top = fetch_os_stat_by_top(tops)  # always called, sometimes needed
+    isdirs = list(stat.S_ISDIR(_.st_mode) for _ in stat_by_top.values())
+
+    if not tops:  # if no Tops
+        func = ls_here_by_stat
+        kwargs = dict()
+
+    elif not tops[1:]:  # if one Top
+        if all(isdirs):
+            func = ls_dir_by_stat
+            kwargs = dict(top=top_else)
+        else:
+            func = ls_file_by_stat
+            kwargs = dict(file_=top_else)
+
+    else:  # else many Tops
+        if all(isdirs):
+            func = ls_top_dirs_by_stat
+            kwargs = dict(tops=tops)
+        elif not any(isdirs):
+            func = ls_files_by_stat
+            kwargs = dict(files=tops)
+        else:
+            func = ls_tops_by_stat
             kwargs = dict(tops=tops)
 
     return (opt, func, kwargs)
@@ -245,8 +288,8 @@ def fetch_os_stat_by_top(tops):
     stat_by_top = dict()
     for top in alt_tops:
         if top not in stat_by_top.keys():
-            stat = os.stat(top)
-            stat_by_top[top] = stat
+            stat_ = os.stat(top)
+            stat_by_top[top] = stat_
 
     return stat_by_top
 
@@ -270,7 +313,7 @@ def opt_form_title_py(opt, tops, func):
         shline += " " + " ".join(shtops)
 
     title_py = "# {}".format(shline)
-    if func is ls_tops_by_line:
+    if func in (ls_tops_by_name, ls_tops_by_stat):
         title_py = '"""{}"""'.format(shline)
 
     return title_py
@@ -337,15 +380,21 @@ def lines_apply_dash_a(lines):
     # Stop caring if Item Starts With Dot, when yes:  ls -a
 
     if startswith_dot_ok:
+        dropped_if = None
         for i, line in enumerate(lines):
             if line.strip() == 'if not item.startswith("."):':
                 lines[i] = None
 
-                assert lines[i + 1].startswith(_4_DENT), repr(lines[i + 1])
-                lines[i + 1] = lines[i + 1][len(_4_DENT) :]
+                assert dropped_if is None, (i, line)
+                dropped_if = i
 
-                if lines[i + 2 :]:
-                    assert not lines[i + 2].startswith(_4_DENT), repr(lines[i + 2])
+            if dropped_if is not None:
+                if i > dropped_if:
+                    if line:
+                        if not line.startswith(_4_DENT):
+                            dropped_if = len(lines)
+                        else:
+                            lines[i] = line[len(_4_DENT) :]
 
 
 def lines_infer_boilerplates(lines, func, title_py):
@@ -363,14 +412,14 @@ def lines_infer_boilerplates(lines, func, title_py):
 
     lines[0:0] = ["", title_py, ""]
 
-    # Mark these Sourcelines as Py Sourcelines, 1st of all
+    # Mark these Sourcelines as Py Sourcelines, 1st of all, when printing lots
 
-    if func is ls_tops_by_line:
+    if func in (ls_tops_by_name, ls_tops_by_stat):
         lines[0:0] = ["#!/usr/bin/env python3"]
 
-    # Drop the blank Sourcelines when not structuring many Sourcelines
+    # Drop the blank Sourcelines when not printing lots of Sourcelines
 
-    if func is not ls_tops_by_line:
+    if func not in (ls_tops_by_name, ls_tops_by_stat):
         for i, line in enumerate(lines):
             if not line:
                 lines[i] = None
@@ -387,7 +436,8 @@ def py_exec_or_show(py):
         try:
             exec(py)
         except Exception as exc:
-            traceback.print_exception(exc, limit=0)
+            traceback.print_exception(exc)
+            # traceback.print_exception(exc, limit=0)
 
             sys.exit(1)
 
@@ -397,33 +447,32 @@ def py_exec_or_show(py):
 #
 
 
-def ls_here_by_line():
-    """Show the Working Dir as a Column of one File or Dir per Line"""
+def ls_here_by_name():
+    """Show the Working Dir as one Column of File or Dir Names"""
 
     for item in sorted([".", ".."] + os.listdir()):
         if not item.startswith("."):
             print(item)
 
 
-def ls_dir_by_line(top):
-    """Show a Dir as a Column of one File or Dir per Line"""
+def ls_dir_by_name(top):
+    """Show a Dir as one Column of File or Dir Names"""
 
     for item in sorted([".", ".."] + os.listdir(top)):
         if not item.startswith("."):
             print(item)
 
 
-def ls_file_by_line(file_):
-    """Show the Name of one File"""
+def ls_file_by_name(file_):
+    """Show one File Name"""
 
-    _ = os.stat(file_)
     assert not os.path.isdir(file_), (file_,)
-
+    _ = os.stat(file_)
     print(file_)
 
 
-def ls_top_dirs_by_line(tops):
-    """Show some Dirs, each as the Label of a Column of one File or Dir per Line"""
+def ls_top_dirs_by_name(tops):
+    """Show some Dirs, each as the Label of a Column of File or Dir Names"""
 
     sep = None
     for top in tops:
@@ -438,17 +487,17 @@ def ls_top_dirs_by_line(tops):
                 print(item)
 
 
-def ls_files_by_line(files):
-    """Show some Files as a Column of one File per Line"""
+def ls_files_by_name(files):
+    """Show some Files as a Column of File Names"""
 
     for file_ in sorted(files):
-        _ = os.stat(file_)
         assert not os.path.isdir(file_), (file_,)
+        _ = os.stat(file_)
 
         print(file_)
 
 
-def ls_tops_by_line(tops):
+def ls_tops_by_name(tops):
     """Show the Files, one per Line, and then the Dirs, each as Label of a Column"""
 
     sep = None
@@ -458,6 +507,7 @@ def ls_tops_by_line(tops):
         if os.path.isdir(top):
             topdirs.append(top)
         else:
+            _ = os.stat(top)
             print(top)
             sep = "\n"
 
@@ -478,16 +528,178 @@ def ls_tops_by_line(tops):
 #
 
 
-def ls_by_row(tops):
-    """Show as many columns of one file or dir per line"""
+def ls_here_by_stat():
+    """Show the Working Dir as many Columns of one File or Dir per Line"""
 
-    raise NotImplementedError("def ls_by_row")
+    rows = list()
+    for item in sorted([".", ".."] + os.listdir()):
+        if not item.startswith("."):
+            row = find_form_cells(find=item)
+            rows.append(row)
+
+    rows_print(rows)
 
 
-def ls_by_row_humane(tops):
-    """Show the Items in detail, one per Line, but round off the Byte Counts"""
+def ls_dir_by_stat(top):
+    """Show a Dir as many Columns of one File or Dir per Line"""
 
-    raise NotImplementedError("def ls_by_row_humane")
+    rows = list()
+    for item in sorted([".", ".."] + os.listdir(top)):
+        if not item.startswith("."):
+            find = os.path.join(top, item)
+            row = find_form_cells(find)
+            rows.append(row)
+
+    rows_print(rows)
+
+
+def ls_file_by_stat(file_):
+    """Show the Name of one File"""
+
+    assert not os.path.isdir(file_), (file_,)
+    row = find_form_cells(find=file_)
+
+    rows_print(rows=[row])
+
+
+def ls_top_dirs_by_stat(tops):
+    """Show some Dirs, each as the Label of many Columns of one File or Dir per Line"""
+
+    sep = None
+    for top in tops:
+        if sep:
+            print()
+        sep = "\n"
+
+        print(top + ":")
+
+        rows = list()
+        for item in sorted([".", ".."] + os.listdir(top)):
+            if not item.startswith("."):
+                find = os.path.join(top, item)
+                row = find_form_cells(find)
+                rows.append(row)
+
+        rows_print(rows=[row])
+
+
+def ls_files_by_stat(files):
+    """Show some Files as many Columns of one File per Line"""
+
+    rows = list()
+    for file_ in sorted(files):
+        assert not os.path.isdir(file_), (file_,)
+        row = find_form_cells(find=file_)
+        rows.append(row)
+
+    rows_print(rows=[row])
+
+
+def ls_tops_by_stat(tops):
+    """Show the Files, one per Line, and then the Dirs, each as Label of many Columns"""
+
+    rows = list()
+
+    sep = None
+    topdirs = list()
+    for top in sorted(tops):
+        if os.path.isdir(top):
+            topdirs.append(top)
+        else:
+            sep = "\n"
+
+            row = find_form_cells(find=top)
+            rows.append(row)
+
+    rows_print(rows=[row])
+
+    for top in topdirs:
+        if sep:
+            print()
+        sep = "\n"
+
+        print(top + ":")
+        ls_dir_by_stat(top)
+
+
+def find_form_cells(find):
+    """Show one File or Dir as many Columns"""
+
+    s = os.stat(find)
+
+    chmods = st_mode_str(s.st_mode)
+    stamp = st_mtime_ns_str(s.st_mtime_ns)
+    cells = (chmods, s.st_nlink, s.st_uid, s.st_gid, s.st_size, stamp, find)
+
+    return cells
+
+    # todo: Sym Link Stat follow or not vs lstat
+
+
+def st_mode_str(st_mode):
+    """Style ChMod Permissions"""
+
+    chmod_chars = "drwxrwxrwx"
+    chmod_masks = [stat.S_IFDIR]
+    chmod_masks.extend([stat.S_IRUSR, stat.S_IWUSR, stat.S_IXUSR])
+    chmod_masks.extend([stat.S_IRGRP, stat.S_IWGRP, stat.S_IXGRP])
+    chmod_masks.extend([stat.S_IROTH, stat.S_IWOTH, stat.S_IXOTH])
+    assert len(chmod_chars) == len(chmod_masks)
+
+    chmods = ""
+    for char, mask in zip(chmod_chars, chmod_masks):
+        chmods += char if (st_mode & mask) else "-"
+
+    return chmods
+
+
+def st_mtime_ns_str(st_mtime_ns):
+    """Style Date/Time Stamp of a File or Dir"""
+
+    ts = st_mtime_ns / 10**9
+    t = dt.datetime.fromtimestamp(ts)
+
+    now = dt.datetime.now()
+
+    (early_year, early_month) = (now.year, now.month)
+    early_month -= 6
+    if early_month < 1:
+        early_month += 12
+        early_year -= 1
+    early = now.replace(year=early_year, month=early_month)
+
+    (late_year, late_month) = (now.year, now.month)
+    late_month += 6
+    if late_month > 12:
+        late_month -= 12
+        late_year += 1
+    late = now.replace(year=late_year, month=late_month)
+
+    form = "%b {:2} %H:%M".format(t.day)
+    if (t < early) or (t > late):
+        form = "%b {:2}  %Y".format(t.day)
+
+    chars = t.strftime(form)
+
+    return chars
+
+
+def rows_print(rows):
+    """Right-justify digits, else left-justify, and two Spaces between Columns"""
+
+    widths_rows = list(list(len(str(cell)) for cell in row) for row in rows)
+    widths = list(max(_) for _ in zip(*widths_rows))
+
+    for row in rows:
+        justs = list()
+        for i, (cell, width) in enumerate(zip(row, widths)):
+            if isinstance(cell, str):
+                just = cell.ljust(width)
+            else:
+                just = str(cell).rjust(width)
+            justs.append(just)
+        chars = "  ".join(justs)
+        print(chars)
 
 
 #
