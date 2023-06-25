@@ -33,13 +33,17 @@ if not hasattr(__builtins__, "breakpoint"):
 
 _ = subprocess.run  # new since Sep/2015 Python 3.5
 _ = dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6
-_ = "{:_}".format(12345)  # new since Dec/2016 Python 3.6
+_ = "{:_}".format(12345)  # new since Dec/2016 Python 3.6  # Ubuntu 2018
+
 # _ = breakpoint  # new since Jun/2018 Python 3.7
-# _ = importlib.import_module("dataclasses")  # new since Jun/2018 Python 3.7
-# _ = f"{sys.version_info[:3]=}"  # new since Oct/2019 Python 3.8
+# _ = dataclasses  # new since Jun/2018 Python 3.7
+# _ = f"{sys.version_info[:3]=}"  # new since Oct/2019 Python 3.8  # Ubuntu 2020
+
 # _ = shlex.join  # new since Oct/2019 Python 3.8
 # _ = str.removesuffix  # new since Oct/2020 Python 3.9
-# _  = list(zip([], [], strict=True))  # since Oct/2021 Python 3.10
+# _  = list(zip([], [], strict=True))  # since Oct/2021 Python 3.10  # Ubuntu 2022
+
+# _ = tomllib  # since Oct/2022 Python 3.11
 
 
 #

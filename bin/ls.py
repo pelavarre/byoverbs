@@ -3,7 +3,7 @@
 """
 usage: ls.py [--help] [-a] [-1 | -C | -m | -l | -lh | --full-time] [--py] [TOP ...]
 
-show the files and dirs inside a dir
+show the files and dirs inside of dirs
 
 positional arguments:
   TOP          the name of a dir or file to show
