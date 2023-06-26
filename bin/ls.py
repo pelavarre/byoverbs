@@ -23,7 +23,8 @@ options:
 
 quirks:
   goes well with Cp, MkDir, Ls, Mv, Rm, RmDir, Touch
-  classic Ls dumps all the Items, with no Scroll limit, when given no Parms
+  Linux Ls leaps to guess you want '-a' when you say '--full-time'
+  classic Ls dumps all the Items, with no Scroll limit, when given no ShArgs
 
 examples:
 
@@ -632,7 +633,11 @@ def find_form_cells(find):
 
     return cells
 
-    # todo: Sym Link Stat follow or not vs lstat
+    # todo: -lh gives RJust of 4 Columns
+    # of 919k or 9.2k or 99k or 99B vs Linux drop B, and Metric vs Classic Sh Binary
+    # maybe i prefer RJust of 5 Columns of Ki Mi etc, esp Ki v k
+
+    # todo: stop following Sym Link, and mark Sym Link as Sym Link
 
 
 def st_mode_str(st_mode):
@@ -657,10 +662,13 @@ def st_mtime_ns_str(st_mtime_ns):
 
     if main.args.full_time:
         ts = st_mtime_ns / 10**9
+        ns = st_mtime_ns % 10**9
+
         naive = dt.datetime.fromtimestamp(ts)
         t = naive.astimezone()
 
-        chars = t.strftime("%Y-%m-%d %H:%M:%S.%f %z")
+        form = "%Y-%m-%d %H:%M:%S.{:09} %z".format(ns)
+        chars = t.strftime(form)
 
         return chars
 
@@ -706,8 +714,9 @@ def rows_print(rows):
             else:
                 just = str(cell).rjust(width)
             justs.append(just)
+
         chars = "  ".join(justs)
-        print(chars)
+        print(chars.rstrip())
 
 
 #
