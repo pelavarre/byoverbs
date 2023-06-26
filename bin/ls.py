@@ -241,7 +241,6 @@ def parse_ls_ell_args(args):
     assert args.ell, args
     if args.full_time:
         opt = "--full-time"  # like -l but detail date/time as "%Y-%m-%d %H:%M:%S.%f %z"
-        raise NotImplementedError("--full-time")
     elif args.lh:
         opt = "-lh"  # like -l but round off byte counts to k M G T P E Z Y R Q etc
         raise NotImplementedError("-lh")
@@ -655,6 +654,15 @@ def st_mode_str(st_mode):
 
 def st_mtime_ns_str(st_mtime_ns):
     """Style Date/Time Stamp of a File or Dir"""
+
+    if main.args.full_time:
+        ts = st_mtime_ns / 10**9
+        naive = dt.datetime.fromtimestamp(ts)
+        t = naive.astimezone()
+
+        chars = t.strftime("%Y-%m-%d %H:%M:%S.%f %z")
+
+        return chars
 
     ts = st_mtime_ns / 10**9
     t = dt.datetime.fromtimestamp(ts)
