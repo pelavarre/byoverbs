@@ -208,7 +208,11 @@ def parse_ls_one_args(args):
     top_else = tops[0] if tops else None
 
     stat_by_top = fetch_os_stat_by_top(tops)  # always called, sometimes needed
-    isdirs = list(stat.S_ISDIR(_.st_mode) for _ in stat_by_top.values())
+
+    isdirs = list(
+        (stat.S_ISDIR(s.st_mode) and not stat.S_ISLNK(s.st_mode))
+        for s in stat_by_top.values()
+    )
 
     if not tops:  # if no Tops
         func = ls_here_by_name
@@ -252,7 +256,11 @@ def parse_ls_ell_args(args):
     top_else = tops[0] if tops else None
 
     stat_by_top = fetch_os_stat_by_top(tops)  # always called, sometimes needed
-    isdirs = list(stat.S_ISDIR(_.st_mode) for _ in stat_by_top.values())
+
+    isdirs = list(
+        (stat.S_ISDIR(s.st_mode) and not stat.S_ISLNK(s.st_mode))
+        for s in stat_by_top.values()
+    )
 
     if not tops:  # if no Tops
         func = ls_here_by_stat
@@ -279,6 +287,8 @@ def parse_ls_ell_args(args):
 
     return (opt, func, kwargs)
 
+    # todo: merge 'parse_ls_ell_args' with 'parse_ls_one_args'
+
 
 def fetch_os_stat_by_top(tops):
     """Call Os Stat for each Top"""
@@ -288,7 +298,7 @@ def fetch_os_stat_by_top(tops):
     stat_by_top = dict()
     for top in alt_tops:
         if top not in stat_by_top.keys():
-            stat_ = os.stat(top)
+            stat_ = os.lstat(top)
             stat_by_top[top] = stat_
 
     return stat_by_top
@@ -466,8 +476,7 @@ def ls_dir_by_name(top):
 def ls_file_by_name(file_):
     """Show one File Name"""
 
-    assert not os.path.isdir(file_), (file_,)
-    _ = os.stat(file_)
+    _ = os.lstat(file_)
     print(file_)
 
 
@@ -491,8 +500,7 @@ def ls_files_by_name(files):
     """Show some Files as a Column of File Names"""
 
     for file_ in sorted(files):
-        assert not os.path.isdir(file_), (file_,)
-        _ = os.stat(file_)
+        _ = os.lstat(file_)
 
         print(file_)
 
@@ -507,7 +515,7 @@ def ls_tops_by_name(tops):
         if os.path.isdir(top):
             topdirs.append(top)
         else:
-            _ = os.stat(top)
+            _ = os.lstat(top)
             print(top)
             sep = "\n"
 
@@ -556,7 +564,6 @@ def ls_dir_by_stat(top):
 def ls_file_by_stat(file_):
     """Show the Name of one File"""
 
-    assert not os.path.isdir(file_), (file_,)
     row = find_form_cells(find=file_)
 
     rows_print(rows=[row])
@@ -588,7 +595,6 @@ def ls_files_by_stat(files):
 
     rows = list()
     for file_ in sorted(files):
-        assert not os.path.isdir(file_), (file_,)
         row = find_form_cells(find=file_)
         rows.append(row)
 
@@ -625,11 +631,16 @@ def ls_tops_by_stat(tops):
 def find_form_cells(find):
     """Show one File or Dir as many Columns"""
 
-    s = os.stat(find)
+    s = os.lstat(find)
+
+    alt_find = find
+    if stat.S_ISLNK(s.st_mode):
+        there = os.readlink(find)
+        alt_find = "{} -> {}".format(find, there)
 
     chmods = st_mode_str(s.st_mode)
     stamp = st_mtime_ns_str(s.st_mtime_ns)
-    cells = (chmods, s.st_nlink, s.st_uid, s.st_gid, s.st_size, stamp, find)
+    cells = (chmods, s.st_nlink, s.st_uid, s.st_gid, s.st_size, stamp, alt_find)
 
     return cells
 
@@ -637,22 +648,25 @@ def find_form_cells(find):
     # of 919k or 9.2k or 99k or 99B vs Linux drop B, and Metric vs Classic Sh Binary
     # maybe i prefer RJust of 5 Columns of Ki Mi etc, esp Ki v k
 
-    # todo: stop following Sym Link, and mark Sym Link as Sym Link
-
 
 def st_mode_str(st_mode):
     """Style ChMod Permissions"""
 
     chmod_chars = "drwxrwxrwx"
+
     chmod_masks = [stat.S_IFDIR]
     chmod_masks.extend([stat.S_IRUSR, stat.S_IWUSR, stat.S_IXUSR])
     chmod_masks.extend([stat.S_IRGRP, stat.S_IWGRP, stat.S_IXGRP])
     chmod_masks.extend([stat.S_IROTH, stat.S_IWOTH, stat.S_IXOTH])
+
     assert len(chmod_chars) == len(chmod_masks)
 
     chmods = ""
     for char, mask in zip(chmod_chars, chmod_masks):
         chmods += char if (st_mode & mask) else "-"
+
+    if stat.S_ISLNK(st_mode):
+        chmods = "l" + chmods[1:]
 
     return chmods
 
