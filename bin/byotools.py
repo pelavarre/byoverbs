@@ -718,5 +718,100 @@ def sys_stderr_print(*args, **kwargs):
         sys.stderr.flush()
 
 
+#
+# Add some Def's to Import TextWrap
+#
+
+
+def textwrap_dicts_tabled(dicts, sep=" | ", divider="-+-"):
+    """Format [Dict] as centered Column Keys, then Rows of justified Cells"""
+
+    if not dicts:
+        return ""
+
+    labels = list(" {} ".format(_) for _ in dicts[-1].keys())
+    lists = [labels] + list(list(_.values()) for _ in dicts)
+
+    chars = textwrap_lists_tabled(lists, sep=sep, divider=divider)
+
+    return chars
+
+
+def textwrap_frame(chars):
+    """Add top/ bottom/ left/ right margins"""
+
+    dent = 4 * " "
+
+    lines = list()
+
+    lines.append("")  # opens twice
+    lines.append("")
+
+    for alt_line in chars.splitlines():
+        line = dent + alt_line
+        line = line.rstrip()
+
+        lines.append(line)
+
+    lines.append("")  # closes twice
+    lines.append("")
+
+    alt_chars = "\n".join(lines)
+
+    return alt_chars
+
+
+def textwrap_lists_tabled(lists, sep="  ", divider=None):
+    """Format List of List of Cells as centered or justified Str's in Columns"""
+
+    # Count out the Width of each Column
+
+    rows = lists
+    widths_rows = list(list(len(str(cell).strip()) for cell in row) for row in rows)
+    widths = list(max(_) for _ in zip(*widths_rows))
+
+    div_widths = list(widths)
+    div_widths[0] += 1  # adds Left Margin in the Dividing Row
+    div_widths[-1] += 1  # adds Right Margin in the Dividing Row
+
+    # Form each Row
+
+    lines = list()
+    for i, row in enumerate(rows):
+        justs = list()
+        for cell, width in zip(row, widths):
+            strip = str(cell).strip()
+
+            if not isinstance(cell, str):  # as if starts with & doesn't end with Space
+                just = strip.rjust(width)
+            elif not cell.startswith(" "):  # maybe ends with Space, maybe doesn't
+                just = strip.ljust(width)
+            elif not cell.endswith(" "):  # starts with Space & doesn't end with Space
+                just = strip.rjust(width)
+            else:  # starts with & ends with Space
+                just = strip.center(width)
+
+            justs.append(just)
+
+        line = sep.join(justs)
+        if divider:
+            line = " " + line  # adds Left Margin to all Rows tabled with a Dividing Row
+        line = line.rstrip()  # makes the Right Margin implicit, not explicit
+        lines.append(line)
+
+        # Insert a Dividing Row between Column Labels and Column Cells
+
+        if divider:
+            if i == 0:
+                dividing_line = divider.join((_ * divider[-1:]) for _ in div_widths)
+                lines.append(dividing_line)
+
+    # Succeed
+
+    join = "\n".join(lines)
+
+    return join
+
+
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/byotools.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

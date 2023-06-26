@@ -17,14 +17,15 @@ options:
   -C           show as columns of names (default for Stdout Tty)
   -m           show as lines of comma separated names
   -l           show as many columns of one file or dir per line
-  -lh          like -l but round off byte counts to Ki Mi Gi Ti Pi Ei Zi Yi Ri Qi etc
+  -lh          like -l but round off byte (B) counts to k M G T P E Z Y R Q etc
   --full-time  like -l but detail date/time as "%Y-%m-%d %H:%M:%S.%f %z"
   --py         show the code without running it
 
 quirks:
   goes well with Cp, MkDir, Ls, Mv, Rm, RmDir, Touch
-  Mac Ls, Linux Ls, & we differ in how '-lh' marks Dir & Link Sizes, & rounds File Sizes
-  we don't guess you want '-a' when you say '--full-time', but Linux Ls does
+  toggles between Decimal and Binary SI Units at '-lh', at '-lh -lh', etc
+  doesn't tweak the numbers to speak the alt Binary SI Units of Mac/ Linux '-lh'
+  doesn't guess you want '-a' when you say '--full-time', although Linux Ls does
   classic Ls dumps all the Items, with no Scroll limit, when given no ShArgs
 
 docs:
@@ -115,9 +116,8 @@ def parse_ls_py_args():
     help_one = "show as one column of file or dir names (default for Stdout Pipe)"
     help_cee = "show as columns of names (default for Stdout Tty)"
     help_ell = "show as many columns of one file or dir per line"
-    help_lh_marks = "Ki Mi Gi Ti Pi Ei Zi Yi Ri Qi"  # Binary Metric Multipliers
 
-    help_lh = "like -l but round off byte counts to " + help_lh_marks + " etc"
+    help_lh = "like -l but round off byte (B) counts to k M G T P E Z Y R Q etc"
     help_m = "show as lines of comma separated names"
 
     help_full_time = 'like -l but detail date/time as "%%Y-%%m-%%d %%H:%%M:%%S.%%f %%z"'
@@ -554,7 +554,8 @@ def ls_here_by_stat():
             row = find_form_cells(find=item, item=item)
             rows.append(row)
 
-    rows_print(rows)
+    chars = byo.textwrap_lists_tabled(lists=rows, sep="  ")
+    print(chars)
 
 
 def ls_dir_by_stat(top):
@@ -568,7 +569,8 @@ def ls_dir_by_stat(top):
             row = find_form_cells(find, item=item)
             rows.append(row)
 
-    rows_print(rows)
+    chars = byo.textwrap_lists_tabled(lists=rows, sep="  ")
+    print(chars)
 
 
 def ls_file_by_stat(file_):
@@ -576,7 +578,8 @@ def ls_file_by_stat(file_):
 
     row = find_form_cells(find=file_, item=file_)
     rows = [row]
-    rows_print(rows)
+    chars = byo.textwrap_lists_tabled(lists=rows, sep="  ")
+    print(chars)
 
 
 def ls_top_dirs_by_stat(tops):
@@ -597,7 +600,8 @@ def ls_top_dirs_by_stat(tops):
                 row = find_form_cells(find, item=item)
                 rows.append(row)
 
-        rows_print(rows)
+        chars = byo.textwrap_lists_tabled(lists=rows, sep="  ")
+        print(chars)
 
 
 def ls_files_by_stat(files):
@@ -608,7 +612,8 @@ def ls_files_by_stat(files):
         row = find_form_cells(find=file_, item=file_)
         rows.append(row)
 
-    rows_print(rows)
+    chars = byo.textwrap_lists_tabled(lists=rows, sep="  ")
+    print(chars)
 
 
 def ls_tops_by_stat(tops):
@@ -627,7 +632,8 @@ def ls_tops_by_stat(tops):
             row = find_form_cells(find=top, item=top)
             rows.append(row)
 
-    rows_print(rows)
+    chars = byo.textwrap_lists_tabled(lists=rows, sep="  ")
+    print(chars)
 
     for topdir in sorted(topdirs):
         if sep:
@@ -643,65 +649,55 @@ def find_form_cells(find, item):
 
     s = os.lstat(find)
 
-    alt_item = item
-    if stat.S_ISLNK(s.st_mode):
-        there = os.readlink(find)
-        alt_item = "{} -> {}".format(item, there)
+    chmods = stat.filemode(s.st_mode)
 
-    alt_size = s.st_size
+    size = s.st_size
     if not stat.S_ISDIR(s.st_mode):
         if not stat.S_ISLNK(s.st_mode):
             if main.args.lh:
-                alt_size = st_size_str(s.st_size)
+                size = st_size_str(s.st_size)
 
-    chmods = st_mode_str(s.st_mode)
-    stamp = st_mtime_ns_str(s.st_mtime_ns)
-    cells = (chmods, s.st_nlink, s.st_uid, s.st_gid, alt_size, stamp, alt_item)
+    stamp = st_mtime_ns_brief(s.st_mtime_ns)
+    if main.args.full_time:
+        stamp = st_mtime_ns_precise(s.st_mtime_ns)
+
+    quoted_item = byo.shlex_quote_if(item)
+    assert not quoted_item.startswith(" ")  # not marked as right-justified or centered
+    assert not quoted_item.endswith(" ")  # not marked as left-justified or centered
+
+    quoted = quoted_item
+    if stat.S_ISLNK(s.st_mode):
+        there = os.readlink(find)
+        quoted = "{} -> {}".format(quoted_item, there)
+
+    cells = (chmods, s.st_nlink, s.st_uid, s.st_gid, size, stamp, quoted)
 
     return cells
 
 
-def st_mode_str(st_mode):
-    """Style ChMod Permissions"""
-
-    chmod_chars = "drwxrwxrwx"
-
-    chmod_masks = [stat.S_IFDIR]
-    chmod_masks.extend([stat.S_IRUSR, stat.S_IWUSR, stat.S_IXUSR])
-    chmod_masks.extend([stat.S_IRGRP, stat.S_IWGRP, stat.S_IXGRP])
-    chmod_masks.extend([stat.S_IROTH, stat.S_IWOTH, stat.S_IXOTH])
-
-    assert len(chmod_chars) == len(chmod_masks)
-
-    chmods = ""
-    for char, mask in zip(chmod_chars, chmod_masks):
-        chmods += char if (st_mode & mask) else "-"
-
-    if stat.S_ISLNK(st_mode):
-        chmods = "l" + chmods[1:]
-
-    return chmods
-
-
-def st_mtime_ns_str(st_mtime_ns):
+def st_mtime_ns_precise(st_mtime_ns):
     """Style Date/Time Stamp of a File or Dir"""
 
-    if main.args.full_time:
-        ts = st_mtime_ns / 10**9
-        ns = st_mtime_ns % 10**9
-
-        naive = dt.datetime.fromtimestamp(ts)
-        t = naive.astimezone()
-
-        form = "%Y-%m-%d %H:%M:%S.{:09} %z".format(ns)
-        chars = t.strftime(form)
-
-        return chars
-
     ts = st_mtime_ns / 10**9
-    t = dt.datetime.fromtimestamp(ts)
+    ns = st_mtime_ns % 10**9
+
+    naive = dt.datetime.fromtimestamp(ts)
+    t = naive.astimezone()
+
+    form = "%Y-%m-%d %H:%M:%S.{:09} %z".format(ns)
+    chars = t.strftime(form)
+
+    return chars
+
+
+def st_mtime_ns_brief(st_mtime_ns):
+    """Pack Date/Time Stamp of a File or Dir into like 12 Columns"""
+
+    ts_int = int(st_mtime_ns / 10**9)
+    t = dt.datetime.fromtimestamp(ts_int)
 
     now = dt.datetime.now()
+    now = now.replace(microsecond=0)  # rounds down to an int timestamp
 
     (early_year, early_month) = (now.year, now.month)
     early_month -= 6
@@ -727,47 +723,37 @@ def st_mtime_ns_str(st_mtime_ns):
 
 
 def st_size_str(st_size):
-    """Right-justify Byte Size in Binary Prefix SI Units"""
+    """Right-justify Byte Size in SI Units"""
 
-    help_lh_marks = "Ki Mi Gi Ti Pi Ei Zi Yi Ri Qi"  # Binary Metric Multipliers
-    marks = help_lh_marks.split()
+    # List the Decimal Units, else the Binary Units
+
+    step = 10**3
+    marks = list("kMGTPEZYRQ")
+    if (main.args.lh % 2) == 0:
+        step = 2**10
+        marks = list("{}i".format(_.upper()) for _ in marks)
+
+    # Pick a Unit less than or equal to the Size, else the Unit 1 for a 0 Size
 
     mark = ""
-    scale_plus = 2**10
+    scale_plus = step
     while st_size >= scale_plus:
         mark = marks.pop(0)  # raises IndexError when File Size >= 1024 QiB
-        scale_plus *= 2**10
+        scale_plus *= step
 
-    scale = scale_plus // 2**10
+    scale = scale_plus // step
+
+    # Round down or up  # todo: when to prefer 'Rounding half to even', 'to odd', etc
 
     size = st_size // scale
-    if (st_size % scale) >= 2**9:
+    if (st_size % scale) >= (step // 2):
         size += 1
 
-    assert size in range(2**10 + 1)  # may be 1024 rounded up from 1023.5
+    assert size in range(step + 1)  # may be 1000 up from 999.5, or 1024 up from 1023.5
 
     chars = " {}{}B".format(size, mark)  # mark with Space at left for right-justifying
 
     return chars
-
-
-def rows_print(rows):
-    """Right-justify digits, else left-justify, and two Spaces between Columns"""
-
-    widths_rows = list(list(len(str(cell).strip()) for cell in row) for row in rows)
-    widths = list(max(_) for _ in zip(*widths_rows))
-
-    for row in rows:
-        justs = list()
-        for i, (cell, width) in enumerate(zip(row, widths)):
-            if isinstance(cell, str) and not cell.startswith(" "):
-                just = cell.ljust(width)
-            else:
-                just = str(cell).strip().rjust(width)
-            justs.append(just)
-
-        chars = "  ".join(justs)
-        print(chars.rstrip())
 
 
 #
@@ -855,8 +841,10 @@ PY_SH_TESTS = """
     ls.py --full-time --py
 
     ls -lh  # different at Linux, different at Mac, legacies of last century
-    ls.py -lh  # Dec/1998 https://physics.nist.gov/cuu/Units/binary.html
+    ls.py -lh  # International System of Units (SI) Decimal
+    ls.py -lh -lh  # Binary Dec/1998 https://physics.nist.gov/cuu/Units/binary.html
     ls.py -lh --py
+    ls.py -lh -lh --py
 
 """
 
