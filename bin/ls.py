@@ -17,14 +17,18 @@ options:
   -C           show as columns of names (default for Stdout Tty)
   -m           show as lines of comma separated names
   -l           show as many columns of one file or dir per line
-  -lh          like -l but round off byte counts to k M G T P E Z Y R Q etc
+  -lh          like -l but round off byte counts to Ki Mi Gi Ti Pi Ei Zi Yi Ri Qi etc
   --full-time  like -l but detail date/time as "%Y-%m-%d %H:%M:%S.%f %z"
   --py         show the code without running it
 
 quirks:
   goes well with Cp, MkDir, Ls, Mv, Rm, RmDir, Touch
-  Linux Ls leaps to guess you want '-a' when you say '--full-time'
+  Mac Ls, Linux Ls, & we differ in how '-lh' marks Dir & Link Sizes, & rounds File Sizes
+  we don't guess you want '-a' when you say '--full-time', but Linux Ls does
   classic Ls dumps all the Items, with no Scroll limit, when given no ShArgs
+
+docs:
+  https://physics.nist.gov/cuu/Units/binary.html
 
 examples:
 
@@ -111,8 +115,9 @@ def parse_ls_py_args():
     help_one = "show as one column of file or dir names (default for Stdout Pipe)"
     help_cee = "show as columns of names (default for Stdout Tty)"
     help_ell = "show as many columns of one file or dir per line"
-    mm = "k M G T P E Z Y R Q"  # Metric Multipliers  # wikipedia.org/wiki/Metric_prefix
-    help_lh = "like -l but round off byte counts to " + mm + " etc"
+    help_lh_marks = "Ki Mi Gi Ti Pi Ei Zi Yi Ri Qi"  # Binary Metric Multipliers
+
+    help_lh = "like -l but round off byte counts to " + help_lh_marks + " etc"
     help_m = "show as lines of comma separated names"
 
     help_full_time = 'like -l but detail date/time as "%%Y-%%m-%%d %%H:%%M:%%S.%%f %%z"'
@@ -248,7 +253,6 @@ def parse_ls_ell_args(args):
         opt = "--full-time"  # like -l but detail date/time as "%Y-%m-%d %H:%M:%S.%f %z"
     elif args.lh:
         opt = "-lh"  # like -l but round off byte counts to k M G T P E Z Y R Q etc
-        raise NotImplementedError("-lh")
     else:
         opt = "-1"  # show as many columns of one file or dir per line
 
@@ -369,7 +373,7 @@ def lines_apply_dash_a(lines):
 
     args = main.args
 
-    _4_DENT = 4 * " "
+    DENT_4 = 4 * " "
 
     # Drop the Os CurDir and ParDir from what Os ListDir finds, when not:  ls -a
 
@@ -391,20 +395,22 @@ def lines_apply_dash_a(lines):
 
     if startswith_dot_ok:
         dropped_if = None
+        dent_if = None
         for i, line in enumerate(lines):
             if line.strip() == 'if not item.startswith("."):':
                 lines[i] = None
 
                 assert dropped_if is None, (i, line)
                 dropped_if = i
+                dent_if = (len(line) - len(line.lstrip())) * " "
 
             if dropped_if is not None:
                 if i > dropped_if:
                     if line:
-                        if not line.startswith(_4_DENT):
+                        if not line.startswith(dent_if):
                             dropped_if = len(lines)
                         else:
-                            lines[i] = line[len(_4_DENT) :]
+                            lines[i] = line[len(DENT_4) :]
 
 
 def lines_infer_boilerplates(lines, func, title_py):
@@ -460,7 +466,8 @@ def py_exec_or_show(py):
 def ls_here_by_name():
     """Show the Working Dir as one Column of File or Dir Names"""
 
-    for item in sorted([".", ".."] + os.listdir()):
+    items = sorted([".", ".."] + os.listdir())
+    for item in items:
         if not item.startswith("."):
             print(item)
 
@@ -468,7 +475,8 @@ def ls_here_by_name():
 def ls_dir_by_name(top):
     """Show a Dir as one Column of File or Dir Names"""
 
-    for item in sorted([".", ".."] + os.listdir(top)):
+    items = sorted([".", ".."] + os.listdir(top))
+    for item in items:
         if not item.startswith("."):
             print(item)
 
@@ -484,7 +492,7 @@ def ls_top_dirs_by_name(tops):
     """Show some Dirs, each as the Label of a Column of File or Dir Names"""
 
     sep = None
-    for top in tops:
+    for top in sorted(tops):
         if sep:
             print()
         sep = "\n"
@@ -519,14 +527,14 @@ def ls_tops_by_name(tops):
             print(top)
             sep = "\n"
 
-    for top in topdirs:
+    for topdir in sorted(topdirs):
         if sep:
             print()
         sep = "\n"
 
-        print(top + ":")
+        print(topdir + ":")
 
-        for item in sorted([".", ".."] + os.listdir(top)):
+        for item in sorted([".", ".."] + os.listdir(topdir)):
             if not item.startswith("."):
                 print(item)
 
@@ -540,9 +548,10 @@ def ls_here_by_stat():
     """Show the Working Dir as many Columns of one File or Dir per Line"""
 
     rows = list()
-    for item in sorted([".", ".."] + os.listdir()):
+    items = sorted([".", ".."] + os.listdir())
+    for item in items:
         if not item.startswith("."):
-            row = find_form_cells(find=item)
+            row = find_form_cells(find=item, item=item)
             rows.append(row)
 
     rows_print(rows)
@@ -552,10 +561,11 @@ def ls_dir_by_stat(top):
     """Show a Dir as many Columns of one File or Dir per Line"""
 
     rows = list()
-    for item in sorted([".", ".."] + os.listdir(top)):
+    items = sorted([".", ".."] + os.listdir(top))
+    for item in items:
         if not item.startswith("."):
             find = os.path.join(top, item)
-            row = find_form_cells(find)
+            row = find_form_cells(find, item=item)
             rows.append(row)
 
     rows_print(rows)
@@ -564,16 +574,16 @@ def ls_dir_by_stat(top):
 def ls_file_by_stat(file_):
     """Show the Name of one File"""
 
-    row = find_form_cells(find=file_)
-
-    rows_print(rows=[row])
+    row = find_form_cells(find=file_, item=file_)
+    rows = [row]
+    rows_print(rows)
 
 
 def ls_top_dirs_by_stat(tops):
     """Show some Dirs, each as the Label of many Columns of one File or Dir per Line"""
 
     sep = None
-    for top in tops:
+    for top in sorted(tops):
         if sep:
             print()
         sep = "\n"
@@ -584,10 +594,10 @@ def ls_top_dirs_by_stat(tops):
         for item in sorted([".", ".."] + os.listdir(top)):
             if not item.startswith("."):
                 find = os.path.join(top, item)
-                row = find_form_cells(find)
+                row = find_form_cells(find, item=item)
                 rows.append(row)
 
-        rows_print(rows=[row])
+        rows_print(rows)
 
 
 def ls_files_by_stat(files):
@@ -595,10 +605,10 @@ def ls_files_by_stat(files):
 
     rows = list()
     for file_ in sorted(files):
-        row = find_form_cells(find=file_)
+        row = find_form_cells(find=file_, item=file_)
         rows.append(row)
 
-    rows_print(rows=[row])
+    rows_print(rows)
 
 
 def ls_tops_by_stat(tops):
@@ -614,39 +624,41 @@ def ls_tops_by_stat(tops):
         else:
             sep = "\n"
 
-            row = find_form_cells(find=top)
+            row = find_form_cells(find=top, item=top)
             rows.append(row)
 
-    rows_print(rows=[row])
+    rows_print(rows)
 
-    for top in topdirs:
+    for topdir in sorted(topdirs):
         if sep:
             print()
         sep = "\n"
 
-        print(top + ":")
-        ls_dir_by_stat(top)
+        print(topdir + ":")
+        ls_dir_by_stat(top=topdir)
 
 
-def find_form_cells(find):
+def find_form_cells(find, item):
     """Show one File or Dir as many Columns"""
 
     s = os.lstat(find)
 
-    alt_find = find
+    alt_item = item
     if stat.S_ISLNK(s.st_mode):
         there = os.readlink(find)
-        alt_find = "{} -> {}".format(find, there)
+        alt_item = "{} -> {}".format(item, there)
+
+    alt_size = s.st_size
+    if not stat.S_ISDIR(s.st_mode):
+        if not stat.S_ISLNK(s.st_mode):
+            if main.args.lh:
+                alt_size = st_size_str(s.st_size)
 
     chmods = st_mode_str(s.st_mode)
     stamp = st_mtime_ns_str(s.st_mtime_ns)
-    cells = (chmods, s.st_nlink, s.st_uid, s.st_gid, s.st_size, stamp, alt_find)
+    cells = (chmods, s.st_nlink, s.st_uid, s.st_gid, alt_size, stamp, alt_item)
 
     return cells
-
-    # todo: -lh gives RJust of 4 Columns
-    # of 919k or 9.2k or 99k or 99B vs Linux drop B, and Metric vs Classic Sh Binary
-    # maybe i prefer RJust of 5 Columns of Ki Mi etc, esp Ki v k
 
 
 def st_mode_str(st_mode):
@@ -714,19 +726,44 @@ def st_mtime_ns_str(st_mtime_ns):
     return chars
 
 
+def st_size_str(st_size):
+    """Right-justify Byte Size in Binary Prefix SI Units"""
+
+    help_lh_marks = "Ki Mi Gi Ti Pi Ei Zi Yi Ri Qi"  # Binary Metric Multipliers
+    marks = help_lh_marks.split()
+
+    mark = ""
+    scale_plus = 2**10
+    while st_size >= scale_plus:
+        mark = marks.pop(0)  # raises IndexError when File Size >= 1024 QiB
+        scale_plus *= 2**10
+
+    scale = scale_plus // 2**10
+
+    size = st_size // scale
+    if (st_size % scale) >= 2**9:
+        size += 1
+
+    assert size in range(2**10 + 1)  # may be 1024 rounded up from 1023.5
+
+    chars = " {}{}B".format(size, mark)  # mark with Space at left for right-justifying
+
+    return chars
+
+
 def rows_print(rows):
     """Right-justify digits, else left-justify, and two Spaces between Columns"""
 
-    widths_rows = list(list(len(str(cell)) for cell in row) for row in rows)
+    widths_rows = list(list(len(str(cell).strip()) for cell in row) for row in rows)
     widths = list(max(_) for _ in zip(*widths_rows))
 
     for row in rows:
         justs = list()
         for i, (cell, width) in enumerate(zip(row, widths)):
-            if isinstance(cell, str):
+            if isinstance(cell, str) and not cell.startswith(" "):
                 just = cell.ljust(width)
             else:
-                just = str(cell).rjust(width)
+                just = str(cell).strip().rjust(width)
             justs.append(just)
 
         chars = "  ".join(justs)
@@ -813,9 +850,14 @@ PY_SH_TESTS = """
     ls.py -l
     ls.py -l --py
 
-    ls --full-time
+    ls --full-time  # often unavailable at Mac  # forces '-a' at Linux
     ls.py --full-time
     ls.py --full-time --py
+
+    ls -lh  # different at Linux, different at Mac, legacies of last century
+    ls.py -lh  # Dec/1998 https://physics.nist.gov/cuu/Units/binary.html
+    ls.py -lh --py
+
 """
 
 
