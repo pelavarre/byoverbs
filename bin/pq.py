@@ -17,9 +17,9 @@ quirks:
 
 words:
   _ dent casefold expandtabs lower lstrip rstrip strip tee upper  # [Line] -> [Line]
-  encode repr  # [Line] -> [Lit] -> [Line]
+  decode encode eval quote repr unquote  # [Line] -> [Lit] -> [Line]
   dedent enumerate join reversed sorted split  # ... -> Line|[IndexedLine|Line|Word]
-  decode encode eval len keys repr values  # ... -> [Any|Bytes|Index|Int|Key|Line|Value]
+  eval len keys repr values  # ... -> [Any|Bytes|Index|Int|Key|Line|Value]
 
 examples:
 
@@ -39,6 +39,9 @@ examples:
 
   echo '⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |pq encode |cat -
   echo '⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |pq encode decode |cat -
+
+  echo 'http://www.google.com/images?q=Jacques%20Carelman' |pq unquote |cat -
+  echo 'Jacques Carelman' |pq quote |cat -
 
   echo "'abc' 'de'"
   echo "'abc' 'de'" |pq eval |cat -
@@ -81,6 +84,7 @@ import json
 import subprocess
 import sys
 import textwrap
+import urllib.parse
 
 import byotools as byo
 
@@ -334,16 +338,16 @@ def line_dent():  # |pq dent  # [Line] -> [Line]
         print(oline)
 
 
-def line_lit_encode():  # |pq encode  # [Line] -> [Bytes]
+def line_encode_lit():  # |pq encode  # [Line] -> [Bytes]
     """Encode each Line as a Py Bytes Literal"""
 
     byo.sys_stderr_print('>>> _.encode(errors="surrogatescape")')
 
     ichars = sys.stdin.read()
     for iline in ichars.splitlines():
-        iline = iline.encode(errors="surrogatescape")
-        ilit = str(iline)
-        print(ilit)
+        oline = iline.encode(errors="surrogatescape")
+        olit = str(oline)
+        print(olit)
 
 
 def line_expandtabs():  # |pq expandtabs  # [Line] -> [Line]
@@ -379,6 +383,18 @@ def line_lstrip():  # |pq lstrip  # [Line] -> [Line]
         print(oline)
 
 
+def line_quote():  # |pq quote  # [Line] -> [UrlCodedLine]
+    """Encode each Line before sending as an HttpS/Http Literal Param Value"""
+
+    byo.sys_stderr_print(">>> urllib.parse.quote(_)")
+
+    ichars = sys.stdin.read()
+    for iline in ichars.splitlines():
+        oline = urllib.parse.quote(iline)
+        olit = str(oline)
+        print(olit)
+
+
 def line_repr_lit():  # |pq repr  # [Line] -> [Lit]
     """Represent each Line as a Py Str Literal"""
 
@@ -410,6 +426,18 @@ def line_strip():  # |pq strip  # [Line] -> [Line]
     ichars = sys.stdin.read()
     for line in ichars.splitlines():
         print(line.strip())
+
+
+def line_unquote():  # |pq unquote  # [Line] -> [UrlCodedLine]
+    """Decode each Line after receiving as an HttpS/Http Literal Param Value"""
+
+    byo.sys_stderr_print(">>> urllib.parse.unquote(_)")
+
+    ichars = sys.stdin.read()
+    for iline in ichars.splitlines():
+        oline = urllib.parse.unquote(iline)
+        olit = str(oline)
+        print(olit)
 
 
 def line_upper():  # |pq upper  # [Line] -> [Line]
@@ -698,7 +726,7 @@ FUNC_BY_WORD = {
     "decode": line_eval_decode,
     "dedent": file_dedent,
     "dent": line_dent,
-    "encode": line_lit_encode,
+    "encode": line_encode_lit,
     "enumerate": file_enumerate,
     "eval": line_eval_print,
     "expandtabs": line_expandtabs,
@@ -708,6 +736,7 @@ FUNC_BY_WORD = {
     "len": file_len_lit,
     "lower": line_lower,
     "lstrip": line_lstrip,
+    "quote": line_quote,
     "repr": line_repr_lit,
     "reversed": file_reversed,
     "rstrip": line_rstrip,
@@ -716,6 +745,7 @@ FUNC_BY_WORD = {
     "spread": file_para_spread,
     "strip": line_strip,
     "tee": line_tee,
+    "unquote": line_unquote,
     "upper": line_upper,
     "values": file_eval_values,
 }
@@ -735,13 +765,16 @@ _ = """
   :
 
   echo -n |pq _ |hexdump -C
+  echo -n |pq decode |hexdump -C
   echo -n |pq dedent |hexdump -C
   echo -n |pq dent |hexdump -C
+  echo -n |pq encode |hexdump -C
   echo -n |pq enumerate |hexdump -C
   echo -n |pq expandtabs |hexdump -C
   echo -n |pq gather |hexdump -C
   echo -n |pq join |hexdump -C
   echo -n |pq lstrip |hexdump -C
+  echo -n |pq quote |hexdump -C
   echo -n |pq reversed |hexdump -C
   echo -n |pq rstrip |hexdump -C
   echo -n |pq sorted |hexdump -C
@@ -749,15 +782,19 @@ _ = """
   echo -n |pq spread |hexdump -C
   echo -n |pq strip |hexdump -C
   echo -n |pq tee |hexdump -C
+  echo -n |pq unquote |hexdump -C
 
   echo |pq _ |hexdump -C
+  false && echo |pq decode |hexdump -C  # SyntaxError
   echo |pq dedent |hexdump -C
   echo |pq dent |hexdump -C
+  echo |pq encode |hexdump -C
   echo |pq enumerate |hexdump -C
   echo |pq expandtabs |hexdump -C
   echo |pq gather |hexdump -C
   echo |pq join |hexdump -C
   echo |pq lstrip |hexdump -C
+  echo |pq quote |hexdump -C
   echo |pq reversed |hexdump -C
   echo |pq rstrip |hexdump -C
   echo |pq sorted |hexdump -C
@@ -765,15 +802,19 @@ _ = """
   echo |pq spread |hexdump -C
   echo |pq strip |hexdump -C
   echo |pq tee |hexdump -C
+  echo |pq unquote |hexdump -C
 
   echo -n abc |pq _ |hexdump -C
+  false && echo -n abc |pq decode |hexdump -C  # SyntaxError
   echo -n abc |pq dedent |hexdump -C
   echo -n abc |pq dent |hexdump -C
+  echo -n abc |pq encode |hexdump -C
   echo -n abc |pq enumerate |hexdump -C
   echo -n abc |pq expandtabs |hexdump -C
   echo -n abc |pq gather |hexdump -C
   echo -n abc |pq join |hexdump -C
   echo -n abc |pq lstrip |hexdump -C
+  echo -n abc |pq quote |hexdump -C
   echo -n abc |pq reversed |hexdump -C
   echo -n abc |pq rstrip |hexdump -C
   echo -n abc |pq sorted |hexdump -C
@@ -781,15 +822,19 @@ _ = """
   echo -n abc |pq spread |hexdump -C
   echo -n abc |pq strip |hexdump -C
   echo -n abc |pq tee |hexdump -C
+  echo -n abc |pq unquote |hexdump -C
 
   echo abc |pq _ |hexdump -C
+  false && echo abc |pq decode |hexdump -C  # SyntaxError
   echo abc |pq dedent |hexdump -C
   echo abc |pq dent |hexdump -C
+  echo abc |pq encode |hexdump -C
   echo abc |pq enumerate |hexdump -C
   echo abc |pq expandtabs |hexdump -C
   echo abc |pq gather |hexdump -C
   echo abc |pq join |hexdump -C
   echo abc |pq lstrip |hexdump -C
+  echo abc |pq quote |hexdump -C
   echo abc |pq reversed |hexdump -C
   echo abc |pq rstrip |hexdump -C
   echo abc |pq sorted |hexdump -C
@@ -797,6 +842,7 @@ _ = """
   echo abc |pq spread |hexdump -C
   echo abc |pq strip |hexdump -C
   echo abc |pq tee |hexdump -C
+  echo abc |pq unquote |hexdump -C
 
   echo '[0, 11, 22]' |pq . |cat -
   echo '[0, 11, 22]' |pq keys |cat -
