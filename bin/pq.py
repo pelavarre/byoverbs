@@ -18,8 +18,8 @@ quirks:
 words:
   _ dent casefold expandtabs lower lstrip rstrip strip tee upper  # [Line] -> [Line]
   decode encode eval quote repr unquote  # [Line] -> [Lit] -> [Line]
-  dedent enumerate join reversed sorted split  # ... -> Line|[IndexedLine|Line|Word]
-  eval len keys repr values  # ... -> [Any|Bytes|Index|Int|Key|Line|Value]
+  counter enumerate join reversed set sorted split  # ... -> [ChangedLine|ChosenLine]
+  dedent eval len keys repr values  # ... -> [Any|Bytes|Chars|Index|Int|Key|Line|Value]
 
 examples:
 
@@ -61,7 +61,8 @@ examples:
   ls -1 -F -rt |pq sorted && pbpaste  # show Sorted
   ls -1 -F -rt |pq sorted enumerate && pbpaste  # show Numbered and Sorted
 
-  ls -1 -F -rt |pq so nu && pbpaste  # ok if 'so' 'nu' is only Sort & Enumerate
+  ls -1 |cut -c1,2 |pq set enu |cat -  # works while 'so set enu' is unambiguous
+  ls -1 |cut -c1 |pq counter |cat -
 
   git grep -Hn '^def ' |pq gather |less -FIRX  # print one Paragraph of Hits per File
   git grep -Hn '^def ' |pq gather spread |less -FIRX  # undo Gather with Spread
@@ -79,6 +80,7 @@ examples:
 
 import argparse
 import ast
+import collections
 import io
 import json
 import subprocess
@@ -274,12 +276,12 @@ def pq_word_to_func(word):
 
     # Quit in the face of an undefined Word
 
-    key = " ".join(keys)
-    assert key in FUNC_BY_WORD.keys(), (key, FUNC_BY_WORD.keys())
+    join = " ".join(keys)
+    assert join in FUNC_BY_WORD.keys(), (word, join, FUNC_BY_WORD.keys())
 
     # Pick the code to run inside the Runtime Environment
 
-    func = FUNC_BY_WORD[key]
+    func = FUNC_BY_WORD[join]
 
     return func
 
@@ -456,7 +458,7 @@ def line_upper():  # |pq upper  # [Line] -> [Line]
 #
 
 
-def file_dedent():  # |pq dedent  # [Line] -> Str -> [Line]
+def file_chars_dedent():  # |pq dedent  # [Line] -> Str -> [Line]
     """Strip the Blank Columns that start every Line of Chars"""
 
     byo.sys_stderr_print(">>> textwrap.dedent(c)")
@@ -466,7 +468,19 @@ def file_dedent():  # |pq dedent  # [Line] -> Str -> [Line]
     sys.stdout.write(ochars)
 
 
-def file_enumerate():  # |pq enumerate  # [Line] -> [IndexedLine]
+def file_lines_counter():  # |pq counter  # [Line] -> [CountedDistinctLine]
+    """Count each distinct Line"""
+
+    byo.sys_stderr_print(">>> collections.Counter(r)")
+
+    ichars = sys.stdin.read()
+    ilines = ichars.splitlines()
+    ocounter = collections.Counter(ilines)
+    for opair in ocounter.items():
+        print(*opair)
+
+
+def file_lines_enumerate():  # |pq enumerate  # [Line] -> [IndexedLine]
     """Count off every Line of the Chars, up from 0"""
 
     byo.sys_stderr_print(">>> enumerate(r)")
@@ -477,22 +491,7 @@ def file_enumerate():  # |pq enumerate  # [Line] -> [IndexedLine]
         print(*opair)
 
 
-def file_join():  # |pq join  # [Word] -> Line
-    r"""Replace each Line-Ending with one Space"""
-
-    byo.sys_stderr_print(r'''>>> " ".join(r) + "\n"''')
-
-    ichars = sys.stdin.read()
-    ilines = ichars.splitlines()
-
-    ochars = ""
-    if ilines:
-        ochars = " ".join(ilines) + "\n"
-
-    sys.stdout.write(ochars)
-
-
-def file_len_lit():  # |pq len  # [Line] -> Int
+def file_lines_len_lit():  # |pq len  # [Line] -> Int
     """Count the Lines of the File"""
 
     byo.sys_stderr_print(">>> len(r)")
@@ -502,6 +501,55 @@ def file_len_lit():  # |pq len  # [Line] -> Int
     oint = len(ilines)
     olit = str(oint)
     print(olit)
+
+
+def file_lines_reversed():  # |pq reversed  # [Line] -> [OppositeLine]
+    """Reverse the Lines"""
+
+    byo.sys_stderr_print(">>> reversed(r)")
+
+    ichars = sys.stdin.read()
+    ilines = ichars.splitlines()
+
+    olines = list(reversed(ilines))
+
+    ochars = ""
+    if olines:
+        ochars = "\n".join(olines) + "\n"
+
+    sys.stdout.write(ochars)
+
+
+def file_lines_set():  # |pq set  # [Line] -> [DistinctLine]
+    """Keep each distinct Line, drop Dupes, even when Not adjacent"""
+
+    byo.sys_stderr_print(">>> set(r)")
+
+    ichars = sys.stdin.read()
+    ilines = ichars.splitlines()
+
+    oset = set()
+    for iline in ilines:
+        if iline not in oset:
+            oset.add(iline)
+            print(iline)
+
+
+def file_lines_sorted():  # |pq sorted  # [Line] -> [SortedLine]
+    """Sort the Lines"""
+
+    byo.sys_stderr_print(">>> sorted(r)")
+
+    ichars = sys.stdin.read()
+    ilines = ichars.splitlines()
+
+    olines = list(sorted(ilines))
+
+    ochars = ""
+    if olines:
+        ochars = "\n".join(olines) + "\n"
+
+    sys.stdout.write(ochars)
 
 
 def file_para_gather(sep=":"):  # |pq gather  # [TaggedLine] -> [TaggedPara]
@@ -585,41 +633,7 @@ def file_para_spread(sep=":"):  # |pq spread  # [TaggedPara] -> [TaggedLine]
     # todo: cope well with ":" Colons in Pathnames, such as:  bin/:h, bin/:v
 
 
-def file_reversed():  # |pq reversed  # [Line] -> [OppositeLine]
-    """Reverse the Lines"""
-
-    byo.sys_stderr_print(">>> reversed(r)")
-
-    ichars = sys.stdin.read()
-    ilines = ichars.splitlines()
-
-    olines = list(reversed(ilines))
-
-    ochars = ""
-    if olines:
-        ochars = "\n".join(olines) + "\n"
-
-    sys.stdout.write(ochars)
-
-
-def file_sorted():  # |pq sorted  # [Line] -> [SortedLine]
-    """Sort the Lines"""
-
-    byo.sys_stderr_print(">>> sorted(r)")
-
-    ichars = sys.stdin.read()
-    ilines = ichars.splitlines()
-
-    olines = list(sorted(ilines))
-
-    ochars = ""
-    if olines:
-        ochars = "\n".join(olines) + "\n"
-
-    sys.stdout.write(ochars)
-
-
-def file_split():  # |pq split  # [[Word]] -> [Word]
+def file_words_split():  # |pq split  # [[Word]] -> [Word]
     """Split each Line into Words"""
 
     byo.sys_stderr_print(">>> c.split()")
@@ -630,6 +644,21 @@ def file_split():  # |pq split  # [[Word]] -> [Word]
     ochars = ""
     if iwords:
         ochars = "\n".join(iwords) + "\n"
+
+    sys.stdout.write(ochars)
+
+
+def file_words_join():  # |pq join  # [Word] -> Line
+    r"""Replace each Line-Ending with one Space"""
+
+    byo.sys_stderr_print(r'''>>> " ".join(r) + "\n"''')
+
+    ichars = sys.stdin.read()
+    ilines = ichars.splitlines()
+
+    ochars = ""
+    if ilines:
+        ochars = " ".join(ilines) + "\n"
 
     sys.stdout.write(ochars)
 
@@ -723,25 +752,27 @@ FUNC_BY_WORD = {
     ".": file_eval,
     "_": line_print,
     "casefold": line_casefold,
+    "counter": file_lines_counter,
     "decode": line_eval_decode,
-    "dedent": file_dedent,
+    "dedent": file_chars_dedent,
     "dent": line_dent,
     "encode": line_encode_lit,
-    "enumerate": file_enumerate,
+    "enumerate": file_lines_enumerate,
     "eval": line_eval_print,
     "expandtabs": line_expandtabs,
     "gather": file_para_gather,
-    "join": file_join,
+    "join": file_words_join,
     "keys": file_eval_keys,
-    "len": file_len_lit,
+    "len": file_lines_len_lit,
     "lower": line_lower,
     "lstrip": line_lstrip,
     "quote": line_quote,
     "repr": line_repr_lit,
-    "reversed": file_reversed,
+    "reversed": file_lines_reversed,
     "rstrip": line_rstrip,
-    "sorted": file_sorted,
-    "split": file_split,
+    "set": file_lines_set,
+    "sorted": file_lines_sorted,
+    "split": file_words_split,
     "spread": file_para_spread,
     "strip": line_strip,
     "tee": line_tee,
@@ -765,6 +796,7 @@ _ = """
   :
 
   echo -n |pq _ |hexdump -C
+  echo -n |pq counter |hexdump -C
   echo -n |pq decode |hexdump -C
   echo -n |pq dedent |hexdump -C
   echo -n |pq dent |hexdump -C
@@ -777,6 +809,7 @@ _ = """
   echo -n |pq quote |hexdump -C
   echo -n |pq reversed |hexdump -C
   echo -n |pq rstrip |hexdump -C
+  echo -n |pq set |hexdump -C
   echo -n |pq sorted |hexdump -C
   echo -n |pq split |hexdump -C
   echo -n |pq spread |hexdump -C
@@ -785,7 +818,7 @@ _ = """
   echo -n |pq unquote |hexdump -C
 
   echo |pq _ |hexdump -C
-  false && echo |pq decode |hexdump -C  # SyntaxError
+  echo |pq counter |hexdump -C
   echo |pq dedent |hexdump -C
   echo |pq dent |hexdump -C
   echo |pq encode |hexdump -C
@@ -797,15 +830,17 @@ _ = """
   echo |pq quote |hexdump -C
   echo |pq reversed |hexdump -C
   echo |pq rstrip |hexdump -C
+  echo |pq set |hexdump -C
   echo |pq sorted |hexdump -C
   echo |pq split |hexdump -C
   echo |pq spread |hexdump -C
   echo |pq strip |hexdump -C
   echo |pq tee |hexdump -C
   echo |pq unquote |hexdump -C
+  false && echo |pq decode |hexdump -C  # SyntaxError
 
   echo -n abc |pq _ |hexdump -C
-  false && echo -n abc |pq decode |hexdump -C  # SyntaxError
+  echo -n abc |pq counter |hexdump -C
   echo -n abc |pq dedent |hexdump -C
   echo -n abc |pq dent |hexdump -C
   echo -n abc |pq encode |hexdump -C
@@ -817,15 +852,17 @@ _ = """
   echo -n abc |pq quote |hexdump -C
   echo -n abc |pq reversed |hexdump -C
   echo -n abc |pq rstrip |hexdump -C
+  echo -n abc |pq set |hexdump -C
   echo -n abc |pq sorted |hexdump -C
   echo -n abc |pq split |hexdump -C
   echo -n abc |pq spread |hexdump -C
   echo -n abc |pq strip |hexdump -C
   echo -n abc |pq tee |hexdump -C
   echo -n abc |pq unquote |hexdump -C
+  false && echo -n abc |pq decode |hexdump -C  # SyntaxError
 
   echo abc |pq _ |hexdump -C
-  false && echo abc |pq decode |hexdump -C  # SyntaxError
+  echo abc |pq counter |hexdump -C
   echo abc |pq dedent |hexdump -C
   echo abc |pq dent |hexdump -C
   echo abc |pq encode |hexdump -C
@@ -837,12 +874,14 @@ _ = """
   echo abc |pq quote |hexdump -C
   echo abc |pq reversed |hexdump -C
   echo abc |pq rstrip |hexdump -C
+  echo abc |pq set |hexdump -C
   echo abc |pq sorted |hexdump -C
   echo abc |pq split |hexdump -C
   echo abc |pq spread |hexdump -C
   echo abc |pq strip |hexdump -C
   echo abc |pq tee |hexdump -C
   echo abc |pq unquote |hexdump -C
+  false && echo abc |pq decode |hexdump -C  # SyntaxError
 
   echo '[0, 11, 22]' |pq . |cat -
   echo '[0, 11, 22]' |pq keys |cat -
