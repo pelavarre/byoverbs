@@ -73,10 +73,6 @@ examples:
 
 # code reviewed by people, and by Black and Flake8
 
-# todo: --strict to reject abbreviated keywords, such as 'sort' for 'sorted'
-# todo: --ext=.py to print the Code without running it
-# todo: -fiqv to tune the Runs of this Code
-
 
 import argparse
 import ast
@@ -967,6 +963,16 @@ _ = """
 
 if __name__ == "__main__":
     main()
+
+
+# todo: |pq tabled  to expand any one ' ' to give '  ' in a column, w right floats/ints
+# todo: retry with trailing r"[^0-9]+" dropped to allow units on numeric literal
+# todo: settle for majority vote, don't require every cell precisely numeric
+# todo: ls -alF -rt |pq tabled
+
+# todo: --strict to reject abbreviated keywords, such as 'sort' for 'sorted'
+# todo: --py to print the Code without running it
+# todo: -fiqv to tune the Runs of this Code
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq.py

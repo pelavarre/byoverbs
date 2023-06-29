@@ -1,7 +1,3 @@
-function bh() {  # for Bash, not for Zsh
-    (
-        set -xe
-        HISTTIMEFORMAT='%b %d %H:%M:%S  ' history
-        # Zsh history -t '%b %d %H:%M:%S' 0
-    )
-}
+echo + "HISTTIMEFORMAT='%b %d %H:%M:%S  ' history"
+HISTTIMEFORMAT='%b %d %H:%M:%S  ' history
+# Zsh history -t '%b %d %H:%M:%S' 0
