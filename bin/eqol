@@ -3,16 +3,9 @@ if ! which emacs >/dev/null; then
     emacs=/opt/homebrew/bin/emacs
 fi
 
-qol=$(dirname "$0")/qol
-if [[ $# == 1 ]]; then
-    set -xe
-    # shellcheck disable=SC2046  # Quote this to prevent word splitting
-    $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qol "$@")
-    # FIXME +"/$1"
-else
-    set -xe
-    # shellcheck disable=SC2046  # Quote this to prevent word splitting
-    $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qol "$@")
-fi
+echo '+ e $(qol' "$@"")" >&2
+# shellcheck disable=SC2046  # Quote this to prevent word splitting
+e $(qol "$@")
+# FIXME +"/$1"
 
-# note: Bash unsets the "${ALTPWDS[@]}" unless you run this Code as a Bash Func
+# note: Bash unsets the 'qol' "${ALTPWDS[@]}" unless you run this Code as a Bash Func

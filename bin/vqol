@@ -1,12 +1,11 @@
-qol=$(dirname "$0")/qol
 if [[ $# == 1 ]]; then
-    set -xe
+    echo '+ v $(qol' "$@"")" +'"'/$1'"' >&2
     # shellcheck disable=SC2046  # Quote this to prevent word splitting
-    vim $($qol "$@") +"/$1"
+    v $(qol "$@") +"/$1"
 else
-    set -xe
+    echo '+ v $(qol' "$@"")" >&2
     # shellcheck disable=SC2046  # Quote this to prevent word splitting
-    vim $($qol "$@")
+    v $(qol "$@")
 fi
 
-# note: Bash unsets the "${ALTPWDS[@]}" unless you run this Code as a Bash Func
+# note: Bash unsets the 'qol' "${ALTPWDS[@]}" unless you run this Code as a Bash Func
