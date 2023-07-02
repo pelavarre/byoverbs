@@ -67,22 +67,21 @@ function pips () {
 # Work the deep magic inside the Sh Process that Git SubProcesses can't reach,
 # provided that $(which q) is a Sh File, not a Sh Func
 
-bin=$(which q)
-bin=$(basename "$bin")
+# HISTTIMEFORMAT='%b %d %H:%M:%S  ' history
+function bh () { source "$bin"/bh.source "$@"; }
 
-function bh () { source "$bin"/bh.source "$@"; }  # HistTimeForm~ history
-function fh () { cat ~/.*.log; }
+# cd, popd
+function qcd () { d=$(which q); d=$(dirname "$d"); source "$d"/qcd.source "$@"; }
+function qp () { d=$(which q); d=$(dirname "$d"); source "$d"/qp.source "$@"; }
 
-function qcd () { source "$bin"/qcd.source "$@"; }  # cd
-function qp () { source "$bin"/qp.source "$@"; }  # popd
-
-function eqol () { source "$bin"/eqol "$@"; }  # "${ALTPWDS[@]}"
-function qo () { source "$bin"/qo "$@"; }
-function qof () { source "$bin"/qof "$@"; }
-function qoi () { source "$bin"/qoi "$@"; }
-function qoil () { source "$bin"/qoil "$@"; }
-function qol () { source "$bin"/qol "$@"; }
-function vqol () { source "$bin"/vqol "$@"; }
+# "${ALTPWDS[@]}"
+function eqol () { d=$(which q); d=$(dirname "$d"); source "$d"/eqol "$@"; }
+function qo () { d=$(which q); d=$(dirname "$d"); source "$d"/qo "$@"; }
+function qof () { d=$(which q); d=$(dirname "$d"); source "$d"/qof "$@"; }
+function qoi () { d=$(which q); d=$(dirname "$d"); source "$d"/qoi "$@"; }
+function qoil () { d=$(which q); d=$(dirname "$d"); source "$d"/qoil "$@"; }
+function qol () { d=$(which q); d=$(dirname "$d"); source "$d"/qol "$@"; }
+function vqol () { d=$(which q); d=$(dirname "$d"); source "$d"/vqol "$@"; }
 
 
 #

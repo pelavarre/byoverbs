@@ -67,24 +67,21 @@ function pips () {
 # Work the deep magic inside the Sh Process that Git SubProcesses can't reach,
 # provided that $(which q) is a Sh File, not a Sh Func
 
-# shellcheck disable=SC1090  # SC1090: Can't follow non-constant source
+# history -t '%b %d %H:%M:%S' 0
+function zh () { d=$(which q); d=$(dirname "$d"); source "$d"/zh.source "$@"; }
 
-bin=$(which q)
-bin=$(basename "$bin")
+# cd, popd
+function qcd () { d=$(which q); d=$(dirname "$d"); source "$d"/qcd.source "$@"; }
+function qp () { d=$(which q); d=$(dirname "$d"); source "$d"/qp.source "$@"; }
 
-function fh () { cat ~/.*.log; }
-function zh () { source "$bin"/zh.source "$@"; }  # history -t
-
-function qcd () { source "$bin"/qcd.source "$@"; }  # cd
-function qp () { source "$bin"/qp.source "$@"; }  # popd
-
-function eqol () { source "$bin"/eqol "$@"; }  # "${ALTPWDS[@]}"
-function qo () { source "$bin"/qo "$@"; }
-function qof () { source "$bin"/qof "$@"; }
-function qoi () { source "$bin"/qoi "$@"; }
-function qoil () { source "$bin"/qoil "$@"; }
-function qol () { source "$bin"/qol "$@"; }
-function vqol () { source "$bin"/vqol "$@"; }
+# "${ALTPWDS[@]}"
+function eqol () { d=$(which q); d=$(dirname "$d"); source "$d"/eqol "$@"; }
+function qo () { d=$(which q); d=$(dirname "$d"); source "$d"/qo "$@"; }
+function qof () { d=$(which q); d=$(dirname "$d"); source "$d"/qof "$@"; }
+function qoi () { d=$(which q); d=$(dirname "$d"); source "$d"/qoi "$@"; }
+function qoil () { d=$(which q); d=$(dirname "$d"); source "$d"/qoil "$@"; }
+function qol () { d=$(which q); d=$(dirname "$d"); source "$d"/qol "$@"; }
+function vqol () { d=$(which q); d=$(dirname "$d"); source "$d"/vqol "$@"; }
 
 
 #
