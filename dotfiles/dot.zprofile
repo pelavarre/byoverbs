@@ -71,7 +71,7 @@ function zh () { source $(dirname $(which q))/zh.source "$@"; }  # history -t
 function qcd () { source $(dirname $(which q))/qcd.source "$@"; }  # cd
 function qp () { source $(dirname $(which q))/qp.source "$@"; }  # popd
 
-function eqol () { source $(dirname $(which q))/vqol "$@"; }  # "${ALTPWDS[@]}"
+function eqol () { source $(dirname $(which q))/eqol "$@"; }  # "${ALTPWDS[@]}"
 function qo () { source $(dirname $(which q))/qo "$@"; }
 function qof () { source $(dirname $(which q))/qof "$@"; }
 function qoi () { source $(dirname $(which q))/qoi "$@"; }

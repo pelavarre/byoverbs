@@ -381,6 +381,11 @@ repeat count for I/R/A etc should be record/ replay macro
 
 add an 'eqol' for 'vqol', as we have 'eqgl' for 'vqgl'
 
+add shellcheck, and solve its complaints
+
+    shellcheck dot.bash_profile dot.bashrc dot.zprofile dot.zshrc
+
+
 
 ## Copied from
 

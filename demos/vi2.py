@@ -45,7 +45,9 @@ large inputs:
   cat ./demos/vi2.py |dd bs=1 count=10123 |tr '[ -~]' '.' |pbcopy && ./demos/vi2.py --
 
 examples:
+  ./demos/vi2.py -h
   ./demos/vi2.py --
+  ./demos/vi2.py -q
 """
 
 # "⌃" == "\u2303" == "\N{Up Arrowhead}" for the Control Key
