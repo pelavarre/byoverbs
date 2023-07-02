@@ -1,5 +1,7 @@
 # ~/.bashrc
 
+# shellcheck disable=SC1090  # Can't follow non-constant source
+#
 
 # Run their code if they did shove it into your Home
 
@@ -26,7 +28,7 @@ fi
 
 function precmd () {  # a la Zsh 'function precmd'
     local xs=$?
-    HISTTIMEFORMAT= history 1 |cut -c8- >>~/.stdin.log  # no Pwd, no Date/Time, no Exit
+    HISTTIMEFORMAT='' history 1 |cut -c8- >>~/.stdin.log  # no Pwd, no Date/Time, no Exit
     return $xs
 }
 

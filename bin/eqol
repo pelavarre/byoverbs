@@ -3,8 +3,6 @@ if ! which emacs >/dev/null; then
     emacs=/opt/homebrew/bin/emacs
 fi
 
-$emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qgl "$@")
-
 qol=$(dirname "$0")/qol
 if [[ $# == 1 ]]; then
     set -xe

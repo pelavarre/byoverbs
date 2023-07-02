@@ -1,5 +1,7 @@
 # ~/.zprofile
 
+# shellcheck disable=SC1090  # Can't follow non-constant source
+
 
 # Load Ssh Keys and grow Sh Path
 
@@ -65,19 +67,24 @@ function pips () {
 # Work the deep magic inside the Sh Process that Git SubProcesses can't reach,
 # provided that $(which q) is a Sh File, not a Sh Func
 
+# shellcheck disable=SC1090  # SC1090: Can't follow non-constant source
+
+bin=$(which q)
+bin=$(basename "$bin")
+
 function fh () { cat ~/.*.log; }
-function zh () { source $(dirname $(which q))/zh.source "$@"; }  # history -t
+function zh () { source "$bin"/zh.source "$@"; }  # history -t
 
-function qcd () { source $(dirname $(which q))/qcd.source "$@"; }  # cd
-function qp () { source $(dirname $(which q))/qp.source "$@"; }  # popd
+function qcd () { source "$bin"/qcd.source "$@"; }  # cd
+function qp () { source "$bin"/qp.source "$@"; }  # popd
 
-function eqol () { source $(dirname $(which q))/eqol "$@"; }  # "${ALTPWDS[@]}"
-function qo () { source $(dirname $(which q))/qo "$@"; }
-function qof () { source $(dirname $(which q))/qof "$@"; }
-function qoi () { source $(dirname $(which q))/qoi "$@"; }
-function qoil () { source $(dirname $(which q))/qoil "$@"; }
-function qol () { source $(dirname $(which q))/qol "$@"; }
-function vqol () { source $(dirname $(which q))/vqol "$@"; }
+function eqol () { source "$bin"/eqol "$@"; }  # "${ALTPWDS[@]}"
+function qo () { source "$bin"/qo "$@"; }
+function qof () { source "$bin"/qof "$@"; }
+function qoi () { source "$bin"/qoi "$@"; }
+function qoil () { source "$bin"/qoil "$@"; }
+function qol () { source "$bin"/qol "$@"; }
+function vqol () { source "$bin"/vqol "$@"; }
 
 
 #
@@ -100,7 +107,7 @@ echo
 # Calm the Ls Light-Mode Colors
 
 if dircolors >/dev/null 2>&1; then  # for Linux
-    eval $(dircolors <(dircolors -p |sed 's,1;,0;,g'))  && : 'no bold for light mode'
+    eval "$(dircolors <(dircolors -p |sed 's,1;,0;,g'))"  # 'no bold for light mode'
 fi
 
 

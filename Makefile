@@ -133,11 +133,12 @@ bin:
 	exit 0
 
 
-# Publish many $HOME DotFiles
+# Publish many $HOME DotFiles, even the Bash less tested at Mac than the Zsh
 
 .PHONY: dotfiles  # make input:  ls -d ./dotfiles
 dotfiles:
 	cp -p ~/.bash_profile dotfiles/dot.bash_profile
+	cp -p ~/.bashrc dotfiles/dot.bashrc
 	cp -p ~/.emacs dotfiles/dot.emacs
 	# cp -p ~/.gitconfig dotfiles/dot.gitconfig  # nope, '[user]' differs
 	cp -p ~/.hushlogin dotfiles/dot.hushlogin

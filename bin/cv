@@ -3,7 +3,7 @@
 if [ -t 0 ]; then
     set -xe
     pbpaste
-elif [-t 1 ]; then
+elif [ -t 1 ]; then
     set -xe
     pbcopy
 else

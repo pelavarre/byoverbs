@@ -14,8 +14,7 @@ fi
 
 # Keep copies of the Sh Input lines indefinitely, in the order given
 
-type -f precmd >/dev/null  # a la Bash $PROMPT_COMMAND
-if [[ $? != 0 ]]; then
+if ! type -f precmd >/dev/null; then  # a la Bash $PROMPT_COMMAND
     function precmd () {
         fc -ln -1 >>~/.stdin.log  # no Pwd, no Date/Time Stamp, no Exit Code
     }

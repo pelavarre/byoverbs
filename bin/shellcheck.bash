@@ -11,19 +11,10 @@ if ! which shellcheck; then
 fi
 
 
-echo "calling ShellCheck on $(echo bin/shellcheck.bash bin/* |wc -w) files"
+echo "calling ShellCheck on $(echo bin/shellcheck.bash bin/* |wc -w) + 4 files"
+
 
 shellcheck bin/shellcheck.bash
-
-
-function _shellcheck_bin_file () {
-
-    T="../tmp/$SHFILE.bash"
-    echo '#!/bin/bash' >"$T"
-    cat "../bin/$SHFILE" >>"$T"
-
-    shellcheck "$T"
-}
 
 
 cd bin/ || exit 1
@@ -33,13 +24,19 @@ for SHFILE in *; do
         :
     elif [[ "$SHFILE" == "sh" ]]; then
         :
-    elif [[ "$SHFILE" == "zprofile" ]]; then
-        :
     elif [[ "$SHFILE" =~ ^[^.]*$ ]]; then
-        _shellcheck_bin_file "$SHFILE"
+        shellcheck --shell=bash "$SHFILE"
     elif [[ "$SHFILE" =~ [.]bash$ ]]; then
-        _shellcheck_bin_file "$SHFILE"
+        shellcheck --shell=bash "$SHFILE"
     else
         :
     fi
 done
+
+cd ../ || exit 1
+
+
+cd dotfiles/ || exit 1
+
+shellcheck --shell=bash dot.bash_profile dot.bashrc
+shellcheck --shell=bash dot.zprofile dot.zshrc

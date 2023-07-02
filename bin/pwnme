@@ -5,9 +5,9 @@ D=$(dirname "$0")/..
 cd "$D"/
 dirs -p |tail -1
 
-git log --oneline --no-decorate -1
+git log --oneline --no-decorate -3
 
 git fetch
 git rebase
 
-git log --oneline --no-decorate -1
+git log --oneline --no-decorate -3
