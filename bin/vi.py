@@ -1,33 +1,30 @@
 #!/usr/bin/env python3
 
 r"""
-usage: vi2.py [-h] [-q]
+usage: vi.py [-h] [--play LOG] DEV
 
 view & change bytes of screen, memory, pipe, or file, in reply to keyboard chords
 
+positional arguments:
+  DEV         always only the '/dev/tty' terminal today, more variety in future
+
 options:
-  -h, --help   show this help message and exit
-  -q, --quiet  say less
+  -h, --help  show this help message and exit
+  --play LOG  file of bytes to write to screen
 
 quirks:
-  quits when told ⌃C ⇧Z ⇧Q, or ⌃C ⌃L : Q ! Return
+  quits without saving input when told ⌃C ⇧Z ⇧Q, or ⌃C ⌃L : Q ! Return
   accepts ⇧Q V I Return without action or complaint
+  saves input to ./dev.tty when quit by ⇧Z ⇧Z
 
 keystrokes:
   ⌃C ⌃D ⌃G ⌃H ⌃J ⌃L Return ⌃N ⌃P ⌃\ ↑ ↓ → ←
   Space $ + - 0 1 2 3 4 5 6 7 8 9 ⇧H ⇧M ⇧L H J K L |
   ⇧C ⇧D ⇧G ⇧I ⇧O ⇧R ⇧S ⇧X ^ _ C$ CC D$ DD A I O R S X
 
-self-tests:
-  1 ⇧Z Q test of Keyboard, 2 ⇧Z Q test of Screen, etc
-
-escape-sequences:
-  ⎋[d line-position-absolute  ⎋[G cursor-character-absolute
+escape sequences:
   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[m plain
-
-  ⎋[1m bold  ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange  ⎋[m plain
-  ⎋[4h insertion-mode  ⎋[6 q bar  ⎋[4l replacement-mode  ⎋[4 q skid  ⎋[ q unstyled
-  ⎋[M delete-line  ⎋[L insert-line  ⎋[P delete-character  ⎋[@ insert-character
+  ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange  ⎋[m plain
   ⎋[T scroll-up  ⎋[S scroll-down
 
 docs:
@@ -38,16 +35,24 @@ docs:
   https://www.ecma-international.org/publications-and-standards/standards/ecma-48
     /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
 
-large inputs:
-  git show && ./demos/vi2.py --
-  make p.py && vi +':set t_ti= t_te=' p.py && ./demos/vi2.py --
-  git grep --color=always def |less -FIRX && ./demos/vi2.py --
-  cat ./demos/vi2.py |dd bs=1 count=10123 |tr '[ -~]' '.' |pbcopy && ./demos/vi2.py --
-
 examples:
-  ./demos/vi2.py -h
-  ./demos/vi2.py --
-  ./demos/vi2.py -q
+  vim -u /dev/null ~/.vimrc  # edit custom configuration with default configuration
+
+  screen -L  # log bytes written to Screen into ./screenlog.0
+  script -t0  # log bytes written to Mac Screen into ./typescript
+  script -f  # log bytes written to Linux Screen into ./typescript before SIGUSR1
+
+  vi.py /dev/tty
+  vi.py --play typescript
+
+  vi +$ Makefile  # open up at end of file, not start of file
+
+  vi +':set background=light' Makefile  # choose Light Mode, when they didn't
+  vi +':set background=dark' Makefile  # choose Dark Mode, when they didn't
+
+  ls -1 |vi -  # edit from Pipe to File
+  ls -1 |vi - +':set t_ti= t_te='  # edit without clearing & switching Screens
+  pbpaste |vi -  # edit the Mac Os Copy/Paste Buffer
 """
 
 # "⌃" == "\u2303" == "\N{Up Arrowhead}" for the Control Key
@@ -61,9 +66,9 @@ examples:
 
 import __main__
 import argparse
-import datetime as dt
 import difflib
 import os
+import pathlib
 import re
 import select
 import signal
@@ -100,11 +105,36 @@ def main():
 def parse_vi2_py_args():
     """Parse the Args from the Sh Command Line"""
 
-    parser = compile_argdoc()
-    parser.add_argument("-q", "--quiet", dest="q", action="count", help="say less")
+    parser = qikargparse.ArgumentParser()
 
-    args = parser_parse_args(parser)  # prints help and exits zero, when asked
-    args.quiet = args.q if args.q else 0
+    dev_help = "always only the '/dev/tty' terminal today, more variety in future"
+    play_help = "file of bytes to write to screen"
+
+    parser.add_argument("dev", metavar="DEV", help=dev_help)
+    parser.add_argument(
+        "--play", metavar="LOG", dest="plays", action="append", help=play_help
+    )
+
+    args = parser.parse_args()  # often prints help & exits zero
+    if args.dev != "/dev/tty":
+        sys.stderr.write("vi.py: error: DEV must be:  /dev/tty\n")
+        sys.exit(2)
+
+    fd = sys.stdout.fileno()
+    if False and args.plays:  # play inside Terminal, and drop the inputs
+        for play in args.plays:
+            path = pathlib.Path(play)
+            bytes_ = path.read_bytes()
+            os.write(fd, bytes_)
+
+        assert CUP_Y1 == "\x1B[{}H"
+        size = os.get_terminal_size()
+        y = size.lines
+
+        print()
+        os.write(fd, "\x1B[{}H".format(y).encode())
+
+        sys.exit(3)
 
     return args
 
@@ -143,12 +173,14 @@ class ViTerminal:
 
         y = bt.get_terminal_lines()
 
-        self.print_if()
-        self.write_if("\x1B[{}H".format(y).encode())
+        ct.write(b"\r\n")
+        ct.write("\x1B[{}H".format(y).encode())
 
         exit_ = ct.__exit__()
 
         return exit_
+
+        # ct.write(b"\x1B[J") implied by Mac Process exit  # todo: test Linux
 
     def pid_suspend(self):  # Vi ⌃Z F G Return
         """Release the Screen & Keyboard, pause this Process Pid, re-acquire"""
@@ -162,11 +194,13 @@ class ViTerminal:
         # Suspend as if 5 L ⌃Z
         # to make room for:  "", "zsh: suspended...", "% fg", "[1]...cont...", ""
 
-        self.print_if()
         y = bt.get_terminal_lines()
         alt_y = max(y - 4, 1)
-        self.write_if("\x1B[{}H".format(alt_y).encode())
-        self.write_if(b"\x1B[J")
+
+        ct.write(b"\r\n")
+        ct.write("\x1B[{}H".format(alt_y).encode())
+
+        ct.write(b"\x1B[J")
 
         # Suspend and resume this Process Pid
 
@@ -186,15 +220,7 @@ class ViTerminal:
     def run_till_quit(self):
         """Loop Terminal Input back as Terminal Output"""
 
-        args_quiet = main.args.quiet
-
         assert CUU == b"\x1B[A"
-
-        # Start up noisily, or not
-
-        if not args_quiet:
-            self.write_if(b"\x1B[A")
-            self.help_quit()
 
         # Read enough Chords to choose a Func, and then run that Func
 
@@ -253,10 +279,8 @@ class ViTerminal:
     def echo_chords(self, chords):
         """Echo the collected Bytes and the collected Words of Chars"""
 
-        ct = self.ct
         bytes_key = self.bytes_key
         digit_holds = self.digit_holds
-        args_quiet = main.args.quiet
 
         # Form a Python Repr to echo Bytes
 
@@ -280,22 +304,6 @@ class ViTerminal:
                     chars = digits + " " + chords
 
             status = self.chars_to_status(chars)
-
-        # Rewrite the Status Row
-
-        if not args_quiet:
-            write_chars = " " + status
-            if not isinstance(chords, bytes):
-                byte_status = bytes(bytes_key)
-                byte_status = repr(byte_status)
-                byte_write_chars = " " + byte_status
-                length = len(byte_write_chars + write_chars)
-                write_chars += length * "\b"
-
-            write = write_chars.encode()
-            ct.write(write)
-
-        # todo: Place the Status Row outside the Scrolling Rows
 
     def chars_to_status(self, chars):
         """Say how to echo Chars as Status"""
@@ -459,8 +467,6 @@ class ViTerminal:
         # ["⇧W"] = self.word_plus_n
         func_by_chords["⇧X"] = self.column_minus_n_cut  # e"X"cise
         # ["⇧Y"] = self.row_tail_copy
-
-        func_by_chords["⇧Z Q"] = self.try_me_n  # could also take 'Z ⇧Q' and 'Z Q'
         func_by_chords["⇧Z ⇧Q"] = self.force_quit
 
         # ["["]
@@ -719,7 +725,6 @@ class ViTerminal:
         chars_key = self.chars_key
         chars_key_list = self.chars_key_list
         digit_holds = self.digit_holds
-        args_quiet = main.args.quiet
 
         chars_key_list.extend(["Bel", "⌃C"])
 
@@ -731,9 +736,6 @@ class ViTerminal:
         digit_holds.clear()
 
         ct.write(b"\a")
-        if not args_quiet:
-            if ct.kbhit(timeout=0):
-                ct.print()  # cancelled Esc, Esc [, Return, etc
 
     def force_quit(self):  # ⇧Z ⇧Q
         """Force quit Vi, despite dirty Cache, etc"""
@@ -1532,278 +1534,6 @@ class ViTerminal:
 
             # todo: take ⌃V as quoting non-text chars
 
-    #
-    # Test
-    #
-
-    def print_if(self, *args, **kwargs):
-        """Print Chars, if not running quietly"""
-
-        ct = self.ct
-        if not main.args.quiet:
-            ct.print(*args, **kwargs)
-
-    def write_if(self, bytes_):
-        """Write Bytes, if not running quietly"""
-
-        ct = self.ct
-        if not main.args.quiet:
-            ct.write(bytes_)
-
-    def try_me_n(self):
-        """Run a quick thorough self-test"""
-
-        n_else = self.pull_digits_int(default=None)
-
-        funcs_by_int = dict()
-
-        funcs_by_int[None] = self.try_keyboard
-        funcs_by_int[None] = self.try_screen  # last wins
-
-        funcs_by_int[1] = self.try_keyboard
-        funcs_by_int[2] = self.try_screen
-
-        if n_else not in funcs_by_int.keys():
-            self.slap_back_chars()  # Test Func not-found
-            return
-
-        int_func = funcs_by_int[n_else]
-        int_func()
-
-    def try_keyboard(self):
-        """Test the ChordsTerminal Read till ⌃C"""
-
-        ct = self.ct
-
-        self.print_if("Press ⌃C to stop our ChordsKeyboardTest")
-
-        ckt = ChordsKeyboardTest(ct)
-        ckt.run_till_quit()
-
-        self.print_if()  # todo: prompt to Quit at each Screen of Input?
-
-    def try_screen(self):
-        """Test the BytesTerminal Write at a Chords Terminal, till ⌃C"""
-
-        ct = self.ct
-
-        assert CUP_Y1 == "\x1B[{}H"
-
-        self.print_if("Press ⌃C to stop our ChordsScreenTest")
-
-        cst = ChordsScreenTest(ct)
-        cst.run_till_quit()
-
-        self.print_if()
-
-        bt = ct.bt
-        y = bt.get_terminal_lines()
-        self.write_if("\x1B[{}H".format(y).encode())
-
-
-#
-# Test the BytesTerminal Write at a Chords Terminal, till ⌃C
-#
-
-
-class ChordsScreenTest:
-    """Test the BytesTerminal Write at a Chords Terminal, till ⌃C"""
-
-    def __init__(self, ct):
-        self.ct = ct
-
-    def run_till_quit(self):  # noqa  # C901 too complex
-        """Test the BytesTerminal Write at a Chords Terminal, till ⌃C"""
-
-        ct = self.ct
-        bt = ct.bt
-        args_quiet = main.args.quiet
-
-        assert CUP_Y_X == "\x1B[{};{}H"
-        assert DSR_FOR_CPR == b"\x1B[6n"
-        assert CprPatternYX == rb"\x1B[\\[]([0-9]+);([0-9]+)R"
-
-        writes = bytearray()
-        yx_by_frame = 2 * [None]
-
-        # Read Chords
-
-        frame = None
-        while True:
-            chords = ct.read_chords()
-
-            # Warp the Cursor to the Frame of Bytes|Str
-
-            old_frame = frame
-            frame = int(isinstance(chords, bytes))
-
-            if not args_quiet:
-                if old_frame != frame:
-                    yx = yx_by_frame[frame]
-                    if yx is not None:
-                        cup = "\x1B[{};{}H".format(*yx)
-                        cup = cup.encode()
-                        ct.write(cup)
-
-            # Capture and trace the Bytes, else write the Bytes in place of Str
-
-            if isinstance(chords, bytes):
-                writes.extend(chords)
-                rep = bytes(writes)
-                rep = repr(rep).encode()
-                if not args_quiet:
-                    assert CR == b"\r"
-                    assert EL == b"\x1B[K"
-
-                    ct.write(b"\r")
-                    ct.write(b"\x1B[K")
-                    ct.write(rep)
-            else:
-                ct.write(writes)
-                writes.clear()
-
-                # Quit after Control+C
-
-                if chords == (Control + "C"):
-                    break
-
-            # Find the Cursor
-
-            if not args_quiet:
-                bt.write(DSR_FOR_CPR)  # todo: CPR through 'ct' to snoop '.row, .column'
-
-                cpr_else = bt.read()
-                m = re.match(rb"^" + CprPatternYX + rb"$", string=cpr_else)
-                assert m, cpr_else  # todo: let my people type this fast
-
-                (y, x) = (m.group(1), m.group(2))
-                (y, x) = (y.decode(), x.decode())
-                yx_by_frame[frame] = (y, x)
-
-                # Warp the Cursor to the Frame of Str, if need be
-
-                old_frame = frame
-                frame = int(isinstance("", bytes))
-
-                if old_frame != frame:
-                    yx = yx_by_frame[frame]
-                    if yx is not None:
-                        cup = "\x1B[{};{}H".format(*yx)
-                        cup = cup.encode()
-                        ct.write(cup)
-
-
-#
-# Test the ChordsTerminal Read till ⌃C
-#
-
-
-class ChordsKeyboardTest:
-    """Test the ChordsTerminal Read till ⌃C"""
-
-    def __init__(self, ct):
-        self.ct = ct
-
-        t0 = dt.datetime.now()
-
-        self.t0 = t0
-        self.t1 = t0
-        self.old_ms = None
-        self.clocking = False
-
-    def run_till_quit(self):
-        """Test the ChordsTerminal Read till ⌃C"""
-
-        ct = self.ct
-
-        while True:
-            if ct.kbhit(timeout=0):
-                read = self.read_verbosely()
-                if read == (Control + "C"):
-                    break
-
-            self.log_clock()
-
-            self.sleep_till()
-
-    def read_verbosely(self):
-        """Timestamp Chars from the Terminal, and the Bytes inside them"""
-
-        ct = self.ct
-
-        # Fetch one Byte or some Words of Chars
-
-        read = ct.read_chords()
-
-        # Timestamp
-
-        self.t1 = dt.datetime.now()
-        t1t0 = self.t1 - self.t0
-        self.t0 = self.t1
-
-        # Close the Clock Line if open
-
-        if self.clocking:
-            self.clocking = False
-            ct.print()
-
-        # Log the whole Keystroke as Words of Chars, or a Byte of it
-
-        ms = int(t1t0.total_seconds() * 1000)
-        if not ms:
-            ct.print("    {}, {!r}".format(ms, read))
-        else:
-            if self.old_ms == 0:
-                ct.print()
-            ct.print("{}, {!r}".format(ms, read))
-
-        self.old_ms = ms
-
-        # Succeed
-
-        return read
-
-    def log_clock(self):
-        """Timestamp no Chars and no Bytes from the Terminal"""
-
-        ct = self.ct
-
-        # Limit the rate of logging
-
-        t2 = dt.datetime.now()
-        t2t1 = t2 - self.t1
-        if t2t1 >= dt.timedelta(seconds=3):
-            self.t1 += dt.timedelta(seconds=1)
-
-            # Print a Separator and open the Clock Line
-
-            if not self.clocking:
-                self.clocking = True
-                ct.print()
-
-            # Refresh the Clock
-
-            hms = t2.strftime("%H:%M:%S")
-            encode = hms.encode()
-
-            assert CR == b"\r"
-
-            ct.write(b"\r")
-            ct.write(encode)
-
-    def sleep_till(self):
-        """Yield Cpu while no Keyboard Input"""
-
-        ct = self.ct
-
-        next_clock = self.t1 + dt.timedelta(seconds=3)
-        t3 = dt.datetime.now()
-        if t3 > next_clock:
-            timeout = next_clock - t3
-            timeout = timeout.total_seconds()
-            if timeout > 0:
-                ct.kbhit(timeout=timeout)
-
 
 #
 # Write Output as Mock Moves, read Input as Chars, above a BytesTerminal
@@ -2234,6 +1964,17 @@ CprPatternYX = rb"\x1B[\\[]([0-9]+);([0-9]+)R"  # 04/18 Cursor Pos~ Report (CPR)
 #
 
 
+Control = "\N{Up Arrowhead}"  # ⌃
+Option = "\N{Option Key}"  # ⌥
+Shift = "\N{Upwards White Arrow}"  # ⇧
+Command = "\N{Place of Interest Sign}"  # ⌘
+
+
+C0_BYTES = b"".join(chr(_).encode() for _ in range(0, 0x20)) + b"\x7F"
+C1_BYTES = b"".join(chr(_).encode() for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
+# the Text Bytes of the first 0x80 (128) Bytes are the Bytes not-in the C0_BYTES
+
+
 def bytes_to_chords_else(bytes_, default):
     """Find the Keyboard Bytes as Str Words of Keyboard Chords, else return unchanged"""
 
@@ -2292,49 +2033,6 @@ CHORDS_BY_BYTES[b"\x1BOB"] = "↓"
 CHORDS_BY_BYTES[b"\x1BOC"] = "→"
 CHORDS_BY_BYTES[b"\x1BOD"] = "←"
 # ⎋O replaces ⎋[ for ↑↓→← for b"\x1b[1?h" Application-Cursor-Keys till b"\x1b[1?l"
-
-
-def add_us_ascii_into_chords_by_bytes():
-    """Add a US Ascii Keyboard into Chars by Bytes"""
-
-    chords_by_bytes = CHORDS_BY_BYTES
-
-    # Decode Control Chords
-
-    assert Control == "\N{Up Arrowhead}"  # ⌃
-
-    for ord_ in C0_BYTES:
-        char = chr(ord_)
-        bytes_ = char.encode()
-        if bytes_ not in chords_by_bytes.keys():
-            if bytes_ != Esc:
-                chords_by_bytes[bytes_] = Control + chr(ord_ ^ 0x40)
-
-    # Decode Shift'ed and un-Shift'ed US Ascii Letters
-
-    assert Shift == "\N{Upwards White Arrow}"  # ⇧
-
-    for char in string.ascii_uppercase:
-        bytes_ = char.encode()
-        assert bytes_ not in chords_by_bytes.keys(), bytes_
-
-        chords_by_bytes[bytes_] = Shift + char
-
-    for char in string.ascii_lowercase:
-        bytes_ = char.encode()
-        assert bytes_ not in chords_by_bytes.keys(), bytes_
-
-        chords_by_bytes[bytes_] = char.upper()
-
-    # Decode all the US Ascii Bytes not decoded above
-
-    for ord_ in range(0x80):
-        char = chr(ord_)
-
-        bytes_ = char.encode()
-        if bytes_ not in chords_by_bytes.keys():
-            if bytes_ != Esc:
-                chords_by_bytes[bytes_] = char
 
 
 CHORDS_BY_BYTES.update(  # the Fn Key Caps at Mac
@@ -2508,6 +2206,54 @@ CHORDS_BY_BYTES.update(  # the Option Punctuation-Mark strokes at Mac
 # no Bytes come from macOS Keyboard at ⇧F1 ⇧F2 ⇧F3 ⇧F4 ⌃⌥F ⌃⇧F ⌥⇧F ⌃⌥⇧F
 
 
+def add_us_ascii_into_chords_by_bytes():
+    """Add a US Ascii Keyboard into Chars by Bytes"""
+
+    chords_by_bytes = CHORDS_BY_BYTES
+
+    # Decode the Control Chords not yet decoded
+
+    assert Control == "\N{Up Arrowhead}"  # ⌃
+
+    for ord_ in C0_BYTES:
+        char = chr(ord_)
+        bytes_ = char.encode()
+        if bytes_ in chords_by_bytes.keys():
+            assert bytes_ in b"\x00\x09\x0D\x1B\x7F", bytes_
+        else:
+            chords_by_bytes[bytes_] = Control + chr(ord_ ^ 0x40)
+
+    # Decode the Shift'ed and un-Shift'ed US Ascii Letters
+
+    assert Shift == "\N{Upwards White Arrow}"  # ⇧
+
+    for char in string.ascii_uppercase:  # "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        bytes_ = char.encode()
+        assert bytes_ not in chords_by_bytes.keys(), bytes_
+        chords_by_bytes[bytes_] = Shift + char
+
+    for char in string.ascii_lowercase:  # "abcdefghijklmnopqrstuvwxyz"
+        bytes_ = char.encode()
+        assert bytes_ not in chords_by_bytes.keys(), bytes_
+        chords_by_bytes[bytes_] = char.upper()
+
+    # Decode the US Ascii Bytes not yet decoded
+
+    for ord_ in range(0x80):
+        char = chr(ord_)
+        bytes_ = char.encode()
+        if bytes_ in chords_by_bytes.keys():
+            pass
+        elif bytes_ in string.digits.encode():  # b"0123456789"
+            chords_by_bytes[bytes_] = char
+        else:
+            assert bytes_ in rb""" !"#$%&'()*+,-./ :;<=>?  @ [\]^_ ` {|}~ """, bytes_
+            chords_by_bytes[bytes_] = char
+
+
+add_us_ascii_into_chords_by_bytes()
+
+
 #
 # Define whole & partial Control Byte and Text Byte Sequences
 #
@@ -2520,19 +2266,12 @@ CRLF = b"\r\n"  # 00/13 00/10 Carriage Return + Line Feed
 LF = b"\n"  # 00/10 Line Feed
 Esc = b"\x1B"  # 01/11 Escape
 
+DECSC = b"\x1B7"  # 01/11 03/07  # Save Cursor
+DECRC = b"\x1B8"  # 01/11 03/08  # Restore Cursor (to last Save)
+
 CSI = b"\x1B["  # 01/11 05/11 Control Sequence Introducer  # till rb"[\x30-\x7E]"
 OSC = b"\x1B]"  # 01/11 05/13 Operating System Command  # till BEL, CR, Esc \ ST, etc
 SS3 = b"\x1BO"  # 01/11 04/15 Single Shift Three
-
-C0_BYTES = b"".join(chr(_).encode() for _ in range(0, 0x20)) + b"\x7F"
-C1_BYTES = b"".join(chr(_).encode() for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
-# the Text Bytes of the first 0x80 (128) Bytes are the Bytes not-in the C0_BYTES
-
-
-Control = "\N{Up Arrowhead}"  # ⌃
-Option = "\N{Option Key}"  # ⌥
-Shift = "\N{Upwards White Arrow}"  # ⇧
-Command = "\N{Place of Interest Sign}"  # ⌘
 
 
 CsiStartPattern = b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"  # leading Zeroes allowed
@@ -2834,6 +2573,60 @@ class BytesTerminal:
 #
 
 
+qikargparse = sys.modules[__name__]
+
+
+def ArgumentParser():
+    """Work like Class ArgumentParser of Import ArgParse"""
+
+    parser = compile_argdoc()
+
+    proxy = ArgumentParserProxy(parser)
+    parser.parse_args = proxy.parse_args
+
+    return parser
+
+
+class ArgumentParserProxy:
+    def __init__(self, parser):
+        self.parser = parser
+
+    def parse_args(self, args=None):
+        """Parse the Sh Args, even when no Sh Args coded as the one Sh Arg '--'"""
+
+        parser = self.parser
+
+        # Persuade ArgParse to ignore the "--" Sh Args Separator when no Positional Args
+
+        sh_args = sys.argv[1:] if (args is None) else args
+        if sh_args == ["--"]:
+            sh_args = ""
+
+        # Print Diffs & exit nonzero, when Arg Doc wrong
+
+        diffs = parser_to_diffs(parser)
+        if diffs:
+            print("\n".join(diffs))
+
+            sys.exit(2)
+
+        # Print examples & exit zero, if no Sh Args
+
+        testdoc = epilog_to_testdoc(parser.epilog)
+        if not sys.argv[1:]:
+            print()
+            print(testdoc)
+            print()
+
+            sys.exit(0)
+
+        # Print help lines & exit zero, else return Parsed Args
+
+        args = type(parser).parse_args(parser, sh_args)
+
+        return args
+
+
 def compile_argdoc(drop_help=None):
     """Form an ArgumentParser from the ArgDoc, without Positional Args and Options"""
 
@@ -2888,24 +2681,21 @@ def compile_argdoc(drop_help=None):
     return parser
 
 
-def parser_parse_args(parser):
-    """Parse the Sh Args, even when no Sh Args coded as the one Sh Arg '--'"""
+def epilog_to_testdoc(epilog):
+    """Pick out the last Heading of the Epilog of an Arg Doc, and drop its Title"""
 
-    sys_exit_if_argdoc_ne(parser)  # prints diff and exits nonzero, when Arg Doc wrong
+    lines = epilog.splitlines()
+    indices = list(_ for _ in range(len(lines)) if lines[_])  # drops empties
+    indices = list(_ for _ in indices if not lines[_].startswith(" "))  # takes headings
+    testdoc = "\n".join(lines[indices[-1] + 1 :])  # takes last heading, drops its title
+    testdoc = textwrap.dedent(testdoc)
+    testdoc = testdoc.strip()
 
-    sh_args = sys.argv[1:]
-    if sh_args == ["--"]:  # needed by ArgParse when no Positional Args
-        sh_args = ""
-
-    args = parser.parse_args(sh_args)  # prints helps and exits, else returns args
-
-    sys_exit_if_testdoc(parser.epilog)  # prints examples & exits if no args
-
-    return args
+    return testdoc
 
 
-def sys_exit_if_argdoc_ne(parser):
-    """Print Diff and exit nonzero, unless Arg Doc equals Parser Format_Help"""
+def parser_to_diffs(parser):
+    """Form Diffs from Main Arg Doc to Parser Format_Help"""
 
     # Fetch the Main Doc, and note where from
 
@@ -2948,47 +2738,7 @@ def sys_exit_if_argdoc_ne(parser):
         )
     )
 
-    if diffs:
-        print("\n".join(diffs))
-
-        sys.exit(2)  # trust caller to log SystemExit exceptions well
-
-    # https://github.com/python/cpython/issues/53903  <= options: / optional arguments:
-    # https://bugs.python.org/issue38438  <= usage: [WORD ... ] / [WORD [WORD ...]]
-
-    # todo: tag the 'a=' 'b=' such that 'git apply -v' fixes the failure
-
-
-#
-# Add some Def's to Import Sys
-#
-
-
-def sys_exit_if_testdoc(epilog):
-    """Print examples and exit, if no Sh Args"""
-
-    if sys.argv[1:]:
-        return
-
-    lines = epilog.splitlines()
-    indices = list(_ for _ in range(len(lines)) if lines[_])
-    indices = list(_ for _ in indices if not lines[_].startswith(" "))
-    testdoc = "\n".join(lines[indices[-1] + 1 :])
-    testdoc = textwrap.dedent(testdoc)
-
-    print()
-    print(testdoc)
-    print()
-
-    sys.exit(0)
-
-
-#
-# Complete the CHORDS_BY_BYTES
-#
-
-
-add_us_ascii_into_chords_by_bytes()
+    return diffs
 
 
 #
@@ -2998,9 +2748,13 @@ add_us_ascii_into_chords_by_bytes()
 
 _ = r"""  # up towards demo of reduce Python to Color Python
 
---screenlog FILE
-to fill the Screen but know the Chars
-⇧Z ⇧Z to save a copy
+--
+
+vi.py /dev/tty  # ⇧Z⇧Z to save to 'dev.tty'
+
+revive messaging of Press ⌃C ⇧Z ⇧Q to quit
+
+Save Cursor/ Restore to go to Status and back
 
 --
 
@@ -3083,5 +2837,5 @@ if __name__ == "__main__":
     main()
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/vi2.py
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/vi.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
