@@ -858,5 +858,9 @@ if __name__ == "__main__":
     main()
 
 
+# todo: compress Sh Args for logging - find the plain "~" and the plain "*" and such
+# todo: name the Dir in -l as ~/
+
+
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/ls.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -42,8 +42,8 @@ examples:
   script -t0  # log bytes written to Mac Screen into ./typescript
   script -f  # log bytes written to Linux Screen into ./typescript before SIGUSR1
 
-  vi.py /dev/tty
-  vi.py --play typescript
+  vi.py /dev/tty  # ⌃C ⌃L ⇧Z ⇧Q to quit
+  vi.py --play typescript /dev/tty  # ⌃C ⌃L ⇧Z ⇧Q to quit
 
   vi +$ Makefile  # open up at end of file, not start of file
 
@@ -2755,6 +2755,8 @@ vi.py /dev/tty  # ⇧Z⇧Z to save to 'dev.tty'
 revive messaging of Press ⌃C ⇧Z ⇧Q to quit
 
 Save Cursor/ Restore to go to Status and back
+
+tell us at hit X of Y
 
 --
 

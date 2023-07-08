@@ -66,8 +66,7 @@ pull: black flake8 shellcheck selftest
 	:
 	demos/last2lines.py ./ bin/ demos/
 	:
-	rm -fr bin/__pycache__/byotools.cpython-311.pyc
-	rm -fr bin/__pycache__/yy
+	rm -fr bin/__pycache__/byotools.cpython-*.pyc
 	rm -fr tmp/
 	:
 	git log --oneline --no-decorate -1
