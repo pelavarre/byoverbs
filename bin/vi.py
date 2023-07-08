@@ -125,9 +125,9 @@ def parse_vi2_py_args():
         for play in args.plays:
             path = pathlib.Path(play)
             bytes_ = path.read_bytes()
-            os.write(fd, bytes_)
+            os.write(fd, bytes_)  # FIXME: consume the resulting Stdin
 
-        assert CUP_Y1 == "\x1B[{}H"
+        assert CUP_Y_X1 == "\x1B[{}H"
         size = os.get_terminal_size()
         y = size.lines
 
@@ -163,15 +163,17 @@ class ViTerminal:
 
         ct.__enter__()
 
+        # FIXME: DSR CPR to find Status Row
+
         return self
 
     def __exit__(self, *exc_info):
         ct = self.ct
         bt = ct.bt
 
-        assert CUP_Y1 == "\x1B[{}H"
+        assert CUP_Y_X1 == "\x1B[{}H"
 
-        y = bt.get_terminal_lines()
+        y = bt.get_terminal_rows()
 
         ct.write(b"\r\n")
         ct.write("\x1B[{}H".format(y).encode())
@@ -182,19 +184,19 @@ class ViTerminal:
 
         # ct.write(b"\x1B[J") implied by Mac Process exit  # todo: test Linux
 
-    def pid_suspend(self):  # Vi ⌃Z F G Return
+    def pid_suspend(self):  # Vi ⌃Z F G Return  # FIXME: revive, lately doesn't work
         """Release the Screen & Keyboard, pause this Process Pid, re-acquire"""
 
         ct = self.ct
         bt = ct.bt
 
-        assert CUP_Y1 == "\x1B[{}H"
+        assert CUP_Y_X1 == "\x1B[{}H"
         assert ED == b"\x1B[J"
 
         # Suspend as if 5 L ⌃Z
         # to make room for:  "", "zsh: suspended...", "% fg", "[1]...cont...", ""
 
-        y = bt.get_terminal_lines()
+        y = bt.get_terminal_rows()
         alt_y = max(y - 4, 1)
 
         ct.write(b"\r\n")
@@ -238,7 +240,7 @@ class ViTerminal:
         assert not digit_holds, digit_holds
         assert not char_holds, char_holds
 
-        # Cope if the Caller read some Chords ahead
+        # Cope if the Caller didn't read some Chords ahead
 
         fresh_chords = stale_chords
         if stale_chords is None:
@@ -253,11 +255,12 @@ class ViTerminal:
                     chords = "".join(char_holds) + fresh_chords
                     char_holds.clear()
 
-            # Echo the Bytes and Chars naming Funcs
-
-            self.echo_chords(chords)
-
             # Run the Func of Bytes, or the closing Func of Chars
+
+            chords_text = self.chords_format(chords)
+            text = "{};{}  {}".format(ct.row, ct.column, chords_text)
+            self.text_info_print(text)  # FIXME: add Func Name, add route to Quit
+            # FIXME: update inside of ⇧I R etc
 
             func = self.find_func_by_chords(chords)
             func()  # may raise SystemExit
@@ -276,8 +279,57 @@ class ViTerminal:
 
             fresh_chords = ct.read_chords()
 
-    def echo_chords(self, chords):
-        """Echo the collected Bytes and the collected Words of Chars"""
+    def text_info_print(self, text):
+        """Print the next Log Line"""
+
+        ct = self.ct
+        bt = ct.bt
+        rows = bt.get_terminal_rows()  # FIXME: Status @ ct.get_scrolling_rows() + 1
+
+        # FIXME: trunc text with 2+3+2 Chars of "  ...  " in the middle, when needed
+
+        #
+
+        assert DecCursorPush == b"\x1B7"
+        assert DecCsiCursorHide == b"\x1B[?25l"
+
+        assert CUP_Y_X1 == "\x1B[{}H"
+        assert EL == b"\x1B[K"
+
+        assert XtSgrPush == b"\x1B#{"
+
+        assert SgrOff == b"\x1B[m"
+
+        y = rows
+        text_bytes = text.encode()
+
+        assert XtSgrPop == b"\x1B#}"
+        assert DecCursorPop == b"\x1B8"
+        assert DecCsiCursorShow == b"\x1B[?25h"
+
+        #
+
+        ct.write(b"\x1B7")  # DecCursorPush
+        ct.write(b"\x1B[?25l")  # DecCsiCursorHide
+
+        ct.write("\x1B[{}H".format(y).encode())  # CUP_Y_X1
+
+        ct.write(b"\x1B[K")  # EL
+
+        ct.write(b"\x1B#{")  # XtSgrPush  # emulated above BytesTerminal at Mac
+        ct.write(b"\x1B[m")  # SgrOff
+
+        ct.write(text_bytes)
+
+        ct.write(b"\x1B#}")  # XtSgrPop  # emulated above BytesTerminal at Mac
+
+        ct.write(b"\x1B8")  # DecCursorPop
+        ct.write(b"\x1B[?25h")  # DecCsiCursorShow
+
+        # FIXME think more about leaving ⇧Z ⇧Q on Screen after Quit
+
+    def chords_format(self, chords):
+        """Show the collected Bytes or the collected Words of Chars"""
 
         bytes_key = self.bytes_key
         digit_holds = self.digit_holds
@@ -286,8 +338,8 @@ class ViTerminal:
 
         if isinstance(chords, bytes):
             bytes_key.extend(chords)
-            status = bytes(bytes_key)
-            status = repr(status)
+            text = bytes(bytes_key)
+            text = repr(text)
 
         # Form Digits followed by Words of Chars, to echo those
 
@@ -295,7 +347,6 @@ class ViTerminal:
             assert isinstance(chords, str), chords
 
             chars = chords
-
             digits = "".join(digit_holds)
             if digits:
                 if chords in "0123456789":
@@ -303,15 +354,21 @@ class ViTerminal:
                 else:
                     chars = digits + " " + chords
 
-            status = self.chars_to_status(chars)
+            text = self.chords_chars_format(chars)
 
-    def chars_to_status(self, chars):
-        """Say how to echo Chars as Status"""
+        return text
+
+    def chords_chars_format(self, chars):
+        """Say how to echo Chords Chars as Status"""
 
         status = ""
         for ch in chars:
-            if ch.encode() in C0_BYTES:
-                status += Control + chr(ord(ch) ^ 0x40)
+            code = ch.encode()
+            if code in C0_BYTES:
+                if code == ESC:
+                    status += EscChord
+                else:
+                    status += Control + chr(ord(ch) ^ 0x40)
             else:
                 status += ch
 
@@ -323,7 +380,7 @@ class ViTerminal:
         func_by_chords = self.func_by_chords
         chars_key_list = self.chars_key_list
 
-        assert Esc == b"\x1B"
+        assert ESC == b"\x1B"
 
         if isinstance(chords, str):
             chars_key = chords
@@ -388,7 +445,7 @@ class ViTerminal:
         # ["⌃Y"]
         func_by_chords["⌃Z"] = self.pid_suspend
 
-        # ["Esc"]  # collides with C0 Esc Sequences
+        # ["ESC"]  # collides with 'self.write_bytes_key' C0 Esc Sequence's
         func_by_chords["⌃\\"] = self.help_quit_if
         # ["⌃]"]
         # ["⌃^"]
@@ -634,10 +691,11 @@ class ViTerminal:
         bytes_key = self.bytes_key
         chars_key = self.chars_key
 
-        assert b"\x1B" == Esc
+        assert b"\x1B" == ESC
         encode = chars_key.encode()
         if encode.startswith(b"\x1B"):
-            assert encode == bytes_key, (encode, bytes_key)
+            alt_encode = b"\x0F" + encode  # ⌃O
+            assert bytes_key in (encode, alt_encode), (bytes_key, encode, alt_encode)
 
         ct.write(bytes_key)
 
@@ -731,7 +789,8 @@ class ViTerminal:
         assert BEL == b"\a"
 
         chords = chars_key + " " + "Bel"
-        self.echo_chords(chords)
+        text = self.chords_format(chords)
+        self.text_info_print(text)
 
         digit_holds.clear()
 
@@ -1225,8 +1284,8 @@ class ViTerminal:
         if row is not None:
             alt_n = min(n, rows + 1 - row)
 
-        assert SM_IRM == b"\x1B[4h"  # without CS_6_BAR
-        assert RM_IRM == b"\x1B[4l"  # without CS_NONE
+        assert SM_IRM == b"\x1B[4h"  # Insert without CS_6_BAR
+        assert RM_IRM == b"\x1B[4l"  # Replace without CS_NONE
 
         assert CR == b"\r"
         assert CUD == b"\x1B[B"
@@ -1538,7 +1597,7 @@ class ViTerminal:
 #
 # Write Output as Mock Moves, read Input as Chars, above a BytesTerminal
 #
-#   "Esc", "Space", "Tab", and "Return" for b"\x1B", b" ", b"\t", and b"\r"
+#   "ESC", "Space", "Tab", and "Return" for b"\x1B", b" ", b"\t", and b"\r"
 #   "⇧Tab", "⌥Space", b"⇧←" for b"\x1B[Z", b"\xC2\xA0", b"\x1B[1;2C"
 #   "⌥3", "⇧F12" for b"\xC2\xA3", b"\x1B[\x33\x34\x7E"
 #   "⌥E E" for b"\xC2\xB4"
@@ -1552,15 +1611,18 @@ class ChordsTerminal:
     def __init__(self, stdio):
         self.bt = BytesTerminal(stdio)
 
-        self.holds = bytearray()  # the Holds received from the BytesTerminal Keyboard
-        self.peeks = bytearray()  # the Holds already returned
+        self.holds = bytearray()  # the Bytes taken from the BytesTerminal Keyboard
+        self.peeks = bytearray()  # the Bytes already taken of an incomplete Sequence
 
-        self.enter_writes = list()  # contexts to reopen after a temporary exit
-        self.exit_writes = list()  # contexts to close before last exit
+        self.enter_writes = list()  # the Byte Sequences written at entry
+        self.exit_writes = list()  # the Byte Sequences to write at exit
 
-        self.writes = bytearray()  # Bytes written but not yet parsed
-        self.row = None  # the Row of the Cursor, if known
-        self.column = None  # the Column of the Cursor, if known
+        self.row = None  # the Y of the Cursor, else None
+        self.column = None  # the X of the Cursor, else None
+        self.pushed_row_column = (None, None)  # the pushed Cursor Y X
+
+        self.mocked_sgr_seqs = list()  # the written Sgr Contexts
+        self.pushed_sgr_seqs = list()  # the pushed Sgr Contexts
 
     def __enter__(self):
         bt = self.bt
@@ -1597,7 +1659,27 @@ class ChordsTerminal:
 
         return exit_
 
-    def write_before_if(self, before, after):
+        # FIXME: sgr xtpush & clear at exit, restore enter, if ever needed?
+
+    def get_scrolling_columns(self):
+        """Count Columns on Screen"""
+
+        bt = self.bt
+        columns = bt.get_terminal_columns()  # presumes no cache needed
+
+        return columns
+
+    def get_scrolling_rows(self):
+        """Count Rows on Screen"""
+
+        bt = self.bt
+        lines = bt.get_terminal_rows()  # presumes no cache needed
+
+        rows = lines  # todo: split off 1 or 2 Rows of Status below Scrolling
+
+        return rows
+
+    def write_before_if(self, before, after):  # FIXME: explain lots better
         """Write if not written already and return the pair, else return None"""
 
         enter_writes = self.enter_writes
@@ -1610,6 +1692,8 @@ class ChordsTerminal:
 
         if before in enter_writes:
             return
+
+        #
 
         alt_before = before
         alt_after = after
@@ -1631,22 +1715,26 @@ class ChordsTerminal:
 
         return (alt_before, alt_after)
 
-    def write_after_if(self, before_after):
+    def write_after_if(self, before_after):  # FIXME: explain lots better
         """Write the After if wrote the Before"""
 
         enter_writes = self.enter_writes
         exit_writes = self.exit_writes
 
-        if before_after:
-            (before, after) = before_after
+        if not before_after:
+            return
 
-            self.write(after)
+        #
 
-            assert before in enter_writes, before
-            assert after in exit_writes, after
+        (before, after) = before_after
 
-            enter_writes.remove(before)
-            exit_writes.remove(after)
+        self.write(after)
+
+        assert before in enter_writes, before
+        assert after in exit_writes, after
+
+        enter_writes.remove(before)
+        exit_writes.remove(after)
 
     def redraw(self):  # Vi ⌃L
         """Call for Refresh of the ChordsTerminal Cache of BytesTerminal"""
@@ -1688,81 +1776,209 @@ class ChordsTerminal:
     def write(self, bytes_):
         """Write Output as Bytes and also as Mock Moves, above a BytesTerminal"""
 
-        bt = self.bt
-        writes = self.writes
-
-        bt.write(bytes_)
-        writes.extend(bytes_)
-
-        while True:
+        writes = bytearray(bytes_)
+        while writes:
             seq = bytes_take_seq(writes)
-            if not seq:
-                break
+            assert seq, seq
             writes[::] = writes[len(seq) :]
-            self.mock_write_seq(seq)
 
-    def mock_write_seq(self, seq):
-        """Write Output as Mock Moves"""
+            self.write_seq(seq)
+
+    def write_seq(self, seq):
+        """Write one whole Byte Sequence"""
 
         assert seq, seq
 
+        if seq[:1] not in C0_BYTES:
+            self.write_text_seq(seq)
+            return
+
         csi_match = re.match(rb"^" + CsiPattern + rb"$", string=seq)
+        if csi_match:
+            self.write_csi_seq(seq)
+            return
+
+        if seq[:1] == ESC:
+            self.write_esc_seq(seq)
+            return
+
+        assert len(seq) == 1, (len(seq), seq)
+
+        self.write_c0_seq(seq)
+
+    def write_text_seq(self, seq):
+        """Write one whole Text Sequence"""
+
+        bt = self.bt
+
+        assert seq, seq
+
+        for index in range(len(seq)):
+            assert seq[index:][:1] not in C0_BYTES, seq[index:][:1]
+
+        bt.write(seq)
+        self.mock_jump_by_columns(columns=len(seq))
+
+        pass  # misreads undefined Chars  # no count, no log
+
+    def write_c0_seq(self, seq):
+        """Write one C0 Byte that isn't ESC"""
+
+        bt = self.bt
+
+        assert seq, seq
+        assert seq != ESC, seq
+
+        bt.write(seq)
+
+        if seq == b"\b":
+            self.mock_jump_by_columns(columns=-1)
+            return
+
+        if seq == b"\n":
+            self.mock_jump_by_rows(rows=1)
+            return
+
+        if seq == b"\r":
+            self.column = 1
+            return
+
+        pass  # drops undefined Mock Writes  # no count, no log
+
+    def write_esc_seq(self, seq):
+        """Write one whole Byte Sequence that starts with ESC"""
+
+        bt = self.bt
+
+        assert ESC == b"\x1B"
+        assert CSI == b"\x1B["
+
+        assert seq, seq
+        assert seq.startswith(ESC), seq
+        assert not seq.startswith(CSI)
+
+        assert DecCursorPush == b"\x1B7"
+        assert DecCursorPop == b"\x1B8"
+
+        bt.write(seq)
+
+        if seq == b"\x1B7":
+            self.pushed_row_column = (self.row, self.column)
+            return
+
+        if seq == b"\x1B8":
+            (self.row, self.column) = self.pushed_row_column
+            return
+
+        pass  # drops undefined Mock Writes  # no count, no log
+
+    def write_csi_seq(self, seq):
+        """Write one whole Byte Sequence that starts with CSI"""
+
+        bt = self.bt
+        mocked_sgr_seqs = self.mocked_sgr_seqs
+
+        assert CSI == b"\x1B["
+
+        assert seq, seq
+        assert seq.startswith(CSI), seq
+
+        csi_match = re.match(rb"^" + CsiPattern + rb"$", string=seq)
+        assert csi_match, seq
+
+        assert CUU == b"\x1B[A"  # implicit N=1
+        assert CUD == b"\x1B[B"
+        assert CUF == b"\x1B[C"
+        assert CUB == b"\x1B[D"
+
+        assert CUP_Y1_X1 == b"\x1B[H"
+
+        assert XtSgrPush == b"\x1B#{"
+        assert XtSgrPop == b"\x1B#}"
+
+        f = bytes(seq[-1:])
+        ff = bytes(seq[-2:])
+
         form_n_match = re.match(b"^\x1B\\[([0-9]*)[A-Za-z]$", string=seq)
         # form_y_x_match = re.match(b"^\x1B\\[([0-9]*);([0-9]*)[A-Za-z]$", string=seq)
+        if form_n_match:
+            assert csi_match, seq
+
+            digits = form_n_match.group(1)  # drops leading Zeroes
+            n = int(digits) if digits else 1
+
+            bt.write(seq)
+            self.mock_write_csi_n_seq(f, n=n)
+
+            return
+
+        if f == b"m":
+            bt.write(seq)
+            if seq == b"\x1B[m":
+                mocked_sgr_seqs.clear()
+            else:
+                mocked_sgr_seqs.append(seq)
+            return
+
+        if ff == "#{":
+            self.write_xt_sgr_push()
+            return
+
+        if ff == "#}":
+            self.write_xt_sgr_pop()
+            return
+
+        bt.write(seq)
+
+        pass  # drops undefined Mock Writes  # no count, no log
+
+    def mock_write_csi_n_seq(self, f, n):
+        """Write CSI Pn $F Output into a Mirror/ Shadow/ Mock Terminal"""
 
         assert CUU_N == "\x1B[{}A"
         assert CUD_N == "\x1B[{}B"
         assert CUF_N == "\x1B[{}C"
         assert CUB_N == "\x1B[{}D"
-        assert CUP_Y1 == "\x1B[{}H"
         assert CHA_X == "\x1B[{}G"
+
         assert VPA_Y == "\x1B[{}d"
 
-        assert CUU == b"\x1B[A"
-        assert CUD == b"\x1B[B"
-        assert CUF == b"\x1B[C"
-        assert CUB == b"\x1B[D"
-        assert CUP == b"\x1B[H"
+        assert CUP_Y_X1 == "\x1B[{}H"
 
-        if seq[:1] not in C0_BYTES:
-            for index in range(len(seq)):
-                assert seq[index:][:1] not in C0_BYTES, seq[index:][:1]
-            self.jump_by_columns(columns=len(seq))
+        # Take some Uppercase Ascii Letters
+
+        if f == b"A":
+            self.mock_jump_by_rows(-n)
             return
 
-        if seq == b"\b":
-            self.jump_by_columns(columns=-1)
-        elif seq == b"\n":
-            self.jump_by_rows(rows=1)
-        elif seq == b"\r":
-            self.column = 1
-        elif form_n_match:
-            assert csi_match, seq
+        if f == b"B":
+            self.mock_jump_by_rows(n)
+            return
 
-            f = bytes(seq[-1:])
-            digits = form_n_match.group(1)  # drops leading Zeroes
-            n = int(digits) if digits else 1
+        if f == b"C":
+            self.mock_jump_by_columns(-n)
+            return
 
-            mocks_by_f = {
-                b"A": [(self.jump_by_rows, -n)],
-                b"B": [(self.jump_by_rows, n)],
-                b"C": [(self.jump_by_columns, n)],
-                b"D": [(self.jump_by_columns, -n)],
-                b"G": [(self.jump_to_column, n)],
-                b"H": [(self.jump_to_row, n), (self.jump_to_column, 1)],
-                b"d": [(self.jump_to_row, n)],
-            }
+        if f == b"D":
+            self.mock_jump_by_columns(n)
+            return
 
-            if f in mocks_by_f.keys():
-                mocks = mocks_by_f[f]
-                for mock in mocks:
-                    (func, arg) = mock
-                    func(arg)
+        if f == b"G":
+            self.mock_jump_to_column(n)
+            return
 
-            # Flake8 feels unrolling this Code is "too complex" in McCabe Complexity
-            # Flake8 is wrong, and expensive to turn off - we'd mark this Func as 'noqa'
+        if f == b"H":
+            self.mock_jump_to_row(n)
+            self.mock_jump_to_column(1)
+            return
 
-    def jump_to_row(self, row):
+        # Take some Lowercase Ascii Letters
+
+        if f == b"d":
+            self.mock_jump_to_row(n)
+            return
+
+    def mock_jump_to_row(self, row):
         """Mock moving the Cursor up or down to a chosen Row"""
 
         rows = self.get_scrolling_rows()
@@ -1772,14 +1988,14 @@ class ChordsTerminal:
 
         return capped_row
 
-    def jump_by_rows(self, rows):
+    def mock_jump_by_rows(self, rows):
         """Mock moving the Cursor up or down by a count of Rows"""
 
         row = self.row
         if row is not None:
-            self.jump_to_row(row + rows)
+            self.mock_jump_to_row(row + rows)
 
-    def jump_to_column(self, column):
+    def mock_jump_to_column(self, column):
         """Mock moving the Cursor left or right to a chosen Column"""
 
         columns = self.get_scrolling_columns()
@@ -1789,30 +2005,39 @@ class ChordsTerminal:
 
         return capped_column
 
-    def jump_by_columns(self, columns):
+    def mock_jump_by_columns(self, columns):
         """Mock moving the Cursor left or right by a count of Columns"""
 
         column = self.column
         if column is not None:
-            self.jump_to_column(column + columns)
+            self.mock_jump_to_column(column + columns)
 
-    def get_scrolling_columns(self):
-        """Count Columns on Screen"""
+    def write_xt_sgr_pop(self):
+        """Restore the Select Graphic Rendition (SGR) Choices"""
 
-        bt = self.bt
-        columns = bt.get_terminal_columns()  # presumes no cache needed
+        mocked_sgr_seqs = self.mocked_sgr_seqs
+        pushed_sgr_seqs = self.pushed_sgr_seqs
 
-        return columns
+        if mocked_sgr_seqs:
+            self.write(b"\x1B[m")
 
-    def get_scrolling_rows(self):
-        """Count Rows on Screen"""
+        assert not mocked_sgr_seqs, mocked_sgr_seqs
 
-        bt = self.bt
-        lines = bt.get_terminal_lines()  # presumes no cache needed
+        self.write(b"".join(pushed_sgr_seqs))
 
-        rows = lines  # todo: split off 1 or 2 Rows of Status below Scrolling
+        assert mocked_sgr_seqs == pushed_sgr_seqs, (mocked_sgr_seqs, pushed_sgr_seqs)
 
-        return rows
+        # solves here, doesn't call on BytesTerminal to help, because Mac didn't
+
+    def write_xt_sgr_push(self):
+        """Save the Select Graphic Rendition (SGR) Choices"""
+
+        mocked_sgr_seqs = self.mocked_sgr_seqs
+        pushed_sgr_seqs = self.pushed_sgr_seqs
+
+        pushed_sgr_seqs[::] = mocked_sgr_seqs
+
+        # solves here, doesn't call on BytesTerminal to help, because Mac didn't
 
     #
     # Read Input as Chars in from the Keyboard of a BytesTerminal
@@ -1921,42 +2146,56 @@ class ChordsTerminal:
 #
 
 
-CUU_N = "\x1B[{}A"  # 04/01 Cursor Up (CUU) of N
+CUU_N = "\x1B[{}A"  # CSI 04/01 Cursor Up (CUU) of ΔY
 CUU = b"\x1B[A"
-CUD_N = "\x1B[{}B"  # 04/02 Cursor Down (CUD) of N
+CUD_N = "\x1B[{}B"  # CSI 04/02 Cursor Down (CUD) of ΔY
 CUD = b"\x1B[B"
-CUF_N = "\x1B[{}C"  # 04/03 Cursor Right (CUF) of N
+CUF_N = "\x1B[{}C"  # CSI 04/03 Cursor Right (CUF) of ΔX
 CUF = b"\x1B[C"
-CUB_N = "\x1B[{}D"  # 04/04 Cursor Left (CUB) of N
+CUB_N = "\x1B[{}D"  # CSI 04/04 Cursor Left (CUB) of ΔX
 CUB = b"\x1B[D"
 
-CHA_X = "\x1B[{}G"  # 04/07 Cursor Character Absolute (CHA)
+CHA_X = "\x1B[{}G"  # CSI 04/07 Cursor Character Absolute (CHA) of Y
 
-CUP_Y_X = "\x1B[{};{}H"  # 04/08 Cursor Position (CUP) of Y X
-CUP_Y1 = "\x1B[{}H"
-CUP = b"\x1B[H"
+CUP_Y_X = "\x1B[{};{}H"  # CSI 04/08 Cursor Position (CUP) of Y X
+CUP_Y_X1 = "\x1B[{}H"  # CSI of X=1 at Y
+CUP_Y1_X1 = b"\x1B[H"  # CSI of Y=1 X=1
 
-ED = b"\x1B[J"  # 04/10 Erase in Page (ED) of no Ps
-EL = b"\x1B[K"  # 04/11 Erase In Line (EL) of no Ps
-IL = b"\x1B[L"  # 04/12 Insert Line (IL)
-DL_N = "\x1B[{}M"  # 04/13 Delete Line (DL) of N
-DCH_N = "\x1B[{}P"  # 05/00 Delete Character (DCH)
+ED = b"\x1B[J"  # CSI 04/10 Erase in Page (ED) of no Ps
+EL = b"\x1B[K"  # CSI 04/11 Erase In Line (EL) of no Ps
+IL = b"\x1B[L"  # CSI 04/12 Insert Line (IL)
+DL_N = "\x1B[{}M"  # CSI 04/13 Delete Line (DL) of N
+DCH_N = "\x1B[{}P"  # CSI 05/00 Delete Character (DCH) of N
 
-VPA_Y = "\x1B[{}d"  # 06/04 Line Position Absolute (VPA)
-SM_IRM = b"\x1B[4h"  # 06/08 Set Mode (SM)  # 4 Insertion Replacement Mode (IRM)
-RM_IRM = b"\x1B[4l"  # 06/12 Reset Mode (RM)  # 4 Insertion Replacement Mode (IRM)
+VPA_Y = "\x1B[{}d"  # CSI 06/04 Line Position Absolute (VPA) of Y
 
-DSR_FOR_CPR = b"\x1B[6n"  # 06/14 Device Status Report (DSR) call for CPR
+SM_IRM = b"\x1B[4h"  # CSI 06/08 Set Mode (SM)  # 4 Insertion Replacement Mode (IRM)
+RM_IRM = b"\x1B[4l"  # CSI 06/12 Reset Mode (RM)  # 4 Insertion Replacement Mode (IRM)
 
+DecCsiCursorShow = b"\x1B[?25h"  # CSI 06/08 Cursor Show  # DECSET.DECTCEM
+DecCsiCursorHide = b"\x1B[?25l"  # CSI 06/12 Cursor Hide  # DECRST.DECTCEM
+# aka Set/Reset Mode (SM/RM)  # 25 Private Mode TwentyFive
 
-# 07/00..07/14 Private or Experimental Use
-
-CS_NONE = b"\x1B[ q"  # 02/00 07/01  # Cursor No Style
-CS_4_SKID = b"\x1B[4 q"  # 02/00 07/01  # Cursor Style 4 Skid
-CS_6_BAR = b"\x1B[6 q"  # 02/00 07/01  # Cursor Style 6 Bar
+SgrOff = b"\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR) of no Ps
 
 
-CprPatternYX = rb"\x1B[\\[]([0-9]+);([0-9]+)R"  # 04/18 Cursor Pos~ Report (CPR) of Y X
+DSR_FOR_CPR = b"\x1B[6n"  # CSI 06/14 Device Status Report (DSR) call for CPR
+
+CprPatternYX = rb"\x1B[\\[]([0-9]+);([0-9]+)R"
+# CSI 04/18 Cursor Position Report (CPR) of Y X
+
+
+CS_NONE = b"\x1B[ q"  # CSI 02/00 07/01  # Cursor of no Style
+CS_4_SKID = b"\x1B[4 q"  # CSI 02/00 07/01  # Cursor Style 4 Skid
+CS_6_BAR = b"\x1B[6 q"  # CSI 02/00 07/01  # Cursor Style 6 Bar
+# CSI 07/00..07/14 Private or Experimental Use
+
+XtSgrPush = b"\x1B#{"  # CSI 02/03 07/11  # XTPUSHSGR
+XtSgrPop = b"\x1B#}"  # CSI 02/03 07/13  # XTPOPSGR
+
+
+DecCursorPush = b"\x1B7"  # 01/11 03/07  # Cursor Save  # DECSC
+DecCursorPop = b"\x1B8"  # 01/11 03/08  # Cursor Restore  # DECRC
 
 
 #
@@ -1968,6 +2207,8 @@ Control = "\N{Up Arrowhead}"  # ⌃
 Option = "\N{Option Key}"  # ⌥
 Shift = "\N{Upwards White Arrow}"  # ⇧
 Command = "\N{Place of Interest Sign}"  # ⌘
+
+EscChord = "\N{Broken Circle With Northwest Arrow}"  # ⎋
 
 
 C0_BYTES = b"".join(chr(_).encode() for _ in range(0, 0x20)) + b"\x7F"
@@ -2005,7 +2246,7 @@ CHORDS_BY_BYTES = dict()
 CHORDS_BY_BYTES[b"\0"] = "⌃Space"  # ⌃Space ⌃⌥Space ⌃⇧Space ⌃⇧2 ⌃⌥⇧2
 CHORDS_BY_BYTES[b"\t"] = "Tab"  # ⌃I ⌃⌥I ⌃⌥⇧I Tab ⌃Tab ⌥Tab ⌃⌥Tab
 CHORDS_BY_BYTES[b"\r"] = "Return"  # ⌃M ⌃⌥M ⌃⌥⇧M Return etc
-CHORDS_BY_BYTES[b"\x1B"] = "Esc"  # Esc ⌥Esc ⌥⇧Esc etc
+CHORDS_BY_BYTES[b"\x1B"] = EscChord  # Esc ⌥Esc ⌥⇧Esc etc
 CHORDS_BY_BYTES[b" "] = "Space"  # Space ⇧Space
 CHORDS_BY_BYTES[b"\x7F"] = "Delete"  # Delete ⌥Delete ⌥⇧Delete etc
 
@@ -2264,10 +2505,7 @@ BS = b"\b"  # 00/08 Backspace
 CR = b"\r"  # 00/13 Carriage Return
 CRLF = b"\r\n"  # 00/13 00/10 Carriage Return + Line Feed
 LF = b"\n"  # 00/10 Line Feed
-Esc = b"\x1B"  # 01/11 Escape
-
-DECSC = b"\x1B7"  # 01/11 03/07  # Save Cursor
-DECRC = b"\x1B8"  # 01/11 03/08  # Restore Cursor (to last Save)
+ESC = b"\x1B"  # 01/11 Escape
 
 CSI = b"\x1B["  # 01/11 05/11 Control Sequence Introducer  # till rb"[\x30-\x7E]"
 OSC = b"\x1B]"  # 01/11 05/13 Operating System Command  # till BEL, CR, Esc \ ST, etc
@@ -2277,8 +2515,8 @@ SS3 = b"\x1BO"  # 01/11 04/15 Single Shift Three
 CsiStartPattern = b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"  # leading Zeroes allowed
 CsiEndPattern = rb"[\x40-\x7E]"
 CsiPattern = CsiStartPattern + CsiEndPattern
-# as per 1991 ECMA-48_5th 5.4 Control Sequences
 # Csi Patterns define many Pm, Pn, and Ps, but not the Pt of Esc ] OSC Ps ; Pt BEL
+# in 5.4 Control Sequences of ECMA-48_5th 1991
 
 
 MouseSixByteReportPattern = b"\x1B\\[" rb"M..."  # MPR X Y
@@ -2366,11 +2604,11 @@ def bytes_take_control_sequence(bytes_):
 def bytes_take_esc_sequence(bytes_):
     """Take 1 whole C0 Esc Sequence that starts these Bytes, else 0 Bytes"""
 
-    assert Esc == b"\x1B"
+    assert ESC == b"\x1B"
     assert CsiStartPattern == b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"
     assert CsiEndPattern == rb"[\x40-\x7E]"
 
-    assert bytes_.startswith(Esc), bytes_
+    assert bytes_.startswith(ESC), bytes_
 
     # Look for Esc and a Byte
 
@@ -2400,7 +2638,7 @@ def bytes_take_esc_sequence(bytes_):
 
     # Look for more Bytes while Esc [ Sequence incomplete
 
-    assert Esc == b"\x1B"
+    assert ESC == b"\x1B"
     assert CSI == b"\x1B["
 
     assert bytes_.startswith(CSI), bytes_
@@ -2501,7 +2739,7 @@ class BytesTerminal:
 
         return columns
 
-    def get_terminal_lines(self):
+    def get_terminal_rows(self):
         """Count Rows on Screen"""
 
         fd = self.fd
@@ -2739,6 +2977,18 @@ def parser_to_diffs(parser):
     )
 
     return diffs
+
+
+#
+# Sketch practically-never work
+#
+
+
+_ = """
+
+Terminal Windows smaller than the MacOS min of 5 Rows x 20 Columns
+
+"""
 
 
 #
