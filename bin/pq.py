@@ -273,6 +273,15 @@ def pq_word_to_func(word):
     # Quit in the face of an undefined Word
 
     join = " ".join(keys)
+
+    casefold = join.casefold()
+    if casefold != join:
+        if casefold in FUNC_BY_WORD.keys():
+            sys.stderr.write(
+                "pq.py: you wrote {!r}, but did you mean:  {}\n".format(join, casefold)
+            )
+            sys.exit(2)  # exit 2 for wrong args
+
     assert join in FUNC_BY_WORD.keys(), (word, join, FUNC_BY_WORD.keys())
 
     # Pick the code to run inside the Runtime Environment
