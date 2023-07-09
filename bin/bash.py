@@ -12,6 +12,8 @@ echo b
 echo c
 
 export PS1="$PS1\n\\$ "
+
+(IFS=:; for P in $PATH; do echo $P; done)
 """
 
 

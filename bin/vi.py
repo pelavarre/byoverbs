@@ -326,6 +326,9 @@ class ViTerminal:
         ct.write(b"\x1B8")  # DecCursorPop
         ct.write(b"\x1B[?25h")  # DecCsiCursorShow
 
+        # FIXME teach ChordsTerminal to index Cursors - 0 Main, 1 Status, etc
+        # FIXME but aggressively Cursor Pop Show to keep the Cursor Shown
+
         # FIXME think more about leaving ⇧Z ⇧Q on Screen after Quit
 
     def chords_format(self, chords):
@@ -1659,7 +1662,7 @@ class ChordsTerminal:
 
         return exit_
 
-        # FIXME: sgr xtpush & clear at exit, restore enter, if ever needed?
+        # FIXME: sgr xtpush & clear at exit, restore enter - testable at G Shells
 
     def get_scrolling_columns(self):
         """Count Columns on Screen"""
@@ -1779,7 +1782,7 @@ class ChordsTerminal:
         writes = bytearray(bytes_)
         while writes:
             seq = bytes_take_seq(writes)
-            assert seq, seq
+            assert seq, seq  # FIXME: fails at:  ⎋ [ ⌃C
             writes[::] = writes[len(seq) :]
 
             self.write_seq(seq)
@@ -2177,6 +2180,9 @@ DecCsiCursorHide = b"\x1B[?25l"  # CSI 06/12 Cursor Hide  # DECRST.DECTCEM
 # aka Set/Reset Mode (SM/RM)  # 25 Private Mode TwentyFive
 
 SgrOff = b"\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR) of no Ps
+
+
+# ⎋[1m ⎋[31m Bold Dim Red runs as ⎋[1m ⎋[91m Bold Bright Red in my G Shells
 
 
 DSR_FOR_CPR = b"\x1B[6n"  # CSI 06/14 Device Status Report (DSR) call for CPR
