@@ -7,22 +7,27 @@ rename files or dirs
 
 positional arguments:
   FROM       the old name of a file or dir
-  TO         the new name of a file or dir (default: $FROM~%m%d$(jqd)%H%M~
+  TO         the new name of a file or dir
 
 options:
   --help     show this help message and exit
-  -i         stop to ask before replacing file or dir (default: True)
+  -i         stop to ask before replacing file or dir
 
 quirks:
   moves top File off Stack, but keeps its date/time stamp a la:  touch -r FROM TO
+  unless it moves Image Files into a "__$(qjd)-trash__/" Trash Dir
   goes well with Cp, Echo, MkDir, Mv, Ls, Rm, RmDir, Touch
 
 examples:
   mv.py --  # moves top File off Stack
+  mv.py --  # unless it moves Image Files into "__$(jqd)-trash__"
+
   touch t.txt
-  F=$(ls -1rt |tail -1)
-  echo mv -i $F{,~$(date -r $F +%m%d$(jqd)%H%M)~}
-  mv.py $F
+  F=t.txt && echo mv -i $F{,~$(date -r $F +%m%d$(jqd)%H%M)~} |tee /dev/tty |bash
+
+  echo mv *.jpeg *.jpg *.png *.svg *.webp __$(qjd)-trash__/.
+
+  echo mv -i "$(ls -1rt |tail -1)"{,~$(date +%m%d$(jqd)%H%M)~}
 """
 
 import datetime as dt
