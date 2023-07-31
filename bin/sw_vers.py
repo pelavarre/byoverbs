@@ -23,8 +23,13 @@ examples:
   sw_vers |grep ^ProductVersion: |awk '{print $2}'  # such as:  12.2
 
   :
-  : Sep/2018 Mojave macOS X 10.14  # yearly major release date, miscoded as minor
-  : Oct/2019 Catalina macOS X 10.15  # yearly major release date, miscoded as minor
+  : Classic Mac OS, Mac OS X, OS X, macOS
+  :
+  : Sep/2016 Sierra macOS 10.12  # major release date
+  : Sep/2017 High Sierra macOS 10.13  # major release date
+  : Sep/2018 Mojave macOS 10.14  # major release date
+  : Oct/2019 Catalina macOS 10.15  # major release date
+  :
   : Nov/2020 Big Sur macOS 11  # major release date
   : Oct/2021 Monterey macOS 12  # major release date
   : Oct/2022 Ventura macOS 13  # major release date

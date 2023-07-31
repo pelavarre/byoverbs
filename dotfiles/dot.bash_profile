@@ -30,7 +30,7 @@ shopt -s histverify  # Preview ! History Expansion  # a la Zsh:  setopt histveri
 # Autocorrect some inputs
 # Work inside the Terminal a la macOS > Preferences > Keyboard > Replace works outside
 
-function /: { echo ':/  ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |tee >(pbcopy); }
+function /: { echo ':/  ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮ ·' |tee >(pbcopy); }
 function :scf () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
 
@@ -68,7 +68,7 @@ function pips () {
 # provided that $(which q) is a Sh File, not a Sh Func
 
 # HISTTIMEFORMAT='%b %d %H:%M:%S  ' history
-function bh () { source "$bin"/bh.source "$@"; }
+function bh () { d=$(which q); d=$(dirname "$d"); source "$d"/bh.source "$@"; }
 
 # cd, popd
 function qcd () { d=$(which q); d=$(dirname "$d"); source "$d"/qcd.source "$@"; }

@@ -24,7 +24,7 @@ examples:
   touch t.touch && date -r t.touch +'%a %b %d %H:%M:%S %Z %Y'
   echo mv -i t.touch{,~$(date -r t.touch +%m%dpl%H%M)~}
 
-  TZ=Asia/Calcutta date
+  TZ=Asia/Kolkata date
   TZ=Europe/Kyiv date
   TZ=America/Los_Angeles date
 """

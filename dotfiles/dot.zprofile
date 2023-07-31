@@ -30,7 +30,7 @@ setopt histverify  # Preview ! History Expansion  # a la Bash:  shopt -s histver
 # Autocorrect some inputs
 # Work inside the Terminal a la macOS > Preferences > Keyboard > Replace works outside
 
-function /: { echo '/:  ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |tee >(pbcopy); }
+function /: { echo '/:  ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮ ·' |tee >(pbcopy); }
 function :scf () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
 

@@ -278,5 +278,9 @@ if __name__ == "__main__":
 # todo: 'http://example.com?q=a+b' should come out as 'q=a+b' not 'q=a%20b', true??
 
 
+# todo: exit nonzero when wrongly dropping '&kiosk' open.py 'http://grafana/plot?orgId=123&kiosk'
+# todo: stop wrongly dropping '&kiosk' open.py 'http://grafana/plot?orgId=123&kiosk'
+
+
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/open.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
