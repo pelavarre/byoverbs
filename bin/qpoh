@@ -1,0 +1,25 @@
+cat - <<EOF
+
+#### the CLI Life Cycle of a Git Branch ####
+
+ssh host0
+git branch -a |grep /feature/ |grep -v /guests/
+# picks out what Branches people made before you
+
+ssh host1
+git push origin HEAD:guests/jqdoe
+# only once, at only one Clone inside one Host
+
+ssh host1, ssh host2, etc
+git checkout guests/jqdoe
+
+cat .git/config
+ssh host3
+git push origin --delete guests/jqdoe
+# only once, at only one Clone inside one Host
+
+ssh host4
+git checkout -
+git branch -D guests/jqdoe
+
+EOF
