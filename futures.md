@@ -385,6 +385,7 @@ add shellcheck, and solve its complaints
 
     shellcheck dot.bash_profile dot.bashrc dot.zprofile dot.zshrc
 
+back up my c*nfidential ~/.ssh/zprofile and ~/.ssh/bash_profile Files
 
 
 ## Copied from

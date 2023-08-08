@@ -3,9 +3,7 @@
 # shellcheck disable=SC1090  # Can't follow non-constant source
 
 
-# Load Ssh Keys and grow Sh Path
-
-ssh-add ~/.ssh/*id_rsa 2>/dev/null
+# Grow Sh Path
 
 export PATH=$PATH:$HOME/bin
 
