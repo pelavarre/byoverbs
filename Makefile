@@ -55,10 +55,13 @@ help:
 # Restyle & test the source, then tell me to push it
 
 push: pull
+	ssh-add -D
+	ssh-add ~/.ssh/github.id_rsa
 	: did you mean:  git push
 	: press ⌃D to execute, or ⌃C to quit
 	cat - >/dev/null
 	git push
+	ssh-add -D
 	exit 0
 	:
 
