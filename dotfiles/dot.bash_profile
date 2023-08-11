@@ -79,6 +79,7 @@ function qof () { d=$(which q); d=$(dirname "$d"); source "$d"/qof "$@"; }
 function qoi () { d=$(which q); d=$(dirname "$d"); source "$d"/qoi "$@"; }
 function qoil () { d=$(which q); d=$(dirname "$d"); source "$d"/qoil "$@"; }
 function qol () { d=$(which q); d=$(dirname "$d"); source "$d"/qol "$@"; }
+function qolf () { d=$(which q); d=$(dirname "$d"); source "$d"/qolf "$@"; }
 function vqol () { d=$(which q); d=$(dirname "$d"); source "$d"/vqol "$@"; }
 
 

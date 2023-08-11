@@ -1,0 +1,28 @@
+if [[ $# == 0 ]]; then
+
+    echo '+ git ls-files' "${ALTPWDS[@]}" >&2
+    git ls-files "${ALTPWDS[@]}"
+
+else
+
+    index=0
+    unset parms
+    while [[ $# != 0 ]]; do
+
+        if ! [[ "$1" =~ ^[-] ]]; then
+            index=$((index + 1))
+            parms[index]="-e"
+        fi
+
+        index=$((index + 1))
+        parms[index]="$1"
+
+        shift
+
+    done
+
+    echo '+ git ls-files' "${ALTPWDS[@]}" '|grep -i' "${parms[@]}" >&2
+    git ls-files "${ALTPWDS[@]}" |grep -i "${parms[@]}"
+fi
+
+# note: Bash unsets the "${ALTPWDS[@]}" unless you run this Code as a Bash Func
