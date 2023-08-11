@@ -22,7 +22,7 @@ alias ~='echo + cd "~" >&2 && cd ~ && (dirs -p |head -1)'
 
 setopt histverify  # Preview ! History Expansion  # a la Bash:  shopt -s histverify
 
-: stty -ixon  && : 'define ⌃S to undo ⌃R, not XOff'  # history-incremental-search'es
+stty -ixon  # let Sh ⌃S mean undo ⌃R  # don't take ⌃Q and ⌃S as XOn/ XOff
 
 
 # Autocorrect some inputs
