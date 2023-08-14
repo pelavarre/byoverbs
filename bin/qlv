@@ -1,4 +1,4 @@
 set -e
 LINES=$(stty size </dev/tty |cut -d' ' -f1)
 set -xe
-git log --oneline --decorate -$((LINES / 3)) "$@"
+git log --oneline --decorate "-$((2 * LINES / 3))" "$@"
