@@ -18,7 +18,8 @@ cat - <<EOF
 # 1 - Pick out what Branches people made before you
 
 ssh host0
-git branch -a |grep /feature/ |grep -v /guests/
+git branch --all |less -FIRX
+git branch --all |grep /feature/ |grep -v /guests/
 
 
 # 2 - Make your Branch remotely, like 'mkdir',
