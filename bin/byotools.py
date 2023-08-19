@@ -44,6 +44,7 @@ _ = "{:_}".format(12345)  # new since Dec/2016 Python 3.6  # Ubuntu 2018
 # _  = list(zip([], [], strict=True))  # since Oct/2021 Python 3.10  # Ubuntu 2022
 
 # _ = tomllib  # since Oct/2022 Python 3.11
+# _ = termios.tcgetwinsize(sys.stderr.fileno())  # since Oct/2022 Python 3.11
 
 
 #
