@@ -1,0 +1,3 @@
+acute=$(dirname $0)/acute/
+echo + python3 .../acute/ "$@"
+python3 $acute "$@"
