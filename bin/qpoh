@@ -1,25 +1,55 @@
 cat - <<EOF
 
+
+#
+# our CLI to create/ destroy Git Branches
+# should feel as familiar and simple as
+# our mkdir/ shdir CLI to create/ destroy folders of files
+#
+
+#
+# these five notes will take you there
+#
+
+
 #### the CLI Life Cycle of a Git Branch ####
+
+
+# 1 - Pick out what Branches people made before you
 
 ssh host0
 git branch -a |grep /feature/ |grep -v /guests/
-# picks out what Branches people made before you
+
+
+# 2 - Make your Branch remotely, like 'mkdir',
+# only once, at only one Clone inside one Host
 
 ssh host1
 git push origin HEAD:guests/jqdoe
-# only once, at only one Clone inside one Host
+
+
+# 3 - Copy your Branch out to each Host,
+# everywhere all at once, distributed consistency
 
 ssh host1, ssh host2, etc
+git fetch
 git checkout guests/jqdoe
+
+
+# 4 - Delete your Branch remotely, like 'rm -rf',
+# only once, at only one Clone inside one Host
 
 cat .git/config
 ssh host3
 git push origin --delete guests/jqdoe
-# only once, at only one Clone inside one Host
+
+
+# 5 - Delete your Branch locally from each Host,
+# everywhere all at once, distributed consistency
 
 ssh host4
 git checkout -
 git branch -D guests/jqdoe
+
 
 EOF
