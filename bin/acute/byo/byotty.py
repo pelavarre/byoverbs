@@ -51,7 +51,7 @@ def main():
 
     __main__.__doc__ = byoargparse.self_test_main_doc("byotty.py")
     parser = byoargparse.ArgumentParser()
-    parser.parse_args()  # often prints help & exits zero
+    parser.parse_args_else()  # often prints help & exits zero
 
     # Prompt for manual intervention
 

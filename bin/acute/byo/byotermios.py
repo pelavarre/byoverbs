@@ -42,7 +42,7 @@ def main():
 
     __main__.__doc__ = byoargparse.self_test_main_doc("byotermios.py")
     parser = byoargparse.ArgumentParser()
-    parser.parse_args()  # often prints help & exits zero
+    parser.parse_args_else()  # often prints help & exits zero
 
     with byotty.BytesTerminal(sys.stderr) as bt:
         quits = ("⌃C", "⌃D", "⌃Z", r"⌃\ ".rstrip(), "⇧Q")

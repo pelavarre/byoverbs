@@ -96,7 +96,7 @@ def parse_acute_py_args():
     parser.add_argument("--keylog", metavar="K", help=keylog_help)
     parser.add_argument("--screenlog", metavar="S", help=screenlog_help)
 
-    args = parser.parse_args()  # often prints help & exits zero
+    args = parser.parse_args_else()  # often prints help & exits zero
 
     what = args.what
 
@@ -244,8 +244,9 @@ def mess_about():
 
 
 if __name__ == "__main__":
-    # byotty.main()  # jitter Sat 19/Aug
-    # byotermios.main()  # jitter Sat 19/Aug
+    if False:  # jitter Sun 19/Aug
+        byotty.main()
+        byotermios.main()
     main()
 
 

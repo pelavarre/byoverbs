@@ -7,14 +7,14 @@ Form an ArgParser ArgumentParser of the Sh Command Line by compiling the Main Do
 
 Trust the caller to add Arguments as needed to match the Usage Line of the Main Doc
 
-Define '.parse_args' to
+Define 'parser.parse_args_else' to
 
-    a ) print examples & exit zero, when no Sh Args sipplied
+    a ) print examples & exit zero, when no Sh Args supplied
     b ) print help & exit zero, same as original ArgParse, for '-h' and '--help'
     c ) print diffs & exit nonzero, when Arg Doc wrong
     d ) accept the "--" Sh Args Separator when present with or without Positional Args
 
-Pick the Examples of how to test this Code out of the last Paragraph of the Epilog
+Pick the Examples of how to test Main out of the last Paragraph of the Epilog
 
 Don't yet solve SubParser's
 """
@@ -48,7 +48,7 @@ examples:
 """
 
 
-def self_test_main_doc(filename):
+def self_test_main_doc(filename) -> str:
     """Form a Main Doc for a Self-Test"""
 
     doc = _SELF_TEST_DOC.replace("p.py", filename)
@@ -56,27 +56,71 @@ def self_test_main_doc(filename):
     return doc
 
 
-def ArgumentParser(add_help=True):
-    """Work like Class ArgumentParser of Import ArgParse"""
+class ArgumentParser(argparse.ArgumentParser):
+    """Amp up Class ArgumentParser of Import ArgParse"""
 
-    parser = compile_argdoc(drop_help=not add_help)
+    def __init__(self, add_help=True):
+        argdoc = __main__.__doc__
 
-    proxy = ArgumentParserProxy(parser)
-    parser.parse_args = proxy.parse_args
+        # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
 
-    return parser
+        doc_lines = argdoc.strip().splitlines()
+        prog = doc_lines[0].split()[1]  # first word of first line
 
-    # 'add_help=False' for 'cal -h', 'df -h', 'ls -h', etc
+        doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
+        alt_description = doc_firstlines[1]  # first line of second paragraph
 
+        # Say when Doc Lines stand plainly outside of the Epilog
 
-class ArgumentParserProxy:
-    def __init__(self, parser):
-        self.parser = parser
+        def skippable(line):
+            strip = line.rstrip()
 
-    def parse_args(self, args=None):  # often prints help & exits
+            skip = not strip
+            skip = skip or strip.startswith(" ")
+            skip = skip or strip.startswith("usage")
+            skip = skip or strip.startswith("positional arguments")
+            skip = skip or strip.startswith("options")
+
+            return skip
+
+        default = "just do it"
+        description = default if skippable(alt_description) else alt_description
+
+        # Pick the Epilog out of the Doc
+
+        epilog = None
+        for index, line in enumerate(doc_lines):
+            if skippable(line) or (line == description):
+                continue
+
+            epilog = "\n".join(doc_lines[index:])
+            break
+
+        # Form an ArgumentParser, without Positional Args and Options
+
+        super().__init__(
+            prog=prog,
+            description=description,
+            add_help=add_help,
+            formatter_class=argparse.RawTextHelpFormatter,
+            epilog=epilog,
+        )
+
+        # 'add_help=False' for 'cal -h', 'df -h', 'ls -h', etc
+
+    #
+    # def parse_args(self, args=None) -> argparse.Namespace:
+    #     argspace = super().parse_args(args)
+    #     return argspace
+    #
+    # yea no, MyPy would then explode with a deeply inscrutable
+    #
+    #   Signature of "parse_args" incompatible with supertype "ArgumentParser"
+    #   [override]
+    #
+
+    def parse_args_else(self, args=None) -> argparse.Namespace:
         """Parse the Sh Args, even when no Sh Args coded as the one Sh Arg '--'"""
-
-        parser = self.parser
 
         # Accept the "--" Sh Args Separator when present with or without Positional Args
 
@@ -86,7 +130,7 @@ class ArgumentParserProxy:
 
         # Print Diffs & exit nonzero, when Arg Doc wrong
 
-        diffs = parser_to_diffs(parser)
+        diffs = self.diff_doc_vs_format_help()
         if diffs:
             print("\n".join(diffs))
 
@@ -94,7 +138,7 @@ class ArgumentParserProxy:
 
         # Print examples & exit zero, if no Sh Args
 
-        testdoc = epilog_to_testdoc(parser.epilog)
+        testdoc = self.scrape_testdoc_from_epilog()
         if not sys.argv[1:]:
             print()
             print(testdoc)
@@ -104,122 +148,74 @@ class ArgumentParserProxy:
 
         # Print help lines & exit zero, else return Parsed Args
 
-        args = type(parser).parse_args(parser, sh_args)
+        argspace = self.parse_args(sh_args)
 
-        return args
+        return argspace
 
+        # often prints help & exits
 
-def compile_argdoc(drop_help=None):
-    """Form an ArgumentParser from the ArgDoc, without Positional Args and Options"""
+    def diff_doc_vs_format_help(self) -> list[str]:
+        """Form Diffs from Main Arg Doc to Parser Format_Help"""
 
-    argdoc = __main__.__doc__
+        # Fetch the Main Doc, and note where from
 
-    # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
+        main_doc = __main__.__doc__.strip()
+        main_filename = os.path.split(__file__)[-1]
+        got_filename = "./{} --help".format(main_filename)
 
-    doc_lines = argdoc.strip().splitlines()
-    prog = doc_lines[0].split()[1]  # first word of first line
+        # Fetch the Parser Doc from a fitting virtual Terminal
+        # Fetch from a Black Terminal of 89 columns, not current Terminal width
+        # Fetch from later Python of "options:", not earlier Python of "optional arguments:"
 
-    doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
-    alt_description = doc_firstlines[1]  # first line of second paragraph
+        with_columns = os.getenv("COLUMNS")
+        os.environ["COLUMNS"] = str(89)
+        try:
+            parser_doc = self.format_help()
 
-    add_help = not drop_help
+        finally:
+            if with_columns is None:
+                os.environ.pop("COLUMNS")
+            else:
+                os.environ["COLUMNS"] = with_columns
 
-    # Say when Doc Lines stand plainly outside of the Epilog
+        parser_doc = parser_doc.replace("optional arguments:", "options:")
 
-    def skippable(line):
-        strip = line.rstrip()
+        parser_filename = "ArgumentParser(...)"
+        want_filename = parser_filename
 
-        skip = not strip
-        skip = skip or strip.startswith(" ")
-        skip = skip or strip.startswith("usage")
-        skip = skip or strip.startswith("positional arguments")
-        skip = skip or strip.startswith("options")
+        # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
 
-        return skip
+        got_doc = main_doc
+        want_doc = parser_doc
 
-    default = "just do it"
-    description = default if skippable(alt_description) else alt_description
-
-    # Pick the Epilog out of the Doc
-
-    epilog = None
-    for index, line in enumerate(doc_lines):
-        if skippable(line) or (line == description):
-            continue
-
-        epilog = "\n".join(doc_lines[index:])
-        break
-
-    # Form an ArgumentParser, without Positional Args and Options
-
-    parser = argparse.ArgumentParser(
-        prog=prog,
-        description=description,
-        add_help=add_help,
-        formatter_class=argparse.RawTextHelpFormatter,
-        epilog=epilog,
-    )
-
-    return parser
-
-
-def epilog_to_testdoc(epilog):
-    """Pick out the last Heading of the Epilog of an Arg Doc, and drop its Title"""
-
-    lines = epilog.splitlines()
-    indices = list(_ for _ in range(len(lines)) if lines[_])  # drops empties
-    indices = list(_ for _ in indices if not lines[_].startswith(" "))  # takes headings
-    testdoc = "\n".join(lines[indices[-1] + 1 :])  # takes last heading, drops its title
-    testdoc = textwrap.dedent(testdoc)
-
-    return testdoc
-
-
-def parser_to_diffs(parser):
-    """Form Diffs from Main Arg Doc to Parser Format_Help"""
-
-    # Fetch the Main Doc, and note where from
-
-    main_doc = __main__.__doc__.strip()
-    main_filename = os.path.split(__file__)[-1]
-    got_filename = "./{} --help".format(main_filename)
-
-    # Fetch the Parser Doc from a fitting virtual Terminal
-    # Fetch from a Black Terminal of 89 columns, not current Terminal width
-    # Fetch from later Python of "options:", not earlier Python of "optional arguments:"
-
-    with_columns = os.getenv("COLUMNS")
-    os.environ["COLUMNS"] = str(89)
-    try:
-        parser_doc = parser.format_help()
-
-    finally:
-        if with_columns is None:
-            os.environ.pop("COLUMNS")
-        else:
-            os.environ["COLUMNS"] = with_columns
-
-    parser_doc = parser_doc.replace("optional arguments:", "options:")
-
-    parser_filename = "ArgumentParser(...)"
-    want_filename = parser_filename
-
-    # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
-
-    got_doc = main_doc
-    want_doc = parser_doc
-
-    diffs = list(
-        difflib.unified_diff(
-            a=got_doc.splitlines(),
-            b=want_doc.splitlines(),
-            fromfile=got_filename,
-            tofile=want_filename,
-            lineterm="",  # else the '---' '+++' '@@' Diff Control Lines end with '\n'
+        diffs = list(
+            difflib.unified_diff(
+                a=got_doc.splitlines(),
+                b=want_doc.splitlines(),
+                fromfile=got_filename,
+                tofile=want_filename,
+                lineterm="",  # else the '---' '+++' '@@' Diff Control Lines end with '\n'
+            )
         )
-    )
 
-    return diffs
+        return diffs
+
+    def scrape_testdoc_from_epilog(self) -> str:
+        """Pick out the last Heading of the Epilog of an Arg Doc, and drop its Title"""
+
+        epilog = "" if (self.epilog is None) else self.epilog
+
+        lines = epilog.splitlines()
+        indices = list(_ for _ in range(len(lines)) if lines[_])  # drops empties
+        indices = list(
+            _ for _ in indices if not lines[_].startswith(" ")
+        )  # takes headings
+        testdoc = "\n".join(
+            lines[indices[-1] + 1 :]
+        )  # takes last heading, drops its title
+        testdoc = textwrap.dedent(testdoc)
+
+        return testdoc
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/acute/byo/
