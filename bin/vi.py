@@ -2224,7 +2224,7 @@ C0_BYTES = b"".join(chr(_).encode() for _ in range(0, 0x20)) + b"\x7F"
 # yea no that Code for C1_BYTES is way way wrong
 
 
-def bytes_to_chords_else(bytes_, default):
+def bytes_to_chords_else(bytes_, default):  # lying Docstring here
     """Find the Keyboard Bytes as Str Words of Keyboard Chords, else return unchanged"""
 
     if bytes_ in CHORDS_BY_BYTES.keys():

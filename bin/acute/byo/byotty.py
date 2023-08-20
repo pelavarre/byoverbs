@@ -35,7 +35,10 @@ import termios  # unhappy at Windows
 import tty  # unhappy at Windows
 from typing import Any, Self
 
+import byo
 from byo import byoargparse
+
+_ = byo  # auths separate test of unused imports despite Flake8 & MyPy
 
 
 #
@@ -50,27 +53,31 @@ def main():
     parser = byoargparse.ArgumentParser()
     parser.parse_args()  # often prints help & exits zero
 
+    # Prompt for manual intervention
+
     with BytesTerminal(sys.stderr) as bt:
         quits = (b"\x03", b"\x04", b"\x1A", b"\x1C", b"Q")  # ⌃C ⌃D ⌃Z ⌃\ ⇧Q
         bt.print(r"Press ⇧Z ⇧Q to quit, or any one of ⌃C ⌃D ⌃Z ⌃\ ".rstrip())
         bt.print()  # doesn't accept : Q ! Return
 
+        # Take Bytes of Paste, or the Bytes of the next Chord from Keyboard
+
         t0 = dt.datetime.now()
         while True:
-            if bt.holds:
-                bt.breakpoint()
-            available = bt.available(func=bytes_take_startswith_else)
-            if available:
-                t1 = dt.datetime.now()
+            bytes_ = bt.read_chord_bytes()
 
-                bytes_ = bt.read(length=available)
-                bt.print(t1 - t0, bytes_)
-                t0 = dt.datetime.now()
+            # Time the arrivals, log the details
 
-                if bytes_ in quits:
-                    break
+            t1 = dt.datetime.now()
+            bt.print(t1 - t0, bytes_)
+            t0 = dt.datetime.now()
 
-    # todo: make this Sh Usage work without patching __main__.py
+            # Quit on request
+
+            if bytes_ in quits:
+                break
+
+    # todo: make a Sh Usage work without patching __main__.py
 
 
 #
@@ -78,6 +85,7 @@ def main():
 #
 
 
+NUL = b"\0"  # 00/00 Null
 BEL = b"\a"  # 00/07 Bell
 BS = b"\b"  # 00/08 Backspace
 CR = b"\r"  # 00/13 Carriage Return
@@ -91,14 +99,14 @@ LF = b"\n"  # 00/10 Line Feed
 
 
 C0_BYTES = b"".join(bytearray([_]) for _ in range(0, 0x20)) + b"\x7F"
-
 C1_BYTES = b"".join(bytearray([_]) for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
-
 UTF8_START_BYTES = b"".join(bytearray([_]) for _ in range(0xC2, 0xF5))
 
 assert len(C0_BYTES) == 0x21 == 33 == (128 - 95)
 assert len(C1_BYTES) == 0x20 == 32
 assert len(UTF8_START_BYTES) == 0x33 == 51
+
+# todo: more test of C1_BYTES
 
 
 #
@@ -130,8 +138,10 @@ class BytesTerminal:
     r"""Read the Raw Bytes from a Terminal"""
 
     def __init__(self, stdio):
+        fd = stdio.fileno()
+
         self.stdio = stdio
-        self.fd = stdio.fileno()
+        self.fd = fd
         self.tcgetattr = None
         self.holds = bytearray()
 
@@ -215,6 +225,19 @@ class BytesTerminal:
         fd = self.fd
         os.write(fd, bytes_)
 
+    def read_chord_bytes(self) -> bytes:
+        r"""Block till read of Paste or Chords"""
+
+        while True:
+            available = self.available(func=bytes_take_startswith_else)
+            if available:
+                break
+            self.kbhit()  # blocks till more Bytes arrive
+
+        bytes_ = self.read(length=available)
+
+        return bytes_
+
     def available(self, func) -> int:
         """Count the Bytes available to read to satisfy Func, without blocking"""
 
@@ -237,7 +260,7 @@ class BytesTerminal:
         # for Func's such as:  bytes_take_startswith_else
 
     def read(self, length=1022) -> bytes:
-        """Block to read one or more Bytes"""
+        """Block to read one or more Bytes of Paste or Chords"""
 
         fd = self.fd
         holds = self.holds
