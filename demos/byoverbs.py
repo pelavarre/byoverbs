@@ -81,12 +81,10 @@ sys.path.append(DIR)
 
 del sys.modules[__name__]
 
-if True:
+if True:  # ducks Flake8 E402 module.level.import.not.at.top.of.file
     import byoverbs
 
     _ = byoverbs
-
-    # the enclosing If-True ducks Flake8:  E402 module level import not at top of file
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/byoverbs.py

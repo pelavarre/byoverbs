@@ -22,7 +22,7 @@ Docs
     /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
 """
 
-# code reviewed by people, and by Black and Flake8
+# code reviewed by people, and by Black & Flake8 & MyPy
 
 
 import __main__
@@ -38,7 +38,7 @@ from typing import Any, Self
 import byo
 from byo import byoargparse
 
-_ = byo  # auths separate test of unused imports despite Flake8 & MyPy
+_ = byo  # ducks Flake8 F401 imported.but.unused
 
 
 #
@@ -46,7 +46,7 @@ _ = byo  # auths separate test of unused imports despite Flake8 & MyPy
 #
 
 
-def main():
+def main() -> None:
     """Define Self-Test at Sh Usage: cd bin/acute/ && python3 -m pdb __main__.py --"""
 
     __main__.__doc__ = byoargparse.self_test_main_doc("byotty.py")
@@ -137,12 +137,12 @@ MouseSixByteEndPattern = b"\x1B\\[" rb"M..."  # MPR X Y
 class BytesTerminal:
     r"""Read the Raw Bytes from a Terminal"""
 
-    def __init__(self, stdio):
+    def __init__(self, stdio) -> None:
         fd = stdio.fileno()
 
         self.stdio = stdio
         self.fd = fd
-        self.tcgetattr = None
+        self.tcgetattr: list[Any] | None = None
         self.holds = bytearray()
 
     def __enter__(self) -> Self:

@@ -12,7 +12,7 @@ and then also ⌥Q and F1 and FnDelete, and ⌥⇧A and ⌥E E, and so on and on
 Name the Byte Encodings here from our own Tests, stop struggling to find them doc'ed
 """
 
-# code reviewed by people, and by Black and Flake8
+# code reviewed by people, and by Black & Flake8 & MyPy
 
 
 import __main__
@@ -24,7 +24,7 @@ import byo
 from byo import byoargparse
 from byo import byotty
 
-_ = byo  # auths separate test of unused imports despite Flake8 & MyPy
+_ = byo  # ducks Flake8 F401 imported.but.unused
 
 
 C0_BYTES = b"".join(bytearray([_]) for _ in range(0, 0x20)) + b"\x7F"
@@ -37,7 +37,7 @@ assert C0_BYTES == byotty.C0_BYTES, (C0_BYTES, byotty.C0_BYTES)
 #
 
 
-def main():
+def main() -> None:
     """Define Self-Test at Sh Usage: cd bin/acute/ && python3 -m pdb __main__.py --"""
 
     __main__.__doc__ = byoargparse.self_test_main_doc("byotermios.py")
@@ -80,7 +80,7 @@ def main():
 #
 
 
-def bytes_to_chords_else(bytes_, default):
+def bytes_to_chords_else(bytes_, default) -> bytes | str:
     """Find these Keyboard Bytes as Str Words of Keyboard Chords, else default"""
 
     if bytes_ in CHORDS_BY_BYTES.keys():
@@ -314,7 +314,7 @@ CHORDS_BY_BYTES.update(  # the Option Punctuation-Mark strokes at Mac
 # no Bytes come from macOS Keyboard at ⇧F1 ⇧F2 ⇧F3 ⇧F4 ⌃⌥F ⌃⇧F ⌥⇧F ⌃⌥⇧F
 
 
-def add_us_ascii_into_chords_by_bytes():
+def add_us_ascii_into_chords_by_bytes() -> None:
     """Add a US Ascii Keyboard into Chars by Bytes"""
 
     chords_by_bytes = CHORDS_BY_BYTES

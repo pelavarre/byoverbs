@@ -19,7 +19,7 @@ Pick the Examples of how to test Main out of the last Paragraph of the Epilog
 Don't yet solve SubParser's
 """
 
-# code reviewed by people, and by Black and Flake8
+# code reviewed by people, and by Black & Flake8 & MyPy
 
 
 import __main__
@@ -59,7 +59,7 @@ def self_test_main_doc(filename) -> str:
 class ArgumentParser(argparse.ArgumentParser):
     """Amp up Class ArgumentParser of Import ArgParse"""
 
-    def __init__(self, add_help=True):
+    def __init__(self, add_help=True) -> None:
         argdoc = __main__.__doc__
 
         # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
@@ -72,7 +72,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
         # Say when Doc Lines stand plainly outside of the Epilog
 
-        def skippable(line):
+        def skippable(line) -> bool:
             strip = line.rstrip()
 
             skip = not strip

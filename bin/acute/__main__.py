@@ -25,7 +25,7 @@ examples:
   echo abc def |xargs -n 1 |é -- |cat -etv  # edits Pipe
 """
 
-# code reviewed by people, and by Black and Flake8
+# code reviewed by people, and by Black & Flake8 & MyPy
 
 
 import argparse
@@ -35,6 +35,7 @@ import shlex
 import stat
 import subprocess
 import sys
+import typing
 
 import byo
 from byo import byoargparse
@@ -42,9 +43,7 @@ from byo import byotermios
 from byo import byotty
 
 
-# Auth separate test of unused imports despite Flake8 & MyPy
-
-_ = byo, byotermios, byotty
+_ = byo, byotermios, byotty  # ducks Flake8 F401 imported.but.unused
 
 
 #
@@ -52,11 +51,19 @@ _ = byo, byotermios, byotty
 #
 
 
-def main():
+class Main:
+    args: argparse.Namespace  # parsed Sh Args
+    ibytes: bytes  # the Bytes read as Input
+    obytes: bytes  # the Bytes to write as Output
+    klogger: typing.TextIO  # the Stream to log Keyboard Reads into
+    slogger: typing.TextIO  # the Stream to log Screen Writes into
+
+
+def main() -> None:
     """Run well when called from Sh by people"""
 
     args = parse_acute_py_args()
-    main.args = args
+    Main.args = args
 
     # Record and/or replay our work
 
@@ -64,24 +71,24 @@ def main():
 
     with open(os.path.expanduser("~/.ssh/keylog.py"), "w") as klogger:
         with open(os.path.expanduser("~/.ssh/screenlog.py"), "w") as slogger:
-            main.klogger = klogger
-            main.slogger = slogger
+            Main.klogger = klogger
+            Main.slogger = slogger
 
             # Open, slurp, edit, flush, close
 
             ibytes = pull_in()
-            main.ibytes = ibytes
+            Main.ibytes = ibytes
 
-            main.obytes = b""
+            Main.obytes = b""
             mess_about()
 
-            obytes = main.obytes
+            obytes = Main.obytes
             push_out(obytes)
 
     # todo: empty and/recreate the Log Py as executable hashbang Py, then append
 
 
-def parse_acute_py_args():
+def parse_acute_py_args() -> argparse.Namespace:
     """Take Words from the Sh Command Line into Acute Py"""
 
     assert argparse.OPTIONAL == "?"
@@ -117,7 +124,7 @@ def parse_acute_py_args():
     return args
 
 
-def home_dot_ssh_find_else():
+def home_dot_ssh_find_else() -> None:
     """Find else make the 'drwx------' ~/.ssh/"""
 
     dirname = os.path.expanduser("~/.ssh")
@@ -135,10 +142,10 @@ def home_dot_ssh_find_else():
         os.chmod(dirname, mode=fresh_mode)
 
 
-def pull_in():
+def pull_in() -> bytes:
     """Copy lotsa Bytes in"""
 
-    args = main.args
+    args = Main.args
 
     # Read from the Os Copy-Paste Buffer
 
@@ -159,7 +166,7 @@ def pull_in():
     return ibytes
 
 
-def subprocess_run_stdout(argv):
+def subprocess_run_stdout(argv) -> bytes:
     """Run the ArgV and capture its Stdout"""
 
     run = subprocess.run(
@@ -173,10 +180,10 @@ def subprocess_run_stdout(argv):
     return stdout
 
 
-def push_out(obytes):
+def push_out(obytes) -> None:
     """Copy lotsa Bytes out"""
 
-    args = main.args
+    args = Main.args
 
     # Write to the Os Copy-Paste Buffer
 
@@ -209,11 +216,11 @@ def push_out(obytes):
 #
 
 
-def mess_about():
+def mess_about() -> None:
     """Work up the Bytes to go out, from the Bytes that came in"""
 
-    args = main.args
-    ibytes = main.ibytes
+    args = Main.args
+    ibytes = Main.ibytes
 
     # Replay Bytes logged at Screen
 
@@ -233,7 +240,7 @@ def mess_about():
     ochars = ichars.upper()
     obytes = ochars.encode(errors="surrogateescape")
 
-    main.obytes = obytes
+    Main.obytes = obytes
 
     # todo: Replay bytes logged at keyboard slowly over time
 

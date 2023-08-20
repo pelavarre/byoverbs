@@ -9,7 +9,7 @@
 # Show examples and exit
 #
 #   cat Makefile |expand |grep '^[^ :]*:' |grep -v '^[.]PHONY:' |cut -d: -f1
-#   # don't help with:  default, black, flake8, shellcheck, selftest, p.py
+#   # don't help with:  default, black, flake8, mypy, shellcheck, selftest, p.py
 #
 
 default:
@@ -65,7 +65,7 @@ push: pull
 	exit 0
 	:
 
-pull: black flake8 shellcheck selftest
+pull: black flake8 mypy shellcheck selftest
 	:
 	demos/last2lines.py ./ bin/ demos/
 	:
@@ -99,6 +99,13 @@ flake8:
 		../byoverbs
 # --ignore=E203  # Black '[ : ]' rules over E203 whitespace before ':'
 # --ignore=W503  # 2017 Pep 8 and Black over W503 line break before bin op
+
+
+# Lint the Python Data Types, quickly and meaningfully
+
+mypy:
+	~/.pyvenvs/mypy/bin/mypy bin/acute
+	# todo: more widely adopt MyPy Code-Review of Python Data-Types
 
 
 # Lint the Bash Source Files, quickly
