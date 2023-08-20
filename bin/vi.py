@@ -2218,8 +2218,10 @@ EscChord = "\N{Broken Circle With Northwest Arrow}"  # ⎋
 
 
 C0_BYTES = b"".join(chr(_).encode() for _ in range(0, 0x20)) + b"\x7F"
-C1_BYTES = b"".join(chr(_).encode() for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
 # the Text Bytes of the first 0x80 (128) Bytes are the Bytes not-in the C0_BYTES
+
+# C1_BYTES = b"".join(chr(_).encode() for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
+# yea no that Code for C1_BYTES is way way wrong
 
 
 def bytes_to_chords_else(bytes_, default):

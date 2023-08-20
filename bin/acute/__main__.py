@@ -36,7 +36,11 @@ import stat
 import subprocess
 import sys
 
+import byo
 from byo import byoargparse
+from byo import byotty
+
+_ = byo, byotty  # auths separate test of unused imports despite Flake8
 
 
 #
@@ -236,6 +240,7 @@ def mess_about():
 
 
 if __name__ == "__main__":
+    # byotty.main()  # jitter Sat 19/Aug
     main()
 
 

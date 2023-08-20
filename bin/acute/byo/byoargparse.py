@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 
 r"""
-usage: byoargparse.py [-h]
+Amp up Import ArgParse
 
-compile an ArgParser Parser of the Sh Command Line from the Main Doc, and run it
+Form an ArgParser ArgumentParser of the Sh Command Line by compiling the Main Doc
 
-options:
-  -h, --help  show this help message and exit
+Trust the caller to add Arguments as needed to match the Usage Line of the Main Doc
 
-examples:
-  python3 -i bin/acute/ --
-    from byo import byoargparse  # forms Parser from __main__.__doc__
-    parser = byoargparse.ArgumentParser()
-    aa = parser.parse_args()
-    print(aa)  # Namespace()
+Define '.parse_args' to
+
+    a ) print examples & exit zero, when no Sh Args sipplied
+    b ) print help & exit zero, same as original ArgParse, for '-h' and '--help'
+    c ) print diffs & exit nonzero, when Arg Doc wrong
+    d ) accept the "--" Sh Args Separator when present with or without Positional Args
+
+Pick the Examples of how to test this Code out of the last Paragraph of the Epilog
+
+Don't yet solve SubParser's
 """
 
 # code reviewed by people, and by Black and Flake8
@@ -30,30 +33,55 @@ import textwrap
 _ = breakpoint, pdb  # requires Python >= Jun/2018 Python 3.7
 
 
-def ArgumentParser():
+_SELF_TEST_DOC = """
+usage: p.py [-h]
+
+test self
+
+options:
+  -h, --help  show this help message and exit
+
+examples:
+  ./p.py  # shows these examples and exits
+  ./p.py --h  # shows these examples as part of a larger help message and exits
+  ./p.py --  # runs this self-test
+"""
+
+
+def self_test_main_doc(filename):
+    """Form a Main Doc for a Self-Test"""
+
+    doc = _SELF_TEST_DOC.replace("p.py", filename)
+
+    return doc
+
+
+def ArgumentParser(add_help=True):
     """Work like Class ArgumentParser of Import ArgParse"""
 
-    parser = compile_argdoc()
+    parser = compile_argdoc(drop_help=not add_help)
 
     proxy = ArgumentParserProxy(parser)
     parser.parse_args = proxy.parse_args
 
     return parser
 
+    # 'add_help=False' for 'cal -h', 'df -h', 'ls -h', etc
+
 
 class ArgumentParserProxy:
     def __init__(self, parser):
         self.parser = parser
 
-    def parse_args(self, args=None):
+    def parse_args(self, args=None):  # often prints help & exits
         """Parse the Sh Args, even when no Sh Args coded as the one Sh Arg '--'"""
 
         parser = self.parser
 
-        # Persuade ArgParse to ignore the "--" Sh Args Separator when no Positional Args
+        # Accept the "--" Sh Args Separator when present with or without Positional Args
 
         sh_args = sys.argv[1:] if (args is None) else args
-        if sh_args == ["--"]:
+        if sh_args == ["--"]:  # ArgParse chokes if Sep present without Pos Args
             sh_args = ""
 
         # Print Diffs & exit nonzero, when Arg Doc wrong
@@ -192,15 +220,6 @@ def parser_to_diffs(parser):
     )
 
     return diffs
-
-
-#
-# Run from the Sh Command Line, if not imported
-#
-
-
-if __name__ == "__main__":
-    assert sys.argv[1:], sys.argv
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/acute/byo/
