@@ -1,3 +1,2 @@
 set -xe
-git reflog --stat "$@"
-# todo: git reflog --numstat doesn't work
+git reflog --numstat "$@"
