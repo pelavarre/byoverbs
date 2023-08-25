@@ -60,7 +60,15 @@ examples:
 # https://packages.ubuntu.com/jammy/python/ Ubuntu Apr/2022  => Mar/2022 Python 3.10.4
 
 
+import sys
+
+
 import byotools as byo
+
+
+if sys.argv[1:]:
+    sys.stderr.write("python3.py: did you mean:  python3 ...\n")
+    sys.exit(2)
 
 
 byo.subprocess_exit_run_if()
