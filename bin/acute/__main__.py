@@ -52,6 +52,8 @@ _ = byo, byotermios, byotty  # ducks Flake8 F401 imported.but.unused
 
 
 class Main:
+    """Open up a shared workspace for the Code of this Py File"""
+
     args: argparse.Namespace  # parsed Sh Args
     ibytes: bytes  # the Bytes read as Input
     obytes: bytes  # the Bytes to write as Output
