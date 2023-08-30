@@ -87,7 +87,7 @@ QUICK_LAZY_IMPORT_NAMES = """
 
     # from VEnv Pip Install
 
-    jira redis requests
+    jira pandas redis requests
 
 
 """.splitlines()
