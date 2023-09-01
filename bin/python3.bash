@@ -1,8 +1,6 @@
 set -e
 
 DIR=$(dirname "$0")
-function black_ () { "$DIR"/black "$@"; }
-function flake8_ () { "$DIR"/flake8 "$@"; }
 
 last=$#
 py=p.py
@@ -25,8 +23,9 @@ done
 set -xe
 
 echo |python3 -m pdb $py
-black_ $py
-flake8_ $py
+black.bash $py
+flake8.bash $py
+mypy.bash $py
 :
 :
 python3 "$@"

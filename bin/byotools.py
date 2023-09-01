@@ -31,9 +31,9 @@ if not hasattr(__builtins__, "breakpoint"):
     breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
 
 
-_ = subprocess.run  # new since Sep/2015 Python 3.5
-_ = dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6
-_ = "{:_}".format(12345)  # new since Dec/2016 Python 3.6  # Ubuntu 2018
+_35 = subprocess.run  # new since Sep/2015 Python 3.5
+_36a = dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6
+_36b = "{:_}".format(12345)  # new since Dec/2016 Python 3.6  # Ubuntu 2018
 
 # _ = breakpoint  # new since Jun/2018 Python 3.7
 # _ = dataclasses  # new since Jun/2018 Python 3.7

@@ -40,6 +40,7 @@ examples:
   echo '⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |pq encode |cat -
   echo '⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮' |pq encode decode |cat -
 
+  echo Carelman bicycle |pq href |cat -
   echo 'http://www.google.com/images?q=Jacques%20Carelman' |pq unquote |cat -
   echo 'Jacques Carelman' |pq quote |cat -
 
@@ -71,7 +72,7 @@ examples:
   pq help  # fails, but dumps vocabulary
 """
 
-# code reviewed by people, and by Black and Flake8
+# code reviewed by people, and by Black & Flake8 & MyPy
 
 
 import argparse
@@ -82,6 +83,7 @@ import json
 import subprocess
 import sys
 import textwrap
+import typing
 import urllib.parse
 
 import byotools as byo
@@ -92,7 +94,13 @@ import byotools as byo
 #
 
 
-def main():
+class Main:
+    """Open up a shared workspace for the Code of this Py File"""
+
+    pqv: "PyQueryVm"
+
+
+def main() -> None:
     """Edit the Os Copy/Paste Buffer else other Stdin/ Stdout"""
 
     sys.stdout = open("/dev/stdout", "w", encoding="utf-8")  # allows Unicode in Help
@@ -102,13 +110,15 @@ def main():
 
     assert words, repr(words)
 
+    funcs: list[typing.Callable]
+
     funcs = list()
     for word in words:
         func = pq_word_to_func(word)
         funcs.append(func)
 
     with PyQueryVm(open_ended=args.open_ended) as pqv:
-        main.pqv = pqv
+        Main.pqv = pqv
 
         for index, func in enumerate(funcs):
             if index:
@@ -119,7 +129,7 @@ def main():
     # Jul/2019 Python 3.6.9 needed explicit Stdout Encoding, other Python's can test it
 
 
-def parse_pq_args():
+def parse_pq_args() -> argparse.Namespace:
     """Take Words from the Sh Command Line into Pq Py"""
 
     assert argparse.ZERO_OR_MORE == "*"
@@ -145,10 +155,10 @@ def parse_pq_args():
 class PyQueryVm:
     """Define the Runtime Context of the Pq Programming Language"""
 
-    def __init__(self, open_ended):
+    def __init__(self, open_ended) -> None:
         self.open_ended = open_ended
 
-    def __enter__(self):
+    def __enter__(self) -> "PyQueryVm":
         """Sponge up the Stdin of Chars, and open up the Stdout of Chars"""
 
         self.with_stdin = sys.stdin
@@ -159,6 +169,7 @@ class PyQueryVm:
         if not sys.stdin.isatty():
             alt_ichars = sys.stdin.read()
         else:
+            sys.stderr.write("+ pbpaste |...\n")
             alt_ichars = byo.subprocess_run_stdout("pbpaste", errors="surrogateescape")
 
         ichars = alt_ichars
@@ -179,7 +190,7 @@ class PyQueryVm:
 
         return self
 
-    def __exit__(self, *exc_info):
+    def __exit__(self, *exc_info) -> bool | None:
         """Sponge up the Stdin of Chars, and open up the Stdout of Chars"""
 
         open_ended = self.open_ended
@@ -211,9 +222,12 @@ class PyQueryVm:
         if not sys.stdout.isatty():
             sys.stdout.write(ochars)
         else:
+            sys.stderr.write("+ ... |pbcopy\n")
             subprocess.run("pbcopy", input=ochars, errors="surrogateescape", check=True)
 
-    def close_open_stdio(self):
+        return None
+
+    def close_open_stdio(self) -> None:
         """Flush the Stdout back into the Stdin, like to run more Code"""
 
         stdout = sys.stdout
@@ -236,7 +250,7 @@ class PyQueryVm:
 
         sys.stdout = stdout
 
-    def breakpoint(self):
+    def breakpoint(self) -> None:
         """Reconnect Stdio till Exit from Breakpoint, and breakpoint once"""
 
         stdin = sys.stdin
@@ -257,7 +271,7 @@ class PyQueryVm:
 #
 
 
-def pq_word_to_func(word):
+def pq_word_to_func(word) -> typing.Callable:
     """Compile 1 word of Pq down to 1 Func to call"""
 
     # Overload Word Fragments to mean Exact Match, else StartsWith, else In
@@ -296,7 +310,8 @@ def pq_word_to_func(word):
 #
 
 
-def line_print():  # |pq _  # [Line] -> [Line]
+# |pq _  # [Line] -> [Line]
+def line_print() -> None:
     """Close the last Line if not closed"""
 
     byo.sys_stderr_print(">>> _")
@@ -306,7 +321,8 @@ def line_print():  # |pq _  # [Line] -> [Line]
         print(iline)
 
 
-def line_tee():  # |pq tee  # [Line] -> [Line]
+# |pq tee  # [Line] -> [Line]
+def line_tee() -> None:
     """Close the last Line if not closed, but dump them all into '/dev/tty'"""
 
     byo.sys_stderr_print(">>> pq.tee(_)")
@@ -323,7 +339,8 @@ def line_tee():  # |pq tee  # [Line] -> [Line]
 #
 
 
-def line_casefold():  # |pq casefold  # [Line] -> [Line]
+# |pq casefold  # [Line] -> [Line]
+def line_casefold() -> None:
     """Casefold the Chars in each Line"""
 
     byo.sys_stderr_print(">>> _.casefold()")
@@ -334,7 +351,8 @@ def line_casefold():  # |pq casefold  # [Line] -> [Line]
         print(oline)
 
 
-def line_dent():  # |pq dent  # [Line] -> [Line]
+# |pq dent  # [Line] -> [Line]
+def line_dent() -> None:
     """Insert 4 Spaces into each Line"""
 
     byo.sys_stderr_print('>>> "    {}".format(_)')
@@ -345,7 +363,8 @@ def line_dent():  # |pq dent  # [Line] -> [Line]
         print(oline)
 
 
-def line_encode_lit():  # |pq encode  # [Line] -> [Bytes]
+# |pq encode  # [Line] -> [Bytes]
+def line_encode_lit() -> None:
     """Encode each Line as a Py Bytes Literal"""
 
     byo.sys_stderr_print('>>> _.encode(errors="surrogatescape")')
@@ -357,7 +376,8 @@ def line_encode_lit():  # |pq encode  # [Line] -> [Bytes]
         print(olit)
 
 
-def line_expandtabs():  # |pq expandtabs  # [Line] -> [Line]
+# |pq expandtabs  # [Line] -> [Line]
+def line_expandtabs() -> None:
     """Replace the "\t" U+0009 Tab's in each Line with 1 to 8 Spaces"""
 
     byo.sys_stderr_print(">>> _.expandtabs(tabsize=8)")  # some forbid explicit TabSize
@@ -368,7 +388,48 @@ def line_expandtabs():  # |pq expandtabs  # [Line] -> [Line]
         print(oline)
 
 
-def line_lower():  # |pq lower  # [Line] -> [Line]
+# |pq href  # [Line] -> [Line]
+def line_href() -> None:
+    """Form a Web Address out of each Line"""
+
+    byo.sys_stderr_print(">>> _.line_to_href()")
+
+    href_kinds = "images texts".split()
+
+    ichars = sys.stdin.read()
+    for iline in ichars.splitlines():
+        iwords = iline.split()
+
+        oline = "http://example.com"
+        if iwords:
+            iword0 = iwords[0]
+
+            # Split the leading verbized plural-noun off if present
+
+            kind = "texts"
+            splits = iline.split()
+            if iword0 in href_kinds:
+                kind = iword0
+                splits = iline.split()[1:]
+
+            quote = "+".join(urllib.parse.quote(_) for _ in splits)
+
+            # Form the HRef, kind by kind, from the Words
+
+            if kind == "images":
+                # oline = "https://google.com/search?tbm=isch&q=" + quote
+                oline = "http://google.com/images?q=" + quote
+            else:
+                assert kind == "texts", (kind,)
+                oline = "https://google.com/search?q=" + quote
+
+        print(oline)
+
+    # todo: how to cite non-standard Func's
+
+
+# |pq lower  # [Line] -> [Line]
+def line_lower() -> None:
     """Lower the Chars in each Line"""
 
     byo.sys_stderr_print(">>> _.lower()")
@@ -379,7 +440,8 @@ def line_lower():  # |pq lower  # [Line] -> [Line]
         print(oline)
 
 
-def line_lstrip():  # |pq lstrip  # [Line] -> [Line]
+# |pq lstrip  # [Line] -> [Line]
+def line_lstrip() -> None:
     """Drop the Blanks starting each Line, if any"""
 
     byo.sys_stderr_print(">>> _.lstrip()")
@@ -390,7 +452,8 @@ def line_lstrip():  # |pq lstrip  # [Line] -> [Line]
         print(oline)
 
 
-def line_quote():  # |pq quote  # [Line] -> [UrlCodedLine]
+# |pq quote  # [Line] -> [UrlCodedLine]
+def line_quote() -> None:
     """Encode each Line before sending as an HttpS/Http Literal Param Value"""
 
     byo.sys_stderr_print(">>> urllib.parse.quote(_)")
@@ -402,7 +465,8 @@ def line_quote():  # |pq quote  # [Line] -> [UrlCodedLine]
         print(olit)
 
 
-def line_repr_lit():  # |pq repr  # [Line] -> [Lit]
+# |pq repr  # [Line] -> [Lit]
+def line_repr_lit() -> None:
     """Represent each Line as a Py Str Literal"""
 
     byo.sys_stderr_print(">>> repr(_)")
@@ -414,7 +478,8 @@ def line_repr_lit():  # |pq repr  # [Line] -> [Lit]
         print(oline)
 
 
-def line_rstrip():  # |pq rstrip  # [Line] -> [Line]
+# |pq rstrip  # [Line] -> [Line]
+def line_rstrip() -> None:
     """Drop the Blanks ending each Line, if any"""
 
     byo.sys_stderr_print(">>> _.rstrip()")
@@ -425,7 +490,8 @@ def line_rstrip():  # |pq rstrip  # [Line] -> [Line]
         print(oline)
 
 
-def line_strip():  # |pq strip  # [Line] -> [Line]
+# |pq strip  # [Line] -> [Line]
+def line_strip() -> None:
     """Strip each Line"""
 
     byo.sys_stderr_print(">>> _.strip()")
@@ -435,7 +501,8 @@ def line_strip():  # |pq strip  # [Line] -> [Line]
         print(line.strip())
 
 
-def line_unquote():  # |pq unquote  # [Line] -> [UrlCodedLine]
+# |pq unquote  # [Line] -> [UrlCodedLine]
+def line_unquote() -> None:
     """Decode each Line after receiving as an HttpS/Http Literal Param Value"""
 
     byo.sys_stderr_print(">>> urllib.parse.unquote(_)")
@@ -447,7 +514,8 @@ def line_unquote():  # |pq unquote  # [Line] -> [UrlCodedLine]
         print(olit)
 
 
-def line_upper():  # |pq upper  # [Line] -> [Line]
+# |pq upper  # [Line] -> [Line]
+def line_upper() -> None:
     """Upper the Chars in each Line"""
 
     byo.sys_stderr_print(">>> _.upper()")
@@ -463,7 +531,8 @@ def line_upper():  # |pq upper  # [Line] -> [Line]
 #
 
 
-def file_chars_dedent():  # |pq dedent  # [Line] -> Str -> [Line]
+# |pq dedent  # [Line] -> Str -> [Line]
+def file_chars_dedent() -> None:
     """Strip the Blank Columns that start every Line of Chars"""
 
     byo.sys_stderr_print(">>> textwrap.dedent(c)")
@@ -473,7 +542,8 @@ def file_chars_dedent():  # |pq dedent  # [Line] -> Str -> [Line]
     sys.stdout.write(ochars)
 
 
-def file_lines_counter():  # |pq counter  # [Line] -> [CountedDistinctLine]
+# |pq counter  # [Line] -> [CountedDistinctLine]
+def file_lines_counter() -> None:
     """Count each distinct Line"""
 
     byo.sys_stderr_print(">>> collections.Counter(r)")
@@ -485,7 +555,8 @@ def file_lines_counter():  # |pq counter  # [Line] -> [CountedDistinctLine]
         print(*opair)
 
 
-def file_lines_enumerate():  # |pq enumerate  # [Line] -> [IndexedLine]
+# |pq enumerate  # [Line] -> [IndexedLine]
+def file_lines_enumerate() -> None:
     """Count off every Line of the Chars, up from 0"""
 
     byo.sys_stderr_print(">>> enumerate(r)")
@@ -496,7 +567,8 @@ def file_lines_enumerate():  # |pq enumerate  # [Line] -> [IndexedLine]
         print(*opair)
 
 
-def file_lines_len_lit():  # |pq len  # [Line] -> Int
+# |pq len  # [Line] -> Int
+def file_lines_len_lit() -> None:
     """Count the Lines of the File"""
 
     byo.sys_stderr_print(">>> len(r)")
@@ -508,7 +580,8 @@ def file_lines_len_lit():  # |pq len  # [Line] -> Int
     print(olit)
 
 
-def file_lines_reversed():  # |pq reversed  # [Line] -> [OppositeLine]
+# |pq reversed  # [Line] -> [OppositeLine]
+def file_lines_reversed() -> None:
     """Reverse the Lines"""
 
     byo.sys_stderr_print(">>> reversed(r)")
@@ -525,7 +598,8 @@ def file_lines_reversed():  # |pq reversed  # [Line] -> [OppositeLine]
     sys.stdout.write(ochars)
 
 
-def file_lines_set():  # |pq set  # [Line] -> [DistinctLine]
+# |pq set  # [Line] -> [DistinctLine]
+def file_lines_set() -> None:
     """Keep each distinct Line, drop Dupes, even when Not adjacent"""
 
     byo.sys_stderr_print(">>> set(r)")
@@ -540,7 +614,8 @@ def file_lines_set():  # |pq set  # [Line] -> [DistinctLine]
             print(iline)
 
 
-def file_lines_sorted():  # |pq sorted  # [Line] -> [SortedLine]
+# |pq sorted  # [Line] -> [SortedLine]
+def file_lines_sorted() -> None:
     """Sort the Lines"""
 
     byo.sys_stderr_print(">>> sorted(r)")
@@ -557,7 +632,8 @@ def file_lines_sorted():  # |pq sorted  # [Line] -> [SortedLine]
     sys.stdout.write(ochars)
 
 
-def file_para_gather(sep=":"):  # |pq gather  # [TaggedLine] -> [TaggedPara]
+# |pq gather  # [TaggedLine] -> [TaggedPara]
+def file_para_gather(sep=":") -> None:
     """Print the Non-Blank Dent plus a Colon to start the Para, then Dent with Spaces"""
 
     byo.sys_stderr_print(""">>> gather(r, sep=":")""")
@@ -601,7 +677,8 @@ def file_para_gather(sep=":"):  # |pq gather  # [TaggedLine] -> [TaggedPara]
     # todo: cope well with ":" Colons in Pathnames, such as:  bin/:h, bin/:v
 
 
-def file_para_spread(sep=":"):  # |pq spread  # [TaggedPara] -> [TaggedLine]
+# |pq spread  # [TaggedPara] -> [TaggedLine]
+def file_para_spread(sep=":") -> None:
     """Print the 1 Head Line of each Para as a Non-Blank Dent of each Tail Line"""
 
     assert sep == ":"
@@ -638,7 +715,8 @@ def file_para_spread(sep=":"):  # |pq spread  # [TaggedPara] -> [TaggedLine]
     # todo: cope well with ":" Colons in Pathnames, such as:  bin/:h, bin/:v
 
 
-def file_words_split():  # |pq split  # [[Word]] -> [Word]
+# |pq split  # [[Word]] -> [Word]
+def file_words_split() -> None:
     """Split each Line into Words"""
 
     byo.sys_stderr_print(">>> c.split()")
@@ -653,7 +731,8 @@ def file_words_split():  # |pq split  # [[Word]] -> [Word]
     sys.stdout.write(ochars)
 
 
-def file_words_join():  # |pq join  # [Word] -> Line
+# |pq join  # [Word] -> Line
+def file_words_join() -> None:
     r"""Replace each Line-Ending with one Space"""
 
     byo.sys_stderr_print(r'''>>> " ".join(r) + "\n"''')
@@ -673,7 +752,8 @@ def file_words_join():  # |pq join  # [Word] -> Line
 #
 
 
-def file_eval():  # |pq .  # Dict|[Value] -> Dict|[Value]
+# |pq .  # Dict|[Value] -> Dict|[Value]
+def file_eval() -> None:
     """Clone a Dict or List"""
 
     byo.sys_stderr_print(">>> ast.literal_eval(c)")
@@ -685,7 +765,8 @@ def file_eval():  # |pq .  # Dict|[Value] -> Dict|[Value]
     sys.stdout.write(olit)
 
 
-def file_eval_keys():  # |pq keys  # Dict|[Value] -> [Key|Index]
+# |pq keys  # Dict|[Value] -> [Key|Index]
+def file_eval_keys() -> None:
     """Pick out the Keys of a Dict Lit, else the Indices of a List Lit"""
 
     ichars = sys.stdin.read()
@@ -704,7 +785,8 @@ def file_eval_keys():  # |pq keys  # Dict|[Value] -> [Key|Index]
     sys.stdout.write(olit)
 
 
-def file_eval_values():  # |pq values  # Dict[Key,Value]|[Value] -> [Value]
+# |pq values  # Dict[Key,Value]|[Value] -> [Value]
+def file_eval_values() -> None:
     """Pick out the Values of a Dict Lit, else clone a List"""
 
     ichars = sys.stdin.read()
@@ -724,7 +806,8 @@ def file_eval_values():  # |pq values  # Dict[Key,Value]|[Value] -> [Value]
     sys.stdout.write(olit)
 
 
-def line_eval_decode():  # |pq decode  # [Bytes] -> [Line]
+# |pq decode  # [Bytes] -> [Line]
+def line_eval_decode() -> None:
     """Decode each Line as a Py Literal of Bytes"""
 
     byo.sys_stderr_print('>>> _.decode(errors="surrogatescape")')
@@ -736,7 +819,8 @@ def line_eval_decode():  # |pq decode  # [Bytes] -> [Line]
         print(oline)
 
 
-def line_eval_print():  # |pq eval  # [Lit] -> [Any]
+# |pq eval  # [Lit] -> [Any]
+def line_eval_print() -> None:
     """Eval each Line as a Py Literal of Bytes"""
 
     byo.sys_stderr_print(">>> ast.literal_eval(_)")
@@ -753,6 +837,8 @@ def line_eval_print():  # |pq eval  # [Lit] -> [Any]
 #
 
 
+FUNC_BY_WORD: dict[str, typing.Callable]
+
 FUNC_BY_WORD = {
     ".": file_eval,
     "_": line_print,
@@ -766,6 +852,7 @@ FUNC_BY_WORD = {
     "eval": line_eval_print,
     "expandtabs": line_expandtabs,
     "gather": file_para_gather,
+    "href": line_href,
     "join": file_words_join,
     "keys": file_eval_keys,
     "len": file_lines_len_lit,
