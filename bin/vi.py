@@ -80,7 +80,7 @@ import textwrap
 import time
 import tty
 
-_ = time
+... == time
 
 
 #
@@ -2992,7 +2992,7 @@ def parser_to_diffs(parser):
 #
 
 
-_ = """
+... == """
 
 Terminal Windows smaller than the MacOS min of 5 Rows x 20 Columns
 
@@ -3004,7 +3004,7 @@ Terminal Windows smaller than the MacOS min of 5 Rows x 20 Columns
 #
 
 
-_ = r"""  # up towards demo of reduce Python to Color Python
+... == r"""  # up towards demo of reduce Python to Color Python
 
 --
 

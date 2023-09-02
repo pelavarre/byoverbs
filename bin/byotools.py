@@ -15,10 +15,10 @@ examples:
 
 import __main__
 import argparse
+import dataclasses
 import datetime as dt
 import difflib
 import os
-import pdb
 import re
 import shlex
 import signal
@@ -27,24 +27,23 @@ import subprocess
 import sys
 import textwrap
 
-if not hasattr(__builtins__, "breakpoint"):
-    breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
+
+assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 
 
-_35 = subprocess.run  # new since Sep/2015 Python 3.5
-_36a = dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6
-_36b = "{:_}".format(12345)  # new since Dec/2016 Python 3.6  # Ubuntu 2018
-
-# _ = breakpoint  # new since Jun/2018 Python 3.7
-# _ = dataclasses  # new since Jun/2018 Python 3.7
-# _ = f"{sys.version_info[:3]=}"  # new since Oct/2019 Python 3.8  # Ubuntu 2020
-
-# _ = shlex.join  # new since Oct/2019 Python 3.8
-# _ = str.removesuffix  # new since Oct/2020 Python 3.9
-# _  = list(zip([], [], strict=True))  # since Oct/2021 Python 3.10  # Ubuntu 2022
-
-# _ = tomllib  # since Oct/2022 Python 3.11
-# _ = termios.tcgetwinsize(sys.stderr.fileno())  # since Oct/2022 Python 3.11
+... == subprocess.run  # new since Sep/2015 Python 3.5
+... == dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6  # Ubuntu 2018
+... == "{:_}".format(12345)  # new since Dec/2016 Python 3.6
+... == (re.search(r"..", "abcde") or [""])[0]  # new since Dec/2016 Python 3.6
+... == breakpoint  # new since Jun/2018 Python 3.7
+... == dataclasses  # new since Jun/2018 Python 3.7
+... == f"{sys.version_info[:3]=}"  # new since Oct/2019 Python 3.8  # Ubuntu 2020
+... == shlex.join  # new since Oct/2019 Python 3.8
+... == str.removeprefix, str.removesuffix  # new since Oct/2020 Python 3.9
+... == dict[str, int]  # new since Oct/2020 Python 3.9
+# ... == list(zip([], [], strict=True))  # since Oct/2021 Python 3.10  # Ubuntu 2022
+# ... == tomllib  # since Oct/2022 Python 3.11
+# ... == termios.tcgetwinsize(sys.stderr.fileno())  # since Oct/2022 Python 3.11
 
 
 #

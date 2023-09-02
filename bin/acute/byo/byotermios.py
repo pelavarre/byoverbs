@@ -24,7 +24,7 @@ import byo
 from byo import byoargparse
 from byo import byotty
 
-_ = byo  # ducks Flake8 F401 imported.but.unused
+... == byo  # ducks Flake8 F401 imported.but.unused
 
 
 C0_BYTES = b"".join(bytearray([_]) for _ in range(0, 0x20)) + b"\x7F"

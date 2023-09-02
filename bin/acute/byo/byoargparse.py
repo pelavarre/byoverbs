@@ -30,7 +30,7 @@ import pdb
 import sys
 import textwrap
 
-_ = breakpoint, pdb  # requires Python >= Jun/2018 Python 3.7
+... == breakpoint, pdb  # requires Python >= Jun/2018 Python 3.7
 
 
 _SELF_TEST_DOC = """

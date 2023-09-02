@@ -43,7 +43,7 @@ from byo import byotermios
 from byo import byotty
 
 
-_ = byo, byotermios, byotty  # ducks Flake8 F401 imported.but.unused
+... == byo, byotermios, byotty  # ducks Flake8 F401 imported.but.unused
 
 
 #

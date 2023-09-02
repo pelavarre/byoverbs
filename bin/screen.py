@@ -15,7 +15,7 @@ import shlex
 import subprocess
 import sys
 
-_ = pdb
+... == pdb
 
 
 # Require Sh Args
@@ -87,7 +87,7 @@ for line in lines[1:-1]:
 print()
 
 
-_ = r"""
+... == r"""
 
 T=Tag screen -S $T -L -Logfile $T.screen
 T=Tag && screen -S $T -L -Logfile $T.screen script $T.script
@@ -122,7 +122,7 @@ export PS1='\$ '
 """
 
 
-_ = """
+... == """
 
 some combo can tell you what state you're in:  Default, Copy Mode, & in-between's
 

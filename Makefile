@@ -105,7 +105,7 @@ flake8:
 
 mypy:
 	grep -R '^def ' bin/acute bin/pq.py |grep -v ') -> ' ||:
-	~/.pyvenvs/mypy/bin/mypy bin/acute bin/pq.py
+	~/.pyvenvs/mypy/bin/mypy bin
 	# todo: more widely adopt MyPy Code-Review of Python Data-Types
 
 

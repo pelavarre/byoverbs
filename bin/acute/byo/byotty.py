@@ -38,7 +38,7 @@ from typing import Any, Self
 import byo
 from byo import byoargparse
 
-_ = byo  # ducks Flake8 F401 imported.but.unused
+... == byo  # ducks Flake8 F401 imported.but.unused
 
 
 #
