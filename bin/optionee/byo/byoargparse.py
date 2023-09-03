@@ -218,5 +218,5 @@ class ArgumentParser(argparse.ArgumentParser):
         return testdoc
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/acute/byo/
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/optionee/byo/
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

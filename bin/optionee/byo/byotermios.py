@@ -33,12 +33,12 @@ assert C0_BYTES == byotty.C0_BYTES, (C0_BYTES, byotty.C0_BYTES)
 
 
 #
-# Define Self-Test at Sh Usage: cd bin/acute/ && python3 -m pdb __main__.py --
+# Define Self-Test at:  cd bin/optionee/ && python3 -m pdb __main__.py --
 #
 
 
 def main() -> None:
-    """Define Self-Test at Sh Usage: cd bin/acute/ && python3 -m pdb __main__.py --"""
+    """Define Self-Test at:  cd bin/optionee/ && python3 -m pdb __main__.py --"""
 
     __main__.__doc__ = byoargparse.self_test_main_doc("byotermios.py")
     parser = byoargparse.ArgumentParser()
@@ -362,5 +362,5 @@ def add_us_ascii_into_chords_by_bytes() -> None:
 add_us_ascii_into_chords_by_bytes()
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/acute/byo/
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/optionee/byo/
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

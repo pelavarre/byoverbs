@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 r"""
-usage: acute [-h] [--keylog K] [--screenlog S] [WHAT]
+usage: optionee [-h] [--keylog K] [--screenlog S] [WHAT]
 
 reply to keyboard with edits of os copy-paste buffer, dir, file, pipe, or screen
 
@@ -64,7 +64,7 @@ class Main:
 def main() -> None:
     """Run well when called from Sh by people"""
 
-    args = parse_acute_py_args()
+    args = parse_optionee_py_args()
     Main.args = args
 
     # Record and/or replay our work
@@ -90,8 +90,8 @@ def main() -> None:
     # todo: empty and/recreate the Log Py as executable hashbang Py, then append
 
 
-def parse_acute_py_args() -> argparse.Namespace:
-    """Take Words from the Sh Command Line into Acute Py"""
+def parse_optionee_py_args() -> argparse.Namespace:
+    """Take Words from the Sh Command Line into optionee Py"""
 
     assert argparse.OPTIONAL == "?"
 
@@ -259,5 +259,5 @@ if __name__ == "__main__":
     main()
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/acute
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/optionee
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
