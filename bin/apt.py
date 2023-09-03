@@ -26,6 +26,8 @@ examples:
 
 import byohelper
 
+... == byohelper
+
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/apt.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
