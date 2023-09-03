@@ -18,7 +18,7 @@ examples:
 
   date.py  # show these examples and exit
   date.py --h  # show help lines and exit (more reliable than -h)
-  date.py --  # run the examples below
+  date.py --  # run the last paragraph of examples
 
   date -u
   touch t.touch && date -r t.touch +'%a %b %d %H:%M:%S %Z %Y'
@@ -30,10 +30,7 @@ examples:
 """
 
 
-import byotools as byo
-
-
-byo.subprocess_exit_run_if()
+import byohelper
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/date.py
