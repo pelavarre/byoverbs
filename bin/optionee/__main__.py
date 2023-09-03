@@ -21,13 +21,15 @@ quirks:
 examples:
   é  # shows these examples and exits
   é --h  # shows these examples as part of a larger help message and exits
-  é --  # edits Os Copy-Paste Buffer
   echo abc def |xargs -n 1 |é -- |cat -etv  # edits Pipe
+  echo abc def |pbcopy
+  pbpaste && é --  # edits Os Copy-Paste Buffer
 """
 
 # code reviewed by people, and by Black & Flake8 & MyPy
 
 
+import __main__
 import argparse
 import os
 import pathlib
@@ -120,8 +122,8 @@ def parse_optionee_py_args() -> argparse.Namespace:
     args.ifile = what
     args.ofile = what
     if args.what is None:
-        args.ifile = "/usr/bin/pbpaste" if sys.stdin.isatty() else "/dev/stdin"
-        args.ofile = "/usr/bin/pbcopy" if sys.stdout.isatty() else "/dev/stdout"
+        args.ifile = "pbpaste" if sys.stdin.isatty() else "/dev/stdin"
+        args.ofile = "pbcopy" if sys.stdout.isatty() else "/dev/stdout"
 
     return args
 
@@ -151,7 +153,7 @@ def pull_in() -> bytes:
 
     # Read from the Os Copy-Paste Buffer
 
-    if args.ifile == "/usr/bin/pbpaste":  # 'pbpaste' first found at macOS
+    if args.ifile == "pbpaste":  # 'pbpaste' first found at macOS
         ibytes = subprocess_run_stdout(argv=shlex.split(args.ifile))
         return ibytes
 
@@ -189,8 +191,8 @@ def push_out(obytes) -> None:
 
     # Write to the Os Copy-Paste Buffer
 
-    if args.ofile == "/usr/bin/pbcopy":  # 'pbcopy' first found at macOS
-        argv = shlex.split("/usr/bin/pbcopy")
+    if args.ofile == "pbcopy":  # 'pbcopy' first found at macOS
+        argv = shlex.split("pbcopy")
         run = subprocess.run(
             argv, input=obytes, stderr=subprocess.PIPE, stdout=subprocess.PIPE
         )
@@ -239,7 +241,10 @@ def mess_about() -> None:
     # Reply to Keyboard till Quit
 
     ichars = ibytes.decode(errors="surrogateescape")
-    ochars = ichars.upper()
+    if ichars != ichars.casefold():
+        ochars = ichars.casefold()
+    else:
+        ochars = ichars.upper()
     obytes = ochars.encode(errors="surrogateescape")
 
     Main.obytes = obytes
@@ -253,9 +258,14 @@ def mess_about() -> None:
 
 
 if __name__ == "__main__":
-    if False:  # jitter Sun 19/Aug
-        byotty.main()
-        byotermios.main()
+    if True:  # jitter Sun 3/Sep
+        main_doc = __main__.__doc__
+        try:
+            # byotty.main()
+            # byotermios.main()
+            pass
+        finally:
+            __main__.__doc__ = main_doc
     main()
 
 
