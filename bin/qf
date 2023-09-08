@@ -1,2 +1,7 @@
-set -xe
-git fetch "$@"
+if [[ $# == 0 ]]; then
+    set -xe
+    git fetch --prune
+else
+    set -xe
+    git fetch "$@"
+fi
