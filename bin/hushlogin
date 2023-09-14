@@ -1,0 +1,6 @@
+#!/bin/bash
+
+set -xe
+mv -i ~/.hushlogin ~/.hushlogin~
+echo |ssh localhost 2>&1 |grep -i System.Restart.Required
+mv -i ~/.hushlogin~ ~/.hushlogin
