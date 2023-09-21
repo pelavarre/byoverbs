@@ -1,6 +1,9 @@
 #!/bin/bash
 
-set -xe
-mv -i ~/.hushlogin ~/.hushlogin~
-echo |ssh localhost 2>&1 |grep -i System.Restart.Required
-mv -i ~/.hushlogin~ ~/.hushlogin
+# H=jqdoe@example.com &&  while :; do (date && ssh -A $H || echo "+ exit $?"); (set -xe; sleep 5); done
+
+(   set -xe
+    mv -i ~/.hushlogin ~/.hushlogin~ ||:
+    (echo |ssh -t -A localhost 2>&1 |grep -i -e Release -e System.Restart.Required) ||:
+    mv -i ~/.hushlogin~ ~/.hushlogin ||:
+)
