@@ -1,0 +1,19 @@
+F=p.py
+if [ -e $F ]; then
+    echo "+ mv -i $F{,~$(date -r $F +%m%djqd%H%M)~}" >&2
+    mv -i $F{,~$(date -r $F +%m%djqd%H%M)~}
+    echo "+ ls -AhlF -rt $F~*" >&2
+    ls -AhlF -rt $F~*
+fi
+
+if [[ "$STY" ]]; then
+    if "$(uname)" == "Darwin"; then
+        echo + unset TERM >&2
+        unset TERM
+    fi
+fi
+
+set -xe
+touch p.py
+vim +startinsert p.py "$@"
+ls -AhlF -rt $F

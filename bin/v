@@ -1,5 +1,6 @@
 if [[ "$STY" ]]; then
     if "$(uname)" == "Darwin"; then
+        echo '+ unset TERM' >&2
         unset TERM
     fi
 fi
