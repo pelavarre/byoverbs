@@ -1,6 +1,12 @@
-_ = """
+#!/usr/bin/env python3
 
+"""
 bash --noprofile --norc
+
+alias -p
+bind -p
+declare -f
+which -a which
 
 (set -x; set |grep ^.=; set |grep ^..=)  # shows a mostly empty namespace
 diff -brpu <(export) <(set) |sort |grep -v '[ +]'  # shows Export's listed as Set's
@@ -15,6 +21,11 @@ export PS1="$PS1\n\\$ "
 
 (IFS=:; for P in $PATH; do echo $P; done)
 """
+
+import byotools as byo
+
+
+byo.sys_exit()
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/bash.py

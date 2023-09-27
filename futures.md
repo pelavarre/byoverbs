@@ -388,6 +388,15 @@ add shellcheck, and solve its complaints
 back up my c*nfidential ~/.ssh/zprofile and ~/.ssh/bash_profile Files
 
 
+### 6 - Sixth traunch
+
+write up bugs/zsh.md of C-x C-e can't run ahead, etc
+
+build advice for restoring the Bash experience, e.g.,
+
+    echo https://google.com/search?q=hello,+World%21
+
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md

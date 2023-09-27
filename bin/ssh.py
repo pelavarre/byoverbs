@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 r"""
 usage: ssh.py [--h] [-t] [-f CONFIG] ...
 

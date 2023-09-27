@@ -12,7 +12,7 @@ positional arguments:
 options:
   --help     show this help message and exit
   -i         stop to ask before replacing file or dir
-  -p         copy, don't fabricate, last-modified date/time stamp and chmod permissions
+  -p         copy, don't lose, last-modified date/time stamp and chmod permissions
 
 quirks:
   copies top File off Stack, but keeps its date/time stamp a la:  touch -r FROM TO
@@ -27,6 +27,11 @@ examples:
   echo cp -ip "$(ls -1rt |tail -1)"{,~$(date +%m%d$(qjd)%H%M)~}
 """
 
+# cp.py file.txt copied.txt  # copies like ⌘ D of macOS Finder
+
+# code reviewed by People, Black, Flake8, & MyPy
+
+
 import datetime as dt
 import os
 import sys
@@ -34,7 +39,7 @@ import sys
 import byotools as byo
 
 
-def main():
+def main() -> None:
     """Run as a Sh Verb"""
 
     # Require one Arg without "-" Dash Options, preceded by a "--" Sep or not

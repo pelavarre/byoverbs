@@ -17,6 +17,8 @@ Add working Python Verbs alongside the broken Sh Verbs.
 Step 3:
 Grow and debug the Python Verbs, till we don't need the broken Sh Verbs any more.
 
+We'll know we've got this working when you first report a Bug to us.
+
 ## Past work
 
 Cristóbal Sciutto

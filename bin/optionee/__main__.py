@@ -21,6 +21,7 @@ quirks:
 examples:
   é  # shows these examples and exits
   é --h  # shows these examples as part of a larger help message and exits
+  optionee --for=cxce WHAT  # edit one Sh Command to run when saved
   echo abc def |xargs -n 1 |é -- |cat -etv  # edits Pipe
   echo abc def |pbcopy
   pbpaste && é --  # edits Os Copy-Paste Buffer

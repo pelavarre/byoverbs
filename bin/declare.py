@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 """
-which -a
-whence -a
+declare -f
 alias -p  # Bash
 alias  # Zsh
-declare -f
+which -a
+whence -a
 """
 
 import byotools as byo
@@ -14,5 +14,5 @@ import byotools as byo
 byo.sys_exit()
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/which.py
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/declare.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

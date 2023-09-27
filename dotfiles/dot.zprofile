@@ -25,12 +25,18 @@ setopt histverify  # Preview ! History Expansion  # a la Bash:  shopt -s histver
 stty -ixon  # let Sh ⌃S mean undo ⌃R  # don't take ⌃Q and ⌃S as XOn/ XOff
 
 
-# Autocorrect some inputs
-# Work inside the Terminal a la macOS > Preferences > Keyboard > Replace works outside
+# Eagerly autocorrect some inputs
+#
+# Work well inside macOS Terminal
+# Work like macOS > System Settings > Keyboard > Replace
+# Work like iOS > Settings > General > Keyboard > Text Replacement
+#
 
-function /: { echo '/:  ⌃ ⌥ ⇧ ⌘ # £ ← ↑ → ↓ ⎋ ⋮ ·' |tee >(pbcopy); }
-function :scf () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
-function :shrug () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
+
+alias %%='echo -n "%%   ⌃ ⌥ ⇧ ⌘   # £   ← ↑ → ↓ ⎋ ⏎ ⇥ ⇤   ⋮ ·" |tee >(pbcopy) && echo'
+
+function :scf: () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
+function :shrug: () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
 
 
 # Adopt the l, la, ll convention from Ubuntu
