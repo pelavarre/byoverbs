@@ -1,15 +1,13 @@
 # ~/.bashrc
 
 # shellcheck disable=SC1090  # Can't follow non-constant source
-#
+
 
 # Run their code if they did shove it into your Home
 
 if [[ -e ~/.bashrc-theirs ]]; then
     source ~/.bashrc-theirs
-    if alias |grep ^alias.ll= >/dev/null; then
-        unalias l la ll
-    fi
+    unalias l la ll 2>/dev/null
 fi
 
 
@@ -28,7 +26,7 @@ fi
 
 function precmd () {  # a la Zsh 'function precmd'
     local xs=$?
-    HISTTIMEFORMAT='' history 1 |cut -c8- >>~/.stdin.log  # no Pwd, no Date/Time, no Exit
+    HISTTIMEFORMAT='' history 1 |cut -c8- >>~/.stdin.log  # no Pwd, no Time, no Exit
     return $xs
 }
 

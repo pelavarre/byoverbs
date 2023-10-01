@@ -106,7 +106,7 @@ echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 echo
 
 
-# Run Bash R C now, in case not before
+# Don't run Bash Profile without also running Bash R C
 
 source ~/.bashrc
 

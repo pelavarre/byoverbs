@@ -33,7 +33,6 @@ import select
 import sys
 import termios  # unhappy at Windows
 import tty  # unhappy at Windows
-from typing import Any, Self
 
 import byo
 from byo import byoargparse
@@ -142,10 +141,10 @@ class BytesTerminal:
 
         self.stdio = stdio
         self.fd = fd
-        self.tcgetattr: list[Any] | None = None
+        self.tcgetattr: list[int | list[bytes | int]] | None = None
         self.holds = bytearray()
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> "BytesTerminal":  # -> typing.Self:
         r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
 
         fd = self.fd
@@ -167,7 +166,7 @@ class BytesTerminal:
 
         return self
 
-    def __exit__(self, *exc_info) -> Any:
+    def __exit__(self, *exc_info) -> None:
         r"""Start line-buffering Input, start replacing \n Output with \r\n, etc"""
 
         fd = self.fd

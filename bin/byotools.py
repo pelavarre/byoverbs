@@ -32,18 +32,25 @@ assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 
 
 ... == subprocess.run  # new since Sep/2015 Python 3.5
+
 ... == dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6  # Ubuntu 2018
 ... == "{:_}".format(12345)  # new since Dec/2016 Python 3.6
 ... == (re.search(r"..", "abcde") or [""])[0]  # new since Dec/2016 Python 3.6
+
 ... == breakpoint  # new since Jun/2018 Python 3.7
 ... == dataclasses  # new since Jun/2018 Python 3.7
+
 ... == f"{sys.version_info[:3]=}"  # new since Oct/2019 Python 3.8  # Ubuntu 2020
 ... == shlex.join  # new since Oct/2019 Python 3.8
+
 ... == str.removeprefix, str.removesuffix  # new since Oct/2020 Python 3.9
 ... == dict[str, int]  # new since Oct/2020 Python 3.9
+
 # ... == list(zip([], [], strict=True))  # since Oct/2021 Python 3.10  # Ubuntu 2022
+
 # ... == tomllib  # since Oct/2022 Python 3.11
 # ... == termios.tcgetwinsize(sys.stderr.fileno())  # since Oct/2022 Python 3.11
+# ... == typing.Self  # since Oct/2022 Python 3.11
 
 
 #
