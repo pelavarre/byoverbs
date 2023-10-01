@@ -51,7 +51,7 @@ import time
 import byotools as byo
 
 
-def main():
+def main() -> None:
     """Run as a Sh Verb"""
 
     # Take in Words from the Sh Command Line
@@ -130,7 +130,7 @@ def main():
             subprocess_run(late_argv)
 
 
-def subprocess_run(argv):
+def subprocess_run(argv) -> None:
     """Forward the options and args to a SubProcess"""
 
     shline = " ".join(argv)
@@ -143,7 +143,7 @@ def subprocess_run(argv):
     _ = subprocess.run(argv, stdin=None)
 
 
-def argv_append_cal_args(argv, args, when):
+def argv_append_cal_args(argv, args, when) -> None:
     """Append each option or arg"""
 
     # Work up some context
@@ -179,7 +179,7 @@ def argv_append_cal_args(argv, args, when):
         argv_append_args_Y(argv, args=args, when=when)
 
 
-def argv_append_args_m(argv, args, when):
+def argv_append_args_m(argv, args, when) -> None:
     """Take months 1..12 as 8 behind, 3 ahead, or this month"""
 
     argv.extend(["-m", args.m])
@@ -211,7 +211,7 @@ def argv_append_args_m(argv, args, when):
                 argv.append(arg)
 
 
-def argv_append_args_Y(argv, args, when):
+def argv_append_args_Y(argv, args, when) -> None:
     """Takes years 0..99 as 66 behind, 33 ahead, or this year"""
 
     year_by_int_y = dict()
@@ -231,20 +231,18 @@ def argv_append_args_Y(argv, args, when):
     argv.append(arg)
 
 
-def parse_cal_py_args_else():
+def parse_cal_py_args_else() -> argparse.Namespace:
     """Print helps for Cal Py and exit zero or nonzero, else return args"""
 
     # Take Words
 
     parser = compile_cal_py_argdoc_else()
 
-    byo.sys_exit_if_testdoc()  # prints examples & exits if no args
+    args = parser.parse_args_else()  # often prints help & exits zero
+    if args.help:
+        parser.print_help()
 
-    byo.sys_exit_if_helpdoc(["--help"])  # ignores "-h", but prints & exits for "--h"
-
-    args = parser.parse_args()  # prints helps and exits, else returns args
-    assert not args.help, args
-    del args.help
+        sys.exit(0)
 
     # Reject the -M -S contradiction, and default to -M at Linux
 
@@ -272,7 +270,7 @@ def parse_cal_py_args_else():
     return args
 
 
-def parse_cal_now():
+def parse_cal_now() -> dt.datetime:
     """Take now as now, or sleep one second and look again"""
 
     now = dt.datetime.now()
@@ -288,7 +286,7 @@ def parse_cal_now():
     return now
 
 
-def parse_cal_when(str_when, now):
+def parse_cal_when(str_when, now) -> dt.datetime:
     """Take in MM or MDD or MMDD or YYMMDD or YYYYMMDD"""
 
     # Don't force people to type the leading zero of an MM month
@@ -331,10 +329,10 @@ def parse_cal_when(str_when, now):
     return when
 
 
-def compile_cal_py_argdoc_else():
+def compile_cal_py_argdoc_else() -> byo.ArgumentParser:
     """Construct an ArgumentParser from the Main ArgDoc"""
 
-    parser = byo.compile_argdoc(drop_help=True)
+    parser = byo.ArgumentParser(add_help=False)
 
     parser.add_argument(
         "--help", action="count", help="show this help message and exit"
@@ -367,13 +365,6 @@ def compile_cal_py_argdoc_else():
         nargs="?",
         help="the number of the year, such as 1970 (default: today's year)",
     )
-
-    try:
-        byo.sys_exit_if_argdoc_ne(parser)
-    except SystemExit:
-        print("jvsketch.py: ERROR: Main Doc and ArgParse Parser disagree")
-
-        raise
 
     return parser
 

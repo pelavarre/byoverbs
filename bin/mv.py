@@ -37,7 +37,13 @@ import sys
 import byotools as byo
 
 
-def main():
+class Main:
+    """Open up a shared workspace for the Code of this Py File"""
+
+    trash_reldir: str
+
+
+def main() -> None:
     """Run as a Sh Verb"""
 
     # Require one Arg without "-" Dash Options, preceded by a "--" Sep or not
@@ -55,7 +61,8 @@ def main():
     # Look for a Trash Can
 
     trash_reldir = "__{jqd}-trash__".format(jqd=jqd)
-    main.trash_reldir = trash_reldir
+    Main.trash_reldir = trash_reldir
+
     trash_isdir_here = os.path.isdir(trash_reldir)
 
     # Look for File Ext's to archive
@@ -74,7 +81,7 @@ def main():
 
     patterns = list("*{}".format(_) for _ in exts)
     if not trash_isdir_here:
-        patterns = None
+        patterns = list()
 
     # Peek at top of Stack
 

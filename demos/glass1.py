@@ -108,7 +108,7 @@ LeftCodes = Left.encode()
 def main():
     """Run from the Sh command line"""
 
-    parser = byo.compile_argdoc()
+    parser = byo.ArgumentParser(add_help=False)
 
     init_help = "run in the alt screen, not in the main screen a la:  less -X"
     parser.add_argument("--init", action="count", help=init_help)
@@ -116,7 +116,7 @@ def main():
     fill_help = "print a screenful of dots, and then run"
     parser.add_argument("--fill", action="count", help=fill_help)
 
-    args = byo.parser_parse_args(parser)  # prints helps and exits, else returns args
+    args = parser.parse_args_else()  # often prints help & exits zero
 
     #
 

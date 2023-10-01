@@ -22,7 +22,7 @@ examples:
   mv -i $(git status --ignored --short |cut -c 4-) ~$(date +%m%d$(qjd)%H%M)~/.
 """
 
-# code reviewed by people, and by Black and Flake8
+# code reviewed by People, Black, Flake8, & MyPy
 
 
 import datetime as dt
@@ -35,11 +35,11 @@ import sys
 import byotools as byo
 
 
-def main():
+def main() -> None:
     """Run as a Sh Verb"""
 
-    parser = byo.compile_argdoc()
-    byo.parser_parse_args(parser)  # prints helps and exits, else returns args
+    parser = byo.ArgumentParser()
+    parser.parse_args_else()  # often prints help & exits zero
 
     # Say who's calling
 

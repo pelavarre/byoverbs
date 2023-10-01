@@ -10,7 +10,7 @@ examples:
   byo.subprocess_exit_run_if(shline)  # prints and exits, else calls $SHELL and returns
 """
 
-# code reviewed by people, and by Black and Flake8
+# code reviewed by People, Black, Flake8, & MyPy
 
 
 import __main__
@@ -58,90 +58,166 @@ assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 #
 
 
-class ArgumentParser:
-    """Work like Class ArgumentParser of Import ArgParse"""
+class ArgumentParser(argparse.ArgumentParser):
+    """Amp up Class ArgumentParser of Import ArgParse"""
 
-    def __init__(self):
-        self.parser = compile_argdoc()
+    def __init__(self, add_help=True) -> None:
+        argdoc = __main__.__doc__
 
-    def __getattr__(self, name):
-        parser = self.parser
-        attr = getattr(parser, name)
-        return attr
+        # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
 
-    def parse_args(self):
-        parser = self.parser
-        args = parser_parse_args(parser)
-        return args
+        doc_lines = argdoc.strip().splitlines()
+        prog = doc_lines[0].split()[1]  # first word of first line
 
+        doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
+        alt_description = doc_firstlines[1]  # first line of second paragraph
 
-def compile_argdoc(drop_help=None):
-    """Form an ArgumentParser from the ArgDoc, without Positional Args and Options"""
+        # Say when Doc Lines stand plainly outside of the Epilog
 
-    argdoc = __main__.__doc__
+        def skippable(line) -> bool:
+            strip = line.rstrip()
 
-    # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
+            skip = not strip
+            skip = skip or strip.startswith(" ")
+            skip = skip or strip.startswith("usage")
+            skip = skip or strip.startswith("positional arguments")
+            skip = skip or strip.startswith("options")
 
-    doc_lines = argdoc.strip().splitlines()
-    prog = doc_lines[0].split()[1]  # first word of first line
+            return skip
 
-    doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
-    alt_description = doc_firstlines[1]  # first line of second paragraph
+        default = "just do it"
+        description = default if skippable(alt_description) else alt_description
 
-    add_help = not drop_help
+        # Pick the Epilog out of the Doc
 
-    # Say when Doc Lines stand plainly outside of the Epilog
+        epilog = None
+        for index, line in enumerate(doc_lines):
+            if skippable(line) or (line == description):
+                continue
 
-    def skippable(line):
-        strip = line.rstrip()
+            epilog = "\n".join(doc_lines[index:])
+            break
 
-        skip = not strip
-        skip = skip or strip.startswith(" ")
-        skip = skip or strip.startswith("usage")
-        skip = skip or strip.startswith("positional arguments")
-        skip = skip or strip.startswith("options")
+        # Form an ArgumentParser, without Positional Args and Options
 
-        return skip
+        super().__init__(
+            prog=prog,
+            description=description,
+            add_help=add_help,
+            formatter_class=argparse.RawTextHelpFormatter,
+            epilog=epilog,
+        )
 
-    default = "just do it"
-    description = default if skippable(alt_description) else alt_description
+        # 'add_help=False' for 'cal -h', 'df -h', 'ls -h', etc
 
-    # Pick the Epilog out of the Doc
+    #
+    # def parse_args(self, args=None) -> argparse.Namespace:
+    #     argspace = super().parse_args(args)
+    #     return argspace
+    #
+    # yea no, MyPy would then explode with a deeply inscrutable
+    #
+    #   Signature of "parse_args" incompatible with supertype "ArgumentParser"
+    #   [override]
+    #
 
-    epilog = None
-    for index, line in enumerate(doc_lines):
-        if skippable(line) or (line == description):
-            continue
+    def parse_args_else(self, args=None) -> argparse.Namespace:
+        """Parse the Sh Args, even when no Sh Args coded as the one Sh Arg '--'"""
 
-        epilog = "\n".join(doc_lines[index:])
-        break
+        # Accept the "--" Sh Args Separator when present with or without Positional Args
 
-    # Form an ArgumentParser, without Positional Args and Options
+        sh_args = sys.argv[1:] if (args is None) else args
+        if sh_args == ["--"]:  # ArgParse chokes if Sep present without Pos Args
+            sh_args = ""
 
-    parser = argparse.ArgumentParser(
-        prog=prog,
-        description=description,
-        add_help=add_help,
-        formatter_class=argparse.RawTextHelpFormatter,
-        epilog=epilog,
-    )
+        # Print Diffs & exit nonzero, when Arg Doc wrong
 
-    return parser
+        diffs = self.diff_doc_vs_format_help()
+        if diffs:
+            print("\n".join(diffs))
 
+            sys.exit(2)
 
-def parser_parse_args(parser):
-    """Parse the Sh Args, even when no Sh Args coded as the one Sh Arg '--'"""
+        # Print examples & exit zero, if no Sh Args
 
-    sys_exit_if_argdoc_ne(parser)  # prints diff & exits nonzero, when Arg Doc wrong
-    sys_exit_if_testdoc()  # prints examples & exits if no args
+        testdoc = self.scrape_testdoc_from_epilog()
+        if not sys.argv[1:]:
+            print()
+            print(testdoc)
+            print()
 
-    shargs = sys.argv[1:]
-    if shargs == ["--"]:  # helps ArgParse as needed when no Positional Args
-        shargs = ""
+            sys.exit(0)
 
-    args = parser.parse_args(shargs)  # prints helps and exits, else returns args
+        # Print help lines & exit zero, else return Parsed Args
 
-    return args
+        argspace = self.parse_args(sh_args)
+
+        return argspace
+
+        # often prints help & exits
+
+    def diff_doc_vs_format_help(self) -> list[str]:
+        """Form Diffs from Main Arg Doc to Parser Format_Help"""
+
+        # Fetch the Main Doc, and note where from
+
+        main_doc = __main__.__doc__.strip()
+        main_filename = os.path.split(__file__)[-1]
+        got_filename = "./{} --help".format(main_filename)
+
+        # Fetch the Parser Doc from a fitting virtual Terminal
+        # Fetch from a Black Terminal of 89 columns, not current Terminal width
+        # Fetch from later Python of "options:", not earlier Python of "optional arguments:"
+
+        with_columns = os.getenv("COLUMNS")
+        os.environ["COLUMNS"] = str(89)
+        try:
+            parser_doc = self.format_help()
+
+        finally:
+            if with_columns is None:
+                os.environ.pop("COLUMNS")
+            else:
+                os.environ["COLUMNS"] = with_columns
+
+        parser_doc = parser_doc.replace("optional arguments:", "options:")
+
+        parser_filename = "ArgumentParser(...)"
+        want_filename = parser_filename
+
+        # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
+
+        got_doc = main_doc
+        want_doc = parser_doc
+
+        diffs = list(
+            difflib.unified_diff(
+                a=got_doc.splitlines(),
+                b=want_doc.splitlines(),
+                fromfile=got_filename,
+                tofile=want_filename,
+                lineterm="",  # else the '---' '+++' '@@' Diff Control Lines end with '\n'
+            )
+        )
+
+        return diffs
+
+    def scrape_testdoc_from_epilog(self) -> str:
+        """Pick out the last Heading of the Epilog of an Arg Doc, and drop its Title"""
+
+        epilog = "" if (self.epilog is None) else self.epilog
+
+        lines = epilog.splitlines()
+        indices = list(_ for _ in range(len(lines)) if lines[_])  # drops empties
+        indices = list(
+            _ for _ in indices if not lines[_].startswith(" ")
+        )  # takes headings
+        testdoc = "\n".join(
+            lines[indices[-1] + 1 :]
+        )  # takes last heading, drops its title
+        testdoc = textwrap.dedent(testdoc)
+
+        return testdoc
 
 
 #
@@ -163,7 +239,7 @@ AST_DEFAULT_DOC = """
 """
 
 
-def ast_fetch_argdoc():
+def ast_fetch_argdoc() -> str:
     """Fetch the Sh Terminal help lines for running the main module"""
 
     # Form an Arg Doc containing the Main Doc as its Test Doc
@@ -192,7 +268,7 @@ def ast_fetch_argdoc():
     return doc
 
 
-def ast_fetch_testdoc():
+def ast_fetch_testdoc() -> str:
     """Fetch the Sh Terminal examples from the help lines for running the main module"""
 
     # Pick a Test Doc out of the Main Doc, just past the last Unindented Line
@@ -218,7 +294,7 @@ def ast_fetch_testdoc():
     return doc
 
 
-def ast_func_to_py(func):
+def ast_func_to_py(func) -> str:
     """Convert to Py Source Chars from Func"""
 
     funcname = func.__name__
@@ -228,6 +304,7 @@ def ast_func_to_py(func):
     module = sys.modules[modulename]
     pyfile = module.__file__
 
+    assert pyfile, (module, module.__file__)  # keeps MyPy happy, but maybe never fails
     with open(pyfile) as reading:
         pyfile_chars = reading.read()
 
@@ -247,13 +324,16 @@ def ast_func_to_py(func):
 
     # finds wrong Func or no Func when source isn't Black'ened, such as:  def func ():
 
+    # to do: AttributeError at func=sys.exit, etc
+    # to do: TypeError at each Func in dir(google), if those existed
+
 
 #
 # Add some Def's to Type List
 #
 
 
-def list_rindex(items, item):
+def list_rindex(items, item) -> int:
     """Find the last copy of Item, else raise IndexError"""
 
     indexed = list(reversed(items))
@@ -264,7 +344,7 @@ def list_rindex(items, item):
     return rindex
 
 
-def list_strip(items):
+def list_strip(items) -> list:
     """Drop the leading and trailing Falsey Items"""
 
     strip = list(items)
@@ -304,7 +384,7 @@ SHLEX_QUOTABLE_CHARS = SHLEX_COLD_CHARS + " !#&()*;<>?[]^{|}~"
 SHLEX_QUOTABLE_CHARS = "".join(sorted(SHLEX_QUOTABLE_CHARS))  # omits " $ ' \ `
 
 
-def shlex_parms_dash_h_etc(shargs, opts=["-h", "--help"]):
+def shlex_parms_dash_h_etc(shargs, opts=["-h", "--help"]) -> bool | None:
     """Return Truthy if '--help' or '--hel' or ... '--h' before '--'"""
 
     for opt in opts:
@@ -324,8 +404,10 @@ def shlex_parms_dash_h_etc(shargs, opts=["-h", "--help"]):
                 if opt.startswith(sharg):
                     return True
 
+    return None
 
-def shlex_parms_one_posarg():
+
+def shlex_parms_one_posarg() -> str | None:
     """Accept one Arg without "-" Dash Options, preceded by a "--" Sep or not"""
 
     shargs = sys.argv[1:]
@@ -341,7 +423,7 @@ def shlex_parms_one_posarg():
     return parm
 
 
-def shlex_quote_if(chars):
+def shlex_quote_if(chars) -> str:
     """Resort to ShLex Quote, only when not plainly cold chars"""
 
     shchars = chars
@@ -360,7 +442,7 @@ def shlex_quote_if(chars):
 #
 
 
-def str_joingrafs(grafs):
+def str_joingrafs(grafs) -> str:
     """Form a Doc of Grafs separated by Empty Lines, from a List of Lists of Lines"""
 
     chars = ""
@@ -372,7 +454,7 @@ def str_joingrafs(grafs):
     return chars
 
 
-def str_ldent(chars):  # kin to 'str.lstrip'
+def str_ldent(chars) -> str:
     """Pick out the Spaces etc, at left of some Chars"""
 
     lstrip = chars.lstrip()
@@ -381,8 +463,10 @@ def str_ldent(chars):  # kin to 'str.lstrip'
 
     return dent
 
+    # kin to 'str.lstrip'
 
-def str_removeprefix(chars, prefix):
+
+def str_removeprefix(chars, prefix) -> str:
     """Remove Prefix from Chars if present, till Oct/2020 Python 3.9 str.removeprefix"""
 
     result = chars
@@ -392,7 +476,7 @@ def str_removeprefix(chars, prefix):
     return result
 
 
-def str_removesuffix(chars, suffix):
+def str_removesuffix(chars, suffix) -> str:
     """Remove Suffix from Chars if present, till Oct/2020 Python 3.9 str.removesuffix"""
 
     result = chars
@@ -402,7 +486,7 @@ def str_removesuffix(chars, suffix):
     return result
 
 
-def str_ripgraf(graf):
+def str_ripgraf(graf) -> list[str]:
     """Pick the lines below the head line of a paragraph, and dedent them"""
 
     grafdoc = "\n".join(graf)
@@ -416,14 +500,14 @@ def str_ripgraf(graf):
     return graf
 
 
-def str_splitgrafs(doc, keepends=False):  # todo: keepends=True
+def str_splitgrafs(doc) -> list[list[str]]:
     """Form List of Lists of Stripped Lines, from Doc of Grafs between Empty Lines"""
-
-    assert not keepends  # 'keepends=True' like for caller to find Sections of Grafs
 
     grafs = list()  # collects Grafs
 
+    graf: list[str]
     graf = list()  # begins Empty, opens up to collect Lines, then begins again
+
     for line in doc.splitlines():
         # Add each Empty Line found before the next Same or Less Dented Line
 
@@ -456,13 +540,15 @@ def str_splitgrafs(doc, keepends=False):  # todo: keepends=True
 
     return grafs  # -> Grid = List[List[Str]]
 
+    # todo: keepends=True
+
 
 #
 # Add some Def's to Import SubProcess
 #
 
 
-def subprocess_exit_run_if(stdin=subprocess.PIPE):
+def subprocess_exit_run_if(stdin=subprocess.PIPE) -> None:
     """Print and exit, else run the last Graf of ShLines in the Main Doc"""
 
     doc = __main__.__doc__
@@ -476,7 +562,9 @@ def subprocess_exit_run_if(stdin=subprocess.PIPE):
         subprocess_ttyline_exit_if(ttyline)  # in effect, shell=True
 
 
-def subprocess_shline_exit_if(shline, stdin=subprocess.PIPE):
+def subprocess_shline_exit_if(  # ) -> subprocess.CompletedProcess:
+    shline, stdin=subprocess.PIPE
+) -> subprocess.CompletedProcess:
     """Print and exit, else run the ShLine and return after it exits zero"""
 
     sys_exit_if()  # prints examples or help and exits, else returns args
@@ -495,7 +583,9 @@ def subprocess_shline_exit_if(shline, stdin=subprocess.PIPE):
     # note: Python SubProcess-Run Shell-False does Not demand AbsPath in the ShVerb
 
 
-def subprocess_ttyline_exit_if(ttyline, stdin=subprocess.PIPE):
+def subprocess_ttyline_exit_if(  # ) -> subprocess.CompletedProcess:
+    ttyline, stdin=subprocess.PIPE
+) -> subprocess.CompletedProcess:
     """Print and exit, else run the TtyLine in $SHELL and return after it exits zero"""
 
     sys_exit_if()  # prints examples or help and exits, else returns args
@@ -515,7 +605,7 @@ def subprocess_ttyline_exit_if(ttyline, stdin=subprocess.PIPE):
     return run
 
 
-def subprocess_run_oneline(shline):
+def subprocess_run_oneline(shline) -> str:
     """Take 1 Line of Output from SubProcess Run Shell=False Check=True"""
 
     argv = shlex.split(shline)
@@ -540,7 +630,7 @@ def subprocess_run_oneline(shline):
     return line
 
 
-def subprocess_run_stdout(shline, errors):
+def subprocess_run_stdout_bytes(shline) -> bytes:
     """Take Output from SubProcess Run Shell=False Check=True"""
 
     argv = shlex.split(shline)
@@ -550,14 +640,33 @@ def subprocess_run_stdout(shline, errors):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        errors=errors,
         check=True,
     )
 
-    stdout = run.stdout  # Bytes|Str
+    stdout = run.stdout
     assert not run.stderr, run.stderr
 
     return stdout
+
+
+def subprocess_run_stdout_surrogateescape(shline) -> str:
+    """Take Output from SubProcess Run Shell=False Check=True"""
+
+    argv = shlex.split(shline)
+
+    run = subprocess.run(
+        argv,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        errors="surrogateescape",
+        check=True,
+    )
+
+    stdout_chars = run.stdout
+    assert not run.stderr, run.stderr
+
+    return stdout_chars
 
 
 #
@@ -565,7 +674,7 @@ def subprocess_run_stdout(shline, errors):
 #
 
 
-def sys_exit():
+def sys_exit() -> None:
     """Prints examples or help lines or exception, and exits"""
 
     sys_exit_if()  # prints examples or help or args and exits, else returns
@@ -573,7 +682,7 @@ def sys_exit():
     raise NotImplementedError(sys.argv[1:])
 
 
-def sys_exit_if():
+def sys_exit_if() -> None:
     """Print examples or help or args and exit, else return"""
 
     sys_exit_if_testdoc()  # prints examples & exits if no args
@@ -583,7 +692,7 @@ def sys_exit_if():
     sys_exit_if_not_implemented()  # raises unhandled exception if arg isn't just:  --
 
 
-def sys_exit_if_helpdoc(opts=["-h", "--help"]):
+def sys_exit_if_helpdoc(opts=["-h", "--help"]) -> None:
     """Print help lines and exit, if -h, --h, --he, --hel, --help"""
 
     doc = ast_fetch_argdoc()
@@ -598,7 +707,7 @@ def sys_exit_if_helpdoc(opts=["-h", "--help"]):
     # byo.sys_exit_if_helpdoc(["--help"])  # ignores "-h", but prints & exits for "--h"
 
 
-def sys_exit_if_argdoc_ne(parser):
+def sys_exit_if_argdoc_ne(parser) -> None:
     """Print Diff and exit nonzero, unless Arg Doc equals Parser Format_Help"""
 
     # Fetch the Main Doc, and note where from
@@ -658,7 +767,7 @@ def sys_exit_if_argdoc_ne(parser):
     # https://bugs.python.org/issue38438  <= usage: [WORD ... ] / [WORD [WORD ...]]
 
 
-def sys_exit_if_not_implemented():
+def sys_exit_if_not_implemented() -> None:
     """Exit by raising unhandled NotImplementedError() if given options or args"""
 
     shargs = sys.argv[1:]
@@ -666,7 +775,7 @@ def sys_exit_if_not_implemented():
         raise NotImplementedError(sys.argv[1:])
 
 
-def sys_exit_if_testdoc():
+def sys_exit_if_testdoc() -> None:
     """Print examples and exit, if no Sh Args"""
 
     testdoc = ast_fetch_testdoc()
@@ -680,7 +789,7 @@ def sys_exit_if_testdoc():
         sys.exit()
 
 
-def sys_stdin_prompt_if():
+def sys_stdin_prompt_if() -> None:
     """Prompt for TTY EOF before blocking to read more of it"""
 
     CONTROL_KEYCAP = "\N{Up Arrowhead}"  # ⌃
@@ -688,7 +797,7 @@ def sys_stdin_prompt_if():
         sys_stderr_print("Press {}D TTY EOF to quit".format(CONTROL_KEYCAP))
 
 
-def sys_stdin_readline_else():
+def sys_stdin_readline_else() -> str:
     """Take a Line from Sys StdIn, else exit zero or nonzero"""
 
     SIGINT_RETURNCODE_130 = 0x80 | signal.SIGINT
@@ -710,7 +819,7 @@ def sys_stdin_readline_else():
     return chars
 
 
-def sys_stderr_print(*args, **kwargs):
+def sys_stderr_print(*args, **kwargs) -> None:
     """Work like Print, but write Sys Stderr in place of Sys Stdout"""
 
     kwargs_ = dict(kwargs)
@@ -730,7 +839,7 @@ def sys_stderr_print(*args, **kwargs):
 #
 
 
-def textwrap_dicts_tabled(dicts, sep=" | ", divider="-+-"):
+def textwrap_dicts_tabled(dicts, sep=" | ", divider="-+-") -> str:
     """Format [Dict] as centered Column Keys, then Rows of justified Cells"""
 
     if not dicts:
@@ -744,7 +853,7 @@ def textwrap_dicts_tabled(dicts, sep=" | ", divider="-+-"):
     return chars
 
 
-def textwrap_frame(chars):
+def textwrap_frame(chars) -> str:
     """Add top/ bottom/ left/ right margins"""
 
     dent = 4 * " "
@@ -768,7 +877,7 @@ def textwrap_frame(chars):
     return alt_chars
 
 
-def textwrap_lists_tabled(lists, sep="  ", divider=None):
+def textwrap_lists_tabled(lists, sep="  ", divider=None) -> str:
     """Format List of List of Cells as centered or justified Str's in Columns"""
 
     # Count out the Width of each Column

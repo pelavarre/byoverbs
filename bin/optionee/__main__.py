@@ -27,7 +27,7 @@ examples:
   pbpaste && é --  # edits Os Copy-Paste Buffer
 """
 
-# code reviewed by people, and by Black & Flake8 & MyPy
+# code reviewed by People, Black, Flake8, & MyPy
 
 
 import __main__
@@ -155,7 +155,7 @@ def pull_in() -> bytes:
     # Read from the Os Copy-Paste Buffer
 
     if args.ifile == "pbpaste":  # 'pbpaste' first found at macOS
-        ibytes = subprocess_run_stdout(argv=shlex.split(args.ifile))
+        ibytes = subprocess_run_stdout_bytes(argv=shlex.split(args.ifile))
         return ibytes
 
     # Read from Dir
@@ -171,7 +171,7 @@ def pull_in() -> bytes:
     return ibytes
 
 
-def subprocess_run_stdout(argv) -> bytes:
+def subprocess_run_stdout_bytes(argv) -> bytes:
     """Run the ArgV and capture its Stdout"""
 
     run = subprocess.run(
@@ -230,13 +230,13 @@ def mess_about() -> None:
     # Replay Bytes logged at Screen
 
     if args.screen_argv:
-        screen_bytes = subprocess_run_stdout(args.screen_argv)
+        screen_bytes = subprocess_run_stdout_bytes(args.screen_argv)
         print(screen_bytes, file=sys.stderr)
 
     # Replay Bytes logged at Keyboard
 
     if args.key_argv:
-        key_bytes = subprocess_run_stdout(args.key_argv)
+        key_bytes = subprocess_run_stdout_bytes(args.key_argv)
         print(key_bytes, file=sys.stderr)
 
     # Reply to Keyboard till Quit

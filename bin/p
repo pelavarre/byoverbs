@@ -40,16 +40,17 @@ QUICK_LAZY_IMPORT_NAMES = """
 
 
     # hard-to-discover basics
+    # sorted(_[0] for _  in sys.modules.items() if not hasattr(_[-1], "__file__"))
 
     __main__
 
-    itertools time
+    atexit builtins errno itertools marshal posix pwd sys time
 
 
-    # from ".so" Shared Object Libraries
+    # from ".so" Shared Object Libraries, minus "pyexpat"
 
     array audioop binascii cmath fcntl grp
-    math mmap nis pyexpat readline resource select syslog termios unicodedata zlib
+    math mmap nis readline resource select syslog termios unicodedata zlib
 
 
     # from Py Files

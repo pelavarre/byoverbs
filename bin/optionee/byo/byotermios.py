@@ -12,7 +12,7 @@ and then also ⌥Q and F1 and FnDelete, and ⌥⇧A and ⌥E E, and so on and on
 Name the Byte Encodings here from our own Tests, stop struggling to find them doc'ed
 """
 
-# code reviewed by people, and by Black & Flake8 & MyPy
+# code reviewed by People, Black, Flake8, & MyPy
 
 
 import __main__

@@ -22,7 +22,7 @@ Docs
     /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
 """
 
-# code reviewed by people, and by Black & Flake8 & MyPy
+# code reviewed by People, Black, Flake8, & MyPy
 
 
 import __main__
@@ -136,12 +136,14 @@ MouseSixByteEndPattern = b"\x1B\\[" rb"M..."  # MPR X Y
 class BytesTerminal:
     r"""Read the Raw Bytes from a Terminal"""
 
+    tcgetattr: list[int | list[bytes | int]] | None
+
     def __init__(self, stdio) -> None:
         fd = stdio.fileno()
 
         self.stdio = stdio
         self.fd = fd
-        self.tcgetattr: list[int | list[bytes | int]] | None = None
+        self.tcgetattr = None
         self.holds = bytearray()
 
     def __enter__(self) -> "BytesTerminal":  # -> typing.Self:

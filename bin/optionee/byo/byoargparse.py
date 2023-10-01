@@ -19,7 +19,7 @@ Pick the Examples of how to test Main out of the last Paragraph of the Epilog
 Don't yet solve SubParser's
 """
 
-# code reviewed by people, and by Black & Flake8 & MyPy
+# code reviewed by People, Black, Flake8, & MyPy
 
 
 import __main__

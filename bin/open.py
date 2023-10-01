@@ -35,6 +35,7 @@ examples:
 # todo: look for '#' over '?' examples of key-value pairs, but found outside the Vpn's
 
 
+import argparse
 import os
 import pdb
 import re
@@ -46,7 +47,7 @@ if not hasattr(__builtins__, "breakpoint"):
     breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
 
 
-def main():
+def main() -> None:
     """Run from the Sh Command Line"""
 
     args = parse_open_py_args_else()  # prints helps and exits, else returns args
@@ -65,23 +66,10 @@ def main():
             address_print_nears(address)
 
 
-def parse_open_py_args_else():
+def parse_open_py_args_else() -> argparse.Namespace:
     """Print helps for Open Py and exit zero or nonzero, else return args"""
 
-    parser = compile_open_py_argdoc_else()
-
-    byo.sys_exit_if_testdoc()  # prints examples & exits if no args
-    byo.sys_exit_if_helpdoc()  # prints help & exits zero for:  -h, --help
-
-    args = parser.parse_args()  # prints helps and exits, else returns
-
-    return args
-
-
-def compile_open_py_argdoc_else():
-    """Print helps for Open Py and exit zero or nonzero, else return args"""
-
-    parser = byo.compile_argdoc()
+    parser = byo.ArgumentParser()
 
     parser.add_argument(
         "address",
@@ -90,17 +78,12 @@ def compile_open_py_argdoc_else():
         help="some web address, maybe ending in '/' plus '?' '#' '&' '=' pairs",
     )
 
-    try:
-        byo.sys_exit_if_argdoc_ne(parser)
-    except SystemExit:
-        print("jvsketch.py: ERROR: Main Doc and ArgParse Parser disagree")
+    args = parser.parse_args_else()  # often prints help & exits zero
 
-        raise
-
-    return parser
+    return args
 
 
-def address_print_nears(address):
+def address_print_nears(address) -> None:
     """Print the paragraphs and then the lines near to an address"""
 
     alt_address = address.strip()
@@ -111,9 +94,9 @@ def address_print_nears(address):
 
     # Sort the Offers
 
-    def key(chars):
-        distinct = (len(chars), chars)
-        return distinct
+    def key(chars) -> tuple[int, str]:
+        keyed = (len(chars), chars)
+        return keyed
 
     alt_paras = sorted(set(paras), key=key, reverse=True)
     alt_lines = sorted(set(lines), key=key, reverse=True)
@@ -134,8 +117,15 @@ def address_print_nears(address):
         print()
 
 
-def address_form_nears(address):  # FIXME  # noqa C901 too complex (13
+Graf = list[str]
+Grid = list[list[str]]
+
+
+def address_form_nears(address) -> tuple[Graf, Graf]:  # FIXME  # noqa C901
     """Search out paragraphs and lines near to an address"""
+
+    paras: Graf  # not Grid : -()
+    lines: Graf
 
     paras = list()
     lines = list()

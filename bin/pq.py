@@ -72,7 +72,9 @@ examples:
   pq help  # fails, but dumps vocabulary
 """
 
-# code reviewed by people, and by Black & Flake8 & MyPy
+# to do: clash w expectation of remove only 4 Columns at:  pq dedent
+
+# code reviewed by People, Black, Flake8, & MyPy
 
 
 import argparse
@@ -170,7 +172,7 @@ class PyQueryVm:
             alt_ichars = sys.stdin.read()
         else:
             sys.stderr.write("+ pbpaste |...\n")
-            alt_ichars = byo.subprocess_run_stdout("pbpaste", errors="surrogateescape")
+            alt_ichars = byo.subprocess_run_stdout_surrogateescape("pbpaste")
 
         ichars = alt_ichars
         if alt_ichars and not alt_ichars.endswith("\n"):

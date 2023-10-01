@@ -33,16 +33,13 @@ docs:
 
 examples:
 
-  ls.py --  # ls -alF -rt
-  ls.py /tmp  # ls -alF -rt /tmp
-  ls.py /tmp/*  # ls -adlF -rt /tmp/*
-
-  ls.py |cat -  # runs the Code for:  ls -1
+  ls.py -- |cat -  # runs the Code for:  ls -1
   ls.py --py |cat -  # shows the Code for:  ls -1
-  ls.py -C --py  # shows the Code for Ls C, which is the Code for:  ls
+
+  ls.py -al  # runs the Code for:  ls -al
 
   ls.py -1 --py >p.py  # name the Code
-  python3 p.py  # run the named Code
+  python3 p.py  # run thmake named Code
   cat p.py |cat -n |expand  # show the numbered Sourcelines of the named Code
 
   python3 -c "$(ls.py -1 --py)"  # runs the Code as shown
@@ -51,7 +48,9 @@ examples:
   ls -1rt |tail -1  # the File or Dir most recently touched, if any
 """
 
-# code reviewed by people, and by Black and Flake8
+# todo: ls.py --  # ls.py -AdhlF -rt ...
+
+# code reviewed by People, Black, Flake8, & MyPy
 
 
 import argparse
@@ -62,15 +61,22 @@ import stat
 import subprocess
 import sys
 import traceback
+import typing
 
 import byotools as byo
 
 
-def main():
+class Main:
+    """Open up a shared workspace for the Code of this Py File"""
+
+    args: argparse.Namespace
+
+
+def main() -> None:
     """Run from the Sh Command Line"""
 
     args = parse_ls_py_args()  # prints help & exits zero for:  -h, --help
-    main.args = args
+    Main.args = args
 
     # Compile Sh Args to Python and run it, if any Dash or Dash-Dash Options in Sh Args
 
@@ -102,7 +108,7 @@ def main():
     sys.exit(run.returncode)
 
 
-def parse_ls_py_args():
+def parse_ls_py_args() -> argparse.Namespace:
     """Parse the Args of the Sh Command Line"""
 
     # Collect Help Lines
@@ -125,7 +131,7 @@ def parse_ls_py_args():
 
     # Form Parser
 
-    parser = byo.compile_argdoc(drop_help=True)
+    parser = byo.ArgumentParser(add_help=False)
 
     assert argparse.ZERO_OR_MORE == "*"
     parser.add_argument("tops", metavar="TOP", nargs="*", help=help_top)
@@ -146,7 +152,7 @@ def parse_ls_py_args():
 
     # Run Parser
 
-    args = byo.parser_parse_args(parser)  # prints help & exits, when need be
+    args = parser.parse_args_else()  # often prints help & exits zero
     if args.help:
         parser.print_help()
 
@@ -171,7 +177,7 @@ def parse_ls_py_args():
     return args
 
 
-def run_ls_args(args):
+def run_ls_args(args) -> None:
     """Interpret the Parsed Args"""
 
     # Default to 'ls -1', despite Sh Ls defaulting to 'ls -C'
@@ -204,7 +210,7 @@ def run_ls_args(args):
     opt_show_or_exec_py(opt, kwargs=kwargs, func=func, title_py=title_py)
 
 
-def parse_ls_one_args(args):
+def parse_ls_one_args(args) -> tuple[str, typing.Callable, dict]:
     """Pick out the '-1' Option, its 1 Func, and its KwArgs"""
 
     opt = "-1"  # show as one column of file or dir names
@@ -218,6 +224,8 @@ def parse_ls_one_args(args):
         (stat.S_ISDIR(s.st_mode) and not stat.S_ISLNK(s.st_mode))
         for s in stat_by_top.values()
     )
+
+    func: typing.Callable
 
     if not tops:  # if no Tops
         func = ls_here_by_name
@@ -245,7 +253,7 @@ def parse_ls_one_args(args):
     return (opt, func, kwargs)
 
 
-def parse_ls_ell_args(args):
+def parse_ls_ell_args(args) -> tuple[str, typing.Callable, dict]:
     """Pick out the '-l' or '-lh' or '--full-time' Option, its 1 Func, and its KwArgs"""
 
     assert args.ell, args
@@ -265,6 +273,8 @@ def parse_ls_ell_args(args):
         (stat.S_ISDIR(s.st_mode) and not stat.S_ISLNK(s.st_mode))
         for s in stat_by_top.values()
     )
+
+    func: typing.Callable
 
     if not tops:  # if no Tops
         func = ls_here_by_stat
@@ -294,12 +304,14 @@ def parse_ls_ell_args(args):
     # todo: merge 'parse_ls_ell_args' with 'parse_ls_one_args'
 
 
-def fetch_os_stat_by_top(tops):
+def fetch_os_stat_by_top(tops) -> dict[str, os.stat_result]:
     """Call Os Stat for each Top"""
 
     alt_tops = tops if tops else [os.curdir]
 
+    stat_by_top: dict[str, os.stat_result]
     stat_by_top = dict()
+
     for top in alt_tops:
         if top not in stat_by_top.keys():
             stat_ = os.lstat(top)
@@ -308,10 +320,10 @@ def fetch_os_stat_by_top(tops):
     return stat_by_top
 
 
-def opt_form_title_py(opt, tops, func):
+def opt_form_title_py(opt, tops, func) -> str:
     """Echo the Sh Line into a Py Comment, minus '.py' '--py' details"""
 
-    args = main.args
+    args = Main.args
 
     shtops = []
     if tops:
@@ -333,7 +345,7 @@ def opt_form_title_py(opt, tops, func):
     return title_py
 
 
-def opt_show_or_exec_py(opt, kwargs, func, title_py):
+def opt_show_or_exec_py(opt, kwargs, func, title_py) -> None:
     """Form the Code, then show it or run it"""
 
     # Fetch the Code
@@ -357,7 +369,7 @@ def opt_show_or_exec_py(opt, kwargs, func, title_py):
     py_exec_or_show(py)
 
 
-def lines_forward_kwargs_etc(lines, kwargs):
+def lines_forward_kwargs_etc(lines, kwargs) -> None:
     """Forward the KwArgs, after dropping the Func's DocString"""
 
     assert lines[0].startswith('"""')
@@ -368,10 +380,10 @@ def lines_forward_kwargs_etc(lines, kwargs):
         lines[1:1] = [kv_py]
 
 
-def lines_apply_dash_a(lines):
+def lines_apply_dash_a(lines) -> None:
     """Correct the Code to run for Ls with or without '-a'"""
 
-    args = main.args
+    args = Main.args
 
     DENT_4 = 4 * " "
 
@@ -413,7 +425,7 @@ def lines_apply_dash_a(lines):
                             lines[i] = line[len(DENT_4) :]
 
 
-def lines_infer_boilerplates(lines, func, title_py):
+def lines_infer_boilerplates(lines, func, title_py) -> None:
     """Choose Hash Bang, DocString, Imports, and sometimes drop all the Blank Lines"""
 
     # Pull in the Imports apparently mentioned, 3rd of all
@@ -441,10 +453,10 @@ def lines_infer_boilerplates(lines, func, title_py):
                 lines[i] = None
 
 
-def py_exec_or_show(py):
+def py_exec_or_show(py) -> None:
     """Show the Code or run it"""
 
-    args = main.args
+    args = Main.args
 
     if args.py:
         print(py)
@@ -463,7 +475,7 @@ def py_exec_or_show(py):
 #
 
 
-def ls_here_by_name():
+def ls_here_by_name() -> None:
     """Show the Working Dir as one Column of File or Dir Names"""
 
     items = sorted([".", ".."] + os.listdir())
@@ -472,7 +484,7 @@ def ls_here_by_name():
             print(item)
 
 
-def ls_dir_by_name(top):
+def ls_dir_by_name(top) -> None:
     """Show a Dir as one Column of File or Dir Names"""
 
     items = sorted([".", ".."] + os.listdir(top))
@@ -481,14 +493,14 @@ def ls_dir_by_name(top):
             print(item)
 
 
-def ls_file_by_name(file_):
+def ls_file_by_name(file_) -> None:
     """Show one File Name"""
 
     _ = os.lstat(file_)
     print(file_)
 
 
-def ls_top_dirs_by_name(tops):
+def ls_top_dirs_by_name(tops) -> None:
     """Show some Dirs, each as the Label of a Column of File or Dir Names"""
 
     sep = None
@@ -504,7 +516,7 @@ def ls_top_dirs_by_name(tops):
                 print(item)
 
 
-def ls_files_by_name(files):
+def ls_files_by_name(files) -> None:
     """Show some Files as a Column of File Names"""
 
     for file_ in sorted(files):
@@ -513,7 +525,7 @@ def ls_files_by_name(files):
         print(file_)
 
 
-def ls_tops_by_name(tops):
+def ls_tops_by_name(tops) -> None:
     """Show the Files, one per Line, and then the Dirs, each as Label of a Column"""
 
     sep = None
@@ -544,7 +556,7 @@ def ls_tops_by_name(tops):
 #
 
 
-def ls_here_by_stat():
+def ls_here_by_stat() -> None:
     """Show the Working Dir as many Columns of one File or Dir per Line"""
 
     rows = list()
@@ -558,7 +570,7 @@ def ls_here_by_stat():
     print(chars)
 
 
-def ls_dir_by_stat(top):
+def ls_dir_by_stat(top) -> None:
     """Show a Dir as many Columns of one File or Dir per Line"""
 
     rows = list()
@@ -573,7 +585,7 @@ def ls_dir_by_stat(top):
     print(chars)
 
 
-def ls_file_by_stat(file_):
+def ls_file_by_stat(file_) -> None:
     """Show the Name of one File"""
 
     row = find_form_cells(find=file_, item=file_)
@@ -582,7 +594,7 @@ def ls_file_by_stat(file_):
     print(chars)
 
 
-def ls_top_dirs_by_stat(tops):
+def ls_top_dirs_by_stat(tops) -> None:
     """Show some Dirs, each as the Label of many Columns of one File or Dir per Line"""
 
     sep = None
@@ -604,7 +616,7 @@ def ls_top_dirs_by_stat(tops):
         print(chars)
 
 
-def ls_files_by_stat(files):
+def ls_files_by_stat(files) -> None:
     """Show some Files as many Columns of one File per Line"""
 
     rows = list()
@@ -616,7 +628,7 @@ def ls_files_by_stat(files):
     print(chars)
 
 
-def ls_tops_by_stat(tops):
+def ls_tops_by_stat(tops) -> None:
     """Show the Files, one per Line, and then the Dirs, each as Label of many Columns"""
 
     rows = list()
@@ -644,21 +656,21 @@ def ls_tops_by_stat(tops):
         ls_dir_by_stat(top=topdir)
 
 
-def find_form_cells(find, item):
+def find_form_cells(find, item) -> tuple[str, int, int, int, str, str, str]:
     """Show one File or Dir as many Columns"""
 
     s = os.lstat(find)
 
     chmods = stat.filemode(s.st_mode)
 
-    size = s.st_size
+    size = str(s.st_size)
     if not stat.S_ISDIR(s.st_mode):
         if not stat.S_ISLNK(s.st_mode):
-            if main.args.lh:
+            if Main.args.lh:
                 size = st_size_str(s.st_size)
 
     stamp = st_mtime_ns_brief(s.st_mtime_ns)
-    if main.args.full_time:
+    if Main.args.full_time:
         stamp = st_mtime_ns_precise(s.st_mtime_ns)
 
     quoted_item = byo.shlex_quote_if(item)
@@ -670,12 +682,13 @@ def find_form_cells(find, item):
         there = os.readlink(find)
         quoted = "{} -> {}".format(quoted_item, there)
 
+    cells: tuple[str, int, int, int, str, str, str]
     cells = (chmods, s.st_nlink, s.st_uid, s.st_gid, size, stamp, quoted)
 
     return cells
 
 
-def st_mtime_ns_precise(st_mtime_ns):
+def st_mtime_ns_precise(st_mtime_ns) -> str:
     """Style Date/Time Stamp of a File or Dir"""
 
     ts = st_mtime_ns / 10**9
@@ -690,7 +703,7 @@ def st_mtime_ns_precise(st_mtime_ns):
     return chars
 
 
-def st_mtime_ns_brief(st_mtime_ns):
+def st_mtime_ns_brief(st_mtime_ns) -> str:
     """Pack Date/Time Stamp of a File or Dir into like 12 Columns"""
 
     ts_int = int(st_mtime_ns / 10**9)
@@ -722,14 +735,14 @@ def st_mtime_ns_brief(st_mtime_ns):
     return chars
 
 
-def st_size_str(st_size):
+def st_size_str(st_size) -> str:
     """Right-justify Byte Size in SI Units"""
 
     # List the Decimal Units, else the Binary Units
 
     step = 10**3
     marks = list("kMGTPEZYRQ")
-    if (main.args.lh % 2) == 0:
+    if (Main.args.lh % 2) == 0:
         step = 2**10
         marks = list("{}i".format(_.upper()) for _ in marks)
 
@@ -761,7 +774,7 @@ def st_size_str(st_size):
 #
 
 
-def ls_by_comma_space(top):
+def ls_by_comma_space(top) -> None:
     """Show as Lines of Comma separated Names"""
 
     raise NotImplementedError("def ls_by_comma_space")
@@ -772,7 +785,7 @@ def ls_by_comma_space(top):
 #
 
 
-def ls_by_ljust(top):
+def ls_by_ljust(top) -> None:
     """Show as Columns of Names"""
 
     raise NotImplementedError("def ls_by_ljust")

@@ -99,8 +99,8 @@ LeftCodes = Left.encode()
 def main():
     """Run from the Sh command line"""
 
-    parser = byo.compile_argdoc()
-    byo.parser_parse_args(parser)  # prints helps and exits, else returns args
+    parser = byo.ArgumentParser(add_help=False)
+    parser.parse_args_else()  # often prints help & exits zero
 
     logfile = open("keylogger.bytes", "wb")
 

@@ -38,9 +38,9 @@ def main():
 
     # Parse the Sh Command Line
 
-    parser = byo.compile_argdoc()
+    parser = byo.ArgumentParser()
     parser.add_argument("dirnames", metavar="DIR", nargs="+", help="files to edit")
-    args = byo.parser_parse_args(parser)  # prints helps and exits, else returns args
+    args = parser.parse_args_else()  # often prints help & exits zero
 
     # Pick out the Last 4 Lines from this Source File
 

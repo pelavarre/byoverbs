@@ -104,7 +104,7 @@ flake8:
 # Lint the Python Data Types, quickly and meaningfully
 
 mypy:
-	grep -R '^def ' bin/optionee bin/pq.py |grep -v ') -> ' ||:
+	grep -nR '^ *def ' bin/*.py |grep -v ') -> ' ||:
 	~/.pyvenvs/mypy/bin/mypy bin
 	# todo: more widely adopt MyPy Code-Review of Python Data-Types
 
