@@ -1,3 +1,4 @@
+# find .  # isn't implied by 'find' without Sh Args at Mac
 # find / -mount 2>/dev/null |grep ...
 
 
