@@ -390,11 +390,13 @@ back up my c*nfidential ~/.ssh/zprofile and ~/.ssh/bash_profile Files
 
 ### 6 - Sixth traunch
 
-write up bugs/zsh.md of C-x C-e can't run ahead, etc
-
-build advice for restoring the Bash experience, e.g.,
-
+write up bugs/zsh.md
+C-x C-e can't run ahead
+advice for restoring the Bash experience in Zsh, e.g.,
     echo https://google.com/search?q=hello,+World%21
+
+backport Typing | to G Cloud Shell Feb/2021 Python 3.9.2 of Oct/2020 Python 3.9
+patch up the source as needed - git apply a diff
 
 
 ## Copied from
