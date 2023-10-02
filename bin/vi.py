@@ -1202,10 +1202,7 @@ class ViTerminal:
         assert BS == b"\b"
         assert DCH_N == "\x1B[{}P"
 
-        alt_n = n
-        if column is not None:
-            alt_n = min(column - 1, n)
-
+        alt_n = n if (column is None) else min(column - 1, n)
         if alt_n:
             ct.write(alt_n * b"\b")
             self.write_form_n("\x1B[{}P", n=alt_n)
