@@ -1,10 +1,16 @@
+# to do: more elegantly resolve
+#
+# shellcheck disable=SC2016  # Expressions don't expand in single quotes, use double ...
+# shellcheck disable=SC2046  # Quote this to prevent word splitting
+# shellcheck disable=SC2086  # Double quote to prevent globbing and word splitting
+# shellcheck disable=SC2145  # Argument mixes string and array. Use * or separate ...
+#
+
 if [[ $# == 1 ]]; then
     echo '+ v $(qol' "$@"")" +'"'/$1'"' >&2
-    # shellcheck disable=SC2046  # Quote this to prevent word splitting
     v $(qol "$@") +"/$1"
 else
     echo '+ v $(qol' "$@"")" >&2
-    # shellcheck disable=SC2046  # Quote this to prevent word splitting
     v $(qol "$@")
 fi
 

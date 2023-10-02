@@ -1,5 +1,7 @@
 # bin/bash_profile
 
+# usage: diff -brpu dotfiles/dot.bash_profile bin/bash_profile |less -FIRX
+
 # shellcheck disable=SC1090  # Can't follow non-constant source
 
 
@@ -7,7 +9,7 @@
 # provided that $(which q) is a Sh File, not a Sh Func
 
 # HISTTIMEFORMAT='%b %d %H:%M:%S  ' history
-function bh () { source "$bin"/bh.source "$@"; }
+function bh () { d=$(which q); d=$(dirname "$d"); source "$d"/bh.source "$@"; }
 
 # cd, popd
 function qcd () { d=$(which q); d=$(dirname "$d"); source "$d"/qcd.source "$@"; }
@@ -20,4 +22,5 @@ function qof () { d=$(which q); d=$(dirname "$d"); source "$d"/qof "$@"; }
 function qoi () { d=$(which q); d=$(dirname "$d"); source "$d"/qoi "$@"; }
 function qoil () { d=$(which q); d=$(dirname "$d"); source "$d"/qoil "$@"; }
 function qol () { d=$(which q); d=$(dirname "$d"); source "$d"/qol "$@"; }
+function qolf () { d=$(which q); d=$(dirname "$d"); source "$d"/qolf "$@"; }
 function vqol () { d=$(which q); d=$(dirname "$d"); source "$d"/vqol "$@"; }

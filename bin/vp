@@ -1,9 +1,10 @@
 F=p.py
 if [ -e $F ]; then
     echo "+ mv -i $F{,~$(date -r $F +%m%djqd%H%M)~}" >&2
-    mv -i $F{,~$(date -r $F +%m%djqd%H%M)~}
+    ext=~$(date -r "$F" +%m%djqd%H%M)~
+    mv -i "$F"{,"$ext"}
     echo "+ ls -AhlF -rt $F~*" >&2
-    ls -AhlF -rt $F~*
+    ls -AhlF -rt "$F"~*
 fi
 
 if [[ "$STY" ]]; then

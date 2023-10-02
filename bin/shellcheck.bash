@@ -20,13 +20,11 @@ shellcheck bin/shellcheck.bash
 cd bin/ || exit 1
 
 for SHFILE in *; do
-    if [[ "$SHFILE" == "__pycache__" ]]; then
+    if [[ -d "$SHFILE" ]]; then  # skips, if dir
         :
-    elif [[ "$SHFILE" == "sh" ]]; then
-        :
-    elif [[ "$SHFILE" =~ ^[^.]*$ ]]; then
+    elif [[ "$SHFILE" =~ ^[^.]*$ ]]; then  # checks, if not hidden and no file ext
         shellcheck --shell=bash "$SHFILE"
-    elif [[ "$SHFILE" =~ [.]bash$ ]]; then
+    elif [[ "$SHFILE" =~ [.]bash$ ]]; then  # checks, if explicitly Bash
         shellcheck --shell=bash "$SHFILE"
     else
         :

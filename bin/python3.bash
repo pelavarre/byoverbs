@@ -1,7 +1,5 @@
 set -e
 
-DIR=$(dirname "$0")
-
 last=$#
 py=p.py
 if [[ $last != 0 ]]; then

@@ -1,11 +1,19 @@
-emacs=emacs
-if ! which emacs >/dev/null; then
-    emacs=/opt/homebrew/bin/emacs
-fi
-
-echo '+ e $(qol' "$@"")" >&2
+# to do: more elegantly resolve
+#
+# shellcheck disable=SC2016  # Expressions don't expand in single quotes, use double ...
 # shellcheck disable=SC2046  # Quote this to prevent word splitting
-e $(qol "$@")
-# FIXME +"/$1"
+# shellcheck disable=SC2086  # Double quote to prevent globbing and word splitting
+# shellcheck disable=SC2145  # Argument mixes string and array. Use * or separate ...
+#
+
+if [[ $# == 1 ]]; then
+    echo '+ e $(qol' "$@"")" +'"'/$1'"' >&2
+    # shellcheck disable=SC2046  # Quote this to prevent word splitting
+    e $(qol "$@") +"/$1"
+else
+    echo '+ e $(qol' "$@"")" >&2
+    # shellcheck disable=SC2046  # Quote this to prevent word splitting
+    e $(qol "$@")
+fi
 
 # note: Bash unsets the 'qol' "${ALTPWDS[@]}" unless you run this Code as a Bash Func
