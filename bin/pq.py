@@ -16,10 +16,11 @@ quirks:
   often does the same work as ' |jq'
 
 words:
-  _ dent casefold expandtabs lower lstrip rstrip strip tee upper  # [Line] -> [Line]
+  casefold expandtabs lower lstrip rstrip strip title upper  # [Line] -> [Line]
   decode encode eval quote repr unquote  # [Line] -> [Lit] -> [Line]
   counter enumerate join reversed set sorted split  # ... -> [ChangedLine|ChosenLine]
   dedent eval len keys repr values  # ... -> [Any|Bytes|Chars|Index|Int|Key|Line|Value]
+  _ dent tee  # [Line] -> [Line]
 
 examples:
 
@@ -503,6 +504,18 @@ def line_strip() -> None:
         print(line.strip())
 
 
+# |pq title  # [Line] -> [Line]
+def line_title() -> None:
+    """Title the Chars in each Line"""
+
+    byo.sys_stderr_print(">>> _.title()")
+
+    ichars = sys.stdin.read()
+    for iline in ichars.splitlines():
+        oline = iline.title()
+        print(oline)
+
+
 # |pq unquote  # [Line] -> [UrlCodedLine]
 def line_unquote() -> None:
     """Decode each Line after receiving as an HttpS/Http Literal Param Value"""
@@ -870,6 +883,7 @@ FUNC_BY_WORD = {
     "spread": file_para_spread,
     "strip": line_strip,
     "tee": line_tee,
+    "title": line_title,
     "unquote": line_unquote,
     "upper": line_upper,
     "values": file_eval_values,
@@ -1027,6 +1041,7 @@ _ = """
   pq str splitlines for str.repr
   pq str splitlines for str.rstrip  # rstrip
   pq str splitlines for str.strip  # strip
+  pq str splitlines for str.title  # title
   pq str splitlines for str.upper  # upper
 
 """
