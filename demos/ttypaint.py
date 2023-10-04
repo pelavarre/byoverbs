@@ -154,11 +154,11 @@ class ScreenEditor:
 
         _ = self.get_terminal_size()  # fails fast
 
-        greeting = (
+        greeting = (  # ⌃ \N{Up Arrowhead}
             "Press (⌃C and then) press Return (or ⌃M) three times to quit"
             " (or ⌃C L 0 Z Q)"
             "\r\n"
-        )  # ⌃ \N{Up Arrowhead}
+        )
 
         self.write(greeting.encode())
 

@@ -39,7 +39,7 @@ examples:
   ls.py -al  # runs the Code for:  ls -al
 
   ls.py -1 --py >p.py  # name the Code
-  python3 p.py  # run thmake named Code
+  python3 p.py  # run the named Code
   cat p.py |cat -n |expand  # show the numbered Sourcelines of the named Code
 
   python3 -c "$(ls.py -1 --py)"  # runs the Code as shown

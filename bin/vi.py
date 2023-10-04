@@ -3013,14 +3013,13 @@ class ArgumentParser(argparse.ArgumentParser):
         epilog = "" if (self.epilog is None) else self.epilog
 
         lines = epilog.splitlines()
-        indices = list(_ for _ in range(len(lines)) if lines[_])  # drops empties
-        indices = list(
-            _ for _ in indices if not lines[_].startswith(" ")
-        )  # takes headings
-        testdoc = "\n".join(
-            lines[indices[-1] + 1 :]
-        )  # takes last heading, drops its title
+
+        indices = list(_ for _ in range(len(lines)) if lines[_])  # no empties
+        indices = list(_ for _ in indices if not lines[_].startswith(" "))  # headings
+
+        testdoc = "\n".join(lines[indices[-1] + 1 :])  # last heading, minus its title
         testdoc = textwrap.dedent(testdoc)
+        testdoc = testdoc.strip()
 
         return testdoc
 
