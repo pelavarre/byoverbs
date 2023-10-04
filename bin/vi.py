@@ -2154,7 +2154,7 @@ class ChordsTerminal:
 
         return available
 
-    def bytes_splitseq(self, bytes_):
+    def bytes_splitseq(self, bytes_) -> tuple[bytes, bytes]:
         """Split out one whole Byte Sequence, else zero Bytes"""
 
         seq = bytes_take_seq(bytes_)

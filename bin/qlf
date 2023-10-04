@@ -1,2 +1,7 @@
-set -xe
-git ls-files "$@"
+if [[ $# == 0 ]]; then
+    set -xe
+    git ls-files
+else
+    set -xe
+    git ls-files |grep -i "$@"
+fi
