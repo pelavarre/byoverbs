@@ -1,3 +1,5 @@
+# shellcheck disable=SC2154  # STY is referenced but not assigned
+
 if [[ "$STY" ]]; then
     if "$(uname)" == "Darwin"; then
         echo '+ unset TERM' >&2

@@ -114,6 +114,7 @@ mypy:
 shellcheck:
 	mkdir -p tmp/
 	bin/shellcheck.bash
+	bin/shellcheck.bash -o all --exclude=...
 	exit 0
 
 

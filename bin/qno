@@ -2,7 +2,8 @@ if [[ $# != 0 ]]; then
     set -xe
     git show --pretty= --name-only "$@"
 else
-    if [[ $(git diff --name-only) ]]; then
+    diffs=$(git diff --name-only)
+    if [[ "$diffs" ]]; then
         set -xe
         git diff --name-only
     else

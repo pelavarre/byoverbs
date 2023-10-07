@@ -1,3 +1,5 @@
+# shellcheck disable=SC2154  # ALTPWDS is referenced but not assigned
+
 if [[ $# == 0 ]]; then
 
     echo '+ git ls-files' "${ALTPWDS[@]}" >&2

@@ -1,3 +1,5 @@
+# shellcheck disable=SC2154  # STY is referenced but not assigned
+
 F=p.py
 if [ -e $F ]; then
     echo "+ mv -i $F{,~$(date -r $F +%m%djqd%H%M)~}" >&2
