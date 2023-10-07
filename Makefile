@@ -17,8 +17,8 @@ default:
 	@echo 'make  # shows examples and exits'
 	@echo 'make help  # shows these help lines and exits'
 	@echo
-	@echo 'make push  # restyles & tests the source, then tells me to push it'
-	@echo "make pull  # restyles & tests the source, but doesn't say push it"
+	@echo 'make push  # restyles & tests the source, then tells you to push it'
+	@echo "make soon  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo 'make bin  # puts bin dir files under test at home bin dir'
 	@echo 'make dotfiles  # updates local dotfiles dir from home dot files'
@@ -41,8 +41,8 @@ help:
 	@echo '  make  # shows these examples and exits'
 	@echo '  make help  # shows these help lines and exits'
 	@echo
-	@echo '  make push  # restyles & tests the source, then tells me to push it'
-	@echo "  make pull  # restyles & tests the source, but doesn't say push it"
+	@echo '  make push  # restyles & tests the source, then tells you to push it'
+	@echo "  make soon  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo '  make bin  # puts bin dir files under test at home bin dir'
 	@echo '  make dotfiles  # updates local dotfiles dir from home dot files'
@@ -54,7 +54,7 @@ help:
 
 # Restyle & test the source, then tell me to push it
 
-push: pull
+push: soon
 	ssh-add -D
 	ssh-add ~/.ssh/github.id_rsa
 	: did you mean:  git push
@@ -65,7 +65,7 @@ push: pull
 	exit 0
 	:
 
-pull: black flake8 mypy shellcheck selftest
+soon: black flake8 mypy shellcheck selftest
 	:
 	demos/last2lines.py ./ bin/ demos/
 	:
