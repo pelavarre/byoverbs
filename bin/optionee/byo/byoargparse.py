@@ -218,8 +218,8 @@ class ArgumentParser(argparse.ArgumentParser):
 
     _ = """
 
-    def as_py(self):  # FIXME
-        py = as_py(parser=self)
+    def aspy(self):  # FIXME
+        py = aspy(parser=self)
         return py
 
     def add_subparsers_from_doc(self, doc):  # FIXME
@@ -230,7 +230,7 @@ class ArgumentParser(argparse.ArgumentParser):
     """
 
 
-# def as_py(parser):  # FIXME
+# def aspy(parser):  # FIXME
 
 # def parser_add_subparsers(parser, doc)  # FIXME
 # def parser_add_subparser(parser, doc)  # FIXME
