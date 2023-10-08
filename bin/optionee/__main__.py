@@ -32,6 +32,7 @@ examples:
 
 import __main__
 import argparse
+import dataclasses
 import os
 import pathlib
 import shlex
@@ -46,6 +47,7 @@ from byo import byotermios
 from byo import byotty
 
 
+... == dict[str, int]  # new since Oct/2020 Python 3.9
 ... == byo, byotermios, byotty  # ducks Flake8 F401 imported.but.unused
 
 
@@ -54,10 +56,26 @@ from byo import byotty
 #
 
 
+@dataclasses.dataclass
+class OptioneeArgs:
+    """Name the Command-Line Arguments of Optionee Dir"""
+
+    what_else: str | None
+    keylog_else: str | None
+    screenlog_else: str | None
+
+    key_argv_else: list[str] | None
+    screen_argv_else: list[str] | None
+
+    ifile: str
+    ofile: str
+
+
+@dataclasses.dataclass
 class Main:
     """Open up a shared workspace for the Code of this Py File"""
 
-    args: argparse.Namespace  # parsed Sh Args
+    args: OptioneeArgs  # parsed Sh Args
     ibytes: bytes  # the Bytes read as Input
     obytes: bytes  # the Bytes to write as Output
     klogger: typing.TextIO  # the Stream to log Keyboard Reads into
@@ -67,7 +85,7 @@ class Main:
 def main() -> None:
     """Run well when called from Sh by people"""
 
-    args = parse_optionee_py_args()
+    args = parse_optionee_dir_args()
     Main.args = args
 
     # Record and/or replay our work
@@ -93,8 +111,8 @@ def main() -> None:
     # todo: empty and/recreate the Log Py as executable hashbang Py, then append
 
 
-def parse_optionee_py_args() -> argparse.Namespace:
-    """Take Words from the Sh Command Line into optionee Py"""
+def parse_optionee_dir_args() -> OptioneeArgs:
+    """Take Words from the Sh Command Line into Optionee Dir"""
 
     assert argparse.OPTIONAL == "?"
 
@@ -108,23 +126,33 @@ def parse_optionee_py_args() -> argparse.Namespace:
     parser.add_argument("--keylog", metavar="K", help=keylog_help)
     parser.add_argument("--screenlog", metavar="S", help=screenlog_help)
 
-    args = parser.parse_args_else()  # often prints help & exits zero
+    ns = parser.parse_args_else()  # often prints help & exits zero
 
-    what = args.what
+    key_argv_else = None
+    if ns.keylog:
+        key_argv_else = shlex.split(ns.keylog)
 
-    args.key_argv = None
-    if args.keylog:
-        args.key_argv = shlex.split(args.keylog)
+    screen_argv_else = None
+    if ns.screenlog:
+        screen_argv_else = shlex.split(ns.screenlog)
 
-    args.screen_argv = None
-    if args.screenlog:
-        args.screen_argv = shlex.split(args.screenlog)
+    ifile = ns.what
+    ofile = ns.what
+    if ns.what is None:
+        ifile = "pbpaste" if sys.stdin.isatty() else "/dev/stdin"
+        ofile = "pbcopy" if sys.stdout.isatty() else "/dev/stdout"
 
-    args.ifile = what
-    args.ofile = what
-    if args.what is None:
-        args.ifile = "pbpaste" if sys.stdin.isatty() else "/dev/stdin"
-        args.ofile = "pbcopy" if sys.stdout.isatty() else "/dev/stdout"
+    # Succeed
+
+    args = OptioneeArgs(
+        what_else=ns.what,
+        keylog_else=ns.keylog,
+        screenlog_else=ns.screenlog,
+        key_argv_else=key_argv_else,
+        screen_argv_else=screen_argv_else,
+        ifile=ifile,
+        ofile=ofile,
+    )
 
     return args
 
@@ -229,14 +257,14 @@ def mess_about() -> None:
 
     # Replay Bytes logged at Screen
 
-    if args.screen_argv:
-        screen_bytes = subprocess_run_stdout_bytes(args.screen_argv)
+    if args.screen_argv_else:
+        screen_bytes = subprocess_run_stdout_bytes(args.screen_argv_else)
         print(screen_bytes, file=sys.stderr)
 
     # Replay Bytes logged at Keyboard
 
-    if args.key_argv:
-        key_bytes = subprocess_run_stdout_bytes(args.key_argv)
+    if args.key_argv_else:
+        key_bytes = subprocess_run_stdout_bytes(args.key_argv_else)
         print(key_bytes, file=sys.stderr)
 
     # Reply to Keyboard till Quit
@@ -270,5 +298,5 @@ if __name__ == "__main__":
     main()
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/optionee
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/optionee/
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
