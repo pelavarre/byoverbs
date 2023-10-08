@@ -3,5 +3,5 @@ if [[ $# == 0 ]]; then
     set -xe
     make soon
 else
-    $D/python3.bash "$@"
+    "$D"/python3.bash "$@"
 fi
