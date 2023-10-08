@@ -59,7 +59,7 @@ def self_test_main_doc(filename) -> str:
 class ArgumentParser(argparse.ArgumentParser):
     """Amp up Class ArgumentParser of Import ArgParse"""
 
-    def __init__(self, add_help=True) -> None:
+    def __init__(self, add_help=True) -> None:  # ,doc=None  # FIXME
         argdoc = __main__.__doc__
 
         # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
@@ -215,6 +215,25 @@ class ArgumentParser(argparse.ArgumentParser):
         testdoc = testdoc.strip()
 
         return testdoc
+
+    _ = """
+
+    def as_py(self):  # FIXME
+        py = as_py(parser=self)
+        return py
+
+    def add_subparsers_from_doc(self, doc):  # FIXME
+        subparsers = add_subparsers_from_doc(parser=self, doc=doc)
+        alt_subparsers = SubParser(subparsers)
+        return alt_subparsers
+
+    """
+
+
+# def as_py(parser):  # FIXME
+
+# def parser_add_subparsers(parser, doc)  # FIXME
+# def parser_add_subparser(parser, doc)  # FIXME
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/optionee/byo/
