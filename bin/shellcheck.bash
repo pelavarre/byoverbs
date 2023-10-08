@@ -15,8 +15,8 @@ set -e
 #   make shellcheck
 #   bin/shellcheck.bash
 #   bin/shellcheck.bash -o all
-#   bin/shellcheck.bash -o all --exclude=SC2230,SC2248,SC2250
-#   bin/shellcheck.bash -o all --exclude=...  # more like FIXME exclusions
+#   bin/shellcheck.bash -o all --exclude=SC2230,SC2244,SC2248,SC2250
+#   bin/shellcheck.bash -o all --exclude=...  # more like four exclusions
 #
 
 

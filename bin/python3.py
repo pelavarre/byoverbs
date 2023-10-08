@@ -50,8 +50,11 @@ examples:
   : : Jun/2022 Python 3.10.5  # micro release date
   : : Aug/2022 Python 3.10.6  # micro release date
   : : Oct/2022 Python 3.10.8  # micro release date  # <- ReplIt-Com 2023 Python
+  : : Jun/2023 Python 3.10.12  # micro release date
   : Oct/2022 Python 3.11  # minor release date
   : : Apr/2023 Python 3.11.3  # micro release date
+  : : Oct/2023 Python 3.11.6  # micro release date
+  : Oct/2022 Python 3.12  # minor release date
 """
 
 # https://packages.ubuntu.com/ > Long Term Stable (LTS)
