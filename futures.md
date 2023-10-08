@@ -400,9 +400,6 @@ patch up the source as needed - git apply a diff
 
 pq could work like cv when given no args
 
-merge 'b' into 'p' with Arg
-define 'b' with no Arg = make pull
-
 
 ## Copied from
 

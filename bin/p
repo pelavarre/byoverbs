@@ -1,8 +1,40 @@
+#!/bin/bash
+
+
 #
-# Define P Return to mean try out some Python without making you type out its "import"s
+# usage: p [WORD...]
+#
+# help you try some Python at Stdin, or in a File
+#
+# positional arguments:
+#   WORD  whatever your Args for Python 3 are
+#
+# quirks:
+#   runs like 'python -i' but without needing Import instructions, if given no Args
+#   calls the colocated 'python.bash' instead, if given Args
+#
+# examples:
+#   p
+#   p p.py
 #
 
-(set -xe; python3 -i -c '' "$@" </dev/null 2>/dev/null)
+
+#
+# Call the colocated 'python.bash' instead, if given Args
+#
+
+
+D=$(dirname "$0")
+if [[ $# != 0 ]]; then
+    set -xe
+    "$D"/python3.bash "$!@"
+    exit
+fi
+
+#
+# Run 'python -i' but set it up to need no Import instructions, if given no Args
+#
+
 python3 -i -c '''
 
 
