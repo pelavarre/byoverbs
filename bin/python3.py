@@ -41,7 +41,7 @@ examples:
   : : May/2021 Python 3.8.10  # micro release date
   : Oct/2020 Python 3.9  # minor release date  # <- G Cloud Shell 2023
   : : Dec/2020 Python 3.9.1  # micro release date
-  : : Feb/2021 Python 3.9.2  # micro release date
+  : : Feb/2021 Python 3.9.2  # micro release date  # <- G Cloud Shell later 2023
   : : Apr/2021 Python 3.9.4  # micro release date
   : : May/2021 Python 3.9.5  # micro release date
   : : Jun/2021 Python 3.9.6  # micro release date  # <- macOS 2021..2023 Monterey Plus
@@ -49,7 +49,7 @@ examples:
   : : Mar/2022 Python 3.10.4  # micro release date
   : : Jun/2022 Python 3.10.5  # micro release date
   : : Aug/2022 Python 3.10.6  # micro release date
-  : : Oct/2022 Python 3.10.8  # micro release date  # <- ReplIt-Com 2023 Python
+  : : Oct/2022 Python 3.10.8  # micro release date  # <- ReplIt-Com Python 2023
   : : Jun/2023 Python 3.10.12  # micro release date
   : Oct/2022 Python 3.11  # minor release date
   : : Apr/2023 Python 3.11.3  # micro release date
