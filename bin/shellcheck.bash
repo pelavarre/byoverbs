@@ -54,7 +54,7 @@ mkdir -p tmp/
 
 if ! which shellcheck; then
     ls /usr/bin/shellcheck ||:
-    echo 'ok by you? or do you want:  sudo apt install shellcheck'
+    echo 'ok by you? or do you want:  date && time  sudo apt install shellcheck'
     exit
 fi
 
