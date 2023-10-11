@@ -1,0 +1,20 @@
+#!/bin/bash
+
+python3 -c '''
+
+import unicodedata
+
+def func(i):
+    try:
+        name = unicodedata.name(chr(i))
+        print(r"\U{:08X}".format(i), chr(i), name.title())
+    except ValueError as exc:
+        assert str(exc) == "no such name"
+
+for i in range(0x20, 0x7F):
+    func(i)
+
+for i in range(0xA0, 0x110000):
+    func(i)
+
+''' |grep -i Circle |grep -i -e Large -e Medium |grep -v 'Black Large Circle'
