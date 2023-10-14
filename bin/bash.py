@@ -19,7 +19,7 @@ echo c
 
 export PS1="$PS1\n\\$ "
 
-(IFS=:; for P in $PATH; do echo $P; done)
+bash -c '( IFS=:; for P in $PATH; do ls -1 $P/python3* 2>/dev/null; done )'
 """
 
 import byotools as byo
