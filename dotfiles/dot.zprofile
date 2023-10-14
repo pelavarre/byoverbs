@@ -3,8 +3,7 @@
 # shellcheck disable=SC1090  # Can't follow non-constant source
 
 
-# Give up on searching for Zsh Defaults that cost less than Bash,
-# and give up on searching for Bash Settings that work as well as Zsh
+# Give up on searching for Zsh Defaults that cost less than Bash
 
 bind 'set enable-bracketed-paste off' 2>/dev/null  # Bash Syntax for this Zsh idea
 unset zle_bracketed_paste
@@ -12,8 +11,6 @@ setopt InteractiveComments 2>/dev/null
 
 setopt NO_nomatch
 
-zmodload zsh/deltochar  # not yet found in Bash
-bindkey "\ez" zap-to-char  # ⌥Z for Zsh, like in Emacs
 
 
 # Grow Sh Path
