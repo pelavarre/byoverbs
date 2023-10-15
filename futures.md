@@ -398,6 +398,8 @@ advice for restoring the Bash experience in Zsh, e.g.,
 backport Typing | to G Cloud Shell Feb/2021 Python 3.9.2 of Oct/2020 Python 3.9
 patch up the source as needed - git apply a diff
 
+make regular breakpoints work for the case of Stdin Stdout both being PBuffer
+
 
 ## Copied from
 

@@ -83,6 +83,7 @@ import ast
 import collections
 import io
 import json
+import re
 import subprocess
 import sys
 import textwrap
@@ -321,7 +322,30 @@ def line_print() -> None:
 
     ichars = sys.stdin.read()
     for iline in ichars.splitlines():
-        print(iline)
+        oline = ""
+        for m in re.finditer(r"(\b[.]?[0-9]+\b)|([^0-9]+)", string=iline):
+            m0 = m[0]  # whole match
+            m1 = m[1]  # first group
+            m2 = m[2]  # second group
+
+            if not m1:
+                assert m2 == m0
+                oline += m0
+            elif not m1.startswith("."):
+                assert m1 == m0
+                int_find = int(m1)
+                assert m0 == str(int_find), (m1, int_find)
+                oline += "{:_}".format(int_find)
+            else:
+                assert m1 == m0
+                m1tail = m1.removeprefix(".")
+                triples = list(m1tail[_:][:3] for _ in range(0, len(m1tail), 3))
+                oline += "." + "_".join(triples)
+
+        print(oline)
+
+        # echo '987654321''987654321''987654321''987654321' |pq _ |c
+        # echo 1.2345 |pq _ |c
 
 
 # |pq tee  # [Line] -> [Line]
@@ -807,7 +831,7 @@ def file_eval_values() -> None:
     ichars = sys.stdin.read()
     ieval = ast.literal_eval(ichars)
 
-    # main.pqv.breakpoint()  # jitter Sat 17/Jun
+    # Main.pqv.breakpoint()  # jitter Sat 17/Jun
 
     if hasattr(ieval, "get"):
         byo.sys_stderr_print(">>> d.values()")
