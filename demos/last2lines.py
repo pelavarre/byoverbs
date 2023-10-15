@@ -33,7 +33,7 @@ except Exception:
     raise
 
 
-def main():
+def main() -> None:
     """Run from the Sh Command Line"""
 
     # Parse the Sh Command Line
@@ -90,7 +90,7 @@ def main():
     )
 
 
-def visit_py_find(find):
+def visit_py_find(find) -> None:
     """Fetch this Py File, review it, and auto-correct it if need be"""
 
     edits = main.edits

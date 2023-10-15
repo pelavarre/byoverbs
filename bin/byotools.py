@@ -658,13 +658,12 @@ def subprocess_run_stdout_surrogateescape(shline) -> str:
         argv,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
         errors="surrogateescape",
         check=True,
     )
 
     stdout_chars = run.stdout
-    assert not run.stderr, run.stderr
+    assert not run.stderr, run.stderr  # but Errors may have gone to Stderr
 
     return stdout_chars
 

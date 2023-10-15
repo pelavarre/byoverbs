@@ -1,0 +1,17 @@
+#!/bin/bash
+
+if [[ $# != 0 ]]; then
+    D=$(dirname "$0")
+    python3 "$D"/examplecom.py "$@"
+else
+    if [ -t 0 ]; then
+        set -xe
+        pbpaste
+    elif [ -t 1 ]; then
+        set -xe
+        pbcopy
+    else
+        set -xe
+        tee >(pbcopy)
+    fi
+fi

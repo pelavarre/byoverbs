@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# kept up by:  F=demos/lazy_import.py && cp -ip bin/p $F && v $F
+
 
 #
 # usage: p [WORD...]
@@ -53,6 +55,7 @@ examples:
     urllib.parse.quote
 """
 
+import argparse
 import importlib
 import os
 import sys
@@ -60,8 +63,11 @@ import urllib.parse
 from decimal import Decimal as D
 
 
-_ = D  # todo: lazy-import X.Y as Z, not just lazy-import X as Z
-_ = urllib.parse  # todo: lazy-import X.Y, not just lazy-import X
+... == D  # todo: lazy-import X.Y as Z, not just lazy-import X as Z
+... == urllib.parse  # todo: lazy-import X.Y, not just lazy-import X
+
+
+parser = argparse.ArgumentParser()
 
 
 print(">>> import ...", file=sys.stderr)
@@ -118,7 +124,7 @@ QUICK_LAZY_IMPORT_NAMES = """
     email encodings ensurepip  html http  idlelib importlib  json  lib2to3 logging
 
     multiprocessing  pydoc_data  re  sqlite3  test tkinter tomllib turtledemo
-    unittest urllib  venv  wsgiref  xml xmlrpc  zoneinfo
+    unittest urllib urllib.parse  venv  wsgiref  xml xmlrpc  zoneinfo
 
 
     # from VEnv Pip Install
@@ -136,24 +142,24 @@ QUICK_LAZY_IMPORT_NAMES = " ".join(QUICK_LAZY_IMPORT_NAMES).split()
 class LazyImport:
     """Defer the work of "import X as Y" till first Y.Z fetched"""
 
-    def __init__(self, import_, as_=None):
+    def __init__(self, import_, as_=None) -> None:
         self.import_ = import_
         self.as_ = import_ if (as_ is None) else as_
 
-    def __getattribute__(self, name):
+    def __getattribute__(self, name) -> object:
         if name in "as_ import_".split():
             return super().__getattribute__(name)
         module = importlib.import_module(self.import_)
         globals()[self.as_] = module
         return module.__getattribute__(name)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         module = importlib.import_module(self.import_)
         globals()[self.as_] = module
         return module.__repr__()
 
 
-def def_some_lazy_imports():
+def def_some_lazy_imports() -> None:
     """Define some Global Names now, to import later"""
 
     g = globals()
@@ -170,7 +176,7 @@ def def_some_lazy_imports():
         g["et"] = et
 
 
-def discover_more_lazy_imports():
+def discover_more_lazy_imports() -> None:
     """Search out Module Names to Import"""
 
     pynames = list()

@@ -13,6 +13,7 @@ examples:
     urllib.parse.quote
 """
 
+import argparse
 import importlib
 import os
 import sys
@@ -20,8 +21,11 @@ import urllib.parse
 from decimal import Decimal as D
 
 
-_ = D  # todo: lazy-import X.Y as Z, not just lazy-import X as Z
-_ = urllib.parse  # todo: lazy-import X.Y, not just lazy-import X
+... == D  # todo: lazy-import X.Y as Z, not just lazy-import X as Z
+... == urllib.parse  # todo: lazy-import X.Y, not just lazy-import X
+
+
+parser = argparse.ArgumentParser()
 
 
 print(">>> import ...", file=sys.stderr)
@@ -32,40 +36,44 @@ QUICK_LAZY_IMPORT_NAMES = """
 
 
     # hard-to-discover basics
+    # sorted(_[0] for _  in sys.modules.items() if not hasattr(_[-1], "__file__"))
 
     __main__
 
-    itertools time
+    atexit builtins errno itertools marshal posix pwd sys time
 
 
     # from ".so" Shared Object Libraries
+    # minus deprecated: audioop nis pyexpat
 
-    array audioop binascii cmath fcntl grp
-    math mmap nis pyexpat readline resource select syslog termios unicodedata zlib
+    array binascii cmath fcntl grp
+    math mmap readline resource select syslog termios unicodedata zlib
 
 
     # from Py Files
+    # minus deprecated: aifc cgi cgitb chunk crypt imghdr
+    # minus deprecated: mailcap nntplib pipes sndhdr sunau telnetlib uu uuid xdrlib
 
-    abc aifc antigravity argparse ast asynchat asyncore  base64 bdb bisect bz2
-    cProfile calendar cgi cgitb chunk cmd code codecs codeop colorsys
-        compileall configparser contextlib contextvars copy copyreg crypt csv
+    abc antigravity argparse ast asynchat asyncore  base64 bdb bisect bz2
+    cProfile calendar cmd code codecs codeop colorsys
+        compileall configparser contextlib contextvars copy copyreg csv
     dataclasses datetime decimal difflib dis doctest  enum
     filecmp fileinput fnmatch fractions ftplib functools
     genericpath getopt getpass gettext glob graphlib gzip
-    hashlib heapq hmac  imaplib imghdr imp inspect io ipaddress  keyword
+    hashlib heapq hmac  imaplib imp inspect io ipaddress  keyword
     linecache locale lzma
 
-    mailbox mailcap mimetypes modulefinder
-    netrc nntplib ntpath nturl2path numbers  opcode operator optparse os
-    pathlib pdb pickle pickletools pipes pkgutil platform plistlib poplib posixpath
+    mailbox mimetypes modulefinder
+    netrc ntpath nturl2path numbers  opcode operator optparse os
+    pathlib pdb pickle pickletools pkgutil platform plistlib poplib posixpath
         pprint profile pstats pty py_compile pyclbr pydoc
     queue quopri  random reprlib rlcompleter runpy
-    sched secrets selectors shelve shlex shutil signal site smtpd smtplib sndhdr socket
+    sched secrets selectors shelve shlex shutil signal site smtpd smtplib socket
         socketserver sre_compile sre_constants sre_parse ssl stat statistics string
-        stringprep struct subprocess sunau symtable sysconfig
-    tabnanny tarfile telnetlib tempfile textwrap this threading timeit token tokenize
+        stringprep struct subprocess symtable sysconfig
+    tabnanny tarfile tempfile textwrap this threading timeit token tokenize
         trace traceback tracemalloc tty turtle types typing
-    uu uuid warnings  wave weakref webbrowser  xdrlib  zipapp zipfile zipimport
+    warnings  wave weakref webbrowser  zipapp zipfile zipimport
 
 
     # from Dirs containing an "_init__.py" File
@@ -74,12 +82,12 @@ QUICK_LAZY_IMPORT_NAMES = """
     email encodings ensurepip  html http  idlelib importlib  json  lib2to3 logging
 
     multiprocessing  pydoc_data  re  sqlite3  test tkinter tomllib turtledemo
-    unittest urllib  venv  wsgiref  xml xmlrpc  zoneinfo
+    unittest urllib urllib.parse  venv  wsgiref  xml xmlrpc  zoneinfo
 
 
     # from VEnv Pip Install
 
-    requests
+    jira pandas redis requests
 
 
 """.splitlines()
@@ -92,24 +100,24 @@ QUICK_LAZY_IMPORT_NAMES = " ".join(QUICK_LAZY_IMPORT_NAMES).split()
 class LazyImport:
     """Defer the work of "import X as Y" till first Y.Z fetched"""
 
-    def __init__(self, import_, as_=None):
+    def __init__(self, import_, as_=None) -> None:
         self.import_ = import_
         self.as_ = import_ if (as_ is None) else as_
 
-    def __getattribute__(self, name):
+    def __getattribute__(self, name) -> object:
         if name in "as_ import_".split():
             return super().__getattribute__(name)
         module = importlib.import_module(self.import_)
         globals()[self.as_] = module
         return module.__getattribute__(name)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         module = importlib.import_module(self.import_)
         globals()[self.as_] = module
         return module.__repr__()
 
 
-def def_some_lazy_imports():
+def def_some_lazy_imports() -> None:
     """Define some Global Names now, to import later"""
 
     g = globals()
@@ -126,7 +134,7 @@ def def_some_lazy_imports():
         g["et"] = et
 
 
-def discover_more_lazy_imports():
+def discover_more_lazy_imports() -> None:
     """Search out Module Names to Import"""
 
     pynames = list()

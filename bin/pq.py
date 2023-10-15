@@ -227,7 +227,9 @@ class PyQueryVm:
             sys.stdout.write(ochars)
         else:
             sys.stderr.write("+ ... |pbcopy\n")
-            subprocess.run("pbcopy", input=ochars, errors="surrogateescape", check=True)
+            subprocess.run(
+                "pbcopy".split(), input=ochars, errors="surrogateescape", check=True
+            )
 
         return None
 
@@ -323,22 +325,32 @@ def line_print() -> None:
     ichars = sys.stdin.read()
     for iline in ichars.splitlines():
         oline = ""
-        for m in re.finditer(r"(\b[.]?[0-9]+\b)|([^0-9]+)", string=iline):
+
+        # Split the Str into Digits, or Digits Dot Digits, and the rest
+        # todo: think more about "_" as input, and about Python Float Literals
+
+        pattern = r"(\b[.]?[0-9]+\b)|([^0-9]+)|(.)"
+        matches = list(re.finditer(pattern, string=iline))
+
+        join = "".join(_[0] for _ in matches)
+        assert join == iline, (join, iline, matches, pattern)
+
+        # Insert "_" Skid Marks as Separators into the Digits Dot Digits or Digits
+
+        for m in matches:
             m0 = m[0]  # whole match
             m1 = m[1]  # first group
-            m2 = m[2]  # second group
 
             if not m1:
-                assert m2 == m0
                 oline += m0
             elif not m1.startswith("."):
-                assert m1 == m0
-                int_find = int(m1)
-                assert m0 == str(int_find), (m1, int_find)
-                oline += "{:_}".format(int_find)
+                int_m1 = int(m1)
+                assert str(int_m1) == m1, (int_m1, m1)
+                oline += "{:_}".format(int_m1)
             else:
-                assert m1 == m0
                 m1tail = m1.removeprefix(".")
+                int_m1tail = int(m1tail)
+                assert str(int_m1tail) == m1tail, (int_m1tail, m1tail)
                 triples = list(m1tail[_:][:3] for _ in range(0, len(m1tail), 3))
                 oline += "." + "_".join(triples)
 
