@@ -1,10 +1,10 @@
 if [[ $# == 0 ]]; then
-    echo + ls -AhlF -rt >&2
-    ls -AhlF -rt
+    echo + ls -hlAF -rt >&2
+    ls -hlAF -rt
 elif [[ $# == 1 ]]; then
-    echo + ls -AhlF -rt "$@" >&2
-    ls -AhlF -rt "$@"
+    echo + ls -hlAF -rt "$1" >&2
+    ls -hlAF -rt "$1"
 else
     echo + ls -AdhlF -rt ... >&2
-    ls -AdhlF -rt "$@"
+    ls -dhlAF -rt "$@"
 fi

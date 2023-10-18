@@ -17,6 +17,7 @@ default:
 	@echo 'make  # shows examples and exits'
 	@echo 'make help  # shows these help lines and exits'
 	@echo
+	@echo 'make pips  # rewrites ~/.pyvenvs/pips/'
 	@echo 'make push  # restyles & tests the source, then tells you to push it'
 	@echo "make soon  # restyles & tests the source, but doesn't say push it"
 	@echo
@@ -41,6 +42,7 @@ help:
 	@echo '  make  # shows these examples and exits'
 	@echo '  make help  # shows these help lines and exits'
 	@echo
+	@echo '  make pips  # rewrites ~/.pyvenvs/pips/'
 	@echo '  make push  # restyles & tests the source, then tells you to push it'
 	@echo "  make soon  # restyles & tests the source, but doesn't say push it"
 	@echo
@@ -50,6 +52,20 @@ help:
 	@echo '  open https://twitter.com/intent/tweet?text=.@PELaVarre'
 	@echo
 	@echo
+
+
+# Add on to Python
+
+pips: ~/.pyvenvs/pips/
+	source ~/.pyvenvs/pips/bin/activate && pip install --upgrade black
+	source ~/.pyvenvs/pips/bin/activate && pip install --upgrade flake8
+	source ~/.pyvenvs/pips/bin/activate && pip install --upgrade flake8-import-order
+	source ~/.pyvenvs/pips/bin/activate && pip install --upgrade mypy
+
+~/.pyvenvs/pips/:
+	mkdir -p  ~/.pyvenvs
+	rm -fr ~/.pyvenvs/pips/
+	(cd ~/.pyvenvs/ && python3 -m venv pips --prompt PIPS)
 
 
 # Restyle & test the source, then tell me to push it

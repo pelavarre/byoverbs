@@ -88,6 +88,7 @@ import subprocess
 import sys
 import textwrap
 import typing
+import unicodedata
 import urllib.parse
 
 import byotools as byo
@@ -316,7 +317,7 @@ def pq_word_to_func(word) -> typing.Callable:
 #
 
 
-# |pq _  # [Line] -> [Line]
+# |pq _  # [Line] -> [Line]  # todo: rename to :_ from _, so that _ is copy no edit?
 def line_print() -> None:
     """Close the last Line if not closed"""
 
@@ -399,6 +400,23 @@ def line_dent() -> None:
     ichars = sys.stdin.read()
     for iline in ichars.splitlines():
         oline = "    {}".format(iline)
+        print(oline)
+
+
+# |pq deslack  # [SlackLine] -> [TxtLine]
+def line_deslack() -> None:
+    """Convert :Emoji: to Unicode, for :Emoji: of Slack"""
+
+    byo.sys_stderr_print(">>> deslack(_)")
+
+    ichars = sys.stdin.read()
+    for iline in ichars.splitlines():
+        oline = iline
+        for sname, uname in SLACK_NAME_TO_UNICODE.items():
+            smarkup = ":{}:".format(sname)
+            utext = unicodedata.lookup(uname)
+
+            oline = oline.replace(smarkup, utext)
         print(oline)
 
 
@@ -898,6 +916,7 @@ FUNC_BY_WORD = {
     "decode": line_eval_decode,
     "dedent": file_chars_dedent,
     "dent": line_dent,
+    "deslack": line_deslack,
     "encode": line_encode_lit,
     "enumerate": file_lines_enumerate,
     "eval": line_eval_print,
@@ -923,6 +942,28 @@ FUNC_BY_WORD = {
     "unquote": line_unquote,
     "upper": line_upper,
     "values": file_eval_values,
+}
+
+
+#
+# Map Slack Emoji/ Reactji Names back to Unicode
+#
+# compare
+#
+#   GitHub Markdown Emoji Markup
+#   https://gist.github.com/rxaviers/7360908
+#
+
+
+SLACK_NAME_TO_UNICODE = {
+    "black_circle": "Medium Black Circle",  # not Large
+    "large_blue_circle": "Large Blue Circle",
+    "large_green_circle": "Large Green Circle",
+    "mag": "Left-Pointing Magnifying Glass",
+    "no_entry_sign": "No Entry Sign",
+    "red_circle": "Large Red Circle",
+    "white_check_mark": "White Heavy Check Mark",  # white-on-green
+    "zzz": "Sleeping Symbol",
 }
 
 

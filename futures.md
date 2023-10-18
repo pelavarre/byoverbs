@@ -403,8 +403,21 @@ make regular breakpoints work inside pq.py
         as well as they work inside examplecom.py
 
 write examples & help for examplecom.py
+add '|pq deslack' to convert the Slack Emoji Markup to Unicode
+better help at:  bin/pq.py --
 
-add '|pq unicode' to convert the Slack Emoji Markup to Unicode
+qcm, qcam near to:  git commit -m "wip - "$(qdno |awk -F/ "{print $NF}")
+qla could drop the detail past the '@'
+
+
+### 7 - Seventh traunch
+
+reinvent this wheel
+
+    qiksys.suspend_globals()
+    qiksys.resume_globals()
+
+like extend json.JSONEncoder to cover:  dt.datetime, dt.timedelta, set, tuple, ...
 
 
 ## Copied from

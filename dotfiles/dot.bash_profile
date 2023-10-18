@@ -94,11 +94,6 @@ function vqol () { d=$(which q); d=$(dirname "$d"); source "$d"/vqol "$@"; }
 #
 
 
-# Mix in Bash_Profile Extensions like for Sh Path, PushD, AltPwdS, & Ssh Aliases
-
-if [[ -e ~/.ssh/bash_profile ]]; then source ~/.ssh/bash_profile; fi
-
-
 # Prompt how to Scp
 
 date
@@ -116,6 +111,11 @@ source ~/.bashrc
 if dircolors >/dev/null 2>&1; then  # for Linux
     eval "$(dircolors <(dircolors -p |sed 's,1;,0;,g'))"  # 'no bold for light mode'
 fi
+
+
+# Mix in Bash_Profile Extensions like for Sh Path, PushD, AltPwdS, & Ssh Aliases
+
+if [[ -e ~/.ssh/bash_profile ]]; then source ~/.ssh/bash_profile; fi
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.bash_profile
