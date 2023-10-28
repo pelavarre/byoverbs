@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ ! -d ~/.ssh ]; then
+    (set -xe; mkdir -p ~/.ssh; chmod go-rw ~/.ssh)
+fi
+
+if [ ! -e ~/.ssh/3.pbpaste ]; then
+    (set -xe; touch ~/.ssh/3.pbpaste)
+fi
+
+if [ -t 0 ] && [ -t 1 ]; then  # b.bash
+    echo '+ pbpaste >~/.ssh/3.pbpaste' >&2
+    pbpaste >~/.ssh/3.pbpaste
+elif [ -t 0 ]; then  # b.bash |...
+    echo '+ cat ~/.ssh/3.pbpaste |tee >(pbcopy)'
+    # shellcheck disable=SC2002  # explicit Cat
+    cat ~/.ssh/3.pbpaste |tee >(pbcopy)
+elif [ -t 1 ]; then  # ... |b.bash
+    echo '+  ...| tee >(pbcopy) ~/.ssh/3.pbpaste'
+    tee >(pbcopy) ~/.ssh/3.pbpaste
+else  # ... |b.bash |...
+    echo '+  ...| tee >(pbcopy) ~/.ssh/3.pbpaste |...'
+    tee >(pbcopy) ~/.ssh/3.pbpaste
+fi
