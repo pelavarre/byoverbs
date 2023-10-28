@@ -16,8 +16,8 @@ elif [ -t 0 ]; then  # b.bash |...
     # shellcheck disable=SC2002  # explicit Cat
     cat ~/.ssh/2.pbpaste |tee >(pbcopy)
 elif [ -t 1 ]; then  # ... |b.bash
-    echo '+  ...| tee >(pbcopy) ~/.ssh/2.pbpaste'
-    tee >(pbcopy) ~/.ssh/2.pbpaste
+    echo '+  ...| tee >(pbcopy) >~/.ssh/2.pbpaste'
+    tee >(pbcopy) >~/.ssh/2.pbpaste
 else  # ... |b.bash |...
     echo '+  ...| tee >(pbcopy) ~/.ssh/2.pbpaste |...'
     tee >(pbcopy) ~/.ssh/2.pbpaste
