@@ -86,9 +86,9 @@ for SHFILE in *; do
     if [[ -d "$SHFILE" ]]; then  # skips, if dir
         :
     elif [[ "$SHFILE" =~ ^[^.]*$ ]]; then  # checks, if not hidden and no file ext
-        shellcheck --norc --shell=bash "$SHFILE" "$@"
+        shellcheck --norc --shell=bash "$@" -- "$SHFILE"
     elif [[ "$SHFILE" =~ [.]bash$ ]]; then  # checks, if explicitly Bash
-        shellcheck --norc --shell=bash "$SHFILE" "$@"
+        shellcheck --norc --shell=bash "$@" -- "$SHFILE"
     else
         :
     fi
