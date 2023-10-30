@@ -12,13 +12,13 @@ if [ -t 0 ] && [ -t 1 ]; then  # b.bash
     echo '+ pbpaste >~/.ssh/1.pbpaste' >&2
     pbpaste >~/.ssh/1.pbpaste
 elif [ -t 0 ]; then  # b.bash |...
-    echo '+ cat ~/.ssh/1.pbpaste |tee >(pbcopy)'
+    echo '+ cat ~/.ssh/1.pbpaste |tee >(pbcopy)' >&2
     # shellcheck disable=SC2002  # explicit Cat
     cat ~/.ssh/1.pbpaste |tee >(pbcopy)
 elif [ -t 1 ]; then  # ... |b.bash
-    echo '+  ...| tee >(pbcopy) >~/.ssh/1.pbpaste'
+    echo '+  ...| tee >(pbcopy) >~/.ssh/1.pbpaste' >&2
     tee >(pbcopy) >~/.ssh/1.pbpaste
 else  # ... |b.bash |...
-    echo '+  ...| tee >(pbcopy) ~/.ssh/1.pbpaste |...'
+    echo '+  ...| tee >(pbcopy) ~/.ssh/1.pbpaste |...' >&2
     tee >(pbcopy) ~/.ssh/1.pbpaste
 fi
