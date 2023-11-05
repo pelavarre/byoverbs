@@ -1,24 +1,58 @@
 #!/bin/bash
 
+# usage: 3
+#
+# fork your Os Copy/Paste Clipboard Buffer into many Clones
+#
+# examples:
+#   3  # captures 3'th copy of Os Copy/Paste Clipboard Buffer
+#   3 |cat -  # shows 3'th copy
+#   echo abc |3  # replaces 3'th copy
+#   echo xyz |3 |tr '[a-z]' '[A-Z]'  # replaces 3'th and forwards it
+
+
+# shellcheck disable=SC2002  # explicit Cat
+
+
+set -e
+
+if [ "$#" != 0 ]; then
+    echo "usage: 3" >&2
+    exit 1
+fi
+
+F="$HOME/.ssh/3.pbpaste"
+
 if [ ! -d ~/.ssh ]; then
     (set -xe; mkdir -p ~/.ssh; chmod go-rw ~/.ssh)
 fi
 
-if [ ! -e ~/.ssh/3.pbpaste ]; then
-    (set -xe; touch ~/.ssh/3.pbpaste)
+if [ ! -e $F ]; then
+    (set -xe; touch $F)
 fi
 
 if [ -t 0 ] && [ -t 1 ]; then  # b.bash
-    echo '+ pbpaste >~/.ssh/3.pbpaste' >&2
-    pbpaste >~/.ssh/3.pbpaste
+    echo "+ pbpaste 3" >&2
+    pbpaste >$F
 elif [ -t 0 ]; then  # b.bash |...
-    echo '+ cat ~/.ssh/3.pbpaste |tee >(pbcopy)' >&2
-    # shellcheck disable=SC2002  # explicit Cat
-    cat ~/.ssh/3.pbpaste |tee >(pbcopy)
+    echo "+ pbcopy 3" >&2
+    cat $F |pbcopy
+    cat $F
 elif [ -t 1 ]; then  # ... |b.bash
-    echo '+  ...| tee >(pbcopy) >~/.ssh/3.pbpaste' >&2
-    tee >(pbcopy) >~/.ssh/3.pbpaste
+    echo "+ |pbcopy 3" >&2
+    cat >$F
+    cat $F |pbcopy
 else  # ... |b.bash |...
-    echo '+  ...| tee >(pbcopy) ~/.ssh/3.pbpaste |...' >&2
-    tee >(pbcopy) ~/.ssh/3.pbpaste
+    echo "+ |pbcopy 3 |" >&2
+    cat >$F
+    cat $F |pbcopy
+    cat $F
 fi
+
+
+# ( cat bin/3 |sed 's,3,2,'g >bin/2 ) && ( cat bin/3 |sed 's,3,1,'g >bin/1 )
+# chmod +x bin/[123]
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/3
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git
