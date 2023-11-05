@@ -413,11 +413,12 @@ qla could drop the detail past the '@'
 ### 7 - Seventh traunch
 
 reinvent this wheel
-
     qiksys.suspend_globals()
     qiksys.resume_globals()
-
 like extend json.JSONEncoder to cover:  dt.datetime, dt.timedelta, set, tuple, ...
+
+maybe maybe 'pwd.py' and 'py.py' and 'time.py' are no longer trouble?
+https://pypi.org/project/py/ might always only be a Python 2 thing?
 
 
 ## Copied from
