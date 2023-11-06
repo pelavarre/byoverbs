@@ -32,21 +32,18 @@ if [ ! -e $F ]; then
 fi
 
 if [ -t 0 ] && [ -t 1 ]; then  # b.bash
-    echo "+ pbpaste 3" >&2
+    echo '+ pbpaste pb$3' >&2
     pbpaste >$F
 elif [ -t 0 ]; then  # b.bash |...
-    echo "+ pbcopy 3" >&2
-    cat $F |pbcopy
+    echo '+ cat $pb3' >&2
     cat $F
 elif [ -t 1 ]; then  # ... |b.bash
-    echo "+ |pbcopy 3" >&2
-    cat >$F
-    cat $F |pbcopy
+    echo '+ |pbcopy $pb3' >&2
+    pbcopy
+    pbpaste >$F
 else  # ... |b.bash |...
-    echo "+ |pbcopy 3 |" >&2
-    cat >$F
-    cat $F |pbcopy
-    cat $F
+    echo '+ |tee $pb3 |' >&2
+    tee $F
 fi
 
 

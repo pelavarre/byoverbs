@@ -32,26 +32,23 @@ if [ ! -e $F ]; then
 fi
 
 if [ -t 0 ] && [ -t 1 ]; then  # b.bash
-    echo "+ pbpaste 2" >&2
+    echo '+ pbpaste pb$2' >&2
     pbpaste >$F
 elif [ -t 0 ]; then  # b.bash |...
-    echo "+ pbcopy 2" >&2
-    cat $F |pbcopy
+    echo '+ cat $pb2' >&2
     cat $F
 elif [ -t 1 ]; then  # ... |b.bash
-    echo "+ |pbcopy 2" >&2
-    cat >$F
-    cat $F |pbcopy
+    echo '+ |pbcopy $pb2' >&2
+    pbcopy
+    pbpaste >$F
 else  # ... |b.bash |...
-    echo "+ |pbcopy 2 |" >&2
-    cat >$F
-    cat $F |pbcopy
-    cat $F
+    echo '+ |tee $pb2 |' >&2
+    tee $F
 fi
 
 
-# ( cat bin/3 |sed 's,3,2,'g >bin/2 ) && ( cat bin/3 |sed 's,3,1,'g >bin/1 )
-# chmod +x bin/[123]
+# ( cat bin/2 |sed 's,2,2,'g >bin/2 ) && ( cat bin/2 |sed 's,2,1,'g >bin/1 )
+# chmod +x bin/[122]
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/2
