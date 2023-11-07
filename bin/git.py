@@ -2,10 +2,14 @@ _ = """
 
 (
 FF=bin/git.py
+
+
 for F in $FF; do
     git blame --show-email $F |cut -d'(' -f2- |cut -d')' -f1 |cut -d'-' -f1-2 \
         |awk '{print $NF" "$0}' |awk '{$NF="";print}'
     done |sort -r |uniq -c |head
+
+
 )
 
 
@@ -24,7 +28,11 @@ $ git clean --help
 
 $
 
-git clean -fdx -e /env
+git status --ignored --short
+:
+git clean -dffxn
+git clean -dffxq
+git clean -dffxq -e /env
 
 for X in 2022.11.22^{{tag,commit,tree}}; do
     it show --name-only $X

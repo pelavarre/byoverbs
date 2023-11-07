@@ -1,6 +1,9 @@
 set -e
-echo 'did you mean: ' git clean -ffxdq "$@"
+: git status --ignored --short
+: git clean -dffxn
+: git clean -dffxn -e env/
+echo 'did you mean: ' git clean -dffxq "$@"
 echo press ⌃D to execute, or ⌃C to quit
 cat - >/dev/null
 set -xe
-git clean -ffxdq "$@"
+git clean -dffxq "$@"

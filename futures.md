@@ -413,12 +413,26 @@ qla could drop the detail past the '@'
 ### 7 - Seventh traunch
 
 reinvent this wheel
+
     qiksys.suspend_globals()
     qiksys.resume_globals()
+
 like extend json.JSONEncoder to cover:  dt.datetime, dt.timedelta, set, tuple, ...
+
+:
 
 maybe maybe 'pwd.py' and 'py.py' and 'time.py' are no longer trouble?
 https://pypi.org/project/py/ might always only be a Python 2 thing?
+
+:
+
+trace today's:  cal
+more like:  cal -H 2023-01-18 -m 1 2023  # cal.py -H 2023018  # cal
+so no matter day of month we always get the -H/-m/etc syntax template form
+
+:
+
+localhost macOS uptime.py --pretty
 
 
 ## Copied from

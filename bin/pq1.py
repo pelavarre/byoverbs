@@ -1165,5 +1165,5 @@ if __name__ == "__main__":
 # todo: -fiqv to tune the Runs of this Code
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq.py
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq1.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
