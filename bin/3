@@ -5,8 +5,9 @@
 # fork your Os Copy/Paste Clipboard Buffer into many Clones
 #
 # examples:
-#   3  # captures 3'th copy of Os Copy/Paste Clipboard Buffer
-#   3 |cat -  # shows 3'th copy
+#   3  # names and backs up your 3'th copy of Os Copy/Paste Clipboard Buffer
+#   3 |3  # brings it back now, like after you stomped on it inside the Buffer
+#   3 |cat -  # shows 3'th copy, without bringing it back
 #   echo abc |3  # replaces 3'th copy
 #   echo xyz |3 |tr '[a-z]' '[A-Z]'  # replaces 3'th and forwards it
 
