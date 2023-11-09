@@ -434,6 +434,14 @@ so no matter day of month we always get the -H/-m/etc syntax template form
 
 localhost macOS uptime.py --pretty
 
+:
+
+qo somefuncname |awk.py --
+qo somefuncname |pq1 gather
+qo somefuncname |pq1 spread  # OSError: [Errno 8] Exec format error: 'pbcopy'
+
+getting Spread/ Gather backwards doesn't cue its own repair well
+
 
 ## Copied from
 
