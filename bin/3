@@ -28,23 +28,23 @@ if [ ! -d ~/.ssh ]; then
     (set -xe; mkdir -p ~/.ssh; chmod go-rw ~/.ssh)
 fi
 
-if [ ! -e $F ]; then
-    (set -xe; touch $F)
+if [ ! -e "$F" ]; then
+    (set -xe; touch "$F")
 fi
 
 if [ -t 0 ] && [ -t 1 ]; then  # b.bash
-    echo '+ pbpaste pb$3' >&2
-    pbpaste >$F
+    echo '+ pbpaste /dev/pb3' >&2
+    pbpaste >"$F"
 elif [ -t 0 ]; then  # b.bash |...
-    echo '+ cat $pb3' >&2
-    cat $F
+    echo '+ cat /dev/pb3' >&2
+    cat "$F"
 elif [ -t 1 ]; then  # ... |b.bash
-    echo '+ |pbcopy $pb3' >&2
+    echo '+ |pbcopy /dev/pb3' >&2
     pbcopy
-    pbpaste >$F
+    pbpaste >"$F"
 else  # ... |b.bash |...
-    echo '+ |tee $pb3 |' >&2
-    tee $F
+    echo '+ |tee /dev/pb3 |' >&2
+    tee "$F"
 fi
 
 
