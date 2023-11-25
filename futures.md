@@ -442,6 +442,17 @@ qo somefuncname |pq1 spread  # OSError: [Errno 8] Exec format error: 'pbcopy'
 
 getting Spread/ Gather backwards doesn't cue its own repair well
 
+mv.py $F
+cp.py $F
+these should work - and they don't, not when i test:  mv.py p.py
+especially:  mv.py p.py, mv.py cv
+
+lsa - this comes in flavours, eg `lsa ~` often wants only not-hidden Files
+
+:
+
+⌃X⌃E Editor
+
 
 ## Copied from
 

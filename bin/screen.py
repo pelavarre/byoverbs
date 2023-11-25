@@ -107,6 +107,8 @@ screen -S Session
 screen -X logfile Session.screen
 screen -X log on
 
+: screen -S Session -L  # at Mac or Linux
+
 : screen -S Session -L -Logfile Session.screen  # all in one line, at Linux (not Mac)
 
 echo $SHELL $$  # see what Shell you got from Screen

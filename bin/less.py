@@ -1,5 +1,7 @@
 _ = """
 -FIRX -S
+
+while interactive, -I etc to toggle
 """
 
 
