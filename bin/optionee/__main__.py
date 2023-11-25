@@ -15,8 +15,13 @@ options:
 
 quirks:
   defaults to edit os copy-paste buffer, but accepts pipes in or out or both
-  reads keyboard and writes screen at /dev/stderr
+  reads keyboard and writes screen at /dev/stderr (unlike 'shutil.get_terminal_size')
   logs keyboard to ~/.ssh/keylog.py, logs screen to ~/.ssh/screenlog.py
+
+related tests:
+  PYTHONPATH=bin/optionee python3 bin/optionee/byo/byotty.py --
+  PYTHONPATH=bin/optionee python3 bin/optionee/byo/byotermios.py --
+  ls -AdhlF -rt ~/.ssh/*log.py
 
 examples:
   é  # shows these examples and exits
@@ -30,7 +35,6 @@ examples:
 # code reviewed by People, Black, Flake8, & MyPy
 
 
-import __main__
 import argparse
 import dataclasses
 import os
@@ -39,6 +43,7 @@ import shlex
 import stat
 import subprocess
 import sys
+import time
 import typing
 
 import byo
@@ -48,7 +53,7 @@ from byo import byotty
 
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9
-... == byo, byotermios, byotty  # ducks Flake8 F401 imported.but.unused
+... == byo, byotermios, byotty, time  # ducks Flake8 F401 imported.but.unused
 
 
 #
@@ -287,14 +292,11 @@ def mess_about() -> None:
 
 
 if __name__ == "__main__":
-    if True:  # jitter Sun 3/Sep
-        main_doc = __main__.__doc__
-        try:
-            # byotty.main()
-            # byotermios.main()
-            pass
-        finally:
-            __main__.__doc__ = main_doc
+    sys.stdout.write("xyz\b\b\b")
+    sys.stdout.flush()
+
+    time.sleep(0.3)
+
     main()
 
 

@@ -1,31 +1,33 @@
 #!/usr/bin/env python3
 
 r"""
-Amp up Import Tty
+usage: byotty.py [-h]
 
-Read the Raw Bytes from a Terminal, often from the Keyboard
+read the Bytes of Terminal Keyboard Input & Paste
 
-Define "raw" as
+options:
+  -h, --help  show this help message and exit
 
-a ) Don't delay the Bytes till End-of-Line
-b ) Do write \n Line Feed (LF) as itself
-c ) Don't insert \r Carriage Return to write \n as \r\n CR LF
-d ) Don't take ⌃C ⌃D ⌃\ ⌃Z as Signals of KeyboardInterrupt, EndOfInput, Quit, Suspend
+notes:
+  doesn't delay the Bytes till End-of-Line
+  doesn't write \n Line Feed (LF) as \r\n CR LF, write LF as LF
+  doesn't take ⌃C ⌃D ⌃\ ⌃Z as Signals of KeyboardInterrupt, EndOfInput, Quit, Suspend
 
-Docs
-
+lots of docs:
   https://unicode.org/charts/PDF/U0000.pdf
   https://unicode.org/charts/PDF/U0080.pdf
   https://en.wikipedia.org/wiki/ANSI_escape_code
   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
   https://www.ecma-international.org/publications-and-standards/standards/ecma-48
     /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+
+usage examples:
+  PYTHONPATH=bin/optionee python3 bin/optionee/byo/byotty.py --
 """
 
 # code reviewed by People, Black, Flake8, & MyPy
 
 
-import __main__
 import datetime as dt
 import os
 import re
@@ -37,50 +39,54 @@ import tty  # unhappy at Windows
 import byo
 from byo import byoargparse
 
+... == dict[str, int]  # new since Oct/2020 Python 3.9
+# ... == typing.Self  # new since Oct/2022 Python 3.11
+
 ... == byo  # ducks Flake8 F401 imported.but.unused
 
 
 #
-# Define Self-Test at:  cd bin/optionee/ && python3 -m pdb __main__.py --
+# Run from the Sh Command Line
 #
 
 
 def main() -> None:
-    """Define Self-Test at:  cd bin/optionee/ && python3 -m pdb __main__.py --"""
+    """Run from the Sh Command Line"""
 
-    __main__.__doc__ = byoargparse.self_test_main_doc("byotty.py")
     parser = byoargparse.ArgumentParser()
     parser.parse_args_else()  # often prints help & exits zero
 
-    # Prompt for manual intervention
+    # Copy Bytes of Keyboard or Paste to Screen,
+    # as Chords of Words of Chars and themselves, else as themselves alone
 
     with BytesTerminal(sys.stderr) as bt:
         quits = (b"\x03", b"\x04", b"\x1A", b"\x1C", b"Q")  # ⌃C ⌃D ⌃Z ⌃\ ⇧Q
         bt.print(r"Press ⇧Z ⇧Q to quit, or any one of ⌃C ⌃D ⌃Z ⌃\ ".rstrip())
         bt.print()  # doesn't accept : Q ! Return
 
-        # Take Bytes of Paste, or the Bytes of the next Chord from Keyboard
-
         t0 = dt.datetime.now()
         while True:
-            bytes_ = bt.read_chord_bytes()
+            data = bt.read_chord_bytes()
 
             # Time the arrivals, log the details
 
             t1 = dt.datetime.now()
-            bt.print(t1 - t0, bytes_)
+            bt.print(t1 - t0, data)
+            if data == b" ":
+                bt.breakpoint()
+
             t0 = dt.datetime.now()
 
             # Quit on request
 
-            if bytes_ in quits:
+            if data in quits:
                 break
 
-    # todo: make a Sh Usage work without patching __main__.py
+        # yes the Tty at Stderr, not a Tty at the Stdout of ShUtil Get_Terminal_Size
 
 
 #
-# Name some Bytes
+# Name some of the C0 Control Bytes
 #
 
 
@@ -97,20 +103,21 @@ LF = b"\n"  # 00/10 Line Feed
 #
 
 
-C0_BYTES = b"".join(bytearray([_]) for _ in range(0, 0x20)) + b"\x7F"
-C1_BYTES = b"".join(bytearray([_]) for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
-UTF8_START_BYTES = b"".join(bytearray([_]) for _ in range(0xC2, 0xF5))
+C0_BYTES = bytes(_ for _ in range(0, 0x20)) + b"\x7F"
+C1_BYTES = bytes(_ for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
+UTF8_START_BYTES = bytes(_ for _ in range(0xC2, 0xF5))
 
 assert len(C0_BYTES) == 0x21 == 33 == (128 - 95)
 assert len(C1_BYTES) == 0x20 == 32
 assert len(UTF8_START_BYTES) == 0x33 == 51
 
-# todo: more test of C1_BYTES
+# todo: test writing C1_BYTES, like into macOS Terminal
 
 
 #
 # Name the Bytes that split Raw Terminal Bytes into Chords
 #
+
 
 ESC = b"\x1B"  # 01/11 Escape
 
@@ -136,33 +143,36 @@ MouseSixByteEndPattern = b"\x1B\\[" rb"M..."  # MPR X Y
 class BytesTerminal:
     r"""Read the Raw Bytes from a Terminal"""
 
-    tcgetattr: list[int | list[bytes | int]] | None
+    tcgetattr_else: list[int | list[bytes | int]] | None
 
     def __init__(self, stdio) -> None:
         fd = stdio.fileno()
 
         self.stdio = stdio
         self.fd = fd
-        self.tcgetattr = None
+        self.tcgetattr_else = None
         self.holds = bytearray()
 
     def __enter__(self) -> "BytesTerminal":  # -> typing.Self:
         r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
 
         fd = self.fd
-        tcgetattr = self.tcgetattr
+        tcgetattr_else = self.tcgetattr_else
 
-        if tcgetattr is None:
+        if tcgetattr_else is None:
             tcgetattr = termios.tcgetattr(fd)
-            self.tcgetattr = tcgetattr
+            assert tcgetattr is not None
 
-            if False:  # jitter Sat 19/Aug  # option for ⌃C to print Py Traceback
-                tty.setcbreak(fd, when=termios.TCSAFLUSH)
+            self.tcgetattr_else = tcgetattr
+
+            # choose to enter through
+            #   TCSAFLUSH - Flush destroys Input, flushes Output, then changes
+            #   TCSADRAIN - Drain flushes Output, then changes
+
+            if False:  # jitter Sat 19/Aug
+                tty.setcbreak(fd, when=termios.TCSAFLUSH)  # ⌃C prints Py Traceback
             else:
-                tty.setraw(fd, when=termios.TCSAFLUSH)  # SetRaw defaults to TcsaFlush
-
-            # TCSAFLUSH - Flush destroys Input, flushes Output, then changes
-            # TCSADRAIN - Drain flushes Output, then changes
+                tty.setraw(fd, when=termios.TCSADRAIN)  # SetRaw defaults to TcsaFlush
 
         self.try_me()
 
@@ -173,12 +183,20 @@ class BytesTerminal:
 
         fd = self.fd
 
-        tcgetattr = self.tcgetattr
-        if tcgetattr is not None:
-            self.tcgetattr = None
+        tcgetattr_else = self.tcgetattr_else
+        if tcgetattr_else is not None:
+            tcgetattr = tcgetattr_else
 
-            when = termios.TCSAFLUSH
+            self.tcgetattr_else = None
+
+            # choose to exit through
+            #   TCSAFLUSH - Flush destroys Input, flushes Output, then changes
+            #   TCSADRAIN - Drain flushes Output, then changes
+
+            when = termios.TCSADRAIN
             termios.tcsetattr(fd, when, tcgetattr)
+
+            # todo: test of Drain vs Flush at Exit
 
         return None
 
@@ -220,26 +238,26 @@ class BytesTerminal:
 
         print(*args, **alt_kwargs)
 
-    def write(self, bytes_) -> None:
+    def write(self, data) -> None:
         """Write some Bytes without encoding them, & without ending the Line"""
 
         fd = self.fd
-        os.write(fd, bytes_)
+        os.write(fd, data)
 
     def read_chord_bytes(self) -> bytes:
         r"""Block till read of Paste or Chords"""
 
         while True:
-            available = self.available(func=bytes_take_startswith_else)
+            available = self.count_available(func=bytes_take_startswith_else)
             if available:
                 break
             self.kbhit()  # blocks till more Bytes arrive
 
-        bytes_ = self.read(length=available)
+        data = self.read(length=available)
 
-        return bytes_
+        return data
 
-    def available(self, func) -> int:
+    def count_available(self, func) -> int:
         """Count the Bytes available to read to satisfy Func, without blocking"""
 
         holds = self.holds
@@ -305,23 +323,25 @@ class BytesTerminal:
 #
 
 
-def bytes_take_startswith_else(bytes_) -> bytes:
+def bytes_take_startswith_else(data) -> bytes:
     """Take 1 defined whole Terminal Input/Output Byte Sequence, else zero Bytes"""
 
     seq = b""
 
-    if bytes_:
-        seq_else = _bytes_take_mouse_six_else(bytes_)
+    if data:
+        seq_else = _bytes_take_mouse_six_else(data)
         if seq_else is None:
-            seq_else = _bytes_take_c0_plus_else(bytes_)  # would misread Mouse Six
+            seq_else = _bytes_take_c0_plus_else(data)  # would misread Mouse Six
             if seq_else is None:
-                seq_else = _bytes_take_much_utf8_else(bytes_)  # would misread C0 Esc
+                seq_else = _bytes_take_much_utf8_else(data)  # would misread C0 Esc
                 if seq_else is None:
-                    seq_else = _bytes_take_one(bytes_)  # would misread partial UTF-8
+                    seq = _bytes_take_one(data)  # would misread partial UTF-8
 
-                    assert len(seq_else) == 1, (seq_else, bytes_)
-                    assert seq_else[0] >= 0x80, (seq_else, bytes_)
-                    assert seq_else not in UTF8_START_BYTES, (seq_else, bytes_)
+                    assert len(seq) == 1, (seq, data)
+                    assert seq[0] >= 0x80, (seq, data)
+                    assert seq not in UTF8_START_BYTES, (seq, data)
+
+                    seq_else = seq
 
                     # thus, an "invalid start byte" of UTF-8
 
@@ -329,11 +349,13 @@ def bytes_take_startswith_else(bytes_) -> bytes:
 
     return seq  # might be empty, might not be UTF-8, is not None
 
+    # does misread Fn⌃⌥Delete b"\x1B\x1B[3;5~" as (b"\x1B", b"\x1B[3;5~")
 
-def _bytes_take_mouse_six_else(bytes_) -> bytes | None:
+
+def _bytes_take_mouse_six_else(data) -> bytes | None:
     """Take 1 whole Mouse Six Byte Report, else zero Bytes while partial, else None"""
 
-    assert bytes_, bytes_  # not empty here
+    assert data, data  # not empty here
 
     assert MouseThreeByteStartPattern == b"\x1B\\[" rb"M"
     assert MouseSixByteEndPattern == b"\x1B\\[" rb"M..."  # MPR X Y
@@ -342,13 +364,13 @@ def _bytes_take_mouse_six_else(bytes_) -> bytes | None:
 
     # Don't say block for 6 Bytes till given Esc [ M
 
-    m0 = re.match(rb"^" + MouseThreeByteStartPattern + rb"$", string=bytes_)
+    m0 = re.match(rb"^" + MouseThreeByteStartPattern + rb"$", string=data)
     if not m0:
         return None
 
     # Do say block for 6 Bytes when given Esc [ M
 
-    mn = re.match(rb"^" + MouseSixByteEndPattern + rb"$", string=bytes_)
+    mn = re.match(rb"^" + MouseSixByteEndPattern + rb"$", string=data)
     if not mn:
         return b""  # partial Mouse Six Byte Report
 
@@ -360,14 +382,14 @@ def _bytes_take_mouse_six_else(bytes_) -> bytes | None:
     return seq  # not empty
 
 
-def _bytes_take_c0_plus_else(bytes_) -> bytes | None:
+def _bytes_take_c0_plus_else(data) -> bytes | None:
     """Take 1 whole C0 Control Sequence, else zero Bytes while partial, else None"""
 
-    assert bytes_, bytes_  # not empty here
+    assert data, data  # not empty here
 
     # Don't say block for Bytes till given a C0 Control Byte
 
-    head = bytes_[:1]
+    head = data[:1]
     if head not in C0_BYTES:
         return None
 
@@ -380,28 +402,28 @@ def _bytes_take_c0_plus_else(bytes_) -> bytes | None:
 
     # Take 1 whole C0 Esc Control Sequence, else zero Bytes while partial, else None
 
-    seq = _bytes_take_c0_esc_etc_else(bytes_)
+    seq = _bytes_take_c0_esc_etc_else(data)
 
     return seq  # not empty
 
 
-def _bytes_take_c0_esc_etc_else(bytes_) -> bytes:
+def _bytes_take_c0_esc_etc_else(data) -> bytes:
     """Take 1 whole C0 Esc Control Sequence, else zero Bytes while partial, else None"""
 
-    assert bytes_.startswith(b"\x1B"), (bytes_,)  # given Esc already here
+    assert data.startswith(b"\x1B"), (data,)  # given Esc already here
 
     assert ESC == b"\x1B"
     assert CsiStartPattern == b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"
     assert CsiEndPattern == rb"[\x40-\x7E]"
 
-    assert bytes_.startswith(ESC), bytes_
+    assert data.startswith(ESC), data
 
     # Do say block for the Byte after Esc
 
-    if not bytes_[1:]:
+    if not data[1:]:
         return b""  # partial C0 Esc Control Sequence
 
-    esc_plus = bytes_[:2]
+    esc_plus = data[:2]
     assert esc_plus[:1] == b"\x1B", (esc_plus,)
 
     # Do say block for the Byte after Esc O,
@@ -410,10 +432,10 @@ def _bytes_take_c0_esc_etc_else(bytes_) -> bytes:
     assert SS3 == b"\x1BO"
 
     if esc_plus == b"\x1BO":
-        if not bytes_[2:]:
+        if not data[2:]:
             return b""  # partial C0 SS3 Control Sequence
 
-        ss3_plus = bytes_[:3]
+        ss3_plus = data[:3]
         return ss3_plus
 
     # Take Esc with a Text Byte of 7-Bit US-Ascii as a Byte Pair,
@@ -430,16 +452,16 @@ def _bytes_take_c0_esc_etc_else(bytes_) -> bytes:
     assert ESC == b"\x1B"
     assert CSI == b"\x1B["
 
-    assert bytes_.startswith(CSI), bytes_
+    assert data.startswith(CSI), data
 
-    m0 = re.match(rb"^" + CsiStartPattern + rb"$", string=bytes_)
+    m0 = re.match(rb"^" + CsiStartPattern + rb"$", string=data)
     if m0:
         return b""  # partial C0 CSI Control Sequence
 
     # Take one whole Esc [ Sequence, or settle for Esc [ begun but cut short
 
-    m1 = re.match(rb"^" + CsiStartPattern, string=bytes_)
-    assert m1, (m1, bytes_)
+    m1 = re.match(rb"^" + CsiStartPattern, string=data)
+    assert m1, (m1, data)
 
     start_seq = m1.string[m1.start() : m1.end()]
     end_seq = m1.string[m1.end() :][:1]
@@ -452,23 +474,23 @@ def _bytes_take_c0_esc_etc_else(bytes_) -> bytes:
     return seq  # not empty
 
 
-def _bytes_take_much_utf8_else(bytes_) -> bytes | None:
+def _bytes_take_much_utf8_else(data) -> bytes | None:
     """Take 1 or more whole UTF-8 Encodings of Text Chars"""
 
-    assert bytes_, bytes_  # not empty here
-    assert bytes_[0] not in C0_BYTES, (bytes,)  # UTF-8 decodes C0 Bytes as themselves
+    assert data, data  # not empty here
+    assert data[0] not in C0_BYTES, (bytes,)  # UTF-8 decodes C0 Bytes as themselves
 
     seq = None
-    for index in range(len(bytes_)):
+    for index in range(len(data)):
         length = index + 1
 
-        try_seq = bytes_[:length]
+        try_seq = data[:length]
         try:
             _ = try_seq.decode()
         except UnicodeDecodeError as exc:
             if "invalid start byte" not in str(exc):
                 assert "unexpected end of data" in str(exc), str(exc)
-                if length < len(bytes_):
+                if length < len(data):
                     continue
 
                 return b""  # partial UTF-8 Encoding
@@ -476,8 +498,8 @@ def _bytes_take_much_utf8_else(bytes_) -> bytes | None:
             if seq:
                 break  # complete UTF-8 Encoding before an Invalid Start Byte
 
-            assert try_seq[0] >= 0x80, (try_seq, bytes_)
-            assert try_seq not in UTF8_START_BYTES, (try_seq, bytes_)
+            assert try_seq[0] >= 0x80, (try_seq, data)
+            assert try_seq not in UTF8_START_BYTES, (try_seq, data)
 
             return None  # Invalid Start Byte
 
@@ -486,13 +508,22 @@ def _bytes_take_much_utf8_else(bytes_) -> bytes | None:
     return seq  # not empty
 
 
-def _bytes_take_one(bytes_) -> bytes:
+def _bytes_take_one(data) -> bytes:
     """Take 1 Byte"""
 
-    seq = bytes_[:1]
-    assert seq, (seq, bytes_)
+    seq = data[:1]
+    assert seq, (seq, data)
 
     return seq  # not empty
+
+
+#
+# Run from the Sh Command Line, if not imported
+#
+
+
+if __name__ == "__main__":
+    main()
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/optionee/byo/

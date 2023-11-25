@@ -26,11 +26,10 @@ import __main__
 import argparse
 import difflib
 import os
-import pdb
 import sys
 import textwrap
 
-... == breakpoint, pdb  # requires Python >= Jun/2018 Python 3.7
+... == dict[str, int]  # new since Oct/2020 Python 3.9
 
 
 _SELF_TEST_DOC = """
@@ -113,7 +112,7 @@ class ArgumentParser(argparse.ArgumentParser):
     #     argspace = super().parse_args(args)
     #     return argspace
     #
-    # yea no, MyPy would then explode with a deeply inscrutable
+    # yea no, MyPy would then explode, like an inscrutable Python Typing nerd =>
     #
     #   Signature of "parse_args" incompatible with supertype "ArgumentParser"
     #   [override]
@@ -183,7 +182,7 @@ class ArgumentParser(argparse.ArgumentParser):
         parser_filename = "ArgumentParser(...)"
         want_filename = parser_filename
 
-        # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
+        # Return the Diff to Parser Doc from Main Doc, may be empty
 
         got_doc = main_doc
         want_doc = parser_doc
@@ -216,7 +215,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
         return testdoc
 
-    _ = """
+    ... == """
 
     def aspy(self):  # FIXME
         py = aspy(parser=self)
