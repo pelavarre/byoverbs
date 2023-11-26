@@ -104,9 +104,28 @@ function vqol () { d=$(which q); d=$(dirname "$d"); source "$d"/vqol "$@"; }
 #
 
 
-# Mix in ZProfile Extensions like for Sh Path, PushD, AltPwdS, & Ssh Aliases
+# Calm the Ls Light-Mode Colors
+
+if dircolors >/dev/null 2>&1; then  # for Linux
+    eval "$(dircolors <(dircolors -p |sed 's,1;,0;,g'))"  # 'no bold for light mode'
+fi
+
+
+# Mix in LocalHost ZProfile for Sh Path, PushD, AltPwdS, Ssh Aliases, Zsh BindKey, etc
 
 if [[ -e ~/.ssh/zprofile ]]; then source ~/.ssh/zprofile; fi
+
+: # export PATH=$PATH:$HOME/...
+: # pushd ~/Desktop >/dev/null
+: # if ! ssh-add -l >/dev/null; then ...
+: # function ... () { set -x; date; caffeinate -s ssh -A ...; echo "+ exit $?"; ...
+
+: # bindkey -s '^[OP' '^Abindkey |grep '\''".*".*".*"$'\'' ^J'
+
+
+#
+# Last of all
+#
 
 
 # Prompt how to Scp
@@ -116,14 +135,7 @@ echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 echo
 
 
-# Calm the Ls Light-Mode Colors
-
-if dircolors >/dev/null 2>&1; then  # for Linux
-    eval "$(dircolors <(dircolors -p |sed 's,1;,0;,g'))"  # 'no bold for light mode'
-fi
-
-
-# Python install patches, rejected
+# Track rejected Python install patches
 #
 #   PATH="/Library/Frameworks/Python.framework/Versions/3.12/bin:${PATH}"
 #   export PATH

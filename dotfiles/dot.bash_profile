@@ -94,13 +94,6 @@ function vqol () { d=$(which q); d=$(dirname "$d"); source "$d"/vqol "$@"; }
 #
 
 
-# Prompt how to Scp
-
-date
-echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
-echo
-
-
 # Don't run Bash Profile without also running Bash R C
 
 source ~/.bashrc
@@ -113,9 +106,28 @@ if dircolors >/dev/null 2>&1; then  # for Linux
 fi
 
 
-# Mix in Bash_Profile Extensions like for Sh Path, PushD, AltPwdS, & Ssh Aliases
+# Mix in LocalHost Bash_Profile for Sh Path, PushD, AltPwdS, Ssh Aliases, Bash Bind, etc
 
 if [[ -e ~/.ssh/bash_profile ]]; then source ~/.ssh/bash_profile; fi
+
+: # export PATH=$PATH:$HOME/...
+: # pushd ~/Desktop >/dev/null
+: # if ! ssh-add -l >/dev/null; then ...
+: # function ... () { set -x; date; caffeinate -s ssh -A ...; echo "+ exit $?"; ...
+
+: # bind '"\eOP": "\C-abind -s \C-j"'
+
+
+#
+# Last of all
+#
+
+
+# Prompt how to Scp
+
+date
+echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
+echo
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.bash_profile
