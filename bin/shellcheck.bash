@@ -21,7 +21,8 @@ set -e
 
 
 #
-# Spell out the Well-Known Options in detail
+# Spell out the Well-Known Options in detail,
+# except i only developed these, i forgot to call them, so we're all conventional now
 #
 
 
@@ -32,7 +33,7 @@ fi
 
 
 #
-# SC2230: which is non-standard ...
+# SC2230: 'which' is non-standard ...  # the actual Tool doesn't quote the Which
 #   Use builtin 'command -v' instead
 #
 # SC2244: Prefer explicit -n to check non-empty string
