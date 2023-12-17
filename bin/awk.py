@@ -29,12 +29,15 @@ examples:
   awk.py --h  # show help lines and exit (more reliable than -h)
   awk.py --  # prefix each line with "-- " and suffix each line with " --"
 
-  seq 20 |awk '!f{f=1;print} {o=$0} END{print o}'  # copies first & last lines
+  seq 20 |awk '!f{f=1;print} {o=$0} END{print o}' |uniq  # copies first & last lines
+  seq 20 |awk '!f{f=1;print} {o=$0} END{if (NR > 1) {print "..."; print o}}'
   seq 20 |awk '/^8$/{F=1} /^14$/{F=0} F{print}'  # starts/ stops copying lines
+  find * |awk -F/ -vOFS=/ '{$NF=""; print}' |sort |uniq |grep   # dirs not empty/hidden
 
-  A='{if (k != $1) {print ""; print $1":"; k = $1}; gsub(/^[^:]*:/, ""); print "   ", $0}'
+  A='{if (k!=$1) {print ""; print $1":"; k = $1}; gsub(/^[^:]*:/, ""); print "   ", $0}'
   alias -- --a="awk -F: '$A'"
   unset A
+  grep 'seq.*[|]' bin/*.py |--a
 """
 
 import __main__

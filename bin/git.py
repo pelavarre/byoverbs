@@ -28,17 +28,19 @@ $ git clean --help
 
 $
 
+
 git status --ignored --short
 :
 git clean -dffxn
 git clean -dffxq
 git clean -dffxq -e /env
 
-for X in 2022.11.22^{{tag,commit,tree}}; do
-    it show --name-only $X
-done |grep TaggerDate
 
-git tag -l --format='%(taggerdate)  %(refname:short)'  2022.11.22
+git tag -l --format='%(taggerdate)  %(refname:short)' 2023.12.15
+
+for X in 2023.12.15{,^{tag},^{commit},^{tree}}; do
+    (set -xe; git show --name-only $X |grep TaggerDate)
+done
 
 """
 

@@ -451,7 +451,9 @@ lsa - this comes in flavours, eg `lsa ~` often wants only not-hidden Files
 
 :
 
-⌃X⌃E Editor
+get our restart at 'pq' working as well as 'pq1'
+
+get 'optionee' working well as an ⌃X⌃E Bash/Zsh Command-Line Editor
 
 
 ## Copied from
