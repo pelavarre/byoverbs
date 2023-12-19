@@ -65,6 +65,8 @@ import typing
 
 import byotools as byo
 
+... == dict[str, int]  # new Syntax since Oct/2020 Python 3.9
+
 
 class Main:
     """Open up a shared workspace for the Code of this Py File"""
@@ -158,7 +160,7 @@ def parse_ls_py_args() -> argparse.Namespace:
 
         sys.exit(0)
 
-    # Gather context for choosing a default Style
+    # Gather context for choosing a default Style of Table Output
 
     styles = [args.alt_one, args.alt_cee, args.alt_ell, args.lh, args.m, args.full_time]
     styles = list(bool(_) for _ in styles)
@@ -168,11 +170,24 @@ def parse_ls_py_args() -> argparse.Namespace:
 
     stdout_isatty = sys.stdout.isatty()
 
-    # Succeed
+    # Choose a default Style of Table Output
 
     args.one = args.alt_one or ((not sum_styles) and (not stdout_isatty))
     args.cee = args.alt_cee or ((not sum_styles) and stdout_isatty)
     args.ell = args.alt_ell or args.full_time or args.lh
+
+    # Trace the choices made because Stdout Tty or not
+
+    if not sum_styles:
+        shargs = ["-1"] if args.one else ["-C"]
+        for arg in sys.argv[1:]:
+            sharg = byo.shlex_quote_if(arg)
+            shargs.append(sharg)
+        shargs_join = " ".join(shargs)
+
+        sys.stderr.write(f"+ ls.py {shargs_join}\n")
+
+    # Succeed
 
     return args
 
@@ -184,12 +199,9 @@ def run_ls_args(args) -> None:
 
     tops = args.tops
 
-    explicit_styles = (args.one, args.cee, args.ell, args.lh, args.m)
-    args_one = args.one if any(bool(_) for _ in explicit_styles) else True
-
     # Pick the Code to show or run
 
-    if args_one:
+    if args.one:
         (opt, func, kwargs) = parse_ls_one_args(args)
     elif args.ell:
         (opt, func, kwargs) = parse_ls_ell_args(args)
@@ -656,12 +668,18 @@ def ls_tops_by_stat(tops) -> None:
         ls_dir_by_stat(top=topdir)
 
 
-def find_form_cells(find, item) -> tuple[str, int, int, int, str, str, str]:
+def find_form_cells(find, item) -> tuple[str, int, str, str, str, str, str]:
     """Show one File or Dir as many Columns"""
 
     s = os.lstat(find)
 
     chmods = stat.filemode(s.st_mode)
+
+    group = str(s.st_gid)  # todo: lookup Group Name, User Name by Id Number
+    author = str(s.st_uid)
+    if (s.st_gid, s.st_uid) == (os.getgid(), os.getuid()):
+        group = "staff"
+        author = "jqdoe"
 
     size = str(s.st_size)
     if not stat.S_ISDIR(s.st_mode):
@@ -682,8 +700,7 @@ def find_form_cells(find, item) -> tuple[str, int, int, int, str, str, str]:
         there = os.readlink(find)
         quoted = "{} -> {}".format(quoted_item, there)
 
-    cells: tuple[str, int, int, int, str, str, str]
-    cells = (chmods, s.st_nlink, s.st_uid, s.st_gid, size, stamp, quoted)
+    cells = (chmods, s.st_nlink, author, group, size, stamp, quoted)
 
     return cells
 

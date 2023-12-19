@@ -447,13 +447,26 @@ cp.py $F
 these should work - and they don't, not when i test:  mv.py p.py
 especially:  mv.py p.py, mv.py cv
 
-lsa - this comes in flavours, eg `lsa ~` often wants only not-hidden Files
-
 :
 
 get our restart at 'pq' working as well as 'pq1'
 
 get 'optionee' working well as an ⌃X⌃E Bash/Zsh Command-Line Editor
+
+:
+
+lsa - this comes in flavours, eg `lsa ~` often wants only not-hidden Files
+
+the '-h' silently ignored by 'ls' in the absence of '-l'
+we could drop it and mention we've dropped it
+
+-A -rt rejected by ls.py
+the '-d' ignored at:  ls.py -a -d -lh byoverbs/.git byoverbs/docs
+ls.py could accept, especially with Arg, the choices of: ls -AdhlF -rt
+
+-F rejected by ls.py
+
+:
 
 
 ## Copied from
