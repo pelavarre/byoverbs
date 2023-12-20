@@ -1,7 +1,7 @@
 # byoverbs
 
 Your workflow inside you Sh Terminal can run better, after you pour this kind of oil into it.
-This Repo adds in Sh Verbs to help you work.
+We give you Sh Scripts and Py Scripts to download, or to copy-edit, so they start helping you work.
 
 ## Show, not tell
 
@@ -25,7 +25,9 @@ They don't have to stay poorly thought out, unadapted to your workflow.
 
 One example is the Sh Verb:  ls
 
-Choose Args well, when no Args given, here '-hlaF -rt':
+Choose Args well,
+when no Args given,
+here '-hlaF -rt':
 
 <pre>
 % <strong>lsa</strong>
@@ -35,7 +37,9 @@ drwxr-xr-x  13 jqdoe  staff   416B Dec 18 15:56 byoverbs/
 %
 </pre>
 
-Choose Args well, when 1 Arg given by typing 1 Arg Pattern, here again '-hlaF -rt':
+Choose Args well,
+when 1 Arg given by typing 1 Arg Pattern,
+here again '-hlaF -rt':
 
 <pre>
 % <strong>lsa *</strong>
@@ -55,7 +59,9 @@ drwxr-xr-x   12 jqdoe  staff   384B Dec 18 15:56 .git/
 %
 </pre>
 
-Choose Args well, when More Args given by typing 2 Args in full, here now '-dhlaF -rt':
+Choose Args well,
+when More Args given by typing out 2 Args in full,
+here now '-dhlaF -rt':
 
 <pre>
 % <strong>lsa byoverbs/.git byoverbs/docs</strong>
@@ -66,7 +72,7 @@ drwxr-xr-x  12 plavarre  staff   384B Dec 18 15:56 byoverbs/.git/
 </pre>
 <=
 
-Our examples above come from inside a setup for test, specifically
+Our examples above come from inside a setup for test, specifically running after
 
     mkdir dir/
     cd dir/

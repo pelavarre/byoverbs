@@ -1,6 +1,12 @@
 # byoverbs/futures.md
 
-what i might should make next for us soon?
+What might should I make next for us soon?
+
+That Question interests me lots, so this File collects Answers to that Question.
+This File looks like English, but it's not very readable per se.
+It lives up inside my Top Dir so it's easy for me to find and grow.
+Its idea is more that you glance at it or search through it and then we talk it over.
+Or more likely you say something and then I come here to find the relevant note I wrote before you spoke.
 
 contents
 + Urgencies
