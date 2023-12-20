@@ -75,6 +75,8 @@ def main() -> None:
             if ext == ".py":
                 visit_py_find(find)
 
+        # todo: no cover for:  git grep -l 'posted into' |grep -v .py$
+
     # Say what happened
 
     join = " ".join(loud_pyfinds)

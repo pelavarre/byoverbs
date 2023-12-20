@@ -1,98 +1,115 @@
 #!/usr/bin/env python3
 
 r"""
-usage: pq [-h] [-p | -b | -c | -w | -l] [WORD ...]
+usage: pq [-h] [-b | -c | -w | -l | -g | -f] [WORD ...]
 
-edit the Os Copy/Paste Clipboard Buffer, else other Stdin/ Stdout
+tell Python to edit the Os Copy/Paste Clipboard Buffer, else other Stdin/ Stdout
 
 positional arguments:
-  WORD        word of the Pq Programming Language
+  WORD             word of the Pq Programming Language
 
 options:
-  -h, --help  show this help message and exit
-  -p          take Input as for each Line of Chars (often the default)
-  -b          take Input as Bytes
-  -c          take Input as Chars
-  -l          take Input as Lines of Chars
-  -w          take Input as Words of Chars
+  -h, --help       show this help message and exit
+  -b, --bytearray  work with Bytes, such as 'len'
+  -c, --str        work with Chars, such as 'dedent' or 'split' or 'upper'
+  -w, --words      work with Words of Chars, such as 'join'
+  -l, --lines      work with Lines of Chars, such as 'dent' and 'undent'
+  -g, --grafs      work with Grafs of Lines of Chars, such as 'gather' and 'spread'
+  -f, --text       work with File of Lines of Chars, such as 'reversed'
 
 quirks:
-  takes names of Python Funcs to work as the Words of the Pq Programming Language
-  chooses for you, often choosing -p, when you don't choose from -b, -c, -w, -l, -p
+  takes Names of Python Funcs as the Words of the Pq Programming Language
+  chooses for you, often choosing -l or -c, if you don't choose from -b, -c, -w, -l, -f
+  ducks the Shift key by taking '.' for '(' or ',', taking '_' for ' ', etc
   works like:  awk, cut, head, grep, sed, sort, tail, tr, uniq, wc, xargs, xargs -n 1
+  doesn't itself update the Os Copy/Paste Clipboard Buffer from the middle of a Sh Pipe
+  substitutes the File '~/.ssh/pbpaste', when 'pbpaste' or 'pbcopy' undefined
   takes Regular Expression Patterns as in Python, not as as in:  awk, grep, sed, tr
-  substitutes the file '~/.ssh/0.pbpaste' File, if 'pbpaste' or 'pbcopy' undefined
-  doesn't update the Os Copy/Paste Clipboard Buffer from the middle of a Sh Pipe
 
-related work:
-  https://pypi.org/project/pawk
-  https://jqlang.github.io/jq
+related works:
+  https://redis.io/ - an In-Memory Data Store of Key-Value Pairs, but with a CLI
+  https://pypi.org/project/pawk - a Python Line Processor
+  https://jqlang.github.io/jq - a Json Processor, lightweight & flexible
 
-file of bytes:
-  pq -b len  # counts Bytes  # | wc -c
+examples with Bytes:
+  pq -b  # no changes
+  pq -b len  # counts Bytes  # |wc -c
+  pq decode  # decodes Py Repr of Bytes as Chars, such as "b'\xC3\x9F'" to 'ß'
+  echo 'b"\xC0\x80"' |pq decode  # raises UnicodeDecodeError
 
-file of chars:
-  pq -c len  # counts Chars  # | wc -m
-  pq -c dedent  # removes blank Columns at left
-  pq -c replace.old.new  # show if replacing once runs faster than once per Line
-  pq dedent  # guesses you mean:  pq -c dedent
-  pq split  # guesses you mean 'pq -c split', same as 'pq -w'  # | xargs -n 1
+examples with Chars:
+  pq -c  # no changes, else raises UnicodeDecodeError if not Utf-8
+  pq -c len  # counts Chars  # |wc -m
+  pq -c strip  # drops the Chars of the leading & trailing blank Lines
+  pq casefold  # case-fold's the Chars, such as 'ß' to 'ss'
+  pq dedent  # removes blank Columns at left
+  pq encode  # encodes Chars as Py Repr of Bytes, such as 'ß' to "b'\xC3\x9F'"
+  pq lower  # lowers the Chars, such as 'ß' to itself  # |tr '[A-Z]' '[a-z]'
+  pq split  # guesses you mean 'pq -c split', same as 'pq -w'  # |xargs -n 1
+  pq upper  # uppers the Chars , such as 'ß' to 'SS'  # unlike |tr '[a-z]' '[A-Z]'
 
-file of words of chars:
-  pq -w  # splits Lines of Words into 1 Word per Line
-  pq -w len  # counts Words  # | wc -w
-  pq -w join  # joins up one Line of File of Words
-  pq join  # guesses you mean 'pq -w join'  # | xargs
+examples with Words of Chars:
+  pq -w  # splits to 1 Word per Line  # |xargs -n 1
+  pq -w len  # counts Words  # |wc -w
+  pq join  # guesses you mean 'pq -w join'  # |xargs
 
-file of lines of chars:
-  pq -l  # closes last Line if not closed, fails if not Utf-8
-  pq -l len  # counts Lines
-  pq -l reversed  # forwards Lines in reverse order  # Linux | tac  # Mac | tail -r
-  pq -l sorted  # forwards Lines in sorted order
-  pq -l sorted.reverse  # forwards Lines in reversed sorted order
-  pq -l [:3],"...",[-2:]  # first 3 & last 2 Lines, with Ellipsis in between
-  pq -l enumerate expandtabs  # number each line, up from 0  # | nl -v0
-  pq -l enumerate.start.1 expandtabs  # number each line, up from 1  # | cat -n |expand
-  pq enum  # guesses you mean:  pq -l enumerate.start.0 expandtabs
-  pq len  # guesses you mean:  pq -l len  # | wc -l
-
-lines of chars:
-  pq len max  # counts max Chars per Line
+examples with Lines of Chars:
+  pq -l  # closes each Line with b"\n", and closes last Line if not closed
+  pq -l len  # counts Chars per Line
+  pq -l len max  # counts max Chars per Line
+  pq dent  # adds four Spaces to left of each Line  # |sed 's,^,    ,'
+  pq if.search.pattern  # forward each Line containing a Reg Ex Match  # |grep pattern
+  pq if.match.^...$  # forward each Line of 3 Characters  # |grep ^...$
+  pq lstrip  # drops Spaces etc from left of each Line  # |sed 's,^ *,,''
+  pq replace..prefix.1  # inserts Prefix to left of each Line  # |sed 's,^,prefix,'
+  pq replace.o  # deletes each 'o' Char  # |tr -d o
+  pq replace.old.new  # finds and replaces each
+  pq replace.old.new.1  # finds and replaces once
+  pq rstrip  # drops Spaces etc from right of each Line  # |sed 's, *$,,''
   pq split len max  # counts max Words per Line
-  pq casefold  # case folds Chars in each Line, such as 'ß' to 'ss'
-  pq dent  # adds four Spaces to left of each Line  # | sed 's,^,    ,'
-  pq if.index.hello  # forward each Line containing a Plain Match
-  pq lower  # lowers Chars in each Line, such as 'ß' to itself  # | tr '[A-Z]' '[a-z]'
-  pq lstrip  # removes of all Spaces from left of each Line  # | sed 's,^ *,,''
-  pq rstrip  # removes of all Spaces from right of each Line  # | sed 's, *$,,''
-  pq strip  # removes of all Spaces from left and right of each Line
-  pq undent  # removes four Spaces from left of each Line  # | sed 's,^    ,,'
-  pq upper  # uppers Chars in each Line, such as 'ß' to 'SS'  # | tr '[a-z]' '[A-Z]'
-  pq replace.old.new  # replaces each Plain Match
-  pq sub.old.new  # replaces each Reg Ex Match  # | sed 's,o,n,g'
-  pq removeprefix.____  # removes four Spaces from left of each Line  # sed 's,^    ,,'
+  pq strip  # drops Spaces etc from left and right of each Line
+  pq sub.old.new  # calls Python 're.sub' to replace each  # |sed 's,o,n,g'
+  pq sub.old.new.1  # calls Python 're.sub' to replace once  # |sed 's,o,n,'
+  pq sub.$.suffix  # appends a Suffix if not RegEx  # |sed 's,$,suffix,'
+  pq undent  # deletes 4 Spaces if present from left of each Line  # |sed 's,^    ,,'
+  pq removeprefix.____  # same as 'undent'
+  pq 'removeprefix("    ")'  # same as 'undent'
 
-less simple lines of chars:
-  pq +._:suffix  # appends a Suffix to right of each Line  # | sed 's,$, :suffix,'
-  pq 'if.match.^...$'  # forward each Line of 3 Characters  # | grep '^...$'
-  pq replace..prefix:_.1  # inserts Prefix to left of each Line  # | sed 's,^,prefix: ,'
-  pq -p dedent  # lets you call Dedent to LStrip each Line, not to Dedent all the Chars
+examples with Grafs of Lines of Chars:
+  pq -g  # drops leading, trailing, & duplicate Blank Lines; also closes Last Line
+  pq -g len  # counts Lines per Graf
+  git grep -Hn '^def ' |pq -g |cat -  # print one Graf of Hits per File
+  git grep -Hn '^def ' |pq --grafs |cat -  # say '-g' as '--grafs'
+  git grep -Hn '^def ' |pq gather |cat -  # say '-g' as 'gather'
+  git grep -Hn '^def ' |pq gather spread |cat -  # undo Gather with Spread
 
-grafs of lines of chars:
-  git grep -Hn '^def ' |pq gather |less -FIRX  # print one Graf of Hits per File
-  git grep -Hn '^def ' |pq gather spread |less -FIRX  # undo Gather with Spread
-  git grep -H '^$' bin/*.py |pq gather |cat -  # Gather nothing when no non-empty Hits
+examples with File of Lines of Chars:
+  pq -f  # no changes, else raises UnicodeDecodeError if not Utf-8, same as 'pq -c'
+  pq -f len  # counts Lines, but doesn't need its '-f' mark  # |wc -l
+  pq Counter items  # counts Duplicates of Lines, but doesn't reorder the Lines
+  pq dict keys  # drops Duplicate Lines but doesn't reorder the Lines
+  pq reversed  # forwards Lines in reverse order  # Linux |tac  # Mac |tail -r
+  pq set  # drops Duplicate Lines and sorts the rest  # sort |uniq
+  pq sorted  # forwards Lines in sorted order
+  pq sorted Counter items  # sorts and counts Duplicates  # sort |uniq -c |expand
+  pq sorted.reverse  # forwards Lines in reversed sorted order
+  pq enumerate  # number each line, up from 0  # |nl -v0 |expand
+  pq enumerate.start.1  # number each line, up from 1  # |cat -n |expand
+  pq count  # guesses you mean:  pq Counter items
+  pq enum  # guesses you mean:  pq enumerate
+  pq sort  # guesses you mean:  pq sorted
+  pq reverse  # guesses you mean:  pq reversed
+  pq -f '[:3],"...",[-2:]'  # first 3 & last 2 Lines, with Ellipsis in between
 
 examples:
-  echo abc |pq upper |cat -  # edit the Chars streaming through the Sh Pipe
+  echo abc |pq upper |cat -  # edit the Chars streaming through a Sh Pipe
   echo abc |pq upper  # fill the Os Copy/Paste Clipboard Buffer
-  pq lower |cat -  # dump an edit of the Os Copy/Paste Clipboard Buffer
-  pq lower  # replace the Chars inside the Os Copy/Paste Clipboard Buffer
+  pq lower |cat -  # dump the Os Copy/Paste Clipboard Buffer, but edit the dump
+  pq lower  # edit the Chars inside the Os Copy/Paste Clipboard Buffer
+  pq --  # closes each Line with b"\n", and closes last Line if not closed
 """
 
-# todo: gather/spread of Graf's divided by blank lines
 # todo: count Screens, given Width & Height of Screens, infinite Width for No Wrap
-# todo: hook to eval counts of things, such as Web Search Results
 
 # code reviewed by People, Black, Flake8, & MyPy
 
@@ -100,6 +117,7 @@ examples:
 import __main__
 import argparse
 import dataclasses
+import itertools
 import pathlib
 import re
 import shutil
@@ -116,26 +134,27 @@ import typing
 
 
 @dataclasses.dataclass
-class PqArgs:
+class PqPyArgs:
     """Name the Command-Line Arguments of Pq Py"""
 
     stdin_isatty: bool
     stdout_isatty: bool
 
-    p: int
-    b: int
-    c: int
-    w: int
-    l: int
+    b: int  # -b, --bytearray
+    c: int  # -c, --str
+    w: int  # -w, --words
+    l: int  # -l, --lines
+    g: int  # -g, --grafs
+    f: int  # -f, --text
 
-    words: list[str]
+    pqwords: list[str]
 
 
 @dataclasses.dataclass
 class Main:
     """Open up a shared workspace for the Code of this Py File"""
 
-    args: PqArgs
+    args: PqPyArgs
 
 
 def main() -> None:
@@ -144,30 +163,27 @@ def main() -> None:
     args = parse_pq_py_args()  # often prints help & exits zero
     Main.args = args
 
-    words = args.words
-    funcs = list(word_to_func(_) for _ in words)
-
-    istuff: list[object]
-    ostuff: list[object]
+    pqwords = args.pqwords
+    funcs = list(pqword_to_func(_) for _ in pqwords)
 
     ibytes = pull_ibytes()
-    ostuff = ibytes_to_ostuff_by_main_args(ibytes)
+    olist = ibytes_decode(ibytes)
 
     for func in funcs:
-        istuff = ostuff
-        ostuff = func(istuff)
+        ilist = olist
+        olist = func(ilist)
 
-    istuff = ostuff
-    obytes = istuff_to_obytes(istuff)
+    ilist = olist
+    obytes = ilist_encode(ilist)
     obytes_push(obytes)
 
 
-def parse_pq_py_args() -> PqArgs:
+def parse_pq_py_args() -> PqPyArgs:
     """Parse the Command-Line Arguments of Pq Py"""
 
     assert argparse.ZERO_OR_MORE == "*"
 
-    # Form the Parser
+    # Form the base Parser without Arguments
 
     doc = __main__.__doc__
 
@@ -183,42 +199,54 @@ def parse_pq_py_args() -> PqArgs:
         epilog=epilog,
     )
 
+    # Add the Arguments
+
     sub = parser.add_mutually_exclusive_group()
 
-    p_help = "take Input as for each Line of Chars (often the default)"
-    b_help = "take Input as Bytes"
-    c_help = "take Input as Chars"
-    l_help = "take Input as Lines of Chars"
-    w_help = "take Input as Words of Chars"
+    b_help = "work with Bytes, such as 'len'"
+    c_help = "work with Chars, such as 'dedent' or 'split' or 'upper'"
+    w_help = "work with Words of Chars, such as 'join'"
+    l_help = "work with Lines of Chars, such as 'dent' and 'undent'"
+    g_help = "work with Grafs of Lines of Chars, such as 'gather' and 'spread'"
+    f_help = "work with File of Lines of Chars, such as 'reversed'"
 
-    sub.add_argument("-p", action="count", help=p_help)
-    sub.add_argument("-b", action="count", help=b_help)
-    sub.add_argument("-c", action="count", help=c_help)
-    sub.add_argument("-w", action="count", help=w_help)
-    sub.add_argument("-l", action="count", help=l_help)
+    sub.add_argument("-b", "--bytearray", action="count", help=b_help)
+    sub.add_argument("-c", "--str", action="count", help=c_help)
+    sub.add_argument("-w", "--words", action="count", help=w_help)
+    sub.add_argument("-l", "--lines", action="count", help=l_help)
+    sub.add_argument("-g", "--grafs", action="count", help=g_help)
+    sub.add_argument("-f", "--text", action="count", help=f_help)
 
     words_help = "word of the Pq Programming Language"
-    parser.add_argument("words", metavar="WORD", nargs="*", help=words_help)
+    parser.add_argument("pqwords", metavar="WORD", nargs="*", help=words_help)
 
-    # Run the Parser and return the Parsed Args
+    # Run the Parser
 
     ns = parser.parse_args()  # often prints help & exits zero
 
-    args = PqArgs(
+    args = PqPyArgs(
         stdin_isatty=sys.stdin.isatty(),
         stdout_isatty=sys.stdout.isatty(),
-        p=ns.b,
-        b=ns.b,
-        c=ns.c,
-        w=ns.w,
-        l=ns.l,
-        words=ns.words,
+        b=ns.bytearray,
+        c=ns.str,
+        w=ns.words,
+        l=ns.lines,
+        g=ns.grafs,
+        f=ns.text,
+        pqwords=ns.pqwords,
     )
+
+    # Patch in a Datatype for Input, if missing
+
+    args_guess_datatypes(args)
+
+    kinds = [args.b, args.c, args.w, args.l, args.g, args.f]
+    assert sum(bool(_) for _ in kinds) == 1, (kinds,)
+
+    # Fall back to print the last Paragraph of Epilog in a frame of 2 Blank Lines
 
     if sys.argv[1:]:
         return args
-
-    # Except default to print the last Paragraph of Epilog in a frame of 2 Blank Lines
 
     doc = __main__.__doc__
     testdoc = doc[doc.rindex("\n\n") :].strip()
@@ -232,6 +260,18 @@ def parse_pq_py_args() -> PqArgs:
     sys.exit(0)
 
     # often prints help & exits zero
+
+
+def args_guess_datatypes(args) -> None:
+    """Work backwords from the Code to guess Input DataType"""
+
+    # Accept explicit Choices unchanged
+
+    kinds = [args.b, args.c, args.w, args.l, args.g, args.f]
+
+    choices = sum(bool(_) for _ in kinds)
+    if choices:
+        return
 
 
 #
@@ -330,66 +370,82 @@ def obytes_push(obytes) -> None:
 #
 
 
-def ibytes_to_ostuff_by_main_args(ibytes) -> list[object]:
+def ibytes_decode(ibytes: bytes) -> list:
     """Choose which Datatype of Input to take"""
 
     args = Main.args
 
-    kinds = [args.b, args.c, args.w, args.l, args.p]
+    kinds = [args.b, args.c, args.w, args.l, args.g, args.f]
     assert sum(bool(_) for _ in kinds) == 1, (kinds,)
 
-    if args.b:  # takes input as File of Bytes
-        ostuff = [ibytes]
-        return ostuff
+    #
 
-    ichars = ibytes.decode()
+    olist: list
 
-    if args.c:  # takes input as File of Chars
-        ostuff = [ichars]
-        return ostuff
+    if args.b:  # takes Input as 1 Instance of Bytes
+        olist = [ibytes]
+        return olist  # -> list[bytes]
 
-    if args.l:  # takes input as File of Lines of Chars
-        ostuff = [ichars.splitlines()]  # go with implicit 'keepends=False'
-        return ostuff
+    ichars = ibytes.decode()  # may raise UnicodeDecodeError
 
-    if args.w:  # takes input as File of Words of Chars
-        ostuff = ichars.split()
-        return ostuff
+    if args.c:  # takes Input as 1 Instance of Chars
+        olist = [ichars]
+        return olist  # -> list[str]
 
-    ostuff = ichars.splitlines()  # takes input as Each Line of Chars
+    if args.w:  # takes Input as N Words
+        iwords = ichars.split()
+        olist = iwords
+        return olist  # -> list[Word]
 
-    return ostuff
+    if args.g:  # takes Input as N Grafs
+        igrafs = str_splitgrafs(ichars)  # includes '.splitlines()'
+        olist = igrafs
+        return olist  # -> list[Graf]
+
+    ilines = ichars.splitlines()
+
+    if args.l:  # takes Input as N Lines
+        olist = ilines  # takes Input as Each Line of Chars
+        return olist  # -> list[Line]
+
+    if args.f:  # takes Input as 1 Instance of List of N Lines, as if 1 Graf
+        olist = [ilines]  # drops Line-Break encodings at 'keepends=False'
+        return olist  # -> list[list[Line]]
+
+    #
+
+    assert False, (args,)  # unreached
 
 
-def istuff_to_obytes(istuff) -> bytes:
+def ilist_encode(ilist: list) -> bytes:
     """Join what has split, before writing it out, if need be"""
 
-    assert isinstance(istuff, list), [type(istuff)]
+    assert isinstance(ilist, list), [type(ilist)]
 
     # Forward Empty List as Zero Bytes
 
-    if not istuff:
+    if not ilist:
         obytes = b""
         return obytes
 
     # Forwards List of Bytes as Byte Lines
 
-    istuff_0 = istuff[0]
+    ilist_0 = ilist[0]
 
-    if isinstance(istuff_0, bytes):
-        obytes = b"\n".join(istuff) + b"\n"
+    if isinstance(ilist_0, bytes):
+        obytes = b"\n".join(ilist) + b"\n"
         return obytes
 
     # Forwards List of Chars as Char Lines, encoded as Utf-8 Bytes
 
-    if isinstance(istuff_0, str):
-        ochars = "\n".join(istuff) + "\n"
-        obytes = ochars.encode()
+    if isinstance(ilist_0, str):
+        ochars = "\n".join(ilist) + "\n"
+        obytes = ochars.encode()  # may raise UnicodeEncodeError
         return obytes
 
     # Forwards List of Objects as List of Repr of Objects
 
-    rstuff = list(repr(_) for _ in istuff)  # int's, float's, dt.datetime's, etc
+    rstuff = list(repr(_) for _ in ilist)  # int's, float's, dt.datetime's, etc
 
     ochars = "\n".join(rstuff) + "\n"
     obytes = ochars.encode()
@@ -402,15 +458,15 @@ def istuff_to_obytes(istuff) -> bytes:
 #
 
 
-def word_to_func(word) -> typing.Callable:
+def pqword_to_func(word) -> typing.Callable:
     """Define the Words of the Pq Programming Language"""
 
     func_by_word = {
-        "dedent": istuff_to_dedent,
-        "join": istuff_to_join,
-        "len": istuff_to_len,
-        "max": istuff_to_max,
-        "min": istuff_to_min,
+        "dedent": ilist_dedent,
+        "join": ilist_join,
+        "len": ilist_len,
+        "max": ilist_max,
+        "min": ilist_min,
     }
 
     func = func_by_word[word]
@@ -418,34 +474,43 @@ def word_to_func(word) -> typing.Callable:
     return func
 
 
-def istuff_to_dedent(istuff) -> list[str]:
-    ostuff = list(textwrap.dedent(_) for _ in istuff)
-    return ostuff
+def ilist_dedent(ilist: list) -> list[str]:
+    olist = list(textwrap.dedent(_) for _ in ilist)
+    return olist
 
 
-def istuff_to_join(istuff) -> list[str]:
-    ostuff = [" ".join(istuff)]
-    return ostuff
+def ilist_join(ilist: list) -> list[str]:
+    olist = [" ".join(ilist)]
+    return olist
 
 
-def istuff_to_len(istuff) -> list[int]:
-    ostuff = list(len(_) for _ in istuff)
-    return ostuff
+def ilist_len(ilist: list) -> list[int]:
+    olist = list(len(_) for _ in ilist)
+    return olist
 
 
-def istuff_to_max(istuff) -> list[int]:
-    ostuff = [max(istuff)]
-    return ostuff
+def ilist_max(ilist: list) -> list[int]:
+    olist = [max(ilist)]
+    return olist
 
 
-def istuff_to_min(istuff) -> list[int]:
-    ostuff = [min(istuff)]
-    return ostuff
+def ilist_min(ilist: list) -> list[int]:
+    olist = [min(ilist)]
+    return olist
 
 
 #
-# Amp up Import BuiltIns
+# Amp up Import BuiltIns Str
 #
+
+
+def str_splitgrafs(self: str) -> list[list[str]]:
+    """Form List of Lists of Lines, from Wider Lines separated by Empty Lines"""
+
+    lines = self.splitlines()
+    grafs = list(list(v) for (k, v) in itertools.groupby(lines, key=bool) if k)
+
+    return grafs
 
 
 def str_unexpandtabs(self: str) -> str:
@@ -479,6 +544,8 @@ def str_unexpandtabs(self: str) -> str:
     assert ochars.expandtabs() == echars, (ochars, echars)  # requires correct Print
 
     return ochars
+
+    # inverts 'str.expandtabs'
 
 
 def _test_str_unexpandtabs() -> None:

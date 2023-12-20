@@ -5,6 +5,10 @@ usage: lazy_import.py [ARG [ARG ...]
 
 try out some Python without making you type out its "import"s
 
+docs:
+  https://docs.python.org/3/library/builtins.html
+  https://docs.python.org/3/library/importlib.html
+
 examples:
   python3 -i demos/lazy_import.py
     dt
@@ -14,6 +18,7 @@ examples:
 """
 
 import argparse
+import builtins
 import importlib
 import os
 import sys
@@ -22,6 +27,7 @@ from decimal import Decimal as D
 
 
 ... == D  # todo: lazy-import X.Y as Z, not just lazy-import X as Z
+... == builtins  # so that CPython:  builtins is __builtins__
 ... == urllib.parse  # todo: lazy-import X.Y, not just lazy-import X
 
 

@@ -78,7 +78,6 @@ push: soon
 	cat - >/dev/null
 	git push
 	ssh-add -D
-	exit 0
 	:
 
 soon: black flake8 mypy shellcheck selftest
@@ -92,7 +91,8 @@ soon: black flake8 mypy shellcheck selftest
 	git status --short --ignored
 	git describe --always --dirty
 	:
-	exit 0
+
+# todo: no 'last2lines' cover for:  git grep -l 'posted into' |grep -v .py$
 
 
 #

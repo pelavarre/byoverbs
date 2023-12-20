@@ -542,6 +542,9 @@ def str_splitgrafs(doc) -> list[list[str]]:
 
     # todo: keepends=True
 
+    # todo: compare/ contrast/ merge/ resolve our 'str_splitgrafs' against
+    # grafs = list(list(v) for (k, v) in itertools.groupby(lines, key=bool) if k)
+
 
 #
 # Add some Def's to Import SubProcess
