@@ -292,33 +292,21 @@ def args_guess_datatypes(args) -> None:
 
     # Fit to Input DataType
 
-    funcword_0 = funcwords[0]
+    headfunc = funcwords[0]
+    (qual, sep, name) = headfunc.partition(".")
 
-    funcname = funcword_0.split(".")[-1]
-    suffix = "." + funcname
-    assert funcword_0.endswith(suffix), (funcword_0, suffix)
-    typename = funcword_0.removesuffix(suffix)
+    tnames = ("str", "list[Word]", "list", "re", "bytes", "builtins")
+    assert qual in tnames, (qual, tnames, sep, name, headfunc)
 
-    assert typename in ("str", "list[Word]", "list", "re", "bytes", "builtins"), (
-        typename,
-        funcword_0,
-    )
-
-    if typename == "str":
+    if qual == "str":
         args.c = True
-    elif typename == "list[Word]":
+    elif qual == "list[Word]":
         args.w = True
     else:
         vars(args)["l"] = True
 
-        if typename == "list":
-            pass
-        elif typename == "re":
-            pass
-        elif typename == "bytes":
-            pass
-        else:
-            assert typename == "builtins", (typename, funcword_0)
+        list_line_tnames = ("list", "re", "bytes", "builtins")
+        assert qual in list_line_tnames, (qual, list_line_tnames, headfunc)
 
 
 #
