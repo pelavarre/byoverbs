@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 r"""
-usage: pq [-h] [-b | -c | -w | -l | -g | -f] [WORD ...]
+usage: pq [-h] [-b | -c | -w | -l | -g | -f] [VERB ...]
 
 tell Python to edit the Os Copy/Paste Clipboard Buffer, else other Stdin/ Stdout
 
 positional arguments:
-  WORD             word of the Pq Programming Language
+  VERB             verb of the Pq Programming Language:  dedent, join, len, max, ...
 
 options:
   -h, --help       show this help message and exit
@@ -27,15 +27,16 @@ quirks:
   takes Regular Expression Patterns as in Python, not as as in:  awk, grep, sed, tr
 
 related works:
-  https://redis.io/ - an In-Memory Data Store of Key-Value Pairs, but with a CLI
-  https://pypi.org/project/pawk - a Python Line Processor
   https://jqlang.github.io/jq - a Json Processor, lightweight & flexible
+  https://pypi.org/project/pawk - a Python Line Processor
+  https://redis.io/ - an In-Memory Data Store of Key-Value Pairs, but with a CLI
 
 examples with Bytes:
   pq -b  # no changes
   pq -b len  # counts Bytes  # |wc -c
   pq decode  # decodes Py Repr of Bytes as Chars, such as "b'\xC3\x9F'" to 'ß'
   echo 'b"\xC0\x80"' |pq decode  # raises UnicodeDecodeError
+  echo 'b"\xC0\x80"' |pq decode.errors=replace replace.\uFFFD.?  # '?' for trouble
 
 examples with Chars:
   pq -c  # no changes, else raises UnicodeDecodeError if not Utf-8
@@ -119,6 +120,7 @@ examples:
 
 import __main__
 import argparse
+import builtins
 import dataclasses
 import itertools
 import pathlib
@@ -128,7 +130,28 @@ import stat
 import subprocess
 import sys
 import textwrap
+import types
 import typing
+
+assert builtins is __builtins__
+
+
+#
+# Declare PyDef's as the Pq Pipe Filters
+#
+
+
+@dataclasses.dataclass
+class PyDef:
+    """Declare the Args, KwArgs, Defaults, and Result Type of a Python Callable"""
+
+    func: typing.Callable  # callable
+
+    arg_types: list[type]
+    kwarg_types: dict[str, type]
+    arg_defaults: dict[int, object]
+    kwarg_defaults: dict[str, object]
+    result_type: type | types.UnionType
 
 
 #
@@ -150,7 +173,7 @@ class PqPyArgs:
     g: int  # -g, --grafs
     f: int  # -f, --text
 
-    funcwords: list[str]  # 'xlist.join'
+    pydefs: list[PyDef]
 
     @property
     def typehints(self) -> dict[str, bool]:
@@ -172,17 +195,29 @@ def main() -> None:
     args = parse_pq_py_args()  # often prints help & exits zero
     Main.args = args
 
-    funcwords = args.funcwords
-    funcs = list(pqword_to_func(_) for _ in funcwords)
+    pydefs = args.pydefs
 
     ibytes = pull_ibytes()
     olist = ibytes_decode(ibytes)
 
-    for func in funcs:
+    for pydef in pydefs:
+        func = pydef.func
+
         ilist = olist
-        olist = func(ilist)
+        if func is len:
+            olist = list(len(_) for _ in ilist)
+        elif func is list_join:
+            olist = [list_join(ilist, sep=" ")]
+        elif func is min:
+            olist = [min(ilist)]
+        elif func is max:
+            olist = [max(ilist)]
+        else:
+            assert func is textwrap.dedent, func
+            olist = list(textwrap.dedent(_) for _ in ilist)
 
     ilist = olist
+
     obytes = ilist_encode(ilist)
     obytes_push(obytes)
 
@@ -226,14 +261,14 @@ def parse_pq_py_args() -> PqPyArgs:
     sub.add_argument("-g", "--grafs", action="count", help=g_help)
     sub.add_argument("-f", "--text", action="count", help=f_help)
 
-    words_help = "word of the Pq Programming Language"
-    parser.add_argument("pqwords", metavar="WORD", nargs="*", help=words_help)
+    verb_help = "verb of the Pq Programming Language:  dedent, join len, max, ..."
+    parser.add_argument("pqverbs", metavar="VERB", nargs="*", help=verb_help)
 
     # Run the Parser
 
     ns = parser.parse_args()  # often prints help & exits zero
 
-    funcwords = find_funcwords(ns.pqwords)
+    pydefs = find_pydefs(ns.pqverbs)
 
     args = PqPyArgs(
         stdin_isatty=sys.stdin.isatty(),
@@ -244,13 +279,13 @@ def parse_pq_py_args() -> PqPyArgs:
         l=ns.lines,
         g=ns.grafs,
         f=ns.text,
-        funcwords=funcwords,
+        pydefs=pydefs,
     )
 
     args_guess_datatypes(args)  # patches in an Input Datatype, if need be
 
     typehints = args.typehints
-    assert sum(_ for _ in typehints.values()) == 1, (typehints, funcwords)
+    assert sum(_ for _ in typehints.values()) == 1, (typehints, pydefs)
 
     # Fall back to print the last Paragraph of Epilog in a frame of 2 Blank Lines
 
@@ -271,10 +306,10 @@ def parse_pq_py_args() -> PqPyArgs:
     # often prints help & exits zero
 
 
-def args_guess_datatypes(args) -> None:
+def args_guess_datatypes(args: PqPyArgs) -> None:
     """Work backwords from the Code to guess Input DataType"""
 
-    funcwords = args.funcwords
+    pydefs = args.pydefs
     typehints = args.typehints
 
     # Accept explicit Choices unchanged
@@ -284,7 +319,7 @@ def args_guess_datatypes(args) -> None:
 
     # Define 'bin/pq.py --' to work with Lines of Chars
 
-    if not funcwords:
+    if not pydefs:
         vars(args)["l"] = True
         return
 
@@ -292,21 +327,18 @@ def args_guess_datatypes(args) -> None:
 
     # Fit to Input DataType
 
-    headfunc = funcwords[0]
-    (qual, sep, name) = headfunc.partition(".")
+    pydef_0 = pydefs[0]
 
-    tnames = ("str", "list[Word]", "list", "re", "bytes", "builtins")
-    assert qual in tnames, (qual, tnames, sep, name, headfunc)
+    arg_types = pydef_0.arg_types
+    arg_type = arg_types[0]
 
-    if qual == "str":
+    if arg_type is str:
         args.c = True
-    elif qual == "list[Word]":
-        args.w = True
+    elif pydef_0.func.__qualname__ == "list_join":
+        args.w = True  # todo: distinguish Words from List[Line]
     else:
+        assert arg_type is list, (arg_type, pydef_0)
         vars(args)["l"] = True
-
-        list_line_tnames = ("list", "re", "bytes", "builtins")
-        assert qual in list_line_tnames, (qual, list_line_tnames, headfunc)
 
 
 #
@@ -411,7 +443,7 @@ def ibytes_decode(ibytes: bytes) -> list:
     args = Main.args
 
     typehints = args.typehints
-    assert sum(_ for _ in typehints.values()) == 1, (typehints, args.funcwords)
+    assert sum(_ for _ in typehints.values()) == 1, (typehints, args.pydefs)
 
     #
 
@@ -489,49 +521,18 @@ def ilist_encode(ilist: list) -> bytes:
 
 
 #
-# Define the Words of the Pq Programming Language
+# Amp up Import BuiltIns List
 #
 
 
-def pqword_to_func(word) -> typing.Callable:
-    """Define the Words of the Pq Programming Language"""
+def list_join(self: list, /, sep: str = " ") -> str:
+    """Catenate the Items of the List, but insert a Sep before each next Item"""
 
-    func_by_word = {
-        "str.dedent": ilist_dedent,
-        "list[Word].join": ilist_join,
-        "builtins.len": ilist_len,
-        "builtins.max": ilist_max,
-        "builtins.min": ilist_min,
-    }
+    join = sep.join(self)
 
-    func = func_by_word[word]
+    return join
 
-    return func
-
-
-def ilist_dedent(ilist: list) -> list[str]:
-    olist = list(textwrap.dedent(_) for _ in ilist)
-    return olist
-
-
-def ilist_join(ilist: list) -> list[str]:
-    olist = [" ".join(ilist)]
-    return olist
-
-
-def ilist_len(ilist: list) -> list[int]:
-    olist = list(len(_) for _ in ilist)
-    return olist
-
-
-def ilist_max(ilist: list) -> list[int]:
-    olist = [max(ilist)]
-    return olist
-
-
-def ilist_min(ilist: list) -> list[int]:
-    olist = [min(ilist)]
-    return olist
+    # may raise TypeError: sequence item ~: expected str instance, ~ found
 
 
 #
@@ -622,30 +623,75 @@ def textwrap_dedent_graflines(self: str) -> list[str]:
 #
 
 
-def find_funcwords(pqwords) -> list[str]:
+def find_pydefs(pqverbs) -> list[PyDef]:
     """Choose between Words of the Pq Programming Language"""
 
     builtins_defs_names = list(_.split()[1].split("(")[0] for _ in BUILTINS_DEFS_LINES)
     str_defs_names = list(_.split()[1].split("(")[0] for _ in STR_DEFS_LINES)
     words_defs_names = list(_.split()[1].split("(")[0] for _ in WORDS_DEFS_LINES)
 
-    funcwords = list()
-    for pqword in pqwords:
-        if pqword in builtins_defs_names:
-            funcwords.append("builtins." + pqword)
-        elif pqword in str_defs_names:
-            funcwords.append("str." + pqword)
+    pydefs = list()
+    for pqverb in pqverbs:
+        if pqverb in builtins_defs_names:
+            if pqverb == "len":
+                pydef = PyDef(
+                    func=builtins.len,
+                    arg_types=[list],
+                    kwarg_types={},
+                    arg_defaults={},
+                    kwarg_defaults={},
+                    result_type=int,
+                )
+            elif pqverb == "max":
+                pydef = PyDef(
+                    func=builtins.max,
+                    arg_types=[list],
+                    kwarg_types={},
+                    arg_defaults={},
+                    kwarg_defaults={},
+                    result_type=object | None,
+                )
+            else:
+                assert pqverb == "min", (pqverb,)
+                pydef = PyDef(
+                    func=builtins.min,
+                    arg_types=[list],
+                    kwarg_types={},
+                    arg_defaults={},
+                    kwarg_defaults={},
+                    result_type=object | None,
+                )
+        elif pqverb in str_defs_names:
+            assert pqverb == "dedent", (pqverb,)
+            pydef = PyDef(
+                func=textwrap.dedent,
+                arg_types=[str],
+                kwarg_types={},
+                arg_defaults={},
+                kwarg_defaults={},
+                result_type=str,
+            )
         else:
-            assert pqword in words_defs_names, (pqword, words_defs_names)
-            funcwords.append("list[Word]." + pqword)
+            assert pqverb in words_defs_names, (pqverb,)
+            assert pqverb == "join", (pqverb,)
+            pydef = PyDef(
+                func=list_join,
+                arg_types=[list],
+                kwarg_types=dict(sep=str),
+                arg_defaults={},
+                kwarg_defaults=dict(sep=" "),
+                result_type=str,
+            )
 
-    return funcwords
+        pydefs.append(pydef)
+
+    return pydefs
 
 
 BUILTINS_DEFS_CHARS = """
     def len(self: list, /) -> int  # 'builtins.len'
-    def max(self: list, /) -> object  # 'builtins.max'
-    def min(self: list, /) -> object  # 'builtins.min'
+    def max(self: list, /) -> object | None  # 'builtins.max'
+    def min(self: list, /) -> object | None  # 'builtins.min'
 """
 
 BUILTINS_DEFS_LINES = list(_ for _ in textwrap_dedent_graflines(BUILTINS_DEFS_CHARS))
@@ -659,7 +705,7 @@ STR_DEFS_LINES = list(_ for _ in textwrap_dedent_graflines(STR_DEFS_CHARS))
 
 
 WORDS_DEFS_CHARS = """
-    def join(self: list[Word], /, sep=" ": str) -> str  # 'str.join'
+    def list_join(self: list, /, sep: str = " ") -> str  # 'str.join'
 """
 
 WORDS_DEFS_LINES = list(_ for _ in textwrap_dedent_graflines(WORDS_DEFS_CHARS))
