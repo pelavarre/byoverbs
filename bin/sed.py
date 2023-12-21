@@ -2,6 +2,8 @@
 
 # sed -iEXT FILE
 
+# sed 's,^.*$,& = self.&,'
+
 """
 usage: sed.py [--h] ...
 
