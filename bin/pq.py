@@ -46,6 +46,8 @@ examples with Chars:
   pq encode  # encodes Chars as Py Repr of Bytes, such as 'ß' to "b'\xC3\x9F'"
   pq lower  # lowers the Chars, such as 'ß' to itself  # |tr '[A-Z]' '[a-z]'
   pq split  # guesses you mean 'pq -c split', same as 'pq -w'  # |xargs -n 1
+  pq translate..._  # drop the Spaces  # |tr -d ' '
+  pq translate.abc123.123abc  # swap some Chars  # |tr abc123 123abc
   pq upper  # uppers the Chars , such as 'ß' to 'SS'  # unlike |tr '[a-z]' '[A-Z]'
 
 examples with Words of Chars:
@@ -58,8 +60,9 @@ examples with Lines of Chars:
   pq -l len  # counts Chars per Line
   pq -l len max  # counts max Chars per Line
   pq dent  # adds four Spaces to left of each Line  # |sed 's,^,    ,'
-  pq if.search.pattern  # forward each Line containing a Reg Ex Match  # |grep pattern
+  pq if.findplus.frag  # forward each Line containing a Fragment  # |grep frag
   pq if.match.^...$  # forward each Line of 3 Characters  # |grep ^...$
+  pq if.search.pattern  # forward each Line containing a Reg Ex Match  # |grep pattern
   pq lstrip  # drops Spaces etc from left of each Line  # |sed 's,^ *,,''
   pq replace..prefix.1  # inserts Prefix to left of each Line  # |sed 's,^,prefix,'
   pq replace.o  # deletes each 'o' Char  # |tr -d o
@@ -147,7 +150,13 @@ class PqPyArgs:
     g: int  # -g, --grafs
     f: int  # -f, --text
 
-    pqwords: list[str]
+    funcwords: list[str]  # 'xlist.join'
+
+    @property
+    def typehints(self) -> dict[str, bool]:
+        """List the Type Hints parsed as Args of Pq Py"""
+        d = dict((k, bool(v)) for (k, v) in vars(self).items() if k in "bcwlgf")
+        return d
 
 
 @dataclasses.dataclass
@@ -163,8 +172,8 @@ def main() -> None:
     args = parse_pq_py_args()  # often prints help & exits zero
     Main.args = args
 
-    pqwords = args.pqwords
-    funcs = list(pqword_to_func(_) for _ in pqwords)
+    funcwords = args.funcwords
+    funcs = list(pqword_to_func(_) for _ in funcwords)
 
     ibytes = pull_ibytes()
     olist = ibytes_decode(ibytes)
@@ -224,6 +233,8 @@ def parse_pq_py_args() -> PqPyArgs:
 
     ns = parser.parse_args()  # often prints help & exits zero
 
+    funcwords = find_funcwords(ns.pqwords)
+
     args = PqPyArgs(
         stdin_isatty=sys.stdin.isatty(),
         stdout_isatty=sys.stdout.isatty(),
@@ -233,15 +244,13 @@ def parse_pq_py_args() -> PqPyArgs:
         l=ns.lines,
         g=ns.grafs,
         f=ns.text,
-        pqwords=ns.pqwords,
+        funcwords=funcwords,
     )
 
-    # Patch in a Datatype for Input, if missing
+    args_guess_datatypes(args)  # patches in an Input Datatype, if need be
 
-    args_guess_datatypes(args)
-
-    kinds = [args.b, args.c, args.w, args.l, args.g, args.f]
-    assert sum(bool(_) for _ in kinds) == 1, (kinds,)
+    typehints = args.typehints
+    assert sum(_ for _ in typehints.values()) == 1, (typehints, funcwords)
 
     # Fall back to print the last Paragraph of Epilog in a frame of 2 Blank Lines
 
@@ -265,13 +274,51 @@ def parse_pq_py_args() -> PqPyArgs:
 def args_guess_datatypes(args) -> None:
     """Work backwords from the Code to guess Input DataType"""
 
+    funcwords = args.funcwords
+    typehints = args.typehints
+
     # Accept explicit Choices unchanged
 
-    kinds = [args.b, args.c, args.w, args.l, args.g, args.f]
-
-    choices = sum(bool(_) for _ in kinds)
-    if choices:
+    if sum(_ for _ in typehints.values()):
         return
+
+    # Define 'bin/pq.py --' to work with Lines of Chars
+
+    if not funcwords:
+        vars(args)["l"] = True
+        return
+
+        # ducks Flake8:  args.l = True  # E741 ambiguous variable name 'l'
+
+    # Fit to Input DataType
+
+    funcword_0 = funcwords[0]
+
+    funcname = funcword_0.split(".")[-1]
+    suffix = "." + funcname
+    assert funcword_0.endswith(suffix), (funcword_0, suffix)
+    typename = funcword_0.removesuffix(suffix)
+
+    assert typename in ("str", "list[Word]", "list", "re", "bytes", "builtins"), (
+        typename,
+        funcword_0,
+    )
+
+    if typename == "str":
+        args.c = True
+    elif typename == "list[Word]":
+        args.w = True
+    else:
+        vars(args)["l"] = True
+
+        if typename == "list":
+            pass
+        elif typename == "re":
+            pass
+        elif typename == "bytes":
+            pass
+        else:
+            assert typename == "builtins", (typename, funcword_0)
 
 
 #
@@ -375,8 +422,8 @@ def ibytes_decode(ibytes: bytes) -> list:
 
     args = Main.args
 
-    kinds = [args.b, args.c, args.w, args.l, args.g, args.f]
-    assert sum(bool(_) for _ in kinds) == 1, (kinds,)
+    typehints = args.typehints
+    assert sum(_ for _ in typehints.values()) == 1, (typehints, args.funcwords)
 
     #
 
@@ -462,11 +509,11 @@ def pqword_to_func(word) -> typing.Callable:
     """Define the Words of the Pq Programming Language"""
 
     func_by_word = {
-        "dedent": ilist_dedent,
-        "join": ilist_join,
-        "len": ilist_len,
-        "max": ilist_max,
-        "min": ilist_min,
+        "str.dedent": ilist_dedent,
+        "list[Word].join": ilist_join,
+        "builtins.len": ilist_len,
+        "builtins.max": ilist_max,
+        "builtins.min": ilist_min,
     }
 
     func = func_by_word[word]
@@ -565,6 +612,78 @@ def _test_str_unexpandtabs() -> None:
     test("ab defg          J", want="ab defg\t\t J")
 
     # 0123456 0123456 0123456 0123456 0123456 0123456 0123456 0123456 0123456 0123456
+
+
+#
+# Amp up Import BuiltIns TextWrap
+#
+
+
+def textwrap_dedent_graflines(self: str) -> list[str]:
+    """Drop the Blank Lines and the Leftmost Blank Columns"""
+
+    dedent = textwrap.dedent(self)
+    strip = dedent.strip()
+    splitlines = strip.splitlines()
+
+    return splitlines
+
+
+#
+# Declare the Input Types of many Pq Words
+#
+
+
+def find_funcwords(pqwords) -> list[str]:
+    """Choose between Words of the Pq Programming Language"""
+
+    builtins_defs_names = list(_.split()[1].split("(")[0] for _ in BUILTINS_DEFS_LINES)
+    str_defs_names = list(_.split()[1].split("(")[0] for _ in STR_DEFS_LINES)
+    words_defs_names = list(_.split()[1].split("(")[0] for _ in WORDS_DEFS_LINES)
+
+    funcwords = list()
+    for pqword in pqwords:
+        if pqword in builtins_defs_names:
+            funcwords.append("builtins." + pqword)
+        elif pqword in str_defs_names:
+            funcwords.append("str." + pqword)
+        else:
+            assert pqword in words_defs_names, (pqword, words_defs_names)
+            funcwords.append("list[Word]." + pqword)
+
+    return funcwords
+
+
+BUILTINS_DEFS_CHARS = """
+    def len(self: list, /) -> int  # 'builtins.len'
+    def max(self: list, /) -> object  # 'builtins.max'
+    def min(self: list, /) -> object  # 'builtins.min'
+"""
+
+BUILTINS_DEFS_LINES = list(_ for _ in textwrap_dedent_graflines(BUILTINS_DEFS_CHARS))
+
+
+STR_DEFS_CHARS = """
+    def dedent(self: str, /) -> str
+"""
+
+STR_DEFS_LINES = list(_ for _ in textwrap_dedent_graflines(STR_DEFS_CHARS))
+
+
+WORDS_DEFS_CHARS = """
+    def join(self: list[Word], /, sep=" ": str) -> str  # 'str.join'
+"""
+
+WORDS_DEFS_LINES = list(_ for _ in textwrap_dedent_graflines(WORDS_DEFS_CHARS))
+
+
+# todo: collections.Counter vs str.count vs. list.count (and vs bytes.count)
+
+# todo: str.format vs builtins.format
+# todo: str.index vs list.index (and vs bytes.index)
+# todo: str.split vs re.split vs builtins.split (and vs bytes.split)
+# todo: re.compile vs builtins.compile
+# todo: bytes.hex vs builtins.hex
 
 
 #

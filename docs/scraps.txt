@@ -1,0 +1,30 @@
+# we could tell Git about bits of Code we write and don't have a place to keep
+
+
+bind 'set enable-bracketed-paste off' 2>/dev/null; \
+unset zle_bracketed_paste; setopt InteractiveComments 2>/dev/null
+
+
+python3
+
+import builtins
+import re
+
+namers = builtins, bytes, list, re, str
+pairs = list((i, j) for i in namers for j in namers if i is not j)
+pairs = sorted(set(pairs), key=lambda _: (_[0].__name__,  _[-1].__name__))
+
+steps = list()
+for i, pair in enumerate(pairs):
+    names = [pair[0].__name__,  pair[-1].__name__]
+    #
+    sorted_names = sorted(names)
+    if sorted_names in steps:
+        continue
+    steps.append(sorted_names)
+    #
+    print()
+    print(i, *names)
+    a = set(dir(pair[0]))
+    b = set(dir(pair[-1]))
+    print(sorted(a & b))

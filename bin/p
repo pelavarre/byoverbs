@@ -26,10 +26,9 @@
 #
 
 
-D=$(dirname "$0")
 if [[ $# != 0 ]]; then
     set -xe
-    "$D"/python3.bash -i "$@"
+    python3 -c 'import json, sys; print(json.dumps(sys.argv[1:], indent=2))' "$@"
     exit
 fi
 

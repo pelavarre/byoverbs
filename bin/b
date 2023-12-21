@@ -3,5 +3,8 @@ if [[ $# == 0 ]]; then
     set -xe
     make soon
 else
-    "$D"/python3.bash "$@"
+    py="$1"
+    "$D"/black.bash $py
+    "$D"/flake8.bash $py
+    "$D"/mypy.bash $py
 fi

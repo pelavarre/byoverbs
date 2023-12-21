@@ -104,6 +104,7 @@ soon: black flake8 mypy shellcheck selftest
 
 black:
 	~/.pyvenvs/black/bin/black ../byoverbs
+	:
 
 
 # Lint the Python Source Files, quickly and meaningfully
@@ -113,6 +114,8 @@ flake8:
 	~/.pyvenvs/flake8/bin/flake8 \
 		--max-line-length=999 --max-complexity 10 --ignore=E203,W503 \
 		../byoverbs
+	:
+
 # --ignore=E203  # Black '[ : ]' rules over E203 whitespace before ':'
 # --ignore=W503  # 2017 Pep 8 and Black over W503 line break before bin op
 
@@ -123,6 +126,7 @@ mypy:
 	grep -nR '^ *def ' bin/*.py demos/l*.py |grep -v ') -> ' ||:
 	~/.pyvenvs/mypy/bin/mypy bin
 	# todo: more widely adopt MyPy Code-Review of Python Data-Types
+	:
 
 
 # Lint the Bash Source Files, quickly
@@ -130,7 +134,7 @@ mypy:
 shellcheck:
 	mkdir -p tmp/
 	bin/shellcheck.bash  # not:  bin/shellcheck.bash -o all --exclude=...
-	exit 0
+	:
 
 
 #
@@ -148,6 +152,7 @@ selftest:
 
 p.py:
 	printf 'def main():\n    print("Hello, World!")\n\n\nmain()\n' >p.py
+	:
 
 
 # Put Bin Dir Files under test at Home Bin Dir
@@ -157,7 +162,7 @@ bin:
 	rm -fr bin/__pycache__/
 	cp -pR bin/* ~/bin/.
 	bash -c 'diff -bpru <(ls -1 ~/bin |grep -v ^__pycache__$$) <(ls -1 bin)'
-	exit 0
+	:
 
 
 # Publish many $HOME DotFiles, even the Bash less tested at Mac than the Zsh
@@ -173,7 +178,8 @@ dotfiles:
 	cp -p ~/.zprofile dotfiles/dot.zprofile
 	cp -p ~/.zshrc dotfiles/dot.zshrc
 	git diff || :
-	exit 0
+	# also consider:  cp -p ~/.gitconfig dotfiles/dot.gitconfig
+	:
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/Makefile
