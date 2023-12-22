@@ -35,7 +35,8 @@ examples of Python for Bytes:
   pq -b  # no changes
   pq -b len  # counts Bytes  # |wc -c
   pq bytes len  # same as '-b len', but without '-b'
-  pq decode  # decodes Py Repr of Bytes as Chars, such as "b'\xC3\x9F'" to 'ß'
+  pq decode  # decodes Bytes as Chars, such as "b'\xC3\x9F'" to 'ß'
+  pq hex upper  # decodes Bytes as Hex Chars, such as "b'\xC3\x9F'" to 'C39F'
   echo 'b"\xC0\x80"' |pq decode  # raises UnicodeDecodeError
   echo 'b"\xC0\x80"' |pq decode.errors=replace replace.\uFFFD.?  # '?' for troubles
 
@@ -47,7 +48,7 @@ examples of Python for Chars:
   pq str strip  # same as '-c strip', but without '-c'
   pq casefold  # case-fold's the Chars, such as 'ß' to 'ss'
   pq dedent  # removes blank Columns at left
-  pq encode  # encodes Chars as Py Repr of Bytes, such as 'ß' to "b'\xC3\x9F'"
+  pq encode  # encodes Chars as Bytes, such as 'ß' to "b'\xC3\x9F'"
   pq lower  # lowers the Chars, such as 'ß' to itself  # |tr '[A-Z]' '[a-z]'
   pq split  # guesses you mean 'pq -c split', same as 'pq -w'  # |xargs -n 1
   pq translate..._  # drop the Spaces  # |tr -d ' '
@@ -139,7 +140,8 @@ import textwrap
 import types
 import typing
 
-assert builtins is __builtins__
+if type(__builtins__) is not dict:  # todo: test inside:  python3 -m pdb bin/pq.py
+    assert builtins is __builtins__
 
 
 #
@@ -154,8 +156,8 @@ class PyDef:
     defname: str  # the '.func.__name__', not the '.func.__qualname__'
 
     aname_by_int: dict[int, str]
-    type_by_int: dict[int, type]
-    type_by_kw: dict[str, type]
+    type_by_int: dict[int, type | types.UnionType]
+    type_by_kw: dict[str, type | types.UnionType]
 
     default_by_int: dict[int, object]
     default_by_kw: dict[str, object]
@@ -267,9 +269,9 @@ def main() -> None:
     for pydef, func in zip(pydefs, funcs):
         defname = pydef.defname
 
-        want = pydef.type_by_int[0].__name__
-        got = type(olist[0]).__name__
-        sys.stderr.write(f"{defname=} want=list[{want}] got=list[{got}]\n")
+        want = pydef.type_by_int[0]
+        got = type(olist[0])
+        sys.stderr.write(f"{defname=} want=list[{want!r}] got=list[{got!r}]\n")
 
         ilist = olist
         olist = list(func(_) for _ in ilist)
@@ -615,9 +617,7 @@ def ast_defline_to_pydef(defline) -> PyDef:
 
     # List each Positional Argument or KeyWord Option, and its Default if present
 
-    # type_by_int: dict[int, type]
-
-    type_by_int: dict[int, type]
+    type_by_int: dict[int, type | types.UnionType]
 
     aname_by_int = dict()
     type_by_int = dict()
@@ -672,7 +672,7 @@ def ast_defline_to_pydef(defline) -> PyDef:
     return pydef
 
 
-def ast_type_eval(typename):
+def ast_type_eval(typename) -> type | types.UnionType:
     """Look up a Python Type Name"""
 
     assert typename in TYPE_BY_NAME.keys(), (typename,)
@@ -682,11 +682,18 @@ def ast_type_eval(typename):
     return type_
 
 
+TYPE_BY_NAME: dict[str, type | types.UnionType]
+
 TYPE_BY_NAME = {
+    "bool": bool,
+    "bytes": bytes,
     "int": int,
+    "list": list,
     "list[str]": list[str],
+    "list[list[str]]": list[list[str]],
     "object | None": object | None,
     "str": str,
+    "typing.Generator": typing.Generator,
     "typing.Iterable": typing.Iterable,
 }
 
@@ -723,6 +730,14 @@ def list_join(self: list, /, sep: str = " ") -> str:
 #
 
 
+def str_dent(self: str) -> str:
+    """Insert 4 Blank Columns into the Left of 1 Line"""
+
+    dented = "    " + self
+
+    return dented
+
+
 def str_splitgrafs(self: str) -> list[list[str]]:
     """Form List of Lists of Lines, from Wider Lines separated by Empty Lines"""
 
@@ -730,6 +745,14 @@ def str_splitgrafs(self: str) -> list[list[str]]:
     grafs = list(list(v) for (k, v) in itertools.groupby(lines, key=bool) if k)
 
     return grafs
+
+
+def str_undent(self: str) -> str:
+    """Drop 4 Blank Columns from the Left of 1 Line, if present"""
+
+    undented = self.removeprefix(4 * " ")
+
+    return undented
 
 
 def str_unexpandtabs(self: str) -> str:
@@ -791,7 +814,7 @@ def _test_str_unexpandtabs() -> None:
 #
 
 
-def textwrap_dedent_graflines(self: str) -> list[str]:
+def textwrap_dedent_lines(self: str) -> list[str]:
     """Drop the Blank Lines and the Leftmost Blank Columns"""
 
     dedent = textwrap.dedent(self)
@@ -823,20 +846,31 @@ def pqverbs_find_pydefs(pqverbs) -> list[PyDef]:
 def pydefs_find_funcs(pydefs) -> list[typing.Callable]:
     """Link each PyDef to its corresponding Py Callable"""
 
+    pyplus_func_by_name: dict[str, typing.Callable]
+    pyplus_func_by_name = {
+        "dent": str_dent,
+        "dedent": textwrap.dedent,
+        "join": list_join,
+        "splitgrafs": str_splitgrafs,
+        "undent": str_undent,
+    }
+
     funcs = list()
     for pydef in pydefs:
         defname = pydef.defname
 
         func: typing.Callable
-        if defname == "dedent":
-            func = textwrap.dedent
-        elif defname == "len":
-            func = len
-        elif defname == "max":
-            func = max
+        if defname in pyplus_func_by_name.keys():
+            func = pyplus_func_by_name[defname]
+
+        elif hasattr(str, defname):
+            func = getattr(str, defname)  # casefold, dedent, encode, split, strip
+        elif hasattr(bytes, defname):
+            func = getattr(bytes, defname)  # decode, hex
+
         else:
-            assert defname == "join", (defname,)
-            func = list_join
+            assert hasattr(builtins, defname), (defname,)
+            func = getattr(builtins, defname)  # len, max, min
 
         funcs.append(func)
 
@@ -846,46 +880,73 @@ def pydefs_find_funcs(pydefs) -> list[typing.Callable]:
 def form_pqverb_pydef_by_defname() -> dict[str, PyDef]:
     """Compile the PyDef's of many Pq Words"""
 
-    iterables_pydefs = list(ast_defline_to_pydef(_) for _ in _ITERABLES_DEFS_LINES)
+    bytes_pydefs = list(ast_defline_to_pydef(_) for _ in _BYTES_DEFS_LINES)
     chars_pydefs = list(ast_defline_to_pydef(_) for _ in _CHARS_DEFS_LINES)
     words_pydefs = list(ast_defline_to_pydef(_) for _ in _WORDS_DEFS_LINES)
+    iterables_pydefs = list(ast_defline_to_pydef(_) for _ in _ITERABLES_DEFS_LINES)
+    line_pydefs = list(ast_defline_to_pydef(_) for _ in _LINE_DEFS_LINES)
 
     pydefs = list()
-    pydefs.extend(iterables_pydefs)
+    pydefs.extend(bytes_pydefs)
     pydefs.extend(chars_pydefs)
     pydefs.extend(words_pydefs)
+    pydefs.extend(iterables_pydefs)
+    pydefs.extend(line_pydefs)
 
     pydef_by_defname = dict()
     for pydef in pydefs:
         defname = pydef.defname
         pydef_by_defname[defname] = pydef
 
+        pydefs_find_funcs([pydef])  # requires one Py Callable found
+
     return pydef_by_defname
 
 
+_BYTES_DEFS_CHARS = """
+    def decode(self: bytes, /) -> str  # bytes.decode
+    def hex(self: bytes, /) -> str  # bytes.hex
+"""
+
 _CHARS_DEFS_CHARS = """
-    def dedent(self: str, /) -> str  # 'textwrap.dedent'
+    def casefold(self: str, /) -> str  # str.casefold
+    def dedent(self: str, /) -> str  # textwrap.dedent
+    def encode(self: str, /) -> bytes  # str.encode
+    def lower(self: str, /) -> str  # str.lower
+    def split(self: str, /) -> list[str]  # str.split
+    def splitgrafs(self: str, /) -> list[list[str]]  # "splitgrafs" not in dir(str)
+    def splitlines(self: str, /) -> list[str]  # str.splitlines
+    def upper(self: str, /) -> str  # str.upper
+    def translate(self: str, from: str, to: str, drop: str = "", /) -> str  # str.translate'ish
 """
-
-_CHARS_DEFS_LINES = list(_ for _ in textwrap_dedent_graflines(_CHARS_DEFS_CHARS))
-
-
-_ITERABLES_DEFS_CHARS = """
-    def len(self: typing.Iterable, /) -> int  # 'builtins.len'
-    def max(self: typing.Iterable, /) -> object | None  # 'builtins.max'
-    def min(self: typing.Iterable, /) -> object | None  # 'builtins.min'
-"""
-
-_ITERABLES_DEFS_LINES = list(
-    _ for _ in textwrap_dedent_graflines(_ITERABLES_DEFS_CHARS)
-)
-
 
 _WORDS_DEFS_CHARS = """
-    def join(self: list[str], /, sep: str = " ") -> str  # 'str.join'
+    def join(self: list[str], /, sep: str = " ") -> str  # str.join'ish
 """
 
-_WORDS_DEFS_LINES = list(_ for _ in textwrap_dedent_graflines(_WORDS_DEFS_CHARS))
+_ITERABLES_DEFS_CHARS = """
+    def enumerate(self: typing.Iterable, /, start: int = 0) -> typing.Generator
+    def len(self: typing.Iterable, /) -> int  # builtins.len
+    def max(self: typing.Iterable, /) -> object | None  # builtins.max
+    def min(self: typing.Iterable, /) -> object | None  # builtins.min
+    def reversed(self: typing.Iterable, /) -> typing.Generator
+    def sorted(self: typing.Iterable, /, reverse: bool = False) -> list
+"""
+
+_LINE_DEFS_CHARS = """
+    def dent(self: str, /) -> str  # "dent" not in dir(str)
+    def lstrip(self: str, /) -> str  # str.lstrip
+    def strip(self: str, /) -> str  # str.strip
+    def rstrip(self: str, /) -> str  # str.rstrip
+    def undent(self: str, /) -> str  # "undent" not in dir(str)
+"""
+
+
+_BYTES_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_BYTES_DEFS_CHARS))
+_CHARS_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_CHARS_DEFS_CHARS))
+_WORDS_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_WORDS_DEFS_CHARS))
+_ITERABLES_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_ITERABLES_DEFS_CHARS))
+_LINE_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_LINE_DEFS_CHARS))
 
 
 PQVERB_PYDEF_BY_DEFNAME = form_pqverb_pydef_by_defname()
