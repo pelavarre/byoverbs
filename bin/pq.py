@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 r"""
-usage: pq [-h] [-b | -c | -w | -l | -g | -f] [VERB ...]
+usage: pq [-h] [-b | -c | -w | -l | -g] [-f] [VERB ...]
 
 tell Python to edit the Os Copy/Paste Clipboard Buffer, else other Stdin/ Stdout
 
@@ -15,7 +15,7 @@ options:
   -w, --words     work with Words of Chars, such as 'join' or 'split set'
   -l, --lines     work with Lines of Chars, such as 'max' and 'reversed'
   -g, --grafs     work with Grafs of Lines, such as 'gather' and 'spread'
-  -f, --for-line  work with each Line of Chars, such as 'dent', 'strip', and 'undent'
+  -f, --for-each  work with each Byte, Char, Word, Line, or Graf, such as 'dent'
 
 quirks:
   takes Names of Python Funcs as the Words of the Pq Programming Language
@@ -93,7 +93,7 @@ examples of Python for each Line:
   pq -f len  # counts Chars per Line
   pq -f len max  # counts max Chars per Line
   pq -f split len max  # counts max Words per Line
-  pq splitlines split for len max  # same as '-f split len max', but without '-f'
+  pq splitlines list split len max  # same as '-f split len max', but without '-f'
   pq dent  # adds four Spaces to left of each Line  # |sed 's,^,    ,'
   pq dict keys  # drops Duplicates but doesn't reorder Lines  # unique_everseen
   pq if.findplus.frag  # forward each Line containing a Fragment  # |grep frag
@@ -130,6 +130,7 @@ import ast
 import builtins
 import dataclasses
 import itertools
+import json
 import pathlib
 import re
 import shutil
@@ -145,13 +146,133 @@ if type(__builtins__) is not dict:  # todo: test inside:  python3 -m pdb bin/pq.
 
 
 #
+# Run well from the Sh Command Line
+#
+
+
+@dataclasses.dataclass
+class PqPyArgs:
+    """Name the Command-Line Arguments of Pq Py"""
+
+    pysteps: list["PyStep"]  # todo: stop needing to quote forward references to Types
+
+
+@dataclasses.dataclass
+class Main:
+    """Open up a shared workspace for the Code of this Py File"""
+
+    args: PqPyArgs
+
+
+def main() -> None:
+    """Run well from the Sh Command Line"""
+
+    args = parse_pq_py_args()  # often prints help & exits zero
+    Main.args = args
+
+    sponge = PySponge(args.pysteps)
+    sponge.run_pysteps()
+
+
+def parse_pq_py_args() -> PqPyArgs:
+    """Parse the Command-Line Arguments of Pq Py"""
+
+    assert argparse.ZERO_OR_MORE == "*"
+
+    # Form the base Parser without Arguments
+
+    doc = __main__.__doc__
+
+    prog = "pq"
+    description = "edit the Os Copy/Paste Clipboard Buffer, else other Stdin/ Stdout"
+    epilog = doc[doc.index("quirks:") :]  # todo: test if this is first Graf of Epilog
+
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        description=description,
+        add_help=True,
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=epilog,
+    )
+
+    # Add the Arguments
+
+    sub = parser.add_mutually_exclusive_group()
+
+    b_help = "work with Bytes, such as 'len'"
+    c_help = "work with Chars, such as 'dedent' or 'split' or 'upper'"
+    w_help = "work with Words of Chars, such as 'join' or 'split set'"
+    l_help = "work with Lines of Chars, such as 'max' and 'reversed'"
+    g_help = "work with Grafs of Lines, such as 'gather' and 'spread'"
+
+    sub.add_argument("-b", "--bytes", action="count", help=b_help)
+    sub.add_argument("-c", "--chars", action="count", help=c_help)
+    sub.add_argument("-w", "--words", action="count", help=w_help)
+    sub.add_argument("-l", "--lines", action="count", help=l_help)
+    sub.add_argument("-g", "--grafs", action="count", help=g_help)
+
+    f_help = "work with each Byte, Char, Word, Line, or Graf, such as 'dent'"
+    parser.add_argument("-f", "--for-each", action="count", help=f_help)
+
+    verb_help = "verb of the Pq Programming Language:  dedent, join len, max, ..."
+    parser.add_argument("pqverbs", metavar="VERB", nargs="*", help=verb_help)
+
+    # Run the Parser
+
+    ns = parser.parse_args()  # often prints help & exits zero
+
+    # Fall back to print the last Paragraph of Epilog in a frame of 2 Blank Lines
+
+    if not sys.argv[1:]:
+        doc = __main__.__doc__
+        testdoc = doc[doc.rindex("\n\n") :].strip()
+        testdoc = testdoc[testdoc.index("\n") :]
+        testdoc = textwrap.dedent(testdoc).strip()
+
+        print()
+        print(testdoc)
+        print()
+
+        sys.exit(0)
+
+    # Forward instructions on into the main PySponge
+
+    opt_pqverbs = ns_choose_pqverbs(ns)
+    opt_pysteps = list(pqverb_find_pystep(_) for _ in opt_pqverbs)
+    pos_pysteps = list(pqverb_find_pystep(_) for _ in ns.pqverbs)
+
+    pysteps = opt_pysteps + pos_pysteps
+    if pysteps:
+        pystep_n = pysteps[-1]
+        bytes_pystep = pqverb_find_pystep("bytes")
+
+        endswith_bytes = False
+        if pystep_n.pytype_else is bytes:
+            endswith_bytes = True
+        elif pystep_n.pyfunc_else:
+            if pystep_n.pyfunc_else.pydef.result_type is bytes:
+                endswith_bytes = True
+
+        if not endswith_bytes:
+            pysteps.append(bytes_pystep)
+
+    args = PqPyArgs(
+        pysteps=pysteps,
+    )
+
+    return args
+
+    # often prints help & exits zero
+
+
+#
 # Declare PyDef's as the Pq Pipe Filters
 #
 
 
 @dataclasses.dataclass
 class PyDef:
-    """Declare the Args, KwArgs, Defaults, and Result Type of a Python Callable"""
+    """Speak of a Python Callable as its Name, Args, KwArgs, Defaults, & Result Type"""
 
     defname: str  # the '.func.__name__', not the '.func.__qualname__'
 
@@ -163,6 +284,7 @@ class PyDef:
     default_by_kw: dict[str, object]
 
     result_type: type | types.UnionType
+    result_list_type_else: type | types.UnionType | None
 
     @property
     def defline(self) -> str:
@@ -218,370 +340,302 @@ class PyDef:
         return s
 
 
-#
-# Run well from the Sh Command Line
-#
+@dataclasses.dataclass
+class PyFunc:
+    """Speak of a Python Callable as itself plus its Py Def"""
+
+    func: typing.Callable
+    pydef: PyDef
 
 
 @dataclasses.dataclass
-class PqPyArgs:
-    """Name the Command-Line Arguments of Pq Py"""
+class PyStep:
+    """Clone the Sponge, change its Datatype, and/or call a PyFunc to edit it"""
+
+    pytype_else: type | types.UnionType | None
+    pyfunc_else: PyFunc | None
+
+
+class PySponge:
+    """Read a List of Items in, mess with the List, write the List back out"""
 
     stdin_isatty: bool
+    iterable: typing.Iterable
+    iterable_type: type | types.UnionType
     stdout_isatty: bool
+    pysteps: list[PyStep]
 
-    b: int  # -b, --bytearray
-    c: int  # -c, --str
-    w: int  # -w, --words
-    l: int  # -l, --lines
-    g: int  # -g, --grafs
-    f: int  # -f, --text
+    def __init__(self, pysteps: list[PyStep]) -> None:
+        self.stdin_isatty = sys.stdin.isatty()
+        self.iterable = b""
+        self.iterable_type = bytes
+        self.stdout_isatty = sys.stdout.isatty()
+        self.pysteps = pysteps
 
-    pydefs: list[PyDef]
-    funcs: list[typing.Callable]
+    def read_bytes(self) -> bytes:
+        """Pick an Input Source and read it"""
 
-    @property
-    def typehints(self) -> dict[str, bool]:
-        """List the Type Hints parsed as Args of Pq Py"""
-        d = dict((k, bool(v)) for (k, v) in vars(self).items() if k in "bcwlgf")
-        return d
+        stdin_isatty = self.stdin_isatty
 
+        assert stat.S_IRWXU == (
+            stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR
+        )  # chmod u=rwx
+        assert stat.S_IRWXG == (
+            stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP
+        )  # chmod g=rwx
+        assert stat.S_IRWXO == (
+            stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH
+        )  # chmod o=rwx
 
-@dataclasses.dataclass
-class Main:
-    """Open up a shared workspace for the Code of this Py File"""
+        u_rwx = stat.S_IRWXU
+        u_rw = stat.S_IRUSR | stat.S_IWUSR
 
-    args: PqPyArgs
+        # Read the Sh Pipe In and done, if present
 
+        if not stdin_isatty:
+            ipath = pathlib.Path("/dev/stdin")
+            ibytes = ipath.read_bytes()
 
-def main() -> None:
-    """Run well from the Sh Command Line"""
+            return ibytes
 
-    args = parse_pq_py_args()  # often prints help & exits zero
-    Main.args = args
+        # Read the Os Copy-Paste Clipboard Buffer, if present
 
-    pydefs = args.pydefs
-    funcs = args.funcs
+        pbpaste_else = shutil.which("pbpaste")
+        if pbpaste_else is not None:
+            sys.stderr.write("+ pbpaste\n")
+            argv = [pbpaste_else]
+            run = subprocess.run(argv, stdout=subprocess.PIPE, check=True)
+            ibytes = run.stdout
 
-    ibytes = pull_ibytes()
-    olist = ibytes_decode(ibytes)
+            return ibytes
 
-    for pydef, func in zip(pydefs, funcs):
-        defname = pydef.defname
+        # Create the 'chmod go-rwx ~/.ssh/.' Dir, if absent
 
-        want = pydef.type_by_int[0]
-        got = type(olist[0])
-        sys.stderr.write(f"{defname=} want=list[{want!r}] got=list[{got!r}]\n")
+        ssh_path = pathlib.Path.home() / ".ssh"
+        if not ssh_path.is_dir():
+            ssh_path.mkdir(u_rwx)
 
-        ilist = olist
-        olist = list(func(_) for _ in ilist)
-        if len(olist) != 1:
-            olist = [olist]
+        # Create the Copy-Paste Clipboard Buffer, if absent
 
-    ilist = olist
+        pbpaste_path = ssh_path.joinpath("0.pbpaste")
+        if not pbpaste_path.exists():
+            pbpaste_path.touch(mode=u_rw, exist_ok=True)
 
-    obytes = ilist_encode(ilist)
-    obytes_push(obytes)
+        # Read the Copy-Paste Clipboard Buffer
 
-
-def parse_pq_py_args() -> PqPyArgs:
-    """Parse the Command-Line Arguments of Pq Py"""
-
-    assert argparse.ZERO_OR_MORE == "*"
-
-    # Form the base Parser without Arguments
-
-    doc = __main__.__doc__
-
-    prog = "pq"
-    description = "edit the Os Copy/Paste Clipboard Buffer, else other Stdin/ Stdout"
-    epilog = doc[doc.index("quirks:") :]  # todo: test if this is first Graf of Epilog
-
-    parser = argparse.ArgumentParser(
-        prog=prog,
-        description=description,
-        add_help=True,
-        formatter_class=argparse.RawTextHelpFormatter,
-        epilog=epilog,
-    )
-
-    # Add the Arguments
-
-    sub = parser.add_mutually_exclusive_group()
-
-    b_help = "work with Bytes, such as 'len'"
-    c_help = "work with Chars, such as 'dedent' or 'split' or 'upper'"
-    w_help = "work with Words of Chars, such as 'join' or 'split set'"
-    l_help = "work with Lines of Chars, such as 'max' and 'reversed'"
-    g_help = "work with Grafs of Lines, such as 'gather' and 'spread'"
-    f_help = "work with each Line of Chars, such as 'dent', 'strip', and 'undent'"
-
-    sub.add_argument("-b", "--bytes", action="count", help=b_help)
-    sub.add_argument("-c", "--chars", action="count", help=c_help)
-    sub.add_argument("-w", "--words", action="count", help=w_help)
-    sub.add_argument("-l", "--lines", action="count", help=l_help)
-    sub.add_argument("-g", "--grafs", action="count", help=g_help)
-    sub.add_argument("-f", "--for-line", action="count", help=f_help)
-
-    verb_help = "verb of the Pq Programming Language:  dedent, join len, max, ..."
-    parser.add_argument("pqverbs", metavar="VERB", nargs="*", help=verb_help)
-
-    # Run the Parser
-
-    ns = parser.parse_args()  # often prints help & exits zero
-
-    pydefs = pqverbs_find_pydefs(ns.pqverbs)
-    funcs = pydefs_find_funcs(pydefs)
-
-    args = PqPyArgs(
-        stdin_isatty=sys.stdin.isatty(),
-        stdout_isatty=sys.stdout.isatty(),
-        b=ns.bytes,
-        c=ns.chars,
-        w=ns.words,
-        l=ns.lines,
-        g=ns.grafs,
-        f=ns.for_line,
-        pydefs=pydefs,
-        funcs=funcs,
-    )
-
-    args_guess_datatypes(args)  # patches in an Input Datatype, if need be
-
-    typehints = args.typehints
-    assert sum(_ for _ in typehints.values()) == 1, (typehints, pydefs)
-
-    # Fall back to print the last Paragraph of Epilog in a frame of 2 Blank Lines
-
-    if sys.argv[1:]:
-        return args
-
-    doc = __main__.__doc__
-    testdoc = doc[doc.rindex("\n\n") :].strip()
-    testdoc = testdoc[testdoc.index("\n") :]
-    testdoc = textwrap.dedent(testdoc).strip()
-
-    print()
-    print(testdoc)
-    print()
-
-    sys.exit(0)
-
-    # often prints help & exits zero
-
-
-def args_guess_datatypes(args: PqPyArgs) -> None:
-    """Work backwords from the Code to guess Input DataType"""
-
-    pydefs = args.pydefs
-    typehints = args.typehints
-
-    # Accept explicit Choices unchanged
-
-    if sum(_ for _ in typehints.values()):
-        return
-
-    # Define 'bin/pq.py --' to work with Lines of Chars
-
-    if not pydefs:
-        vars(args)["l"] = True
-        return
-
-        # ducks Flake8:  args.l = True  # E741 ambiguous variable name 'l'
-
-    # Fit to Input DataType
-
-    pydef_0 = pydefs[0]
-
-    type_by_int = pydef_0.type_by_int
-    arg_type = type_by_int[0]
-
-    if arg_type is str:
-        args.c = True
-    elif pydef_0.defname == "join":
-        args.w = True  # todo: distinguish Words from List[Line]
-    else:
-        assert arg_type is typing.Iterable, (arg_type, pydef_0)
-        vars(args)["l"] = True
-
-
-#
-# Pick an Input Source and read it
-#
-
-
-def pull_ibytes() -> bytes:
-    """Read Bytes of Input"""
-
-    stdin_isatty = Main.args.stdin_isatty
-
-    assert stat.S_IRWXU == (stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)  # chmod u=rwx
-    assert stat.S_IRWXG == (stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP)  # chmod g=rwx
-    assert stat.S_IRWXO == (stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)  # chmod o=rwx
-
-    u_rwx = stat.S_IRWXU
-    u_rw = stat.S_IRUSR | stat.S_IWUSR
-
-    # Read the Sh Pipe In and done, if present
-
-    if not stdin_isatty:
-        ipath = pathlib.Path("/dev/stdin")
-        ibytes = ipath.read_bytes()
+        ibytes = pbpaste_path.read_bytes()
 
         return ibytes
 
-    # Read the Os Copy-Paste Clipboard Buffer, if present
+    def write_obytes(self, obytes: bytes) -> None:
+        """Pick an Output Sink and write it"""
 
-    pbpaste_else = shutil.which("pbpaste")
-    if pbpaste_else is not None:
-        sys.stderr.write("+ pbpaste\n")
-        argv = [pbpaste_else]
-        run = subprocess.run(argv, stdout=subprocess.PIPE, check=True)
-        ibytes = run.stdout
+        stdout_isatty = self.stdout_isatty
 
-        return ibytes
+        # Write the Sh Pipe Out and done, if present
 
-    # Create the 'chmod go-rwx ~/.ssh/.' Dir, if absent
+        if not stdout_isatty:
+            opath = pathlib.Path("/dev/stdout")
+            opath.write_bytes(obytes)
 
-    ssh_path = pathlib.Path.home() / ".ssh"
-    if not ssh_path.is_dir():
-        ssh_path.mkdir(u_rwx)
+            return
 
-    # Create the Copy-Paste Clipboard Buffer, if absent
+        # Write the Os Copy-Paste Clipboard Buffer, if present
 
-    pbpaste_path = ssh_path.joinpath("0.pbpaste")
-    if not pbpaste_path.exists():
-        pbpaste_path.touch(mode=u_rw, exist_ok=True)
+        pbcopy_else = shutil.which("pbcopy")
+        if pbcopy_else is not None:
+            sys.stderr.write("+ pbcopy\n")
+            argv = [pbcopy_else]
+            subprocess.run(argv, input=obytes, check=True)
 
-    # Read the Copy-Paste Clipboard Buffer
+            return
 
-    ibytes = pbpaste_path.read_bytes()
+        # Write the Copy-Paste Clipboard Buffer
 
-    return ibytes
+        ssh_path = pathlib.Path.home() / ".ssh"
+        pbpaste_path = ssh_path.joinpath("0.pbpaste")
 
+        pbpaste_path.write_bytes(obytes)
 
-#
-# Pick an Output Sink and write it
-#
+    def as_pytype(self, pytype) -> typing.Iterable:
+        """Clone the Iterable as Bytes, as List[Bytes], as Str, or as List[Str]"""
 
+        iterable = self.iterable
 
-def obytes_push(obytes) -> None:
-    """Write Bytes of Output"""
+        # Take the Iterable as Bytes or as List[Bytes]
 
-    stdout_isatty = Main.args.stdout_isatty
+        if isinstance(iterable, bytes):
+            byte_iterable = iterable
+        else:
+            byte_iterable = self.as_bytes()
 
-    # Write the Sh Pipe Out and done, if present
+        if pytype is bytes:
+            return byte_iterable
 
-    if not stdout_isatty:
-        opath = pathlib.Path("/dev/stdout")
-        opath.write_bytes(obytes)
+        if pytype == list[bytes]:
+            byteline_iterable = byte_iterable.splitlines()
+            return byteline_iterable
 
-        return
+        # Take the Iterable as Str or as List[Str]
 
-    # Write the Os Copy-Paste Clipboard Buffer, if present
+        char_iterable = byte_iterable.decode()  # may UnicodeDecodeError
 
-    pbcopy_else = shutil.which("pbcopy")
-    if pbcopy_else is not None:
-        sys.stderr.write("+ pbcopy\n")
-        argv = [pbcopy_else]
-        subprocess.run(argv, input=obytes, check=True)
+        if pytype is str:
+            return char_iterable
 
-        return
+        charline_iterable = char_iterable.splitlines()
 
-    # Write the Copy-Paste Clipboard Buffer
+        if pytype == list[str]:
+            return charline_iterable
 
-    ssh_path = pathlib.Path.home() / ".ssh"
-    pbpaste_path = ssh_path.joinpath("0.pbpaste")
+        # Take the Iterable as List[Bool] or List[Int]
 
-    pbpaste_path.write_bytes(obytes)
+        if pytype == list[bool]:
+            bool_iterable = list(bool(_) for _ in charline_iterable)
+            return bool_iterable
 
+        if pytype == list[int]:
+            int_iterable = list(int(_) for _ in charline_iterable)
+            return int_iterable
 
-#
-# Auto-correct Datatype Conflicts
-#
+        # Else freak
 
+        assert False, (pytype,)  # unreached
 
-def ibytes_decode(ibytes: bytes) -> list:
-    """Choose which Datatype of Input to take"""
+    def as_bytes(self) -> bytes:
+        """Take the Iterable as Bytes"""
 
-    args = Main.args
+        iterable = self.iterable
 
-    typehints = args.typehints
-    assert sum(_ for _ in typehints.values()) == 1, (typehints, args.pydefs)
+        # Take Bytes as such
 
-    #
+        if isinstance(iterable, bytes):
+            obytes = bytes(iterable)
+            return obytes
 
-    olist: list
+        # Take Chars as 1 or more Closed Char Lines, else raise Exception
 
-    if args.b:  # takes Input as Bytes
-        olist = [ibytes]
-        return olist  # -> list[bytes]
+        if isinstance(iterable, str):
+            ochars = str(iterable)
+            if ochars[-1:] != "\n":
+                ochars += "\n"
+            obytes = ochars.encode()  # may UnicodeEncodeError
+            return obytes
 
-    ichars = ibytes.decode()  # may raise UnicodeDecodeError
+        # Take an Empty List as Zero Bytes
 
-    if args.c:  # takes Input as Chars
-        olist = [ichars]
-        return olist  # -> list[str]
+        if not iterable:
+            obytes = b""
+            return obytes
 
-    if args.w:  # takes Input as Words
-        iwords = ichars.split()
-        olist = [iwords]
-        return olist  # -> list[list[WordStr]]
+        # Take List[Bytes] as Closed Byte Lines
 
-    if args.g:  # takes Input as Grafs
-        igrafs = str_splitgrafs(ichars)  # includes '.splitlines()'
-        olist = [igrafs]
-        return olist  # -> list[list[Graf]]
+        if isinstance(iterable, list):
+            if isinstance(iterable[0], bytes):
+                obytes = b"\n".join(iterable) + b"\n"
+                return obytes
 
-    ilines = ichars.splitlines()  # drops Line-Break encodings at 'keepends=False'
+            # Take List[Str] as Closed Str Lines, else raise Exception
 
-    if args.l:  # takes Input as Lines
-        olist = [ilines]
-        return olist  # -> list[list[Line]]
+            if isinstance(iterable[0], str):
+                ochars = "\n".join(iterable) + "\n"
+                obytes = ochars.encode()  # may UnicodeEncodeError
+                return obytes
 
-    if args.f:  # takes Input as For Each Line
-        olist = ilines
-        return olist  # -> list[Line]
+                # todo: Str as Str may collide with Str of Scalar Types
 
-    #
+            # Take Bools or Ints or Floats as Closed Str Lines
 
-    assert False, (args,)  # unreached
+            json_scalar_types = (bool, int, float, str)
+            if any(isinstance(iterable[0], _) for _ in json_scalar_types):
+                ochars = "\n".join(str(_) for _ in iterable) + "\n"  # not int
+                obytes = ochars.encode()  # practically never UnicodeEncodeError
+                return obytes
 
+        # Take whatever Else as approximately equal Json Chars
 
-def ilist_encode(ilist: list) -> bytes:
-    """Join what has split, before writing it out, if need be"""
+        ochars = json.dumps(iterable, indent=2) + "\n"  # may TypeError for Set, etc
+        # todo: emulate jq --compact-output
 
-    assert isinstance(ilist, list), [type(ilist)]
+        loads = json.loads(ochars)
+        if loads != iterable:  # because Tuple, etc - not None, Bool, Int, Float, Str
+            raise ValueError(type(loads), type(iterable))  # todo: more detail
 
-    # Forward Empty List as Zero Bytes
+        obytes = ochars.encode()  # may UnicodeEncodeError
 
-    if not ilist:
-        obytes = b""
         return obytes
 
-    # Forwards List of Bytes as Byte Lines
+    def run_pysteps(self) -> None:
+        """Launch a run of our Virtual Machine, have it take steps till it quits"""
 
-    ilist_0 = ilist[0]
+        pysteps = self.pysteps
 
-    if isinstance(ilist_0, bytes):
-        obytes = b"\n".join(ilist) + b"\n"
-        return obytes
+        # Start up
 
-    # Forwards List of Chars as Char Lines, encoded as Utf-8 Bytes
+        ibytes = self.read_bytes()
 
-    if isinstance(ilist_0, str):
-        ochars = "\n".join(ilist) + "\n"
-        obytes = ochars.encode()  # may raise UnicodeEncodeError
-        return obytes
+        # Walk the Steps and then quit
 
-    # Forwards List of Objects as List of Repr of Objects
+        self.iterable = ibytes
+        self.iterable_type = bytes
 
-    rstuff = list(repr(_) for _ in ilist)  # int's, float's, dt.datetime's, etc
+        eaching_else = None
+        for pystep in pysteps:
+            iterable = self.iterable
+            iterable_type = self.iterable_type
 
-    ochars = "\n".join(rstuff) + "\n"
-    obytes = ochars.encode()
+            # Remake the Iterable as Bytes, as List[Bytes], as Str, or as List[Str]
 
-    return obytes
+            if pystep.pytype_else:
+                pytype = pystep.pytype_else
+
+                #
+
+                if pystep.pytype_else is typing.Iterable:
+                    eaching_else = True
+                    continue
+
+                if eaching_else:
+                    eaching_else = False
+
+                #
+
+                if pystep.pytype_else is list:
+                    # if iterable_type in (bool, list[bool]):  # FIXME
+                    #    pytype = list[bool]
+                    if iterable_type in (bytes, list[bytes]):
+                        pytype = list[bytes]
+                    elif iterable_type in (int, list[int]):
+                        pytype = list[int]
+                    else:
+                        assert iterable_type in (str, list[str]), (iterable_type,)
+                        pytype = list[str]
+
+                self.iterable = self.as_pytype(pytype=pytype)
+                self.iterable_type = pytype  # bytes, list[bytes], str, list[str]
+
+            # Work on the Iterable
+
+            if pystep.pyfunc_else:
+                pyfunc = pystep.pyfunc_else
+                func = pyfunc.func
+                pydef = pyfunc.pydef
+
+                if not eaching_else:
+                    self.iterable = func(iterable)  # once
+                    self.iterable_type = pydef.result_type
+                else:
+                    self.iterable = list(func(_) for _ in iterable)  # once per item
+                    assert pydef.result_list_type_else, (pydef,)
+                    result_list_type = pydef.result_list_type_else
+                    self.iterable_type = result_list_type
+
+        # Shut down
+
+        assert self.iterable_type is bytes, (self.iterable_type, type(self.iterable))
+
+        obytes = typing.cast(bytes, self.iterable)
+        self.write_obytes(obytes)
 
 
 #
@@ -614,6 +668,7 @@ def ast_defline_to_pydef(defline) -> PyDef:
     result_tname = s.removeprefix(" -> ")
 
     result_type = ast_type_eval(result_tname)
+    result_list_type_else = ast_type_eval_else("list[{}]".format(result_tname))
 
     # List each Positional Argument or KeyWord Option, and its Default if present
 
@@ -662,6 +717,7 @@ def ast_defline_to_pydef(defline) -> PyDef:
         default_by_int=default_by_int,
         default_by_kw=default_by_kw,
         result_type=result_type,
+        result_list_type_else=result_list_type_else,
     )
 
     # Succeed
@@ -677,9 +733,20 @@ def ast_type_eval(typename) -> type | types.UnionType:
 
     assert typename in TYPE_BY_NAME.keys(), (typename,)
 
-    type_ = TYPE_BY_NAME[typename]
+    evalled = TYPE_BY_NAME[typename]
 
-    return type_
+    return evalled
+
+
+def ast_type_eval_else(typename) -> type | types.UnionType | None:
+    """Look up a Python Type Name, else None if not found"""
+
+    if typename not in TYPE_BY_NAME.keys():
+        return None
+
+    evalled = TYPE_BY_NAME[typename]
+
+    return evalled
 
 
 TYPE_BY_NAME: dict[str, type | types.UnionType]
@@ -689,8 +756,12 @@ TYPE_BY_NAME = {
     "bytes": bytes,
     "int": int,
     "list": list,
-    "list[str]": list[str],
+    "list[bool]": list[bool],
+    "list[bytes]": list[bytes],
     "list[list[str]]": list[list[str]],
+    "list[int]": list[int],
+    "list[object | None]": list[object | None],
+    "list[str]": list[str],
     "object | None": object | None,
     "str": str,
     "typing.Generator": typing.Generator,
@@ -722,7 +793,7 @@ def list_join(self: list, /, sep: str = " ") -> str:
 
     return join
 
-    # may raise TypeError: sequence item ~: expected str instance, ~ found
+    # may TypeError: sequence item ~: expected str instance, ~ found
 
 
 #
@@ -829,22 +900,81 @@ def textwrap_dedent_lines(self: str) -> list[str]:
 #
 
 
-def pqverbs_find_pydefs(pqverbs) -> list[PyDef]:
-    """Choose between Words of the Pq Programming Language"""
+def ns_choose_pqverbs(ns) -> list[str]:
+    """Choose For-Each or not, and between Bytes, Chars, Words, Lines, Grafs"""
+
+    defnames = list()
+
+    if not ns.bytes:  # -b
+        defnames.append("decode")
+        if not ns.chars:  # -c
+            if ns.words:  # -w
+                defnames.append("split")
+            elif ns.grafs:  # -g
+                defnames.append("splitgrafs")
+            else:
+                defnames.append("splitlines")
+                if not ns.lines:  # -l
+                    assert False  # FIXME
+
+    if ns.for_each:  # -f
+        defnames.append("each")
+
+    # Succeed
+
+    return defnames
+
+
+def pqverb_find_pystep(pqverb) -> PyStep:
+    """Pick 1 PyDef to run for 1 Pq Verb"""
 
     pqverb_pydef_by_defname = PQVERB_PYDEF_BY_DEFNAME
 
-    pydefs = list()
-    for pqverb in pqverbs:
-        assert pqverb in pqverb_pydef_by_defname, (pqverb,)
-        pydef = pqverb_pydef_by_defname[pqverb]
-        pydefs.append(pydef)
+    pytype_by_pqverb = {
+        "bytes": bytes,
+        "each": typing.Iterable,  # todo: 'each' isn't precisely a Py Type
+        "list": list,
+        "list[bytes]": list[bytes],
+        "list[str]": list[str],
+        "str": str,
+    }
 
-    return pydefs
+    #
+
+    if pqverb in pytype_by_pqverb.keys():
+        pytype = pytype_by_pqverb[pqverb]
+
+        pystep = PyStep(
+            pytype_else=pytype,
+            pyfunc_else=None,
+        )
+
+        return pystep
+
+    #
+
+    assert pqverb in pqverb_pydef_by_defname, (pqverb,)
+    pydef = pqverb_pydef_by_defname[pqverb]
+
+    func = pydef_find_func(pydef)
+
+    pyfunc = PyFunc(
+        func=func,
+        pydef=pydef,
+    )
+
+    pystep = PyStep(
+        pytype_else=None,
+        pyfunc_else=pyfunc,
+    )
+
+    return pystep
 
 
-def pydefs_find_funcs(pydefs) -> list[typing.Callable]:
-    """Link each PyDef to its corresponding Py Callable"""
+def pydef_find_func(pydef) -> typing.Callable:
+    """Pick 1 Func to run for 1 PyDef"""
+
+    defname = pydef.defname
 
     pyplus_func_by_name: dict[str, typing.Callable]
     pyplus_func_by_name = {
@@ -855,26 +985,20 @@ def pydefs_find_funcs(pydefs) -> list[typing.Callable]:
         "undent": str_undent,
     }
 
-    funcs = list()
-    for pydef in pydefs:
-        defname = pydef.defname
+    func: typing.Callable
+    if defname in pyplus_func_by_name.keys():
+        func = pyplus_func_by_name[defname]
 
-        func: typing.Callable
-        if defname in pyplus_func_by_name.keys():
-            func = pyplus_func_by_name[defname]
+    elif hasattr(str, defname):
+        func = getattr(str, defname)  # casefold, dedent, encode, split, strip
+    elif hasattr(bytes, defname):
+        func = getattr(bytes, defname)  # decode, hex
 
-        elif hasattr(str, defname):
-            func = getattr(str, defname)  # casefold, dedent, encode, split, strip
-        elif hasattr(bytes, defname):
-            func = getattr(bytes, defname)  # decode, hex
+    else:
+        assert hasattr(builtins, defname), (defname,)
+        func = getattr(builtins, defname)  # len, max, min
 
-        else:
-            assert hasattr(builtins, defname), (defname,)
-            func = getattr(builtins, defname)  # len, max, min
-
-        funcs.append(func)
-
-    return funcs
+    return func
 
 
 def form_pqverb_pydef_by_defname() -> dict[str, PyDef]:
@@ -898,7 +1022,7 @@ def form_pqverb_pydef_by_defname() -> dict[str, PyDef]:
         defname = pydef.defname
         pydef_by_defname[defname] = pydef
 
-        pydefs_find_funcs([pydef])  # requires one Py Callable found
+        pydef_find_func(pydef)  # quits unless 1 Py Callable found
 
     return pydef_by_defname
 
@@ -916,6 +1040,7 @@ _CHARS_DEFS_CHARS = """
     def split(self: str, /) -> list[str]  # str.split
     def splitgrafs(self: str, /) -> list[list[str]]  # "splitgrafs" not in dir(str)
     def splitlines(self: str, /) -> list[str]  # str.splitlines
+    def title(self: str, /) -> str  # str.title
     def upper(self: str, /) -> str  # str.upper
     def translate(self: str, from: str, to: str, drop: str = "", /) -> str  # str.translate'ish
 """
