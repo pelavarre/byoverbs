@@ -479,6 +479,7 @@ VsCode + Black on """...""" too often triggers Flake8:  W291 trailing whitespace
 :
 
 pandas, matplotlib, etc inside bin/p
+demos/vi2.py could prompt for its ⇧Z⇧Q more like in lower right corner
 
 
 ## Copied from
