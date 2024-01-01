@@ -5,6 +5,6 @@ elif [[ $# == 1 ]]; then
     echo + ls -hlAF -rt "$1" >&2
     ls -hlAF -rt "$1"
 else
-    echo + ls -AdhlF -rt ... >&2
+    echo + ls -dhlAF -rt ... >&2
     ls -dhlAF -rt "$@"
 fi

@@ -6,98 +6,37 @@ usage: pq [VERB ...]
 tell Python to edit the Os Copy/Paste Clipboard Buffer, else other Stdin/ Stdout
 
 positional arguments:
-  VERB        verb of the Pq Programming Language:  dedent, join, len, max, ...
+  VERB        verb of the Pq Programming Language:  dedent, dent, join, len, max, ...
 
 options:
   -h, --help  show this help message and exit
 
 quirks:
   takes Names of Python Funcs and Types as the Words of a Pq Programming Language
-  starts with 'bytes decode splitlines', unless you say 'bytes' or 'str'
+  starts with 'bytes decode splitlines' like Awk, unless you say 'bytes' or 'str'
   ducks the Shift key and Quotes by taking '.' for '(' or ',', taking '_' for ' ', etc
-  works like:  awk, cut, head, grep, sed, sort, tail, tr, uniq, wc, xargs, xargs -n 1
-  doesn't itself update the Os Copy/Paste Clipboard Buffer from the middle of a Sh Pipe
-  substitutes the File '~/.ssh/pbpaste', when 'pbpaste' or 'pbcopy' undefined
-  takes Regular Expression Patterns as in Python, not as as in:  awk, grep, sed, tr
-  work its own 'pq' examples correctly, but not yet its own '##' examples  <= todo
+  replaces:  awk, cut, head, grep, sed, sort, tail, tr, uniq, wc -l, xargs, xargs -n 1
+  copied from:  git clone https://github.com/pelavarre/byoverbs.git
 
-related works:
-  https://joeyh.name/code/moreutils/ - including 'sponge' up Stdin & dump it
-  https://jqlang.github.io/jq - a fast Json Processor, lightweight & flexible
-  https://pypi.org/project/pawk - a Python Line Processor, a la Awk
-  https://redis.io/ - Key-Value Pairs in Memory, but with a friendly Cli
-
-examples of running Python for each Line:
+examples easier to spell out with Python than with Sh:
   pq dent  # adds four Spaces to left of each Line  # |sed 's,^,    ,'
-  pq dict keys  # drops Duplicates but doesn't reorder Lines  # unique_everseen
-  ## if.findplus.frag  # forwards each Line containing a Fragment  # |grep frag
-  ## if.match.^...$  # forwards each Line of 3 Characters  # |grep ^...$
-  ## if.search.pattern  # forwards each Line containing a Reg Ex Match  # |grep pattern
-  pq len  # counts Chars per Line
-  pq lstrip  # drops Spaces etc from left of each Line  # |sed 's,^ *,,''
-  ## replace..prefix.1  # inserts Prefix to left of each Line  # |sed 's,^,prefix,'
-  ## replace.o  # deletes each 'o' Char  # |tr -d o
-  ## replace.old.new  # finds and replaces each
-  ## replace.old.new.1  # finds and replaces once
-  pq rstrip  # drops Spaces etc from right of each Line  # |sed 's, *$,,''
-  pq strip  # drops Spaces etc from left and right of each Line
-  ## sub.old.new  # calls Python 're.sub' to replace each  # |sed 's,o,n,g'
-  ## sub.old.new.1  # calls Python 're.sub' to replace once  # |sed 's,o,n,'
-  ## sub.$.suffix  # appends a Suffix if not RegEx  # |sed 's,$,suffix,'
-  pq undent  # deletes 4 Spaces if present from left of each Line  # |sed 's,^    ,,'
-  ## removeprefix.____  # more explicit 'undent'
-
-examples of running Python for Lines of Chars:
-  pq list len  # counts Lines, else UnicodeDecodeError  # |wc -l
-  ## list Counter items  # counts Duplicates of Lines, but doesn't reorder the Lines
-  ## list dict keys  # drops Duplicate Lines but doesn't reorder the Lines
-  pq list reversed  # forwards Lines in reverse order  # Linux |tac  # Mac |tail -r
-  ## list set  # drops Duplicate Lines and sorts the rest  # sort |uniq
+  pq help  # shows more examples, specs more quirks
+  pq len  # counts Chars per Line  # |jq --raw-input length
+  pq list set  # drops Duplicate Lines but doesn't reorder Lines  # unique_everseen
   pq list shuffled  # shuffles Lines, via 'random.shuffle'
-  pq list sorted  # forwards Lines in sorted order
-  ## list sorted Counter items  # sorts and counts Duplicates  # sort |uniq -c |expand
-  ## list sorted.reverse  # forwards Lines in reversed sorted order
-  pq list enumerate  # numbers each line, up from 0  # |nl -v0 |expand
-  ## list enumerate.start.1  # numbers each line, up from 1  # |cat -n |expand
-
-examples of running Python for Words of Chars:
-  pq str split  # splits to 1 Word per Line, else UnicodeDecodeError  # |xargs -n 1
-  pq str split len  # counts Words, else UnicodeDecodeError  # |wc -w
-  pq str split join  # remake into one Line of Words, via 'str.join(list)'  # |xargs
-
-examples of running Python for Chars decoded from Bytes:
-  pq str len  # counts Chars, else UnicodeDecodeError  # |wc -m
+  pq str casefold  # case-fold's the Chars, such as 'ß' to 'ss'  # |pq casefold
   pq str dedent  # removes blank Columns at left, via 'textwrap.dedent'
-  pq str dedent strip  # drops leading Blank Columns, and trailing/ leading Blank Lines
-  ## str dict keys  # drops Duplicates but doesn't reorder Chars  # unique_everseen
-  pq str encode  # encodes Chars as Bytes, such as 'ß' to "b'\xC3\x9F'"
-  pq str fromhex  # encodes Hex to Bytes, via 'bytes.fromhex', such as 'C39F' to 'ß'
-  pq str strip  # drops the Chars of the leading & trailing blank Lines
-
-examples of running Python slightly faster for Chars, vs running for Lines:
-  pq str casefold  # case-fold's the Chars, such as 'ß' to 'ss'
   pq str lower  # lowers the Chars, such as 'ß' to itself  # |tr '[A-Z]' '[a-z]'
-  ## str translate..._  # drop the Spaces  # |tr -d ' '
-  ## str translate.abc123.123abc  # swap some Chars  # |tr abc123 123abc
-  pq str upper  # uppers the Chars , such as 'ß' to 'SS'  # unlike |tr '[a-z]' '[A-Z]'
-
-examples of running Python for Bytes:
-  pq bytes len  # counts Bytes  # |wc -c  # such as 2 Bytes at b'\xC3\x9F' of 'ß'
-  ## bytes decode.errors=replace replace.\uFFFD.?  # '?' in place of UnicodeDecodeError
-  pq bytes hex upper  # decodes Bytes as Hex Chars, such as "b'\xC3\x9F'" to 'C39F'
-
-examples of popular abbreviations:
-  ## list count  # guesses 'pq Counter items' not 'pq list count._'
-  ## list enum  # an alt syntax for:  pq list enumerate
-  ## list sort  # an alt syntax for:  pq list sorted
-  ## list reverse  # an alt syntax for:  pq list reversed
+  pq str strip  # removes blank Rows above and below
+  pq strip  # drops Spaces etc from left and right of each Line
+  pq undent  # deletes 4 Spaces if present from left of each Line  # |sed 's,^    ,,'
 
 examples:
   echo abc |pq upper |cat -  # edit the Chars streaming through a Sh Pipe
   echo abc |pq upper  # fill the Os Copy/Paste Clipboard Buffer
   pq lower |cat -  # dump the Os Copy/Paste Clipboard Buffer, but edit the dump
   pq lower  # edit the Chars inside the Os Copy/Paste Clipboard Buffer
-  pq --  # closes each Line with b"\n", and closes last Line if not closed
+  pq --  # closes each Paste Line with "\n", even closes last Line if not closed
 """
 
 # code reviewed by People, Black, Flake8, & MyPy
@@ -131,21 +70,6 @@ if type(__builtins__) is not dict:  # todo: test inside:  python3 -m pdb bin/pq.
 #
 
 
-@dataclasses.dataclass
-class PqPyArgs:
-    """Name the Command-Line Arguments of Pq Py"""
-
-    ns_pyverbs: list[str]
-    pysteps: list["PyStep"]  # todo: stop needing to quote forward references to Types
-
-
-@dataclasses.dataclass
-class Main:
-    """Open up a shared workspace for the Code of this Py File"""
-
-    args: PqPyArgs
-
-
 def main() -> None:
     """Run well from the Sh Command Line"""
 
@@ -156,45 +80,278 @@ def main() -> None:
     sponge.run_pysteps()
 
 
+#
+# Git-track the Man Page
+#
+
+
+MAIN_DOC = __main__.__doc__  # not stripped
+
+LIL_DOC = MAIN_DOC  # todo: each LIL_DOC Line consistent with BIG_DOC?
+LIL_DOC = LIL_DOC[LIL_DOC.rindex("\n\n") :].strip()
+LIL_DOC = LIL_DOC[LIL_DOC.index("\n") :]
+LIL_DOC = textwrap.dedent(LIL_DOC).strip()
+LIL_DOC = "\n" + LIL_DOC + "\n"  # todo: last Graf is all Examples of Lil Doc?
+
+
+BIG_DOC = r"""
+usage: pq [VERB ...]
+
+tell Python to edit the Os Copy/Paste Clipboard Buffer, else other Stdin/ Stdout
+
+positional arguments:
+  VERB        verb of the Pq Programming Language:  dedent, dent, join, len, max, ...
+
+options:
+  -h, --help  show this help message and exit
+
+quirks:
+  takes Names of Python Funcs and Types as the Words of a Pq Programming Language
+  starts with 'bytes decode splitlines' like Awk, unless you say 'bytes' or 'str'
+  ducks the Shift key and Quotes by taking '.' for '(' or ',', taking '_' for ' ', etc
+  doesn't itself update the Os Copy/Paste Clipboard Buffer from the middle of a Sh Pipe
+  substitutes the File '~/.ssh/pbpaste', when 'pbpaste' or 'pbcopy' undefined
+  takes Regular Expression Patterns as in Python, not as as in:  awk, grep, sed, tr
+  work its own 'pq' examples correctly, but not yet its own '##' examples  <= todo
+  replaces:  awk, cut, head, grep, sed, sort, tail, tr, uniq, wc -l, xargs, xargs -n 1
+  copied from:  git clone https://github.com/pelavarre/byoverbs.git
+
+related works:
+  https://clig.dev - Command Line Interface Guidelines, via Julia Evans (@b0rk)
+  https://joeyh.name/code/moreutils/ - including 'sponge' up Stdin & dump it
+  https://jqlang.github.io/jq - a fast Json Processor, lightweight & flexible
+  https://pypi.org/project/pawk - a Python Line Processor, a la Awk
+  https://redis.io/ - Key-Value Pairs in Memory, but with a friendly Cli
+
+examples of running Python for each Line:
+  pq dent  # adds four Spaces to left of each Line  # |sed 's,^,    ,'
+  ## if.findplus.frag  # forwards each Line containing a Fragment  # |grep frag
+  ## if.match.^...$  # forwards each Line of 3 Characters  # |grep ^...$
+  ## if.search.pattern  # forwards each Line containing a Reg Ex Match  # |grep pattern
+  pq len  # counts Chars per Line  # |jq --raw-input length
+  pq lstrip  # drops Spaces etc from left of each Line  # |sed 's,^ *,,''
+  ## replace..prefix.1  # inserts Prefix to left of each Line  # |sed 's,^,prefix,'
+  ## replace.o  # deletes each 'o' Char  # |tr -d o
+  ## replace.old.new  # finds and replaces each
+  ## replace.old.new.1  # finds and replaces once
+  pq rstrip  # drops Spaces etc from right of each Line  # |sed 's, *$,,''
+  pq set join  # drops Duplicate Chars but doesn't reorder Chars  # unique_everseen
+  pq strip  # drops Spaces etc from left and right of each Line
+  ## sub.old.new  # calls Python 're.sub' to replace each  # |sed 's,o,n,g'
+  ## sub.old.new.1  # calls Python 're.sub' to replace once  # |sed 's,o,n,'
+  ## sub.$.suffix  # appends a Suffix if not RegEx  # |sed 's,$,suffix,'
+  pq undent  # deletes 4 Spaces if present from left of each Line  # |sed 's,^    ,,'
+  ## removeprefix.____  # more explicit 'undent'
+
+examples of running Python for Lines of Chars:
+  pq list len  # counts Lines, else UnicodeDecodeError  # |wc -l
+  ## list Counter items  # counts Duplicates of Lines, but doesn't reorder the Lines
+  pq list set  # drops Duplicate Lines but doesn't reorder Lines  # unique_everseen
+  pq list reversed  # forwards Lines in reverse order  # Linux |tac  # Mac |tail -r
+  ## list set sorted  # drops Duplicate Lines and sorts the rest  # sort |uniq
+  pq list shuffled  # shuffles Lines, via 'random.shuffle'
+  pq list sorted  # forwards Lines in sorted order
+  ## list sorted Counter items  # sorts and counts Duplicates  # sort |uniq -c |expand
+  ## list sorted.reverse  # forwards Lines in reversed sorted order
+  pq list enumerate  # numbers each line, up from 0  # |nl -v0 |expand
+  ## list enumerate.start.1  # numbers each line, up from 1  # |cat -n |expand
+
+examples of running Python for Words of Chars:
+  pq str split  # splits to 1 Word per Line, else UnicodeDecodeError  # |xargs -n 1
+  pq str split len  # counts Words, else UnicodeDecodeError  # |wc -w
+  pq str split join  # remake into one Line of Words, via 'str.join(list)'  # |xargs
+
+examples of running Python for Chars decoded from Bytes:
+  pq str len  # counts Chars, else UnicodeDecodeError  # |wc -m
+  pq str dedent  # removes blank Columns at left, via 'textwrap.dedent'
+  pq str dedent strip  # drops leading Blank Columns, and trailing/ leading Blank Lines
+  pq str set join  # drops Duplicate Chars but doesn't reorder Chars  # unique_everseen
+  pq str encode  # encodes Chars as Bytes, such as 'ß' to "b'\xC3\x9F'"
+  pq str fromhex  # encodes Hex to Bytes, via 'bytes.fromhex', such as 'C39F' to 'ß'
+  pq str strip  # drops the Chars of the leading & trailing blank Lines
+
+examples of running Python slightly faster for Chars, vs running for Lines:
+  pq str casefold  # case-fold's the Chars, such as 'ß' to 'ss'
+  pq str lower  # lowers the Chars, such as 'ß' to itself  # |tr '[A-Z]' '[a-z]'
+  ## str translate..._  # drop the Spaces  # |tr -d ' '
+  ## str translate.abc123.123abc  # swap some Chars  # |tr abc123 123abc
+  pq str upper  # uppers the Chars , such as 'ß' to 'SS'  # unlike |tr '[a-z]' '[A-Z]'
+
+examples of running Python for Bytes:
+  pq bytes len  # counts Bytes  # |wc -c  # such as 2 Bytes at b'\xC3\x9F' of 'ß'
+  ## bytes decode.errors=replace replace.\uFFFD.?  # '?' in place of UnicodeDecodeError
+  pq bytes hex upper  # decodes Bytes as Hex Chars, such as "b'\xC3\x9F'" to 'C39F'
+
+examples of popular abbreviations:
+  ## list count  # guesses 'pq Counter items' not 'pq list count._'
+  ## list enum  # an alt syntax for:  pq list enumerate
+  ## list sort  # an alt syntax for:  pq list sorted
+  ## list reverse  # an alt syntax for:  pq list reversed
+
+examples:
+  echo abc |pq upper |cat -  # edit the Chars streaming through a Sh Pipe
+  echo abc |pq upper  # fill the Os Copy/Paste Clipboard Buffer
+  pq lower |cat -  # dump the Os Copy/Paste Clipboard Buffer, but edit the dump
+  pq lower  # edit the Chars inside the Os Copy/Paste Clipboard Buffer
+
+  pq  # shows briefest help message and exits
+  pq --  # closes each Paste Line with "\n", even closes last Line if not closed
+  pq -h  # show this help message and exits  # pq --help
+  pq -hhh  # shows longest help message and exits  # pq help
+  pq --help  # shows this help message and exits  # pq -h
+  pq help  # shows more examples, specs more quirks  # pq -hhh
+"""
+
+# todo: bold for Big Doc to Stdout
+
+
+#
+# Define the Classes of a PySponge Virtual Machine, bottom-up
+#
+
+
+@dataclasses.dataclass
+class PyDef:
+    """Speak of a Python Callable as its Name, Args, KwArgs, Defaults, & Result Type"""
+
+    defname: str  # the '.func.__name__', not the '.func.__qualname__'
+
+    aname_by_int: dict[int, str]
+    type_by_int: dict[int, type | types.UnionType]
+    type_by_kw: dict[str, type | types.UnionType]
+
+    default_by_int: dict[int, object]  # present or absent, per int
+    default_by_kw: dict[str, object]
+
+    result_type: type | types.UnionType
+    result_list_type_else: type | types.UnionType | None
+
+    @property
+    def defline(self) -> str:
+        """Form the Def Sourceline, without its Colon, without a Body"""
+
+        defname = self.defname
+        aname_by_int = self.aname_by_int
+        type_by_int = self.type_by_int
+        type_by_kw = self.type_by_kw
+        default_by_int = self.default_by_int
+        default_by_kw = self.default_by_kw
+        result_type = self.result_type
+
+        arg_indices = list(range(len(aname_by_int)))
+        arg_triples = list(
+            zip(arg_indices, aname_by_int.values(), type_by_int.values())
+        )
+
+        #
+
+        s = ""
+
+        if arg_triples:
+            for arg_index, arg_name, arg_type in arg_triples:
+                if s:
+                    s += ", "
+
+                qualtname = ast_type_repr(arg_type)
+                s += f"{arg_name}: {qualtname}"
+                if arg_index in default_by_int.keys():
+                    arg_default = default_by_int[arg_index]
+                    s += f" = {ast_black_repr(arg_default)}"
+            s += ", "
+            s += "/"
+
+        if arg_triples or type_by_kw:
+            for kwarg_name, kwarg_type in type_by_kw.items():
+                assert s, (s,)
+                s += ", "
+
+                qualtname = ast_type_repr(kwarg_type)
+                s += f"{kwarg_name}: {qualtname}"
+                if kwarg_name in default_by_kw.keys():
+                    kwarg_default = default_by_kw[kwarg_name]
+                    s += f" = {ast_black_repr(kwarg_default)}"
+
+        result_tname = ast_type_repr(result_type)
+
+        #
+
+        s = f"def {defname}({s}) -> {result_tname}"
+
+        return s
+
+
+@dataclasses.dataclass
+class PyFunc:
+    """Speak of a Python Callable as itself plus its Py Def"""
+
+    func: typing.Callable
+    pydef: PyDef
+
+
+@dataclasses.dataclass
+class PyStep:
+    """Clone the Sponge, change its Datatype, and/or call a PyFunc to edit it"""
+
+    pyverb: str  # "str", "dent"
+    pytype_else: type | types.UnionType | None
+    pyfunc_else: PyFunc | None
+
+
+@dataclasses.dataclass
+class PqPyArgs:
+    """Name the Command-Line Arguments of Pq Py"""
+
+    ns_pyverbs: list[str]
+    pysteps: list[PyStep]
+
+
 def parse_pq_py_args() -> PqPyArgs:
     """Parse the Command-Line Arguments of Pq Py"""
 
+    main_doc = __main__.__doc__  # not stripped
+    lil_doc = LIL_DOC
+    big_doc = BIG_DOC
+
+    assert main_doc == MAIN_DOC
     assert argparse.ZERO_OR_MORE == "*"
 
     # Form the Parser
 
-    doc = __main__.__doc__
-
     prog = "pq"
     description = "edit the Os Copy/Paste Clipboard Buffer, else other Stdin/ Stdout"
-    epilog = doc[doc.index("quirks:") :]  # todo: test if this is first Graf of Epilog
+    epilog = main_doc[main_doc.index("quirks:") :]  # todo: first Graf of Epilog?
 
     parser = argparse.ArgumentParser(
         prog=prog,
         description=description,
-        add_help=True,
+        add_help=False,
         formatter_class=argparse.RawTextHelpFormatter,
         epilog=epilog,
     )
 
+    help_help = "show this help message and exit"
+    parser.add_argument("-h", "--help", action="count", help=help_help)
+
     verb_help = "verb of the Pq Programming Language:  dedent, join len, max, ..."
     parser.add_argument("pyverbs", metavar="VERB", nargs="*", help=verb_help)
 
-    # Run the Parser
+    # Parse the Args, else print help & exit zero
 
     ns = parser.parse_args()  # often prints help & exits zero
 
-    # Fall back to print the last Paragraph of Epilog in a frame of 2 Blank Lines
+    doc_else = None
+    if ns.help:
+        if ns.help < 3:
+            doc_else = main_doc.strip()
+        else:
+            doc_else = big_doc
+    elif "help" in ns.pyverbs:
+        doc_else = big_doc
+    elif not sys.argv[1:]:
+        doc_else = lil_doc
 
-    if not sys.argv[1:]:
-        doc = __main__.__doc__
-        testdoc = doc[doc.rindex("\n\n") :].strip()
-        testdoc = testdoc[testdoc.index("\n") :]
-        testdoc = textwrap.dedent(testdoc).strip()
-
-        print()
-        print(testdoc)
-        print()
+    if doc_else:
+        print(doc_else)
 
         sys.exit(0)
 
@@ -221,96 +378,11 @@ def parse_pq_py_args() -> PqPyArgs:
     # often prints help & exits zero
 
 
-#
-# Declare PyDef's as the Pq Pipe Filters
-#
-
-
 @dataclasses.dataclass
-class PyDef:
-    """Speak of a Python Callable as its Name, Args, KwArgs, Defaults, & Result Type"""
+class Main:
+    """Open up a shared workspace for the Code of this Py File"""
 
-    defname: str  # the '.func.__name__', not the '.func.__qualname__'
-
-    aname_by_int: dict[int, str]
-    type_by_int: dict[int, type | types.UnionType]
-    type_by_kw: dict[str, type | types.UnionType]
-
-    default_by_int: dict[int, object]
-    default_by_kw: dict[str, object]
-
-    result_type: type | types.UnionType
-    result_list_type_else: type | types.UnionType | None
-
-    @property
-    def defline(self) -> str:
-        """Form the Def Sourceline, without its Colon"""
-
-        defname = self.defname
-        aname_by_int = self.aname_by_int
-        type_by_int = self.type_by_int
-        type_by_kw = self.type_by_kw
-        default_by_int = self.default_by_int
-        default_by_kw = self.default_by_kw
-        result_type = self.result_type
-
-        arg_indices = list(range(len(aname_by_int)))
-        arg_triples = list(
-            zip(arg_indices, aname_by_int.values(), type_by_int.values())
-        )
-
-        #
-
-        s = ""
-
-        for arg_index, arg_name, arg_type in arg_triples:
-            if s:
-                s += ", "
-
-            qualtname = ast_type_repr(arg_type)
-            s += f"{arg_name}: {qualtname}"
-            if arg_index in default_by_int.keys():
-                arg_default = default_by_int[arg_index]
-                s += f" = {ast_black_repr(arg_default)}"
-
-        if s:
-            s += ", "
-        s += "/"
-
-        for kwarg_name, kwarg_type in type_by_kw.items():
-            assert s, (s,)
-            s += ", "
-
-            qualtname = ast_type_repr(kwarg_type)
-            s += f"{kwarg_name}: {qualtname}"
-            if kwarg_name in default_by_kw.keys():
-                kwarg_default = default_by_kw[kwarg_name]
-                s += f" = {ast_black_repr(kwarg_default)}"
-
-        result_tname = ast_type_repr(result_type)
-
-        #
-
-        s = f"def {defname}({s}) -> {result_tname}"
-
-        return s
-
-
-@dataclasses.dataclass
-class PyFunc:
-    """Speak of a Python Callable as itself plus its Py Def"""
-
-    func: typing.Callable
-    pydef: PyDef
-
-
-@dataclasses.dataclass
-class PyStep:
-    """Clone the Sponge, change its Datatype, and/or call a PyFunc to edit it"""
-
-    pyverb: str  # "str", "dent"
-    pytype_else: type | types.UnionType | None
-    pyfunc_else: PyFunc | None
+    args: PqPyArgs
 
 
 @dataclasses.dataclass
@@ -391,7 +463,7 @@ class PySponge:
             opath = pathlib.Path("/dev/stdout")
             try:
                 opath.write_bytes(obytes)
-            except BrokenPipeError as exc:
+            except BrokenPipeError as exc:  # todo: how much output written?
                 line = f"BrokenPipeError: {exc}"
                 sys.stderr.write(f"{line}\n")
                 # sys.exit(1)  # nope, don't raise BrokenPipeError as Nonzero Exit
@@ -498,6 +570,8 @@ class PySponge:
             return obytes
 
         # Write List[Bytes] as Closed Byte Lines
+        # Write List[Str] as Bytes of Closed Str Lines, else Exception
+        # Write Bools or Ints or Floats as Bytes of Closed Str Lines
 
         obytes_else = self.iterable_as_bytes_else(iterable=items)
         if obytes_else is not None:
@@ -691,7 +765,7 @@ def ast_defline_to_pydef(defline) -> PyDef:
     default_by_int = dict()
     default_by_kw = dict()
 
-    splits = argsline.split(", ")
+    splits = argsline.split(", ") if argsline else list()
     group = 0
     for split in splits:
         (key, _colon, keyed) = split.partition(": ")
@@ -770,24 +844,35 @@ TYPE_BY_NAME = {
     "list": list,
     "list[bool]": list[bool],
     "list[bytes]": list[bytes],
-    "list[list[str]]": list[list[str]],
+    "list[float]": list[float],
     "list[int]": list[int],
+    "list[list]": list[list],
+    "list[list[bytes]]": list[list[bytes]],
+    "list[list[str]]": list[list[str]],
+    "list[None]": list[None],
+    "list[object]": list[object],
     "list[object | None]": list[object | None],
+    "list[set]": list[set],
     "list[str]": list[str],
+    "None": type(None),
     "object": object,
     "object | None": object | None,
+    "set": set,  # todo: meaning a 'set_list' like 'builtins.set' but ordered
     "str": str,
     "typing.Generator": typing.Generator,
     "typing.Iterable": typing.Iterable,
-}
+}  # todo: think more about what 'not in TYPE_BY_NAME.keys()' should mean
 
 
 def ast_type_repr(type_) -> str:
     """Form an eval'lable Python Type Name"""
 
-    typename = repr(type_)  # 'list[str]', 'object | None', 'typing.Iterable'
-    if typename.startswith("<class "):
-        typename = type_.__name__  # 'int', 'str'
+    if type_ is type(None):
+        typename = "None"
+    else:
+        typename = repr(type_)  # 'list[str]', 'object | None', 'typing.Iterable'
+        if typename.startswith("<class "):
+            typename = type_.__name__  # 'int', 'str'
 
     assert typename in TYPE_BY_NAME.keys(), (typename,)
 
@@ -795,11 +880,11 @@ def ast_type_repr(type_) -> str:
 
 
 #
-# Amp up Import BuiltIns List
+# Amp up Import BuiltIns for Types Iterable
 #
 
 
-def list_join(self: list, /, sep: str = " ") -> str:
+def iterable_join(self: typing.Iterable, /, sep: str = " ") -> str:
     """Catenate the Items of the List, but insert a Sep before each next Item"""
 
     join = sep.join(self)
@@ -812,7 +897,24 @@ def list_join(self: list, /, sep: str = " ") -> str:
     # may return List[type(sep)] for empty Lists of any type
 
 
-def list_shuffled(self: list) -> list:
+def iterable_unique_everseen(self: typing.Iterable) -> list:
+    """Drop Duplicate Items but do Not reorder Items"""
+
+    by_k: dict[object, None]  # todo: Value could be alias of Yielded
+    by_k = dict()
+
+    for yielded in self:
+        if yielded not in by_k.keys():
+            by_k[yielded] = None
+
+    items = list(by_k.keys())
+
+    return items
+
+    # compare 'def unique_everseen' @ https://docs.python.org/3/library/itertools.html
+
+
+def iterable_shuffled(self: typing.Iterable) -> list:
     """Shuffle the Items of the List, in place"""
 
     items = list(self)
@@ -944,7 +1046,7 @@ def ns_choose_pyverbs(ns) -> list[str]:
                 pass
             else:
                 opt_pyverbs.append("list")
-                opt_pyverbs.append("for")
+                opt_pyverbs.append("Iterable")
 
     # Succeed
 
@@ -1029,8 +1131,9 @@ def pydef_find_func(pydef) -> typing.Callable:
     pyplus_func_by_name = {
         "dent": str_dent,
         "dedent": textwrap.dedent,
-        "join": list_join,
-        "shuffled": list_shuffled,
+        "join": iterable_join,
+        "set": iterable_unique_everseen,  # todo: more of a Type name than a Func name
+        "shuffled": iterable_shuffled,
         "splitgrafs": str_splitgrafs,
         "undent": str_undent,
     }
@@ -1057,15 +1160,18 @@ def form_pyverb_pydef_by_defname() -> dict[str, PyDef]:
     bytes_pydefs = list(ast_defline_to_pydef(_) for _ in _BYTES_DEFS_LINES)
     chars_pydefs = list(ast_defline_to_pydef(_) for _ in _CHARS_DEFS_LINES)
     words_pydefs = list(ast_defline_to_pydef(_) for _ in _WORDS_DEFS_LINES)
-    list_pydefs = list(ast_defline_to_pydef(_) for _ in _LIST_DEFS_LINES)
-    each_pydefs = list(ast_defline_to_pydef(_) for _ in _EACH_DEFS_LINES)
+    # void_pydefs = list(ast_defline_to_pydef(_) for _ in _VOID_DEFS_LINES)
+
+    outer_pydefs = list(ast_defline_to_pydef(_) for _ in _OUTER_DEFS_LINES)
+    inner_pydefs = list(ast_defline_to_pydef(_) for _ in _INNER_DEFS_LINES)
 
     pydefs = list()
     pydefs.extend(bytes_pydefs)
     pydefs.extend(chars_pydefs)
     pydefs.extend(words_pydefs)
-    pydefs.extend(list_pydefs)
-    pydefs.extend(each_pydefs)
+    # pydefs.extend(void_pydefs)
+    pydefs.extend(outer_pydefs)
+    pydefs.extend(inner_pydefs)
 
     pydef_by_defname = dict()
     for pydef in pydefs:
@@ -1078,14 +1184,16 @@ def form_pyverb_pydef_by_defname() -> dict[str, PyDef]:
 
 
 PYTYPE_BY_PYVERB = {
+    "Iterable": typing.Iterable,  # todo: map, for, each
     "bytes": bytes,
-    "for": typing.Iterable,  # todo: 'for' isn't precisely a Py Type
     "list": list,
     "list[bytes]": list[bytes],
     "list[str]": list[str],
     "str": str,
-}
+}  # todo: case-insensitive Py Types
 
+
+# Pq Filters of Bytes, of Chars, of Words, of one Iterable, of each Line
 
 _BYTES_DEFS_CHARS = """
     def decode(self: bytes, /) -> str  # bytes.decode
@@ -1105,13 +1213,19 @@ _CHARS_DEFS_CHARS = """
     def upper(self: str, /) -> str  # str.upper
     def translate(self: str, from: str, to: str, drop: str = "", /) -> str  # str.translate'ish
 """
+# todo: >88 Columns inside Triple Quote of 'def translate'
+
+# _VOID_DEFS_CHARS = """
+#     def help() -> None  # close kin with 'builtins.help'
+# """
 
 _WORDS_DEFS_CHARS = """
     def join(self: list[str], /, sep: str = " ") -> str  # str.join'ish
 """
 
-_LIST_DEFS_CHARS = """
+_OUTER_DEFS_CHARS = """
     def enumerate(self: typing.Iterable, /, start: int = 0) -> typing.Generator
+    def set(self: typing.Iterable, /) -> set  # set_list like builtins.set but ordered
     def len(self: typing.Iterable, /) -> int  # builtins.len
     def max(self: typing.Iterable, /) -> object | None  # builtins.max
     def min(self: typing.Iterable, /) -> object | None  # builtins.min
@@ -1120,8 +1234,9 @@ _LIST_DEFS_CHARS = """
     def sorted(self: typing.Iterable, /, reverse: bool = False) -> list
     def sum(self: typing.Iterable, /, start: object = 0) -> object | None  # builtins.sum
 """
+# todo: >88 Columns inside Triple Quote of 'def sum'
 
-_EACH_DEFS_CHARS = """
+_INNER_DEFS_CHARS = """
     def bool(self: object, /) -> bool  # builtins.bool
     def dent(self: str, /) -> str  # "dent" not in dir(str)
     def float(self: object, /) -> float  # builtins.float
@@ -1132,15 +1247,16 @@ _EACH_DEFS_CHARS = """
     def undent(self: str, /) -> str  # "undent" not in dir(str)
 """
 
-# todo: try 'ast' parse of 'def ... -> type: return type()'
+# todo: try 'ast' parse of 'def ... -> type: return type()' falsey result
 
 
 _BYTES_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_BYTES_DEFS_CHARS))
 _CHARS_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_CHARS_DEFS_CHARS))
 _WORDS_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_WORDS_DEFS_CHARS))
-_LIST_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_LIST_DEFS_CHARS))
-_EACH_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_EACH_DEFS_CHARS))
+# _VOID_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_VOID_DEFS_CHARS))
 
+_OUTER_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_OUTER_DEFS_CHARS))
+_INNER_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_INNER_DEFS_CHARS))
 
 PYVERB_PYDEF_BY_DEFNAME = form_pyverb_pydef_by_defname()
 
@@ -1173,7 +1289,7 @@ more intricate examples:
   pq 'removeprefix("    ")'  # same as 'pq undent' or 'pq removeprefix.____'
 
 examples of Python for Grafs of Lines:
-  pq splitgrafs  # drops leading, trailing, & duplicate Blank Lines; and closes Last Line
+  pq splitgrafs  # drops leading, trailing, & duplicate Blank Lines; closes Last Line
   pq splitgrafs len  # counts Grafs
   pq splitgrafs [len]  # counts Lines per Graf
   git grep -Hn '^def ' |pq splitgrafs gather |cat -  # print one Graf of Hits per File
@@ -1181,15 +1297,33 @@ examples of Python for Grafs of Lines:
 
 """
 
+# todo: dumps, loads, from 'import json'
+
+# todo: more compare/ contrast 'pq' vs 'builtins.map' and 'functools.reduce'
+# todo: more compare/ contrast 'pq' vs jq --raw-input
+# todo: more concise errors
+
+# todo: --no-input to run headless, never hang or nor pause for Tty
+# todo: --plain, --json, --csv, --tsv
+# todo: -d, --debug, -q, --quiet, -v, --version
+
+# todo: color Stdout/ Stderr Tty, vs --no-color, --color=never|always|auto, TERM=dumb
+# todo: bold, emojis
+# todo: auto pager
+
 # todo: pbcopy, pbpaste, as PyVerbs - and drop trace if explicit
 # todo: str unicodedata.name, .lookup
 # todo: deslack, and other contributions from bin/pq1.py
 
+# todo: pq ls -> list[dict], in the way of lsa = ls -dhlAF -rt
+# todo: pq - for writing/reading to Stdout while Tty
+
 # todo: count Screens, given Width & Height of Screens, infinite Width for No Wrap
-# todo: suggest 'dict keys' in place of 'unique_everseen'
+# todo: help not alias @ suggest 'OrderedSet' and 'set' in place of 'unique_everseen'
 # todo: solve 'unique_justseen' and the other 'import itertools' 'recipes'
 # todo: pq tee upper  # backs up original before editing, into './pq.tee'
-# todo: pq tee.o upper tee.n os.devnull  # writes 'o.tee', 'n.tee', '/dev/null', no Stdout
+# todo: pq tee.o upper tee.n os.devnull  # writes 3 Streams and no Stdout
+
 
 #
 # Run from the Sh Command Line, if not imported
