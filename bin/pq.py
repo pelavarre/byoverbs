@@ -13,7 +13,7 @@ options:
 
 quirks:
   takes Names of Python Funcs and Types as the Words of a Pq Programming Language
-  starts with 'bytes decode splitlines' like Awk, unless you say 'bytes' or 'str'
+  defaults like Awk to 'bytes decode splitlines Iterable', unless you say different
   ducks the Shift key and Quotes by taking '.' for '(' or ',', taking '_' for ' ', etc
   replaces:  awk, cut, head, grep, sed, sort, tail, tr, uniq, wc -l, xargs, xargs -n 1
   copied from:  git clone https://github.com/pelavarre/byoverbs.git
@@ -107,7 +107,7 @@ options:
 
 quirks:
   takes Names of Python Funcs and Types as the Words of a Pq Programming Language
-  starts with 'bytes decode splitlines' like Awk, unless you say 'bytes' or 'str'
+  defaults like Awk to 'bytes decode splitlines Iterable', unless you say different
   ducks the Shift key and Quotes by taking '.' for '(' or ',', taking '_' for ' ', etc
   doesn't itself update the Os Copy/Paste Clipboard Buffer from the middle of a Sh Pipe
   substitutes the File '~/.ssh/pbpaste', when 'pbpaste' or 'pbcopy' undefined
@@ -130,12 +130,12 @@ examples of running Python for each Line:
   ## if.search.pattern  # forwards each Line containing a Reg Ex Match  # |grep pattern
   pq len  # counts Chars per Line  # |jq --raw-input length
   pq lstrip  # drops Spaces etc from left of each Line  # |sed 's,^ *,,''
-  ## replace..prefix.1  # inserts Prefix to left of each Line  # |sed 's,^,prefix,'
-  ## replace.o  # deletes each 'o' Char  # |tr -d o
-  ## replace.old.new  # finds and replaces each
-  ## replace.old.new.1  # finds and replaces once
+  pq replace..prefix:.1  # inserts Prefix to left of each Line  # |sed 's,^,prefix:,'
+  pq replace.o  # deletes each 'o' Char  # |tr -d o
+  pq replace.old.new  # finds and replaces each
+  pq replace.old.new.1  # finds and replaces once
   pq rstrip  # drops Spaces etc from right of each Line  # |sed 's, *$,,''
-  pq set join  # drops Duplicate Chars but doesn't reorder Chars  # unique_everseen
+  pq set join.  # drops Duplicate Chars but doesn't reorder Chars  # unique_everseen
   pq strip  # drops Spaces etc from left and right of each Line
   ## sub.old.new  # calls Python 're.sub' to replace each  # |sed 's,o,n,g'
   ## sub.old.new.1  # calls Python 're.sub' to replace once  # |sed 's,o,n,'
@@ -148,10 +148,10 @@ examples of running Python for Lines of Chars:
   ## list Counter items  # counts Duplicates of Lines, but doesn't reorder the Lines
   pq list set  # drops Duplicate Lines but doesn't reorder Lines  # unique_everseen
   pq list reversed  # forwards Lines in reverse order  # Linux |tac  # Mac |tail -r
-  ## list set sorted  # drops Duplicate Lines and sorts the rest  # sort |uniq
   pq list shuffled  # shuffles Lines, via 'random.shuffle'
   pq list sorted  # forwards Lines in sorted order
   ## list sorted Counter items  # sorts and counts Duplicates  # sort |uniq -c |expand
+  ## list sorted set  # sorts Lines and drops Duplicates  # sort |uniq
   ## list sorted.reverse  # forwards Lines in reversed sorted order
   pq list enumerate  # numbers each line, up from 0  # |nl -v0 |expand
   ## list enumerate.start.1  # numbers each line, up from 1  # |cat -n |expand
@@ -165,7 +165,8 @@ examples of running Python for Chars decoded from Bytes:
   pq str len  # counts Chars, else UnicodeDecodeError  # |wc -m
   pq str dedent  # removes blank Columns at left, via 'textwrap.dedent'
   pq str dedent strip  # drops leading Blank Columns, and trailing/ leading Blank Lines
-  pq str set join  # drops Duplicate Chars but doesn't reorder Chars  # unique_everseen
+  pq str set join.  # drops Duplicate Chars but doesn't reorder Chars  # unique_everseen
+  ## str set.key=casefold join.  # drops Duplicate Chars ignoring Case, doesn't reorder
   pq str encode  # encodes Chars as Bytes, such as 'ß' to "b'\xC3\x9F'"
   pq str fromhex  # encodes Hex to Bytes, via 'bytes.fromhex', such as 'C39F' to 'ß'
   pq str strip  # drops the Chars of the leading & trailing blank Lines
@@ -173,7 +174,9 @@ examples of running Python for Chars decoded from Bytes:
 examples of running Python slightly faster for Chars, vs running for Lines:
   pq str casefold  # case-fold's the Chars, such as 'ß' to 'ss'
   pq str lower  # lowers the Chars, such as 'ß' to itself  # |tr '[A-Z]' '[a-z]'
-  ## str translate..._  # drop the Spaces  # |tr -d ' '
+  pq str replace._  # drop the Spaces  # |tr -d ' '
+  pq str replace.0 replace.1  # drop 0 or 1  # |tr -d 0 |tr -d 1
+  ## str translate...01  # drop 0 or 1  # |tr -d '01'
   ## str translate.abc123.123abc  # swap some Chars  # |tr abc123 123abc
   pq str upper  # uppers the Chars , such as 'ß' to 'SS'  # unlike |tr '[a-z]' '[A-Z]'
 
@@ -211,8 +214,43 @@ examples:
 
 
 @dataclasses.dataclass
+class PyCall:
+    """Split a Python Callable Mention into Name, Arg, & KwArg Typed Values"""
+
+    defname: str  # the '.func.__name__', not the '.func.__qualname__'
+    arg_by_int: dict[int, object | None]
+    kwarg_by_key: dict[str, object | None]
+
+    @property
+    def call_word(self) -> str:
+        """Form the Call Word, without its Parentheses"""
+
+        defname = self.defname
+        arg_by_int = self.arg_by_int
+        kwarg_by_key = self.kwarg_by_key
+
+        s = f"{defname}"
+
+        for i, v in arg_by_int.items():
+            s += "."
+            s += str(v)
+
+        for k, v in kwarg_by_key.items():
+            str_v = str(v)
+            s += "."
+            s += f"{k}={str_v}"
+
+        return s
+
+        # inverts 'ast_word_to_pycall'
+
+        # str.replace._
+        # str.translate..._
+
+
+@dataclasses.dataclass
 class PyDef:
-    """Speak of a Python Callable as its Name, Args, KwArgs, Defaults, & Result Type"""
+    """Split a Python Callable into Name, Arg, KwArg, & Result Types plus Defaults"""
 
     defname: str  # the '.func.__name__', not the '.func.__qualname__'
 
@@ -227,7 +265,7 @@ class PyDef:
     result_list_type_else: type | types.UnionType | None
 
     @property
-    def defline(self) -> str:
+    def def_line(self) -> str:
         """Form the Def Sourceline, without its Colon, without a Body"""
 
         defname = self.defname
@@ -279,13 +317,51 @@ class PyDef:
 
         return s
 
+    # inverts 'ast_def_line_to_pydef'
+    # inverts 'PyDef.def_line'
+
 
 @dataclasses.dataclass
 class PyFunc:
     """Speak of a Python Callable as itself plus its Py Def"""
 
+    pycall: PyCall
     func: typing.Callable
     pydef: PyDef
+
+    def call_on_item(self, obj) -> object | None:
+        """Call the Func with the Obj, and return the Result"""
+
+        func = self.func
+        pycall = self.pycall
+
+        args = list()
+        args.append(obj)
+        args.extend(pycall.arg_by_int.values())
+
+        kwargs = pycall.kwarg_by_key
+
+        result = func(*args, **kwargs)
+
+        return result
+
+    def call_on_iterable(self, obj) -> typing.Iterable:
+        """Call the Func with the Obj, and return the Result"""
+
+        func = self.func
+        pycall = self.pycall
+
+        args = list()
+        args.append(obj)
+        args.extend(pycall.arg_by_int.values())
+
+        kwargs = pycall.kwarg_by_key
+
+        result = func(*args, **kwargs)
+
+        return result
+
+    # todo: why MyPy requires 2 Bodies for call_on_item/ call_on_iterable
 
 
 @dataclasses.dataclass
@@ -486,17 +562,24 @@ class PySponge:
 
         pbpaste_path.write_bytes(obytes)
 
-    def as_pytype(self, pytype) -> typing.Iterable:
+    def as_pytype(self, pytype, eaching_else) -> typing.Iterable:
         """Clone the Iterable as Bytes, as List[Bytes], as Str, or as List[Str]"""
 
         iterable = self.iterable
+        iterable_type = self.iterable_type
 
-        # Take the Iterable as Bytes or as List[Bytes]
+        if pytype is set:
+            setlike = self._as_pytype_setlike(eaching_else)
+            return setlike
+
+        # Form the Bytes
 
         if isinstance(iterable, bytes):  # todo: runtime cost of speculative cloning?
             byte_iterable = bytes(iterable)
         else:
             byte_iterable = self.as_bytes()
+
+        # Take the Iterable as Bytes or as List[Bytes]
 
         if pytype is bytes:
             return byte_iterable
@@ -527,9 +610,44 @@ class PySponge:
             int_iterable = list(int(_) for _ in charline_iterable)
             return int_iterable
 
+        if pytype == list[float]:
+            float_iterable = list(float(_) for _ in charline_iterable)
+            return float_iterable
+
         # Else freak
 
-        assert False, (pytype,)  # unreached
+        assert False, (pytype, iterable_type)  # unreached
+
+    def _as_pytype_setlike(self, eaching_else) -> typing.Iterable:
+        """Drop Duplicate Items but do Not reorder Items"""
+
+        iterable = self.iterable
+
+        by_k: dict[object, None]  # todo: Value could be alias of Yielded
+
+        if not eaching_else:
+            by_k = dict()
+            for k in iterable:
+                if k not in by_k.keys():
+                    by_k[k] = None
+            keys = list(by_k.keys())
+            return keys
+
+        items = list()
+        for item in iterable:
+            by_k = dict()
+            for k in item:
+                if k not in by_k.keys():
+                    by_k[k] = None
+            keys = list(by_k.keys())
+            items.append(keys)
+
+        return items
+
+        # could guess:  items = b"".join(keys)
+        # could guess:  items = "".join(keys)
+
+        # compare 'unique_everseen' of https://docs.python.org/3/library/itertools.html
 
     def as_bytes(self) -> bytes:
         """Take the Iterable as a Clone of Bytes"""
@@ -644,50 +762,30 @@ class PySponge:
         eaching_else = None
         for pystep in pysteps:
             iterable = self.iterable
-            iterable_type = self.iterable_type
+
+            # print(pystep)
 
             # Remake the Iterable as Bytes, as List[Bytes], as Str, or as List[Str]
 
             if pystep.pytype_else:
                 pytype = pystep.pytype_else
-
-                #
-
-                if pystep.pytype_else is typing.Iterable:
-                    eaching_else = True
-                    continue
-
-                if eaching_else:
-                    eaching_else = False
-
-                #
-
-                if pystep.pytype_else is list:
-                    # if iterable_type in (bool, list[bool]):  # FIXME
-                    #    pytype = list[bool]
-                    if iterable_type in (bytes, list[bytes]):
-                        pytype = list[bytes]
-                    elif iterable_type in (int, list[int]):
-                        pytype = list[int]
-                    else:
-                        assert iterable_type in (str, list[str]), (iterable_type,)
-                        pytype = list[str]
-
-                self.iterable = self.as_pytype(pytype=pytype)
-                self.iterable_type = pytype  # bytes, list[bytes], str, list[str]
+                eaching_else = self.pystep_pytype_convert_to(
+                    pystep, pytype=pytype, eaching_else=eaching_else
+                )
 
             # Work on the Iterable
 
             if pystep.pyfunc_else:
                 pyfunc = pystep.pyfunc_else
-                func = pyfunc.func
                 pydef = pyfunc.pydef
 
-                if not eaching_else:
-                    self.iterable = func(iterable)  # once
+                if not eaching_else:  # once over all
+                    result = pyfunc.call_on_iterable(iterable)  # once
+                    self.iterable = result
                     self.iterable_type = pydef.result_type
-                else:
-                    self.iterable = list(func(_) for _ in iterable)  # once per item
+                else:  # once per item
+                    results = list(pyfunc.call_on_item(_) for _ in iterable)
+                    self.iterable = results
                     assert pydef.result_list_type_else, (pydef,)
                     result_list_type = pydef.result_list_type_else
                     self.iterable_type = result_list_type
@@ -722,6 +820,41 @@ class PySponge:
 
         # todo: trace 'pq str encode' as itself, no '|pq bytes' needed
 
+    def pystep_pytype_convert_to(self, pystep, pytype, eaching_else) -> bool:
+        """Remake the Iterable as Bytes, as List[Bytes], as Str, or as List[Str]"""
+
+        iterable_type = self.iterable_type
+
+        #
+
+        if pystep.pytype_else is list:
+            # if iterable_type in (bool, list[bool]):  # FIXME
+            #    pytype = list[bool]
+            if iterable_type in (bytes, list[bytes]):
+                pytype = list[bytes]
+            elif iterable_type in (int, list[int]):
+                pytype = list[int]
+            else:
+                assert iterable_type in (str, list[str]), (iterable_type,)
+                pytype = list[str]
+
+        #
+
+        if pystep.pytype_else is typing.Iterable:
+            eaching_else = True
+            return eaching_else
+
+        self.iterable = self.as_pytype(pytype=pytype, eaching_else=eaching_else)
+        self.iterable_type = pytype  # bytes, list[bytes], str, list[str]
+
+        if eaching_else:
+            if pystep.pytype_else is not set:
+                eaching_else = False
+
+        #
+
+        return eaching_else
+
 
 #
 # Amp up Import Ast
@@ -739,12 +872,79 @@ def ast_black_repr(obj) -> str:
     return s
 
 
-def ast_defline_to_pydef(defline) -> PyDef:
+def ast_word_to_pycall(word) -> PyCall:
+    """Form a PyCall by parsing 1 Word, without Spaces, Commas, or Parentheses"""
+
+    pyverb_pydef_by_defname = PYVERB_PYDEF_BY_DEFNAME
+
+    splits = word.split(".")
+    assert word and splits, (word, splits)
+
+    defname = splits[0]
+    arg_by_int = dict()
+    kwarg_by_key = dict()
+
+    pyverb_exit_if(pyverb=defname)
+
+    min_len_args = 0
+    if defname in pyverb_pydef_by_defname.keys():
+        pydef = pyverb_pydef_by_defname[defname]
+        # keys = list(pydef.type_by_kw.keys())  # todo: fail fast wrong keys
+
+        min_len_args = len(pydef.type_by_int.keys())
+        while min_len_args and ((min_len_args - 1) in pydef.default_by_int.keys()):
+            min_len_args -= 1
+
+        assert min_len_args >= 1, (min_len_args, pydef)
+        min_len_args -= 1  # don't count the placeholder for Self
+
+    index = 0
+    for split in splits[1:]:
+        if "=" not in split:
+            arg_by_int[index] = ast_str_to_typed_value(split)
+            index += 1
+
+    kwarg_splits = splits[1 + index :]
+
+    while index < min_len_args:  # todo: could error, not default to =""
+        arg_by_int[index] = ""
+        index += 1
+
+    for split in kwarg_splits:
+        (k, eq, v0) = split.partition("=")
+        kwarg_by_key[k] = ast_str_to_typed_value(v0)
+
+    pycall = PyCall(defname=defname, arg_by_int=arg_by_int, kwarg_by_key=kwarg_by_key)
+
+    return pycall
+
+    # inverts 'PyDef.call_word'
+
+    # replace._ -> replace(" ", "")
+    # replace._..1 -> replace(" ", "", 1)
+
+
+def ast_str_to_typed_value(self) -> object | None:
+    """Eval an Arg Value or KwArg Value Fragment of a Word"""
+
+    v0 = self
+
+    v1 = v0.replace("_", " ")
+
+    try:
+        v2 = ast.literal_eval(v1)
+    except Exception:
+        v2 = v1  # instance of Str
+
+    return v2
+
+
+def ast_def_line_to_pydef(def_line) -> PyDef:
     """Form a PyDef by parsing a Py Def Sourceline, without its Colon"""
 
     # Pick apart the Def Name, Args Line, Result Type Name, and Comment
 
-    s = defline
+    s = def_line
     (s, hash_, comment) = s.partition("  #")
     s = s.removeprefix("def ")
 
@@ -775,7 +975,7 @@ def ast_defline_to_pydef(defline) -> PyDef:
             group = -1
             continue
 
-        assert tname, (tname, key, keyed, split, splits, defline)
+        assert tname, (tname, key, keyed, split, splits, def_line)
         arg_type = ast_type_eval(tname)
         default_else = ast.literal_eval(default_py) if default_py else None
 
@@ -807,8 +1007,8 @@ def ast_defline_to_pydef(defline) -> PyDef:
 
     # Succeed
 
-    remade = pydef.defline + hash_ + comment
-    assert remade == defline, (remade, defline)
+    remade = pydef.def_line + hash_ + comment
+    assert remade == def_line, (remade, def_line)
 
     return pydef
 
@@ -895,23 +1095,6 @@ def iterable_join(self: typing.Iterable, /, sep: str = " ") -> str:
     # may TypeError: sequence item 0: expected a bytes-like object, ~ found
 
     # may return List[type(sep)] for empty Lists of any type
-
-
-def iterable_unique_everseen(self: typing.Iterable) -> list:
-    """Drop Duplicate Items but do Not reorder Items"""
-
-    by_k: dict[object, None]  # todo: Value could be alias of Yielded
-    by_k = dict()
-
-    for yielded in self:
-        if yielded not in by_k.keys():
-            by_k[yielded] = None
-
-    items = list(by_k.keys())
-
-    return items
-
-    # compare 'def unique_everseen' @ https://docs.python.org/3/library/itertools.html
 
 
 def iterable_shuffled(self: typing.Iterable) -> list:
@@ -1059,34 +1242,40 @@ def pyverb_find_pystep(pyverb) -> PyStep:
     pyverb_pydef_by_defname = PYVERB_PYDEF_BY_DEFNAME
     pytype_by_pyverb = PYTYPE_BY_PYVERB
 
-    pyverb_exit_if(pyverb)
+    # Pick apart the mention of the Func from mention of its Args & KwArgs
 
-    #
+    pycall = ast_word_to_pycall(pyverb)
 
-    if pyverb in pytype_by_pyverb.keys():
-        pytype = pytype_by_pyverb[pyverb]
+    # Pick 1 PyType to run
+
+    defname = pycall.defname
+    if defname in pytype_by_pyverb.keys():
+        pytype = pytype_by_pyverb[defname]
 
         pystep = PyStep(
-            pyverb=pyverb,
+            pyverb=defname,
             pytype_else=pytype,
             pyfunc_else=None,
         )
 
         return pystep
-    #
 
-    assert pyverb in pyverb_pydef_by_defname.keys(), (pyverb,)
-    pydef = pyverb_pydef_by_defname[pyverb]
+    # Pick 1 PyFunc to run
+
+    assert defname in pyverb_pydef_by_defname.keys(), (defname,)
+    pydef = pyverb_pydef_by_defname[defname]
 
     func = pydef_find_func(pydef)
 
     pyfunc = PyFunc(
+        pycall=pycall,
         func=func,
         pydef=pydef,
     )
 
+    call_word = pycall.call_word
     pystep = PyStep(
-        pyverb=pyverb,
+        pyverb=call_word,
         pytype_else=None,
         pyfunc_else=pyfunc,
     )
@@ -1097,15 +1286,7 @@ def pyverb_find_pystep(pyverb) -> PyStep:
 def pyverb_exit_if(pyverb) -> None:
     """Quit if PyVerb not found, but first tell Stderr why"""
 
-    pyverb_pydef_by_defname = PYVERB_PYDEF_BY_DEFNAME
-    pytype_by_pyverb = PYTYPE_BY_PYVERB
-
-    defined_pyverbs: list[str]
-
-    defined_pyverbs = list()
-    defined_pyverbs.extend(pyverb_pydef_by_defname.keys())
-    defined_pyverbs.extend(pytype_by_pyverb.keys())
-    defined_pyverbs.sort()
+    defined_pyverbs = DEFINED_PYVERBS
 
     v0 = defined_pyverbs[0]
     vn = defined_pyverbs[-1]
@@ -1132,7 +1313,6 @@ def pydef_find_func(pydef) -> typing.Callable:
         "dent": str_dent,
         "dedent": textwrap.dedent,
         "join": iterable_join,
-        "set": iterable_unique_everseen,  # todo: more of a Type name than a Func name
         "shuffled": iterable_shuffled,
         "splitgrafs": str_splitgrafs,
         "undent": str_undent,
@@ -1154,16 +1334,34 @@ def pydef_find_func(pydef) -> typing.Callable:
     return func
 
 
+def form_defined_pyverbs() -> list[str]:
+    """List our Defined PyVerb's"""
+
+    pyverb_pydef_by_defname = PYVERB_PYDEF_BY_DEFNAME
+    pytype_by_pyverb = PYTYPE_BY_PYVERB
+
+    defined_pyverbs: list[str]
+
+    defined_pyverbs = list()
+    defined_pyverbs.extend(pyverb_pydef_by_defname.keys())
+    defined_pyverbs.extend(pytype_by_pyverb.keys())
+    defined_pyverbs.sort()
+
+    assert sorted(set(defined_pyverbs)) == defined_pyverbs, (defined_pyverbs,)
+
+    return defined_pyverbs
+
+
 def form_pyverb_pydef_by_defname() -> dict[str, PyDef]:
     """Compile the PyDef's of many Pq Words"""
 
-    bytes_pydefs = list(ast_defline_to_pydef(_) for _ in _BYTES_DEFS_LINES)
-    chars_pydefs = list(ast_defline_to_pydef(_) for _ in _CHARS_DEFS_LINES)
-    words_pydefs = list(ast_defline_to_pydef(_) for _ in _WORDS_DEFS_LINES)
-    # void_pydefs = list(ast_defline_to_pydef(_) for _ in _VOID_DEFS_LINES)
+    bytes_pydefs = list(ast_def_line_to_pydef(_) for _ in _BYTES_DEFS_LINES)
+    chars_pydefs = list(ast_def_line_to_pydef(_) for _ in _CHARS_DEFS_LINES)
+    words_pydefs = list(ast_def_line_to_pydef(_) for _ in _WORDS_DEFS_LINES)
+    # void_pydefs = list(ast_def_line_to_pydef(_) for _ in _VOID_DEFS_LINES)
 
-    outer_pydefs = list(ast_defline_to_pydef(_) for _ in _OUTER_DEFS_LINES)
-    inner_pydefs = list(ast_defline_to_pydef(_) for _ in _INNER_DEFS_LINES)
+    outer_pydefs = list(ast_def_line_to_pydef(_) for _ in _OUTER_DEFS_LINES)
+    inner_pydefs = list(ast_def_line_to_pydef(_) for _ in _INNER_DEFS_LINES)
 
     pydefs = list()
     pydefs.extend(bytes_pydefs)
@@ -1189,6 +1387,7 @@ PYTYPE_BY_PYVERB = {
     "list": list,
     "list[bytes]": list[bytes],
     "list[str]": list[str],
+    "set": set,
     "str": str,
 }  # todo: case-insensitive Py Types
 
@@ -1225,7 +1424,6 @@ _WORDS_DEFS_CHARS = """
 
 _OUTER_DEFS_CHARS = """
     def enumerate(self: typing.Iterable, /, start: int = 0) -> typing.Generator
-    def set(self: typing.Iterable, /) -> set  # set_list like builtins.set but ordered
     def len(self: typing.Iterable, /) -> int  # builtins.len
     def max(self: typing.Iterable, /) -> object | None  # builtins.max
     def min(self: typing.Iterable, /) -> object | None  # builtins.min
@@ -1242,6 +1440,7 @@ _INNER_DEFS_CHARS = """
     def float(self: object, /) -> float  # builtins.float
     def int(self: object, /) -> int  # builtins.int
     def lstrip(self: str, /) -> str  # str.lstrip
+    def replace(self: str, old: str, new: str, count: int = 0, /) -> str  # str.replace
     def strip(self: str, /) -> str  # str.strip
     def rstrip(self: str, /) -> str  # str.rstrip
     def undent(self: str, /) -> str  # "undent" not in dir(str)
@@ -1259,6 +1458,8 @@ _OUTER_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_OUTER_DEFS_CHARS))
 _INNER_DEFS_LINES = list(_ for _ in textwrap_dedent_lines(_INNER_DEFS_CHARS))
 
 PYVERB_PYDEF_BY_DEFNAME = form_pyverb_pydef_by_defname()
+
+DEFINED_PYVERBS = form_defined_pyverbs()
 
 
 # todo: collections.Counter vs str.count vs. list.count (and vs bytes.count)
@@ -1298,6 +1499,12 @@ examples of Python for Grafs of Lines:
 """
 
 # todo: dumps, loads, from 'import json'
+# todo: dig back into bytes byte str char words word lines line grafs graf
+# todo: find a way to guess '|pq str set' should run as '|pq str set join.'
+# todo: trace '|pq str set' as '|pq str set' not as '|pq str str set bytes'
+# todo: trace '|pq set' as '|pq line set' not as '|pq str list Iterable set join. bytes'
+# todo: trace the pick-it-apart, don't also trace the put-it-back-together
+# todo: except still give us a way to say put-it-back-together differently
 
 # todo: more compare/ contrast 'pq' vs 'builtins.map' and 'functools.reduce'
 # todo: more compare/ contrast 'pq' vs jq --raw-input
