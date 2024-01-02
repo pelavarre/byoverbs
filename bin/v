@@ -7,12 +7,12 @@ if [[ "$STY" ]]; then
     fi
 fi
 
-if [[ $# == 0 ]]; then
-    set -xe
-    pbpaste >v.cv
-    vim v.cv
-    <v.cv pbcopy
-else
+if [[ $# != 0 ]]; then
     set -xe
     vim "$@"
+else
+    set -xe
+    pbpaste >pbpaste~$$~
+    vim pbpaste~$$~
+    pbcopy <pbpaste~$$~
 fi

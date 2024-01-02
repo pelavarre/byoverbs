@@ -3,5 +3,12 @@ if ! which emacs >/dev/null; then
     emacs=/opt/homebrew/bin/emacs
 fi
 
-set -xe
-$emacs -nw --no-splash --eval '(menu-bar-mode -1)' "$@"
+if [[ $# != 0 ]]; then
+    set -xe
+    $emacs -nw --no-splash --eval '(menu-bar-mode -1)' "$@"
+else
+    set -xe
+    pbpaste >pbpaste~$$~
+    $emacs -nw --no-splash --eval '(menu-bar-mode -1)' pbpaste~$$~
+    pbcopy <pbpaste~$$~
+fi

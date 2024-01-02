@@ -31,6 +31,7 @@ examples:
 
   F=bin/awk.py && cat $F |awk '(length($0)>88){print "'$F':"NR":"$0}'
 
+  seq 20 |awk '!(NR%2){print o, $0} {o=$0}'  # join each pair of Lines
   seq 20 |awk '!f{f=1;print} {o=$0} END{print o}' |uniq  # copies first & last lines
   seq 20 |awk '!f{f=1;print} {o=$0} END{if (NR > 1) {print "..."; print o}}'
   seq 20 |awk '/^8$/{F=1} /^14$/{F=0} F{print}'  # starts/ stops copying lines

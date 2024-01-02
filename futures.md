@@ -476,10 +476,15 @@ ls.py could accept, especially with Arg, the choices of: ls -AdhlF -rt
 
 VsCode + Black on """...""" too often triggers Flake8:  W291 trailing whitespace
 
+calling Black needs preface of:  echo |python3 -m pdb
+else the SyntaxError's aren't clickable inside VsCode
+
 :
 
 pandas, matplotlib, etc inside bin/p
 demos/vi2.py could prompt for its ⇧Z⇧Q more like in lower right corner
+
+each V should have its own File, so close out-of-order sequences Paste Buffer
 
 
 ## Copied from

@@ -22,10 +22,12 @@ examples easier to spell out with Python than with Sh:
   pq dent  # adds four Spaces to left of each Line  # |sed 's,^,    ,'
   pq help  # shows more examples, specs more quirks
   pq len  # counts Chars per Line  # |jq --raw-input length
+  pq list join replace._  # tr -d ' \n'
   pq list set  # drops Duplicate Lines but doesn't reorder Lines  # unique_everseen
   pq list shuffled  # shuffles Lines, via 'random.shuffle'
   pq str casefold  # case-fold's the Chars, such as 'ß' to 'ss'  # |pq casefold
   pq str dedent  # removes blank Columns at left, via 'textwrap.dedent'
+  pq str dedent strip  # drops lead Blank Columns, & trail/ lead Blank Lines
   pq str lower  # lowers the Chars, such as 'ß' to itself  # |tr '[A-Z]' '[a-z]'
   pq str strip  # removes blank Rows above and below
   pq strip  # drops Spaces etc from left and right of each Line
@@ -160,6 +162,7 @@ examples of running Python for Words of Chars:
   pq str split  # splits to 1 Word per Line, else UnicodeDecodeError  # |xargs -n 1
   pq str split len  # counts Words, else UnicodeDecodeError  # |wc -w
   pq str split join  # remake into one Line of Words, via 'str.join(list)'  # |xargs
+  pq str split join replace._   # drop Spaces and drop Line-Breaks  # |tr -d ' \n'
 
 examples of running Python for Chars decoded from Bytes:
   pq str len  # counts Chars, else UnicodeDecodeError  # |wc -m
@@ -1419,7 +1422,7 @@ _CHARS_DEFS_CHARS = """
 # """
 
 _WORDS_DEFS_CHARS = """
-    def join(self: list[str], /, sep: str = " ") -> str  # str.join'ish
+    def join(self: list[str], /, sep: str = " ") -> str  # str.join, but KwArg Sep
 """
 
 _OUTER_DEFS_CHARS = """
@@ -1476,6 +1479,27 @@ DEFINED_PYVERBS = form_defined_pyverbs()
 #
 
 
+# todo: pq aliases
+#
+# trace as casefolded Alias when supplied in pieces
+# trace as mixed Self when supplied as 1 verb
+# enter/ exit to reconstruct from Bytes/ Chars/ ... Grafs
+# trace enter, don't trace exit
+#
+# Bytes = bytes
+# Chars = encode/ decode
+# Words = str split/ join
+# Lines = str splitlines/ join._n
+# Grafs = str splitgrafs/ "\n\n".join("\n".join(_) for _ in grafs))
+#
+# Byte = bytes map
+# Char = str map
+# Word = str split map
+# Line = str splitlines map
+# Graf = str splitgrafs map
+#
+
+
 # ls -l |cv && bin/pq str strip splitlines for upper && cv
 
 ... == """
@@ -1498,13 +1522,16 @@ examples of Python for Grafs of Lines:
 
 """
 
-# todo: dumps, loads, from 'import json'
 # todo: dig back into bytes byte str char words word lines line grafs graf
+# todo: trace + pbpaste |split |pbcopy also as:  + aka:  pbpaste |xargs -n 1 |pbcopy
+# todo: dumps, loads, from 'import json'
+# todo: trace the pick-it-apart, don't also trace the put-it-back-together
+
+# todo: still give us a way to say put-it-back-together differently
+
 # todo: find a way to guess '|pq str set' should run as '|pq str set join.'
 # todo: trace '|pq str set' as '|pq str set' not as '|pq str str set bytes'
 # todo: trace '|pq set' as '|pq line set' not as '|pq str list Iterable set join. bytes'
-# todo: trace the pick-it-apart, don't also trace the put-it-back-together
-# todo: except still give us a way to say put-it-back-together differently
 
 # todo: more compare/ contrast 'pq' vs 'builtins.map' and 'functools.reduce'
 # todo: more compare/ contrast 'pq' vs jq --raw-input

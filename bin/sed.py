@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 
-# sed -iEXT FILE
-
-# sed 's,^.*$,& = self.&,'
-
 """
 usage: sed.py [--h] ...
 
@@ -21,6 +17,9 @@ examples:
   sed.py  # show these examples and exit
   sed.py --h  # show help lines and exit (more reliable than -h)
   sed.py --  # prefix each line with "-- " and suffix each line with " --"
+
+  sed -i.bak 's,old,new,g' FILE  # Sed '-i' edits Files in place
+  sed 's,^.*$,& = self.&,'  # Sed Repl '&' means the Chars matched
 
   pbpaste |awk '{print $NF}' |sed 's,^,-- ,' |sed 's,$, --,' |pbcopy
 """
