@@ -2,7 +2,7 @@
 
 D=$(dirname "$0")
 if [[ $# == 0 ]]; then
-    python3 "$D"/pq1.py --
+    python3 "$D"/pq1.py -- && pbpaste
 else
     python3 "$D"/pq1.py "$@"
 fi
