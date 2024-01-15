@@ -4,6 +4,7 @@ if [[ $# == 0 ]]; then
     make soon
 else
     set -xe
+    echo |python3 -m pdb "$@"
     "$D"/black.bash "$@"
     "$D"/flake8.bash "$@"
     "$D"/mypy.bash "$@"

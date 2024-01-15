@@ -1,3 +1,0 @@
-set -xe
-: did you mean:  git reflog --numstat "$@"
-git reflog --date=relative "$@"
