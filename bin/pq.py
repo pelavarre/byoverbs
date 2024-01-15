@@ -110,7 +110,7 @@ examples of running Python for each Line:
 examples of running Python for Lines of Chars:
   pq list len  # counts Lines, else UnicodeDecodeError  # |wc -l
   ## list Counter items  # counts Duplicates of Lines, but doesn't reorder the Lines
-  pq list join  # tr '\n' ' '  
+  pq list join  # tr '\n' ' '
   pq list join replace._  # tr -d ' \n'
   pq list reversed  # forwards Lines in reverse order  # Linux |tac  # Mac |tail -r
   pq list set  # drops Duplicate Lines but doesn't reorder Lines  # unique_everseen
@@ -211,6 +211,9 @@ def main() -> None:
     args = parse_pq_py_args()  # often prints help & exits zero
     Main.args = args
 
+    py = steps_to_py(args.steps)
+    exec(py)
+
 
 def parse_pq_py_args() -> PqPyArgs:
     """Parse the Command-Line Arguments of Pq Py"""
@@ -232,7 +235,12 @@ def parse_pq_py_args() -> PqPyArgs:
     )
 
     help_help = "show this help message and exit"
+    quiet_help = "show less"
+    py_help = "show the code without running it"
+
     parser.add_argument("-h", "--help", action="count", help=help_help)
+    parser.add_argument("-q", "--quiet", action="count", help=quiet_help)
+    parser.add_argument("--py", action="count", help=py_help)
 
     assert argparse.ZERO_OR_MORE == "*"
     pqwords_help = "word of the Pq Programming Language:  dedent, join len, max, ..."
@@ -431,6 +439,42 @@ def picks_pop_tails(picks: list[str]) -> list[str]:
             tails.extend("textify encode".split())
 
     return tails
+
+
+#
+# Compose a Python Program to work Bytes through Steps
+#
+
+
+def steps_to_py(steps):
+    """Compose a Python Program to work Bytes through Steps"""
+
+    # Define the Python Program
+
+    py0 = r"""
+
+        import subprocess
+    
+        a_run = subprocess.run("pbpaste", input=b"", stdout=subprocess.PIPE, check=True)
+        a = a_run.stdout
+
+        b = a.decode()
+
+        c = b.splitlines()
+
+        #
+
+        #
+
+        d = "\n".join(c) + "\n"
+        e = d.encode()
+        subprocess.run("pbcopy", input=e, check=True)
+
+    """
+
+    py = textwrap.dedent(py0)
+
+    return py
 
 
 #
