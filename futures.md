@@ -484,7 +484,18 @@ else the SyntaxError's aren't clickable inside VsCode
 pandas, matplotlib, etc inside bin/p
 demos/vi2.py could prompt for its ⇧Z⇧Q more like in lower right corner
 
+:
+
 each V should have its own File, so close out-of-order sequences Paste Buffer
+demo for friends
+
+fix 'cal.py --' at Mac to begin weeks on Mondays
+fix 'cal.py --' to surface editable Y M D
+    + cal -H 2024-01-16 -m 1 2024  # cal
+    + ncal -b -M -H 2024-01-16 -m 1 2024  # ncal -b -M
+add 'cal.py -v' to print reminder defs of -H YYYY-MM-DD, -m, -b, -M
+    -H YYYMMDD place highlight, -M week from Monday, -b classic layout, -m MM month
+teach 'cal.py -H ...' to reject such as '20240116'
 
 
 ## Copied from

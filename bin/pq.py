@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
 r"""
-usage: pq [WORD ...]
+usage: pq [-h] [-q] [--py] [WORD ...]
 
 tell Python to edit the Os Copy/Paste Clipboard Buffer, else other Stdin/ Stdout
 
 positional arguments:
-  WORD        word of the Pq Programming Language:  dedent, dent, join, len, max, ...
+  WORD         word of the Pq Programming Language:  dedent, dent, join, len, max, ...
 
 options:
-  -h, --help  show this help message and exit
+  -h, --help   show this help message and exit
+  -q, --quiet  show less
+  --py         show the code without running it
 
 quirks:
   takes Names of Python Funcs and Types as the Words of a Pq Programming Language
@@ -19,6 +21,7 @@ quirks:
   copied from:  git clone https://github.com/pelavarre/byoverbs.git
 
 examples easier to spell out with Python than with Sh:
+  pq  # closes last Line if not closed  # |awk '{print}'
   pq dent  # adds four Spaces to left of each Line  # |sed 's,^,    ,'
   pq help  # shows more examples, specs more quirks  # pq -hhh
   pq len  # counts Chars per Line  # |jq --raw-input length
@@ -59,26 +62,30 @@ import textwrap
 
 
 BIG_DOC = r"""
-usage: pq [WORD ...]
+usage: pq [-h] [-q] [--py] [WORD ...]
 
 tell Python to edit the Os Copy/Paste Clipboard Buffer, else other Stdin/ Stdout
 
 positional arguments:
-  WORD        word of the Pq Programming Language:  dedent, dent, join, len, max, ...
+  WORD         word of the Pq Programming Language:  dedent, dent, join, len, max, ...
 
 options:
-  -h, --help  show this help message and exit
+  -h, --help   show this help message and exit
+  -q, --quiet  show less
+  --py         show the code without running it
 
 quirks:
   takes Names of Python Funcs and Types as the Words of a Pq Programming Language
   defaults like Awk to 'bytes decode splitlines', unless you say different
   ducks the Shift key and Quotes by taking '.' for '(' or ',', taking '_' for ' ', etc
-  doesn't itself update the Os Copy/Paste Clipboard Buffer from the middle of a Sh Pipe
-  substitutes the File '~/.ssh/pbpaste', when 'pbpaste' or 'pbcopy' undefined
-  takes Regular Expression Patterns as in Python, not as as in:  awk, grep, sed, tr
-  work its own 'pq' examples correctly, but not yet its own '##' examples  <= todo
   replaces:  awk, cut, head, grep, sed, sort, tail, tr, uniq, wc -l, xargs, xargs -n 1
   copied from:  git clone https://github.com/pelavarre/byoverbs.git
+
+more quirks:
+  substitutes the File '~/.ssh/pbpaste', when 'pbpaste' or 'pbcopy' undefined
+  doesn't itself update the Os Copy/Paste Clipboard Buffer from the middle of a Sh Pipe
+  takes Regular Expression Patterns as in Python, not as as in:  awk, grep, sed, tr
+  work its own 'pq' examples correctly, but not yet its own '##' examples  <= todo
 
 related works:
   https://clig.dev - Command Line Interface Guidelines, via Julia Evans (@b0rk)
@@ -88,6 +95,7 @@ related works:
   https://redis.io/ - Key-Value Pairs in Memory, but with a friendly Cli
 
 examples of running Python for each Line:
+  pq  # closes last Line if not closed  # |awk '{print}'
   pq dent  # adds four Spaces to left of each Line  # |sed 's,^,    ,'
   ## if.findplus.frag  # forwards each Line containing a Fragment  # |grep frag
   ## if.match.^...$  # forwards each Line of 3 Characters  # |grep ^...$
@@ -189,7 +197,11 @@ examples easier to spell out with Python than with Sh:
 class PqPyArgs:
     """Name the Command-Line Arguments of Pq Py"""
 
+    quiet: int | None
+    py: bool | None
+
     hints: list[str]  # given as Pq Words on the Sh Line
+
     steps: list[str]  # auto-completed from the Hints
 
 
@@ -212,7 +224,10 @@ def main() -> None:
     Main.args = args
 
     py = steps_to_py(args.steps)
-    exec(py)
+    if args.py:
+        print(py)
+    else:
+        exec(py)
 
 
 def parse_pq_py_args() -> PqPyArgs:
@@ -256,9 +271,10 @@ def parse_pq_py_args() -> PqPyArgs:
     if not sys.argv[1:]:
         doc_else = lil_doc
     elif ns.help:
-        doc_else = main_doc
-        if ns.help >= 3:
-            doc_else = big_doc
+        if ns.help < 3:
+            parser.print_help()
+            sys.exit(0)
+        doc_else = big_doc
     elif "help" in ns.pqwords:
         doc_else = big_doc
 
@@ -273,11 +289,14 @@ def parse_pq_py_args() -> PqPyArgs:
 
     if steps != hints:  # rarely False
         join = " ".join(steps)
-        print(f"+ pq {join}", file=sys.stderr)
+        if not ns.quiet:
+            print(f"+ pq {join}", file=sys.stderr)
 
     # Collect up the Parsed Args
 
     args = PqPyArgs(
+        quiet=ns.quiet,
+        py=ns.py,
         hints=hints,
         steps=steps,
     )
@@ -446,7 +465,7 @@ def picks_pop_tails(picks: list[str]) -> list[str]:
 #
 
 
-def steps_to_py(steps):
+def steps_to_py(steps) -> str:
     """Compose a Python Program to work Bytes through Steps"""
 
     # Define the Python Program
@@ -454,7 +473,7 @@ def steps_to_py(steps):
     py0 = r"""
 
         import subprocess
-    
+
         a_run = subprocess.run("pbpaste", input=b"", stdout=subprocess.PIPE, check=True)
         a = a_run.stdout
 
@@ -472,7 +491,7 @@ def steps_to_py(steps):
 
     """
 
-    py = textwrap.dedent(py0)
+    py = textwrap.dedent(py0).strip()
 
     return py
 

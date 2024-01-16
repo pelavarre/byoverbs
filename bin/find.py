@@ -4,6 +4,8 @@
 # find -size +1001k 2>/dev/null
 # ls -hlAF -rt -rS $(find . -size +1001k 2>/dev/null)
 
+# find . -not -type d -not -path './.git/*'
+# git ls-files
 
 # cd bin/ && find bin/find.py should work sometimes
 
