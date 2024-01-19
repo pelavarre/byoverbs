@@ -1,0 +1,7 @@
+if [[ $# == 0 ]]; then
+    set -xe
+    git show :0:$(0) && : 1 Base, 2 Theirs, 3 Ours, 0 Something Else
+else:
+    set -xe
+    git show :0:"$@"  && : 1 Base, 2 Theirs, 3 Ours, 0 Something Else
+fi
