@@ -472,6 +472,8 @@ ls.py could accept, especially with Arg, the choices of: ls -AdhlF -rt
 
 -F rejected by ls.py
 
+explain Linux Bash History splits Multiline Input by Line
+
 :
 
 VsCode + Black on """...""" too often triggers Flake8:  W291 trailing whitespace
