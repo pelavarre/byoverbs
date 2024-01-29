@@ -12,7 +12,7 @@ examples:
 
   demos/ptyspawn.py --help  # show help and exit zero
   demos/ptyspawn.py  # show examples and exit zero
-  demos/ptyspawn.py --  # mix Breakout Balls into the I/O of a Sh Terminal
+  demos/ptyspawn.py --  # wrap a Sh Terminal to mess with \r ~
 
     \r ~  work like \r ~, but delay the ~ till the next Char after
     \r ~ ~  work like \r ~
