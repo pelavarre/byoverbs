@@ -97,36 +97,36 @@ def pty_spawn_argv(argv) -> None:
                 (i, j) = ij
                 ij[::] = [j, k]
 
-                # Take the 2 Bytes '\r' '~' to mean hold the '~' till next Byte
+                # Take the 2 Bytes b"\r~" to mean hold the b"~" till next Byte
 
                 if (j, k) == (ord("\r"), ord("~")):
                     continue
 
-                # Take the 3 Bytes '\r' '~' '~' to mean forward the 2 Bytes '\r' '~'
+                # Take the 3 Bytes b"\r~~" to mean forward the 2 Bytes b"\r~"
 
                 if (i, j) == (ord("\r"), ord("~")):
                     if (i, j, k) == (ord("\r"), ord("~"), ord("~")):
                         pbytes.append(k)
                         continue
 
-                    # Take the 3 Bytes '\r' '~' '?' to mean explain thyself
+                    # Take the 3 Bytes b"\r~?" to mean explain thyself
 
                     if (i, j, k) == (ord("\r"), ord("~"), ord("?")):
                         print("~?", end="\r\n")
                         print("\r\n".join(patch_doc.splitlines()), end="\r\n")
                         continue
 
-                    # Else forward the '~' of '\r' '~' with the next Byte
+                    # Else forward the b"~" of b"\r~" with the next Byte
 
                     pbytes.append(j)
                     pbytes.append(k)
                     continue
 
-                # Forward any other Bytes immediately
+                # Else forward the Byte immediately
 
                 pbytes.append(k)
 
-            # Return in order to forward some Bytes
+            # Return Bytes to forward them
 
             if pbytes:
                 return pbytes

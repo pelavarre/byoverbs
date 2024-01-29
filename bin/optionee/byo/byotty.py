@@ -323,8 +323,10 @@ class BytesTerminal:
 #
 
 
-def bytes_take_startswith_else(data) -> bytes:
+def bytes_take_startswith_else(data: bytes) -> bytes:
     """Take 1 defined whole Terminal Input/Output Byte Sequence, else zero Bytes"""
+
+    assert not isinstance(data, bytearray), (type(data),)
 
     seq = b""
 
@@ -483,6 +485,9 @@ def _bytes_take_much_utf8_else(data) -> bytes | None:
     seq = None
     for index in range(len(data)):
         length = index + 1
+
+        if data[length - 1] in C0_BYTES:
+            break
 
         try_seq = data[:length]
         try:
