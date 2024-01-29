@@ -112,7 +112,7 @@ def pty_spawn_argv(argv) -> None:
                     # Take the 3 Bytes '\r' '~' '?' to mean explain thyself
 
                     if (i, j, k) == (ord("\r"), ord("~"), ord("?")):
-                        print(end="\r\n")
+                        print("~?", end="\r\n")
                         print("\r\n".join(patch_doc.splitlines()), end="\r\n")
                         continue
 
