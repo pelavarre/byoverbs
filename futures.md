@@ -499,6 +499,10 @@ add 'cal.py -v' to print reminder defs of -H YYYY-MM-DD, -m, -b, -M
     -H YYYMMDD place highlight, -M week from Monday, -b classic layout, -m MM month
 teach 'cal.py -H ...' to reject such as '20240116'
 
+:
+
+ZZ from demos/vi2.py -q
+
 
 ## Copied from
 

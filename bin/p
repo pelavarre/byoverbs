@@ -213,5 +213,8 @@ def_some_lazy_imports()  # ~0.75 ms
 ''' "$@"
 
 
+# todo: up line, insert line, print Import, restore cursor - when Import happens
+
+
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/p
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

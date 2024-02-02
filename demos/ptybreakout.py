@@ -139,8 +139,9 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
                     # Take the 3 Bytes b"\r~+" to mean add a Breakout Ball
 
                     if (i, j, k) == (ord("\r"), ord("~"), ord("+")):
-                        sprite = TerminalSprite(ts)
-                        sprites.append(sprite)
+                        if len(sprites) < 2:
+                            sprite = TerminalSprite(ts, index=len(sprites))
+                            sprites.append(sprite)
                         continue
 
                     # Take the 3 Bytes b"\r~-" to mean remove a Breakout Ball
@@ -193,13 +194,19 @@ LOG.flush()
 class TerminalShadow:
     """Keep up a guess of what one Sh Terminal looks like"""
 
+    holds = bytearray()  # partial Packet of Output Bytes
+
     rows: list[str]
     rows = list()  # Rows of Output Text Characters
 
     x = 0  # Cursor Column
     y = 0  # Cursor Row
 
-    holds = bytearray()  # partial Packet of Output Bytes
+    pens: list[bytes]
+    pens = list()  # Chosen Pen   # []  # [b"\x1B[7m"]
+
+    bitrows: list[list[int]]
+    bitrows = list()  # Reverse-Video Bit per Character  # [[1, 0, 1], [0, 1, 0]]
 
     def write_bytes(self, data):  # noqa C901
         """Keep up a guess of what one Sh Terminal looks like"""
@@ -208,6 +215,7 @@ class TerminalShadow:
 
         holds = self.holds
         rows = self.rows
+        bitrows = self.bitrows
 
         if False:
             log.write("\n")
@@ -231,6 +239,13 @@ class TerminalShadow:
 
             # Take C0_CONTROLS as moving the (Y, X) Cursor
 
+            assert "\b" == "\N{Backspace}"
+            assert "\r" == "\N{Carriage Return}"
+            assert "\n" == "\N{Line Feed}"
+
+            assert "\x1B[m" == Sgr.Plain
+            assert "\x1B[7m" == Sgr.ReverseVideo
+
             if seq[:1] in C0_BYTES:
                 if seq == b"\b":
                     self.x = max(0, self.x - 1)
@@ -238,8 +253,11 @@ class TerminalShadow:
                     self.x = 0
                 elif seq == b"\n":
                     self.y += 1
-                else:
-                    pass
+
+                elif seq == b"\x1B[m":
+                    self.pens.clear()
+                elif seq == b"\x1B[7m":
+                    self.pens.append(seq)
 
                 continue
 
@@ -247,22 +265,32 @@ class TerminalShadow:
 
             while self.y >= len(rows):
                 rows.append("")
+                bitrows.append(list())
 
             # Overlay or grow the Row
 
             row = rows[self.y]
+            bitrow = bitrows[self.y]
 
             decode = seq.decode()
             for ch in decode:
                 while self.x >= len(row):
                     row += " "
+                    bitrow += [0]
+                assert len(bitrow) == len(row), (len(bitrow), len(row))
+
                 row = row[: self.x] + ch + row[self.x + 1 :]
+                if self.pens:
+                    bitrow[self.x] = 1
+                else:
+                    bitrow[self.x] = 0
+
                 self.x += 1
 
             rows[self.y] = row
 
 
-def sys_stdio_kbhit(stdio, timeout=None) -> list[int]:  # 'timeout' in seconds
+def sys_stdio_kbhit(stdio, timeout) -> list[int]:  # 'timeout' in seconds
     """Wait till next Input Byte, else till Timeout, else till forever"""
 
     rlist: list[int] = [stdio]
@@ -279,12 +307,12 @@ def sys_stdio_kbhit(stdio, timeout=None) -> list[int]:  # 'timeout' in seconds
 #
 
 
-NUL = b"\0"  # 00/00 Null
-BEL = b"\a"  # 00/07 Bell
-BS = b"\b"  # 00/08 Backspace
-CR = b"\r"  # 00/13 Carriage Return
-CRLF = b"\r\n"  # 00/13 00/10 Carriage Return + Line Feed
-LF = b"\n"  # 00/10 Line Feed
+NUL = b"\0"  # 00/00 "\N{Nul}"
+BEL = b"\a"  # 00/07 "\N{Bel}"  # not "\N{Bell}""
+BS = b"\b"  # 00/08 "\N{Backspace}"
+CR = b"\r"  # 00/13 "\N{Carriage Return}"
+CRLF = b"\r\n"  # 00/13 00/10 "\N{Carriage Return}" "\N{Line Feed}"
+LF = b"\n"  # 00/10 "\N{Line Feed}"
 
 
 #
@@ -564,74 +592,184 @@ CUF_N = "\x1B[{}C"  # CSI 04/03 Cursor Right (CUF) of ΔX
 CUB_N = "\x1B[{}D"  # CSI 04/04 Cursor Left (CUB) of ΔX
 
 
+class Sgr:
+    """CSI 06/13 Select Graphic Rendition (SGR)"""
+
+    Plain = "\x1B[m"
+    ReverseVideo = "\x1B[7m"  # aka InverseVideo
+
+
 class TerminalSprite:
     """Work in parallel with Sh Terminal I/O"""
 
     steps = 0
 
-    ts: TerminalShadow
+    terminal_shadow: TerminalShadow
 
-    def __init__(self, ts) -> None:
-        self.ts = ts
+    goal: bool  # False to paint Plain, True to paint Reverse-Video
+
+    y: int
+    x: int
+
+    dy: int
+    dx: int
+
+    def __init__(self, ts, index) -> None:
+        self.terminal_shadow = ts
+        self.goal = not bool(index % 2)
+        self.yx_init()
+
+        self.dy = self.dx = 0
+        while (not self.dy) and (not self.dx):  # todo: interminable
+            self.dy = random.choice([-1, 0, 1])
+            self.dx = random.choice([-1, 0, 1])
 
     def step_ahead(self) -> None:
         """Work in parallel with Sh Terminal I/O"""
 
         self.steps += 1
 
-        fd = sys.stderr.fileno()
-        ts = self.ts
+        ts = self.terminal_shadow
+        assert ts.rows, (ts.rows,)
 
-        assert CUU_N == "\x1B[{}A"
-        assert CUD_N == "\x1B[{}B"
-        assert CUF_N == "\x1B[{}C"
-        assert CUB_N == "\x1B[{}D"
+        yx_0 = (self.y, self.x)
+        yx_1 = self.yx_glide()
+        yx_2 = self.yx_fit()
 
-        # Pick a Y-X-Character we can flip between Inverse Video and Plain
+        if yx_2 != yx_1:  # bouncing because hit a wall
+            self.dydx_bounce()
+        else:  # moving
+            coasting = self.y_x_bitget(*yx_1) == self.goal
+            self.y_x_bitput(*yx_1, bit=not self.goal)
+            self.y_x_bitput(*yx_0, bit=self.goal)
+            if not coasting:  # bouncing because took a spot
+                self.dydx_bounce()
+
+    def yx_init(self) -> tuple[int, int]:
+        """Land somewhere on the Text"""
+
+        ts = self.terminal_shadow
 
         if ts.rows:
             y = random.randrange(len(ts.rows))
             row = ts.rows[y]
             if row:
                 x = random.randrange(len(row))
-                ch = row[x]
 
-                # Don't flip the Blank Spaces beyond the Cursor in the Last Row
+        return self.y_x_warp(y, x)
 
-                if y == len(ts.rows) - 1:
-                    if x > ts.x:
-                        return
+    def y_x_warp(self, y, x) -> tuple[int, int]:
+        """Go to a place on the Text, or outside"""
 
-                # Work out how to flip it
+        self.y = y
+        self.x = x
 
-                cuu = cud = ""
-                if y < ts.y:
-                    cuu = "\x1B[{}A".format(ts.y - y)
-                    cud = "\x1B[{}B".format(ts.y - y)
+        yx = (y, x)
 
-                cto = cfrom = ""
-                if x != ts.x:
-                    if x < ts.x:
-                        cto = "\x1B[{}D".format(ts.x - x)
-                        cfrom = "\x1B[{}C".format(ts.x - x)
-                    else:
-                        cto = "\x1B[{}C".format(x - ts.x)
-                        cfrom = "\x1B[{}D".format(x - ts.x)
+        return yx
 
-                polarity = ""
-                plain = ""
-                if random.random() >= 0.5:
-                    polarity = "\x1B[7m"  # Inverse Video
-                    plain = "\x1B[0m"  # Plain
+    def yx_glide(self) -> tuple[int, int]:
+        """Move the Ball"""
 
-                bs = "\b"
+        y = self.y + self.dy
+        x = self.x + self.dx
 
-                writable = cuu + cto + polarity + ch + plain + bs + cfrom + cud
+        return self.y_x_warp(y, x)
 
-                # Flip it
+    def dydx_bounce(self) -> None:
+        """Reverse and tweak the Glide Vector"""
 
-                data = writable.encode()
-                os.write(fd, data)
+        self.dy = -self.dy
+        self.dx = -self.dx
+
+        if random.random() >= 0.5:
+            if random.random() >= 0.5:
+                self.dy = random.choice([-1, 0, 1])
+            else:
+                self.dx = random.choice([-1, 0, 1])
+
+            while (not self.dy) and (not self.dx):  # todo: interminable
+                self.dy = random.choice([-1, 0, 1])
+                self.dx = random.choice([-1, 0, 1])
+
+    def yx_fit(self) -> tuple[int, int]:
+        """Come back in to land on the nearest Text"""
+
+        ts = self.terminal_shadow
+        assert ts.rows, (ts.rows,)
+
+        while self.y >= len(ts.rows):
+            self.y -= 1
+
+        row = ts.rows[self.y]
+        while self.x >= len(row):
+            self.x -= 1
+
+        yx = (self.y, self.x)
+
+        return yx
+
+    def y_x_bitget(self, y, x) -> int:
+        """Get the Bit at (Y, X)"""
+
+        ts = self.terminal_shadow
+        bitrows = ts.bitrows
+        bitrow = bitrows[y]
+        bit = bitrow[x]
+
+        return bit
+
+    def y_x_bitput(self, y, x, bit) -> None:
+        """Put the Bit at (Y, X)"""
+
+        fd = sys.stderr.fileno()
+        ts = self.terminal_shadow
+
+        # Work out how to flip it
+
+        row = ts.rows[y]
+        ch = row[x]
+
+        assert Sgr.Plain == "\x1B[m"
+        assert Sgr.ReverseVideo == "\x1B[7m"
+
+        polarity = ""
+        plain = ""
+        if bit:
+            polarity = "\x1B[7m"  # Reverse-Video
+            plain = "\x1B[m"  # Plain
+
+        # Work out where to flip it
+
+        assert CUU_N == "\x1B[{}A"
+        assert CUD_N == "\x1B[{}B"
+        assert CUF_N == "\x1B[{}C"
+        assert CUB_N == "\x1B[{}D"
+
+        cuu = cud = ""
+        if y != ts.y:
+            assert y < ts.y, (y, ts.y)
+            cuu = "\x1B[{}A".format(ts.y - y)
+            cud = "\x1B[{}B".format(ts.y - y)
+
+        cto = cfrom = ""
+        if x != ts.x:
+            if x < ts.x:
+                cto = "\x1B[{}D".format(ts.x - x)
+                cfrom = "\x1B[{}C".format(ts.x - x)
+            else:
+                cto = "\x1B[{}C".format(x - ts.x)
+                cfrom = "\x1B[{}D".format(x - ts.x)
+
+        # Flip it
+
+        bs = "\b"
+
+        writable = cuu + cto + polarity + ch + plain + bs + cfrom + cud
+
+        data = writable.encode()
+        ts.write_bytes(data)
+        os.write(fd, data)
 
 
 #
@@ -641,6 +779,12 @@ class TerminalSprite:
 
 if __name__ == "__main__":
     main()
+
+
+# bug: b"\x09" Hard Tabs incorrectly occupy 1 Column, not 1..8 Columns?
+
+# bug: Sprites stop stepping at first Input after added? Till next Return ~
+# bug: Prints from 'def fd_patch_input' bypass the TerminalShadow?
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/ptybreakout.py
