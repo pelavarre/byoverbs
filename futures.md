@@ -503,6 +503,8 @@ teach 'cal.py -H ...' to reject such as '20240116'
 
 ZZ from demos/vi2.py -q
 
+grep out the Def that lack ' -> ' MyPy Auth
+
 
 ## Copied from
 

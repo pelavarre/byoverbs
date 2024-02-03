@@ -27,6 +27,7 @@ examples:
 
 
 import __main__
+import dataclasses
 import os
 import pty
 import random
@@ -45,14 +46,18 @@ PATCH_DOC = """
     Supported escape sequences:
     ~?  - this message
     ~~  - send the escape character by typing it twice
+    ~+  - start changing the look of the screen
+    ~-  - restore the look of the screen
     (Note that escapes are only recognized immediately after newline.)
 """
 
-# todo: ~+  - add a Breakout Ball
-# todo: ~-  - remove a Breakout Ball
+# classic Ssh defines ~? to print these Chars of Help, and more
 
 
-# Classic Ssh defines ~? to print these Chars of Help, and more
+class Main:
+    """Open up a shared workspace for the Code of this Py File"""
+
+    terminal_shadow: "TerminalShadow"
 
 
 def main() -> None:
@@ -84,13 +89,18 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
 
     patch_doc = textwrap.dedent(PATCH_DOC).strip()
 
-    ij = [ord("."), ord("\r")]
-    ts = TerminalShadow()
-
     sprites: list[TerminalSprite]
     sprites = list()
 
-    def fd_patch_output(fd):
+    holds = bytearray()
+    holds = bytearray(b"lsa\r")  # jitter
+
+    ij = [ord("."), ord("\r")]
+    ts = TerminalShadow()
+
+    Main.terminal_shadow = ts
+
+    def fd_patch_output(fd) -> bytes:
         """Take the chance to patch Output, or don't"""
 
         obytes = os.read(fd, 0x400)
@@ -98,19 +108,25 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
 
         return obytes
 
-    def fd_patch_input(fd):
+    def fd_patch_input(fd) -> bytes:
         """Take the chance to patch Input, or don't"""
 
         # Pull Bytes till some Bytes found to forward
 
         while True:
             for sprite in sprites:
-                while not sys_stdio_kbhit(sys.stderr, timeout=0.100):
+                while not sys_stdio_kbhit(sys.stderr.fileno(), timeout=0.100):
                     sprite.step_ahead()
 
-            ibytes = os.read(fd, 0x400)
+            # Pull Bytes
 
-            # Consider 3 Bytes at a time
+            if not holds:
+                ibytes = os.read(fd, 0x400)
+            else:
+                ibytes = bytes(holds)
+                holds.clear()
+
+            # Judge 3 Bytes at a time
 
             pbytes = bytearray()
             for k in ibytes:
@@ -132,14 +148,15 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
                     # Take the 3 Bytes b"\r~?" to mean explain thyself
 
                     if (i, j, k) == (ord("\r"), ord("~"), ord("?")):
-                        print("~?", end="\r\n")
-                        print("\r\n".join(patch_doc.splitlines()), end="\r\n")
+                        xprint("~?", end="\r\n")
+                        xprint("\r\n".join(patch_doc.splitlines()), end="\r\n")
                         continue
 
                     # Take the 3 Bytes b"\r~+" to mean add a Breakout Ball
 
                     if (i, j, k) == (ord("\r"), ord("~"), ord("+")):
-                        if len(sprites) < 2:
+                        if not sprites:
+                            xprint("~+", end="\r\n")
                             sprite = TerminalSprite(ts, index=len(sprites))
                             sprites.append(sprite)
                         continue
@@ -148,6 +165,7 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
 
                     if (i, j, k) == (ord("\r"), ord("~"), ord("-")):
                         if sprites:
+                            xprint("~-", end="\r\n")
                             sprite = sprites.pop()
                         continue
 
@@ -168,11 +186,6 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
 
     pty.spawn(argv, master_read=fd_patch_output, stdin_read=fd_patch_input)
 
-    if False:
-        print("==== OUTPUT WAS ====")
-        print("\n".join(ts.rows))
-        print("====")
-
     print(f"{len(sprites)} Sprites walked {list(_.steps for _ in sprites)} Steps")
 
     # compare 'def read' patching output for https://docs.python.org/3/library/pty.html
@@ -183,45 +196,39 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
 #
 
 
-# LOG = open("o.out", "w")  # jitter Sun 28/Jan
-LOG = open(os.devnull, "w")
-
-LOG.write("\n")  # once
-LOG.write("\n")  # twice
-LOG.flush()
-
-
 class TerminalShadow:
     """Keep up a guess of what one Sh Terminal looks like"""
 
     holds = bytearray()  # partial Packet of Output Bytes
 
-    rows: list[str]
-    rows = list()  # Rows of Output Text Characters
+    rows: list[str]  # Rows of Output Text Characters, from 0 to N-1
+    rows = list()
 
-    x = 0  # Cursor Column
-    y = 0  # Cursor Row
+    x = 0  # Cursor Column, counted from 0 Leftmost to N-1 Rightmost
+    y = 0  # Cursor Row, counted from 0 Topmost to N-1 Bottommost
 
-    pens: list[bytes]
-    pens = list()  # Chosen Pen   # []  # [b"\x1B[7m"]
+    pens: list[bytes]  # Chosen Pen   # []  # [b"\x1B[7m"]
+    pens = list()
 
-    bitrows: list[list[int]]
-    bitrows = list()  # Reverse-Video Bit per Character  # [[1, 0, 1], [0, 1, 0]]
+    bitrows: list[list[int]]  # Reverse-Video Bit per Character
+    bitrows = list()  # [[1, 0], [0, 1, 0]]
 
-    def write_bytes(self, data):  # noqa C901
+    def write_text(self, text) -> None:
         """Keep up a guess of what one Sh Terminal looks like"""
 
-        log = LOG
+        lines = text.split("\n")  # todo: "\r" and "\r\n" Line-Break's too
+        data = b"\r\n".join(_.encode() for _ in lines)
+
+        self.write_bytes(data)
+
+    def write_bytes(self, data) -> None:  # noqa C901
+        """Keep up a guess of what one Sh Terminal looks like"""
 
         holds = self.holds
         rows = self.rows
         bitrows = self.bitrows
 
-        if False:
-            log.write("\n")
-            log.write("\n")
-            log.write("{}\n".format(f"{data=}"))
-            log.flush()
+        iprint(f"{data=}  # write_bytes")
 
         # Split the Output Bytes into Packets
 
@@ -234,8 +241,8 @@ class TerminalShadow:
 
             holds[::] = holds[len(seq) :]
 
-            log.write("{}\n".format(f"{self.y=} {self.x=} {seq=}"))
-            log.flush()
+            yx = (self.y, self.x)
+            iprint(f"{yx=} {seq=}")
 
             # Take C0_CONTROLS as moving the (Y, X) Cursor
 
@@ -254,10 +261,11 @@ class TerminalShadow:
                 elif seq == b"\n":
                     self.y += 1
 
-                elif seq == b"\x1B[m":
-                    self.pens.clear()
-                elif seq == b"\x1B[7m":
-                    self.pens.append(seq)
+                elif re.match(CsiPattern, string=seq):
+                    self.write_csi_seq(seq)
+
+                else:
+                    iprint(f"{seq=} skipped  # write_bytes")
 
                 continue
 
@@ -289,6 +297,47 @@ class TerminalShadow:
 
             rows[self.y] = row
 
+    def write_csi_seq(self, seq) -> None:
+        """Guess how a CSI Seq changes the look of a Sh Terminal"""
+
+        assert CSI == b"\x1B["
+
+        assert CUU_N == "\x1B[{}A"  # Up
+        assert CUD_N == "\x1B[{}B"  # Down
+        assert CUF_N == "\x1B[{}C"  # Forward Right
+        assert CUB_N == "\x1B[{}D"  # Backwards Left
+
+        head = b"\x1B["  # "Control Sequence Inducer (CSI)"
+        body = seq[len(b"\x1B[") : -1]  # "Parameter Bytes"
+        tail = seq[-1:]  # "Final Byte"
+
+        assert (head + body + tail) == seq, (head, body, tail, seq)
+
+        if seq == b"\x1B[m":
+            self.pens.clear()
+            return
+
+        if seq == b"\x1B[7m":
+            self.pens.append(seq)
+            return
+
+        if tail in b"ABCD":
+            assert re.match(b"^[0-9]+$", string=body), (body,)
+            body_int = int(body)
+
+            if tail == b"A":
+                self.y -= body_int  # Up
+            elif tail == b"B":
+                self.y += body_int  # Down
+            elif tail == b"C":
+                self.x += body_int  # Right
+            elif tail == b"D":
+                self.x -= body_int  # Left
+
+            return
+
+        iprint(f"{seq=} skipped  # write_csi_seq")
+
 
 def sys_stdio_kbhit(stdio, timeout) -> list[int]:  # 'timeout' in seconds
     """Wait till next Input Byte, else till Timeout, else till forever"""
@@ -300,6 +349,8 @@ def sys_stdio_kbhit(stdio, timeout) -> list[int]:  # 'timeout' in seconds
     (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout)
 
     return alt_rlist
+
+    # works and returns [stdio] even when 'stdio is sys.stderr', not its .fileno()
 
 
 #
@@ -599,10 +650,11 @@ class Sgr:
     ReverseVideo = "\x1B[7m"  # aka InverseVideo
 
 
+@dataclasses.dataclass
 class TerminalSprite:
     """Work in parallel with Sh Terminal I/O"""
 
-    steps = 0
+    steps: int
 
     terminal_shadow: TerminalShadow
 
@@ -615,14 +667,15 @@ class TerminalSprite:
     dx: int
 
     def __init__(self, ts, index) -> None:
+        """Form Self"""
+
+        self.steps = 0
         self.terminal_shadow = ts
         self.goal = not bool(index % 2)
         self.yx_init()
+        self.dydx_init()
 
-        self.dy = self.dx = 0
-        while (not self.dy) and (not self.dx):  # todo: interminable
-            self.dy = random.choice([-1, 0, 1])
-            self.dx = random.choice([-1, 0, 1])
+        iprint(f"{self=}  # __init__")
 
     def step_ahead(self) -> None:
         """Work in parallel with Sh Terminal I/O"""
@@ -635,6 +688,8 @@ class TerminalSprite:
         yx_0 = (self.y, self.x)
         yx_1 = self.yx_glide()
         yx_2 = self.yx_fit()
+
+        iprint(f"{yx_0=} {yx_1=} {yx_2=}  # step_ahead")
 
         if yx_2 != yx_1:  # bouncing because hit a wall
             self.dydx_bounce()
@@ -656,6 +711,10 @@ class TerminalSprite:
             if row:
                 x = random.randrange(len(row))
 
+        if True:  # jitter Sat 3/Feb
+            y = len(ts.rows) - 1
+            x = 0
+
         return self.y_x_warp(y, x)
 
     def y_x_warp(self, y, x) -> tuple[int, int]:
@@ -667,6 +726,25 @@ class TerminalSprite:
         yx = (y, x)
 
         return yx
+
+    def dydx_init(self) -> tuple[int, int]:
+        """Pick a Direction and Speed"""
+
+        dy = dx = 0
+        while (not dy) and (not dx):  # todo: interminable
+            dy = random.choice([-1, 0, 1])
+            dx = random.choice([-1, 0, 1])
+
+        if True:  # jitter Sat 3/Feb
+            dy = -1
+            dx = 0
+
+        self.dy = dy
+        self.dx = dx
+
+        dydx = (dy, dx)
+
+        return dydx
 
     def yx_glide(self) -> tuple[int, int]:
         """Move the Ball"""
@@ -739,6 +817,8 @@ class TerminalSprite:
             polarity = "\x1B[7m"  # Reverse-Video
             plain = "\x1B[m"  # Plain
 
+        bs = "\b"
+
         # Work out where to flip it
 
         assert CUU_N == "\x1B[{}A"
@@ -746,30 +826,83 @@ class TerminalSprite:
         assert CUF_N == "\x1B[{}C"
         assert CUB_N == "\x1B[{}D"
 
-        cuu = cud = ""
+        yto = yfrom = ""
         if y != ts.y:
-            assert y < ts.y, (y, ts.y)
             cuu = "\x1B[{}A".format(ts.y - y)
             cud = "\x1B[{}B".format(ts.y - y)
+            (yto, yfrom) = (cuu, cud) if (y < ts.y) else (cud, cuu)
 
-        cto = cfrom = ""
+        xto = xfrom = ""
         if x != ts.x:
-            if x < ts.x:
-                cto = "\x1B[{}D".format(ts.x - x)
-                cfrom = "\x1B[{}C".format(ts.x - x)
-            else:
-                cto = "\x1B[{}C".format(x - ts.x)
-                cfrom = "\x1B[{}D".format(x - ts.x)
+            cub = "\x1B[{}D".format(ts.x - x)
+            cuf = "\x1B[{}C".format(ts.x - x)
+            (xto, xfrom) = (cub, cuf) if (y < ts.y) else (cuf, cub)
 
         # Flip it
 
-        bs = "\b"
-
-        writable = cuu + cto + polarity + ch + plain + bs + cfrom + cud
+        writable = yto + xto + polarity
+        writable += ch + bs
+        writable += yfrom + xfrom + plain
 
         data = writable.encode()
         ts.write_bytes(data)
         os.write(fd, data)
+
+
+#
+# Define variations on Print
+#
+
+
+TextIO = open(os.devnull, "w")
+TextIO = open("o.out", "w")  # jitter Sun 28/Jan
+
+
+def xprint(*args, **kwargs) -> None:
+    """Print to Stdout, but also to TerminalShadow"""
+
+    ts = Main.terminal_shadow
+
+    sep = kwargs.get("sep", " ")
+    printing = sep.join(str(_) for _ in args)
+
+    print(printing, **kwargs)
+    ts.write_text(printing + "\n")
+
+
+def iprint(*args, **kwargs) -> None:
+    """Print to Log File, not to Stdout"""
+
+    text_io = TextIO
+
+    # Compress =b'...' notation
+
+    sep = kwargs.get("sep", " ")
+    printing = sep.join(str(_) for _ in args)
+
+    find = printing.find("=b'")
+    rfind = printing.rfind("'")
+    if (find >= 0) and (rfind >= 0):
+        start = find + len("=b'")
+        stop = rfind
+
+        reps = printing[start:stop]
+        if reps:
+            ch = reps[-1]
+            n = len(reps)
+
+            if reps and (reps == (n * ch)):
+                alt = printing[:find] + f"={n} * b'" + ch + printing[rfind:]
+                if len(alt) < (len(printing) - 5):
+                    print(alt, **kwargs, file=text_io)
+                    text_io.flush()
+
+                    return
+
+    # Else print like normal, but to our TextIO Log File, and flush
+
+    print(printing, **kwargs, file=text_io)
+    text_io.flush()
 
 
 #
@@ -781,10 +914,20 @@ if __name__ == "__main__":
     main()
 
 
-# bug: b"\x09" Hard Tabs incorrectly occupy 1 Column, not 1..8 Columns?
+# feature: b"\x09" Hard Tabs incorrectly occupy 1 Column, not 1..8 Columns?
+# feature: should take ASDF and HJKL impulses
+# feature: should take --input=FILE option
+
+# bug: often trips up in leftmost column
+# bug: sometimes warps from one angled line to another
+# bug: sometimes lays characters back down several columns to the right of where taken
+# bug: sometimes moves the Terminal Cursor to the right
+# bug: sometimes crashes after moving the Terminal Cursor to the right off Screen
 
 # bug: Sprites stop stepping at first Input after added? Till next Return ~
 # bug: Prints from 'def fd_patch_input' bypass the TerminalShadow?
+
+# bug: Py 'pty.spawn' wrongly flushes Input Paste, in TcsAFlush style, not TcsADrain
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/ptybreakout.py

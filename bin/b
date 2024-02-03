@@ -8,4 +8,5 @@ else
     "$D"/black.bash "$@"
     "$D"/flake8.bash "$@"
     "$D"/mypy.bash "$@"
+    grep -nHR '^ *def ' "$@" |grep -v ' -> ' ||:
 fi
