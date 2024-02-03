@@ -93,7 +93,7 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
     sprites = list()
 
     holds = bytearray()
-    holds = bytearray(b"lsa\r")  # jitter
+    # holds = bytearray(b"lsa\r")  # jitter Sat 3/Feb
 
     ij = [ord("."), ord("\r")]
     ts = TerminalShadow()
@@ -296,6 +296,7 @@ class TerminalShadow:
                 self.x += 1
 
             rows[self.y] = row
+            assert bitrows[self.y] is bitrow
 
     def write_csi_seq(self, seq) -> None:
         """Guess how a CSI Seq changes the look of a Sh Terminal"""
@@ -322,8 +323,8 @@ class TerminalShadow:
             return
 
         if tail in b"ABCD":
-            assert re.match(b"^[0-9]+$", string=body), (body,)
-            body_int = int(body)
+            assert re.match(b"^[0-9]*$", string=body), (body,)
+            body_int = int(body) if body else 1
 
             if tail == b"A":
                 self.y -= body_int  # Up
@@ -693,10 +694,15 @@ class TerminalSprite:
 
         if yx_2 != yx_1:  # bouncing because hit a wall
             self.dydx_bounce()
-        else:  # moving
+        elif self.y_x_flying(*yx_1):  # coasting over no Text
+            self.y_x_visit(*yx_1, bit=not self.goal)
+            if not self.y_x_flying(*yx_0):
+                self.y_x_bitput(*yx_0, bit=self.goal)
+        else:  # moving over Text
             coasting = self.y_x_bitget(*yx_1) == self.goal
             self.y_x_bitput(*yx_1, bit=not self.goal)
-            self.y_x_bitput(*yx_0, bit=self.goal)
+            if not self.y_x_flying(*yx_0):
+                self.y_x_bitput(*yx_0, bit=self.goal)
             if not coasting:  # bouncing because took a spot
                 self.dydx_bounce()
 
@@ -712,6 +718,7 @@ class TerminalSprite:
                 x = random.randrange(len(row))
 
         if True:  # jitter Sat 3/Feb
+            y = 3
             y = len(ts.rows) - 1
             x = 0
 
@@ -754,45 +761,82 @@ class TerminalSprite:
 
         return self.y_x_warp(y, x)
 
-    def dydx_bounce(self) -> None:
+    def dydx_bounce(self) -> tuple[int, int]:
         """Reverse and tweak the Glide Vector"""
 
-        self.dy = -self.dy
-        self.dx = -self.dx
+        dy = -self.dy
+        dx = -self.dx
 
         if random.random() >= 0.5:
             if random.random() >= 0.5:
-                self.dy = random.choice([-1, 0, 1])
+                dy = random.choice([-1, 0, 1])
             else:
-                self.dx = random.choice([-1, 0, 1])
+                dx = random.choice([-1, 0, 1])
 
-            while (not self.dy) and (not self.dx):  # todo: interminable
-                self.dy = random.choice([-1, 0, 1])
-                self.dx = random.choice([-1, 0, 1])
+            while (not dy) and (not dx):  # todo: interminable
+                dy = random.choice([-1, 0, 1])
+                dx = random.choice([-1, 0, 1])
+
+        if True:  # jitter Sat 3/Feb
+            dy = -self.dy
+            dx = -self.dx
+
+        self.dy = dy
+        self.dx = dx
+
+        dydx = (dy, dx)
+
+        return dydx
 
     def yx_fit(self) -> tuple[int, int]:
-        """Come back in to land on the nearest Text"""
+        """Come back in to land on the Text, or over the first Column beyond it"""
 
         ts = self.terminal_shadow
         assert ts.rows, (ts.rows,)
 
-        while self.y >= len(ts.rows):
-            self.y -= 1
+        y = self.y
+        x = self.x
 
-        row = ts.rows[self.y]
-        while self.x >= len(row):
-            self.x -= 1
+        if y < 0:
+            y = 0
+        elif y >= len(ts.rows):
+            y = len(ts.rows) - 1
 
-        yx = (self.y, self.x)
+        row = ts.rows[y]
+        last_x = len(row)
+
+        if x < 0:
+            x = 0
+        elif x > last_x:
+            x = last_x - 1
+
+        self.y = y
+        self.x = x
+
+        yx = (y, x)
 
         return yx
+
+    def y_x_flying(self, y, x) -> bool:
+        """Say if flying over the first Column beyond the Text"""
+
+        ts = self.terminal_shadow
+
+        row = ts.rows[y]
+        last_x = len(row)
+
+        flying = x >= last_x
+
+        return flying
 
     def y_x_bitget(self, y, x) -> int:
         """Get the Bit at (Y, X)"""
 
         ts = self.terminal_shadow
         bitrows = ts.bitrows
+        assert 0 <= y < len(bitrows), (y, len(bitrows))
         bitrow = bitrows[y]
+        assert 0 <= x < len(bitrow), (x, len(bitrow))
         bit = bitrow[x]
 
         return bit
@@ -800,13 +844,20 @@ class TerminalSprite:
     def y_x_bitput(self, y, x, bit) -> None:
         """Put the Bit at (Y, X)"""
 
+        ts = self.terminal_shadow
+
+        row = ts.rows[y]
+        ch = row[x]
+
+        self.y_x_bitput_ch(y, x=x, ch_if=ch, bit=bit)
+
+    def y_x_bitput_ch(self, y, x, ch_if, bit) -> None:
+        """Put the Bit on the Ch at (Y, X)"""
+
         fd = sys.stderr.fileno()
         ts = self.terminal_shadow
 
         # Work out how to flip it
-
-        row = ts.rows[y]
-        ch = row[x]
 
         assert Sgr.Plain == "\x1B[m"
         assert Sgr.ReverseVideo == "\x1B[7m"
@@ -841,12 +892,18 @@ class TerminalSprite:
         # Flip it
 
         writable = yto + xto + polarity
-        writable += ch + bs
+        if ch_if:
+            writable += ch_if + bs
         writable += yfrom + xfrom + plain
 
         data = writable.encode()
         ts.write_bytes(data)
         os.write(fd, data)
+
+    def y_x_visit(self, y, x, bit) -> None:
+        """Move the Cursor to (Y, X) and back, as if putting a Bit there"""
+
+        self.y_x_bitput_ch(y, x=x, ch_if="", bit=bit)
 
 
 #
