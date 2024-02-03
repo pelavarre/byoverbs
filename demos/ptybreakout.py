@@ -79,6 +79,7 @@ def main() -> None:
     # Wrap the I/O of a Sh Terminal
 
     shline = ENV_SHELL
+    # shline = "/bin/bash"  # jitter Sat 3/Feb
     argv = shlex.split(shline)
 
     pty_spawn_argv(argv)
@@ -184,6 +185,12 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
             if pbytes:
                 return pbytes
 
+    fd = sys.stderr.fileno()
+    size = os.get_terminal_size(fd)
+    if True:  # jitter Sat 3/Feb  # evades Terminal Size Discovery Bug in 'pty.spawn'
+        os.putenv("LINES", str(size.lines))
+        os.putenv("COLUMNS", str(size.columns))
+
     pty.spawn(argv, master_read=fd_patch_output, stdin_read=fd_patch_input)
 
     print(f"{len(sprites)} Sprites walked {list(_.steps for _ in sprites)} Steps")
@@ -223,6 +230,8 @@ class TerminalShadow:
 
     def write_bytes(self, data) -> None:  # noqa C901
         """Keep up a guess of what one Sh Terminal looks like"""
+
+        fd = sys.stderr.fileno()
 
         holds = self.holds
         rows = self.rows
@@ -269,21 +278,37 @@ class TerminalShadow:
 
                 continue
 
-            # Find the Row
+            # Find the Row, and overlay or grow the Row, and maybe fall off the End
 
             while self.y >= len(rows):
                 rows.append("")
                 bitrows.append(list())
-
-            # Overlay or grow the Row
 
             row = rows[self.y]
             bitrow = bitrows[self.y]
 
             decode = seq.decode()
             for ch in decode:
+                size = os.get_terminal_size(fd)
+
+                if self.x >= size.columns:
+                    assert self.x == size.columns, (self.x, size.columns)
+
+                    rows[self.y] = row
+                    assert bitrows[self.y] is bitrow
+
+                    self.y += 1
+                    self.x = 0
+
+                    while self.y >= len(rows):
+                        rows.append("")
+                        bitrows.append(list())
+
+                    row = rows[self.y]
+                    bitrow = bitrows[self.y]
+
                 while self.x >= len(row):
-                    row += " "
+                    row += " "  # todo: fill with Flyover Blanks, not Spaces
                     bitrow += [0]
                 assert len(bitrow) == len(row), (len(bitrow), len(row))
 
