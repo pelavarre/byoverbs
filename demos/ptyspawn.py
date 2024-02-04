@@ -131,7 +131,9 @@ def pty_spawn_argv(argv) -> None:
             if pbytes:
                 return pbytes
 
+    print(f"entering pty.spawn {argv=}")
     pty.spawn(argv, master_read=fd_patch_output, stdin_read=fd_patch_input)
+    print("exiting pty.spawn")
 
     # compare 'def read' patching output for https://docs.python.org/3/library/pty.html
 

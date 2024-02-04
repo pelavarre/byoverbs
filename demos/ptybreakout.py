@@ -64,9 +64,9 @@ class Main:
     """Open up a shared workspace for the Code of this Py File"""
 
     terminal_shadow: "TerminalShadow"
-    iprint_when: dt.datetime
+    tprint_when: dt.datetime
 
-    iprint_when = dt.datetime.now()
+    tprint_when = dt.datetime.now()
 
 
 def main() -> None:
@@ -131,9 +131,12 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
         spritely = False
         while True:
             while not sys_stdio_kbhit(fd, timeout=0.100):
-                for sprite in sprites:
+                for i, sprite in enumerate(sprites):
                     spritely = True
                     sprite.step_ahead()
+
+                    ssk = sys_stdio_kbhit(fd, timeout=0.100)
+                    iprint(f"{i=} {ssk=}")
 
             # Pull Bytes
 
@@ -1091,7 +1094,7 @@ class TerminalSprite:
 # Choose a Log File
 
 TextIO = open(os.devnull, "w")
-# TextIO = open("o.out", "w")  # jitter Sat 3/Feb
+TextIO = open("o.out", "w")  # jitter Sat 3/Feb
 
 
 def xprint(*args, **kwargs) -> None:
@@ -1109,22 +1112,12 @@ def xprint(*args, **kwargs) -> None:
 
 
 def iprint(*args, **kwargs) -> None:
-    """Print to Log File, not to Stdout"""
-
-    text_io = TextIO
-
-    # Count milliseconds between Print's
-
-    now = dt.datetime.now()
-    ms_int = int((now - Main.iprint_when).total_seconds() * 1000)
-    ms = f"{ms_int}ms"
-
-    Main.iprint_when = now
-
-    # Compress =b'...' notation
+    """Print with Stamp to Log File not Stdout, but first compress if compressible"""
 
     sep = kwargs.get("sep", " ")
     printing = sep.join(str(_) for _ in args)
+
+    # Compress =b'...' notation
 
     find = printing.find("=b'")
     rfind = printing.rfind("'")
@@ -1140,18 +1133,38 @@ def iprint(*args, **kwargs) -> None:
             if reps and (reps == (n * ch)):
                 alt = printing[:find] + f"={n} * b'" + ch + printing[rfind:]
                 if len(alt) < (len(printing) - 5):
-                    if ms != "0ms":
-                        print(ms, file=text_io)
-                    print(alt, **kwargs, file=text_io)
-                    text_io.flush()
+                    tprint(alt, **kwargs)
 
                     return
 
     # Else print like normal, but to our TextIO Log File, and flush
 
-    if ms != "0ms":
-        print(ms, file=text_io)
-    print(printing, **kwargs, file=text_io)
+    tprint(printing, **kwargs)
+
+
+def tprint(*args, **kwargs) -> None:
+    """Add elapsed Milliseconds Stamp, and print to Log File not Stdout"""
+
+    text_io = TextIO
+
+    sep = kwargs.get("sep", " ")
+    printing = sep.join(str(_) for _ in args)
+
+    # Count milliseconds between Print's
+
+    now = dt.datetime.now()
+    ms_int = int((now - Main.tprint_when).total_seconds() * 1000)
+    ms = f"{ms_int}ms"
+
+    Main.tprint_when = now
+
+    # Add loud elapsed Milliseconds Stamp only if nonzero
+
+    if ms == "0ms":
+        print(printing, **kwargs, file=text_io)
+    else:
+        print("\n" + ms + "\n" + printing, **kwargs, file=text_io)
+
     text_io.flush()
 
 
@@ -1173,7 +1186,6 @@ if __name__ == "__main__":
 
 # bug: Balls don't fly over the Columns beyond the Text
 
-# bug: adding Sprites adds only the one, not two
 # bug: exiting Sprites doesn't restore Reverse/Plain Video
 # bug: exiting Sprites doesn't restore Sgr Colors
 
