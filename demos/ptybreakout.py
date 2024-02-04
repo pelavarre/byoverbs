@@ -37,6 +37,11 @@ import select
 import shlex
 import sys
 import textwrap
+import typing
+
+
+... == dict[str, int]  # new Syntax since Oct/2020 Python 3.9
+# ... == bytes | None  # new Syntax since Oct/2021 Python 3.10
 
 
 default_sh = "sh"
@@ -587,7 +592,7 @@ def bytes_take_startswith_else(data: bytes) -> bytes:
     # does misread Fn⌃⌥Delete b"\x1B\x1B[3;5~" as (b"\x1B", b"\x1B[3;5~")
 
 
-def _bytes_take_mouse_six_else(data) -> bytes | None:
+def _bytes_take_mouse_six_else(data) -> typing.Union[bytes, None]:  # bytes | None:
     """Take 1 whole Mouse Six Byte Report, else zero Bytes while partial, else None"""
 
     assert data, data  # not empty here
@@ -617,7 +622,7 @@ def _bytes_take_mouse_six_else(data) -> bytes | None:
     return seq  # not empty
 
 
-def _bytes_take_c0_plus_else(data) -> bytes | None:
+def _bytes_take_c0_plus_else(data) -> typing.Union[bytes, None]:  # bytes | None:
     """Take 1 whole C0 Control Sequence, else zero Bytes while partial, else None"""
 
     assert data, data  # not empty here
@@ -733,7 +738,7 @@ def _bytes_take_c0_esc_etc_else(data) -> bytes:  # noqa C901
     return seq  # not empty
 
 
-def _bytes_take_much_utf8_else(data) -> bytes | None:
+def _bytes_take_much_utf8_else(data) -> typing.Union[bytes, None]:  # bytes | None:
     """Take 1 or more whole UTF-8 Encodings of Text Chars"""
 
     assert data, data  # not empty here
@@ -980,7 +985,7 @@ class TerminalSprite:
 
         return yx
 
-    def y_x_flying_else(self, y, x) -> bool | None:
+    def y_x_flying_else(self, y, x) -> typing.Union[bool, None]:  # bool | None:
         """Say if flying over the Columns beyond the Text"""
 
         ts = self.terminal_shadow
