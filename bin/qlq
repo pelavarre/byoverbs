@@ -1,4 +1,8 @@
 set -e
-LINES=$(stty size </dev/tty |cut -d' ' -f1)
+if [[ $(stty size) == "0 0" ]]; then
+    LINES=24
+else
+    LINES=$(stty size </dev/tty |cut -d' ' -f1)
+fi
 set -xe
 git log --oneline --no-decorate "-$((2 * LINES / 3))" "$@"

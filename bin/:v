@@ -1,2 +1,6 @@
 set -xe
-printf '\e[8;999;%st' "$(stty size |cut -d' ' -f2)"
+if [[ $(stty size) == "0 0" ]]; then
+    printf '\e[8;999;80t'  # 80 Columns
+else
+    printf '\e[8;999;%st' "$(stty size |cut -d' ' -f2)"
+fi

@@ -1,5 +1,9 @@
 set -e
-LINES=$(stty size </dev/tty |cut -d' ' -f1)
+if [[ $(stty size) == "0 0" ]]; then
+    LINES=24
+else
+    LINES=$(stty size </dev/tty |cut -d' ' -f1)
+fi
 if [[ $# == 0 ]]; then
     set -xe
     head -$((LINES / 3))
