@@ -44,28 +44,61 @@ import typing
 # ... == bytes | None  # new Syntax since Oct/2021 Python 3.10
 
 
+#
+# Configure Staging
+#
+
+FIXME = False
+# FIXME = True  # jitter Sun 4/Feb
+
+
+# Choose a Log File
+
+TextIOElse: typing.Union[typing.TextIO, None]
+
+TextIOElse = None  # for 'vvprint', 'vprint'
+if FIXME:
+    TextIOElse = open("o.out", "w")  # jitter Sat 3/Feb
+
+
+#
+# Configure Production
+#
+
 default_sh = "sh"
 ENV_SHELL = os.getenv("SHELL", default_sh)
 
 
+# classic Ssh defines the \r ~ ? to print Help Lines
+
 PATCH_DOC = """
-    Supported escape sequences:
-    ~?  - this message
-    ~~  - send the escape character by typing it twice
-    ~+  - start changing the look of the screen
-    ~-  - restore the look of the screen
-    (Note that escapes are only recognized immediately after newline.)
+    Return ~ ?  show this help message
+    Return ~ ~  send the escape character by typing it twice
+    Return ~ +  start changing the look of the screen
+      ⇧Z⇧Q       quit & restore screen
+      ⇧Z⇧Z       quit but don't restore screen
+      H J K L    poke the Plain-Video Ball with ← ↓ ↑ →
+      A S D F    poke the Reverse-Video Ball with ← ↓ ↑ →
+      other key  ring the Terminal Bell
 """
 
-# classic Ssh defines ~? to print these Chars of Help, and more
+# Space  pause/ resume the Balls
+
+# 0123456789  pile up digits
+# G g  move 1 Ball to the Last Gameboard Row, or to a chosen Row
+# | \  move 1 Ball to the First Gameboard Column, or to a chosen Column
+
+# also quits when given Vi :q!\r :wq\r, Emacs ⌃X⌃C ⌃X⌃S, or Ssh \r~-
 
 
 class Main:
     """Open up a shared workspace for the Code of this Py File"""
 
     terminal_shadow: "TerminalShadow"
-    tprint_when: dt.datetime
 
+    digits = bytearray()
+
+    tprint_when: dt.datetime
     tprint_when = dt.datetime.now()
 
 
@@ -87,6 +120,12 @@ def main() -> None:
 
     # Wrap the I/O of a Sh Terminal
 
+    fd = sys.stderr.fileno()
+    size = os.get_terminal_size(fd)
+    if size == (0, 0):
+        print(f"{size=}", file=sys.stderr)
+        sys.exit(1)
+
     shline = ENV_SHELL
     # shline = "/bin/bash"  # jitter Sat 3/Feb
     argv = shlex.split(shline)
@@ -105,7 +144,7 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
     holds = bytearray()
     # holds = bytearray(b"lsa\r")  # jitter Sat 3/Feb
 
-    ij = [ord("."), ord("\r")]
+    abc = list(b"..\r")
 
     ts_fd = sys.stderr.fileno()
     ts = TerminalShadow(ts_fd)
@@ -118,9 +157,9 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
         if TextIOElse:
             TextIOElse.flush()
 
-        iprint("blocking  # fd_patch_output os.read fd")
+        vvprint("blocking  # fd_patch_output os.read fd")
         obytes = os.read(fd, 0x400)
-        iprint("unblocking  # fd_patch_output os.read fd")
+        vvprint("unblocking  # fd_patch_output os.read fd")
 
         ts.write_bytes(data=obytes)
 
@@ -130,6 +169,8 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
 
     def fd_patch_input(fd) -> bytes:
         """Take the chance to patch Input, or don't"""
+
+        digits = Main.digits
 
         # Run Sprites while waiting for Input
 
@@ -146,45 +187,64 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
                 TextIOElse.flush()
 
             if not holds:
-                iprint("blocking  # fd_patch_input os.read fd")
+                vvprint("blocking  # fd_patch_input os.read fd")
                 ibytes = os.read(fd, 0x400)
-                iprint("unblocking  # fd_patch_input os.read fd")
+                vvprint("unblocking  # fd_patch_input os.read fd")
             else:
                 ibytes = bytes(holds)
                 holds.clear()
 
-            # Judge 3 Bytes at a time
+            # Look back over 4 Input Bytes
 
             pbytes = bytearray()
-            for k in ibytes:
-                (i, j) = ij
-                ij[::] = [j, k]
+            for d in ibytes:
+                (a, b, c) = abc
+                abc[::] = [b, c, d]
+
+                abcd = bytes([a, b, c, d])
+
+                # Play the Game
+
+                if sprites:
+                    verb = sprites_take_abcd(sprites, abcd=abcd)
+                    if verb == "save_n_quit":
+                        digits.clear()
+                        ts.rows_commit()
+                        sprites.clear()
+                    elif verb == "quit_wout_save":
+                        digits.clear()
+                        ts.rows_rollback()
+                        sprites.clear()
+                    else:
+                        assert not verb, (verb, abcd)
+
+                    continue
 
                 # Take the 2 Bytes b"\r~" to mean hold the b"~" till next Byte
 
-                if (j, k) == (ord("\r"), ord("~")):
+                if abcd.endswith(b"\r~"):
                     continue
 
                 # Take the 3 Bytes b"\r~~" to mean forward the 2 Bytes b"\r~"
 
-                if (i, j) == (ord("\r"), ord("~")):
-                    if (i, j, k) == (ord("\r"), ord("~"), ord("~")):
-                        pbytes.append(k)
+                if (b, c) == (ord("\r"), ord("~")):
+                    if abcd.endswith(b"\r~~"):
+                        pbytes.append(d)
                         continue
 
                     # Take the 3 Bytes b"\r~?" to mean explain thyself
 
-                    if (i, j, k) == (ord("\r"), ord("~"), ord("?")):
+                    if abcd.endswith(b"\r~?"):
                         xprint("~?", end="\r\n")
                         xprint("\r\n".join(patch_doc.splitlines()), end="\r\n")
                         continue
 
                     # Take the 3 Bytes b"\r~+" to mean add a Breakout Ball
 
-                    if (i, j, k) == (ord("\r"), ord("~"), ord("+")):
+                    if abcd.endswith(b"\r~+"):
                         xprint("~+", end="")
                         if not sprites:
-                            ts.rows_clone_up()
+                            ts.rows_checkpoint()
 
                             sprite_a = TerminalSprite(ts, index=len(sprites))
                             xprint(end="\r\n")
@@ -195,25 +255,15 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
 
                         continue
 
-                    # Take the 3 Bytes b"\r~-" to mean remove a Breakout Ball
-
-                    if (i, j, k) == (ord("\r"), ord("~"), ord("-")):
-                        xprint("~-", end="\r\n")
-                        if sprites:
-                            ts.rows_rollback()
-                            sprites.clear()
-
-                        continue
-
                     # Else forward the b"~" of b"\r~" with the next Byte
 
-                    pbytes.append(j)
-                    pbytes.append(k)
+                    pbytes.append(c)
+                    pbytes.append(d)
                     continue
 
                 # Else forward the Byte immediately
 
-                pbytes.append(k)
+                pbytes.append(d)
 
             # Take a lil more Cpu, when forwarding Bytes might deny us Cpu
 
@@ -241,6 +291,113 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
         sprites.clear()  # unneeded
 
     # compare 'def read' patching output for https://docs.python.org/3/library/pty.html
+
+
+def sprites_take_abcd(sprites, abcd) -> str:  # noqa C901
+    r"""React to last 4 Bytes of Input, after our abc = "..\r" start"""
+
+    ts = Main.terminal_shadow
+    digits = Main.digits
+
+    dbyte = abcd[-1:]
+
+    vprint(f"{abcd=}  # fd_patch_input while Sprites")
+
+    # Pile up Decimal Digits
+
+    if (dbyte in b"123456789") or (digits and (dbyte == b"0")):
+        digits.extend(dbyte)
+        return ""
+
+    size = os.get_terminal_size(ts.fd)
+
+    digits_int = 1
+    if digits:
+        digits_int = int(digits)  # todo: test many Digits
+        assert digits_int >= 1, (digits_int, digits)
+
+    if dbyte in b"gG":
+        assert ts.cloned_rows, (ts.cloned_rows,)
+        if not digits:
+            digits_int = len(ts.cloned_rows)
+        index = dbyte == b"G"
+        sprite = sprites[index]
+        sprite.y = digits_int - 1
+        assert 0 <= sprite.y < len(ts.cloned_rows), (sprite.y, len(ts.cloned_rows))
+        return ""
+
+    if dbyte in rb"\|":
+        index = dbyte == b"|"
+        sprite = sprites[index]
+        if digits_int >= size.columns:
+            digits_int = size.columns
+        sprite.x = digits_int - 1
+        assert 0 <= sprite.x < size.columns, (sprite.x, size.columns)
+        return ""
+
+    digits.clear()
+
+    # Save and Quit, or Quit without Saving, or wait for more Input Bytes
+
+    assert (ord("C") ^ 0x40) == 0x03
+    assert (ord("S") ^ 0x40) == 0x13
+    assert (ord("X") ^ 0x40) == 0x18
+
+    save_n_quits = (b":wq\r", b"ZZ", b"\x18\x13")
+    quits_wout_save = (b":q!\r", b"ZQ", b"\x18\x03", b"\r~-")
+
+    if any(abcd.endswith(_) for _ in save_n_quits):  # :wq\r ⇧Z⇧Z ⌃X⌃S
+        return "save_n_quit"
+
+    if any(abcd.endswith(_) for _ in quits_wout_save):  # :q!\r ⇧Z⇧Q ⌃X⌃C
+        return "quit_wout_save"
+
+    if any((dbyte in _) for _ in (save_n_quits + quits_wout_save)):
+        return ""
+
+    # Poke one Sprite to step Left/ Down/ Up/ Right
+
+    dy_by_byte = dict(zip(b"asdf" b"hjkl", 2 * (0, +1, -1, 0)))
+    dx_by_byte = dict(zip(b"asdf" b"hjkl", 2 * (-1, 0, 0, +1)))
+    if dbyte in b"asdf" b"hjkl":
+        (dy, dx) = (dy_by_byte[ord(dbyte)], dx_by_byte[ord(dbyte)])
+
+        index = dbyte in b"hjkl"  # not in b"asdf"
+
+        sprite = sprites[index]
+        sprite.dy = dy
+        sprite.dx = dx
+
+        vprint(f"{dbyte=} {sprite.goal=} {sprite.dy=} {sprite.dx=}")
+
+        sprite.step_ahead()
+
+        return ""
+
+    # Rewrite the Screen to match our Shadow of it
+
+    assert (ord("L") ^ 0x40) == 0x0C
+
+    if dbyte == b"\x0C":  # ⌃L
+        ts.rows_rewrite(ts.rows, bitrows=ts.bitrows)
+
+        return ""
+
+    # Pause/ resume the Sprites
+
+    if dbyte == b" ":  # Space
+        for sprite in sprites:
+            sprite.singly = not sprite.singly
+
+        return ""
+
+    # Shove back sharp & loud against meaningless Input
+
+    vprint(f"{dbyte=} Bel")
+    sys.stderr.write("\a")  # Terminal Bell
+    sys.stderr.flush()
+
+    return ""
 
 
 #
@@ -276,22 +433,38 @@ class TerminalShadow:
 
         self.fd = fd  # sys.stderr.fileno()
 
-    def rows_clone_up(self) -> None:
+    def rows_checkpoint(self) -> None:
         """Clone the Rows of Text, before inviting the Sprites to overwrite them"""
+
+        assert len(self.rows) == len(self.bitrows), (len(self.rows), len(self.bitrows))
+        for row, bitrow in zip(self.rows, self.bitrows):
+            assert len(row) == len(bitrow), (len(row), len(bitrow))
 
         assert not self.cloned_rows, (self.cloned_rows,)
         assert not self.cloned_bitrows, (self.cloned_bitrows,)
 
-        self.cloned_rows.extend(self.rows)
-        self.cloned_bitrows.extend(self.bitrows)
+        self.cloned_rows.extend(self.rows)  # need deep copy of 'bitrows'
+        self.cloned_bitrows.extend(list(list(_) for _ in self.bitrows))
 
     def rows_rollback(self) -> None:
+        """Rewrite the Rows of Text"""
+
+        cloned_rows = self.cloned_rows
+        cloned_bitrows = self.cloned_bitrows
+        self.rows_rewrite(cloned_rows, bitrows=cloned_bitrows)
+        self.rows_commit()
+
+    def rows_rewrite(self, rows, bitrows) -> None:
         """Rewrite the Rows of Text"""
 
         assert CUU_N == "\x1B[{}A"  # Up
         assert EL == "\x1B[K"  # Erase in Line (EL)  # 04/11
 
-        rows = self.cloned_rows
+        alt_rows = list(rows)
+        alt_bitrows = list(bitrows)
+        assert len(alt_rows) == len(alt_bitrows), (len(alt_rows), len(alt_bitrows))
+        n = len(alt_rows)
+
         y = self.y
 
         if y:
@@ -301,8 +474,31 @@ class TerminalShadow:
         xprint("\r", end="")
 
         el = "\x1B[K"
-        for i, row in enumerate(rows):
-            xprint(el + row, end=self.end)
+        for i, pair in enumerate(zip(alt_rows, alt_bitrows)):
+            (row, bitrow) = pair
+            assert len(row) == len(bitrow), (len(row), len(bitrow), i, n)
+
+            compressed = ""
+            for x, ch in enumerate(row):
+                bit = bitrow[x]
+                polarity = "\x1B[7m" if bit else "\x1B[m"  # todo: don't write unneeded
+                if ch != "\t":  # prints all but Tabs
+                    compressed += polarity + ch
+                elif not compressed.endswith("\t"):  # prints first Tab
+                    compressed += polarity + ch
+                elif not (x % 8):  # prints another Tab at each Tab Stop
+                    compressed += polarity + ch
+                else:  # skips filler Tabs extending the first Tab
+                    pass
+
+            xprint(el + compressed, end=self.end)
+
+        assert len(self.rows) == len(self.bitrows), (len(self.rows), len(self.bitrows))
+        for row, bitrow in zip(self.rows, self.bitrows):
+            assert len(row) == len(bitrow), (len(row), len(bitrow))
+
+    def rows_commit(self) -> None:
+        """Forget about rewriting the Rows of Text"""
 
         self.cloned_rows.clear()
         self.cloned_bitrows.clear()
@@ -322,6 +518,9 @@ class TerminalShadow:
 
         rows = self.rows
         bitrows = self.bitrows
+
+        assert self.x >= 0, (self.y, self.x)  # not (self.x, self.y)
+        assert self.y >= 0, (self.y, self.x)
 
         # Split the Output Bytes into Packets
 
@@ -345,28 +544,30 @@ class TerminalShadow:
             assert "\x1B[m" == Sgr.Plain  # 06/13
             assert "\x1B[7m" == Sgr.ReverseVideo  # 06/13
 
-            if seq[:1] in C0_BYTES:
+            if seq == b"\t":
+                pass
+            elif seq[:1] in C0_BYTES:
                 if seq == b"\b":
-                    iprint(f"{yx=} {seq=}")  # b"\b"
+                    vvprint(f"{yx=} {seq=}")  # b"\b"
                     self.x = max(0, self.x - 1)
                 elif seq == b"\r":
-                    iprint(f"{yx=} {seq=}")  # b"\r"
+                    vvprint(f"{yx=} {seq=}")  # b"\r"
                     self.x = 0
                 elif seq == b"\n":
-                    iprint(f"{yx=} {seq=}")  # b"\n"
+                    vvprint(f"{yx=} {seq=}")  # b"\n"
                     self.y += 1
 
                 elif re.match(CsiPattern, string=seq):
                     self.write_csi_seq(seq)
 
                 else:
-                    iprint(f"skipping {yx=} {seq=}  # write_bytes")
+                    vprint(f"skipping {yx=} {seq=}  # write_bytes")
 
                 continue
 
             # Find or make the first Row to write
 
-            iprint(f"{yx=} {seq=}")  # writing Text, not C0_CONTROLS
+            vvprint(f"{yx=} {seq=}")  # writing Text or Tab, not other C0_CONTROLS
 
             while self.y >= len(rows):
                 rows.append("")
@@ -381,12 +582,16 @@ class TerminalShadow:
             for ch in decode:
                 size = os.get_terminal_size(self.fd)
 
-                # Wrap beyond Screen into the next Row
+                # Wrap beyond Screen into the next Row, only when not Tabbing,
+                # with late roundoff of \x1B[{};{}H CUP_Y1_X1, \x1B{}C CUF_N
 
                 if self.x >= size.columns:
+                    self.x = size.columns
+
+                if (ch != "\t") and (self.x >= size.columns):
                     assert self.x == size.columns, (self.x, size.columns)
 
-                    rows[self.y] = row
+                    rows[self.y] = row  # unneeded when equal already
                     assert bitrows[self.y] is bitrow
 
                     self.y += 1
@@ -401,29 +606,45 @@ class TerminalShadow:
 
                 # Grow the Row
 
-                while self.x >= len(row):
-                    row += " "  # todo: fill with Flyover Blanks, not Spaces
-                    bitrow += [0]
+                while True:
+                    while self.x >= len(row):
+                        row += " "
+                        bitrow += [0]
 
-                assert len(bitrow) == len(row), (len(bitrow), len(row))
+                    assert len(bitrow) == len(row), (len(bitrow), len(row))
+                    assert len(row) <= size.columns, (len(row), size.columns)
 
-                # Overwrite the Column, and move the Cursor past it
+                    # Overwrite the Column
 
-                y = self.y
-                x = self.x
+                    y = self.y
+                    x = self.x
 
-                assert x < len(row), (x, len(row), y)  # these two should never fail
-                assert x < len(bitrow), (x, len(bitrow), y)  # i thought i saw this one
+                    assert 0 <= x < len(row), (x, len(row), y)
+                    assert 0 <= x < len(bitrow), (x, len(bitrow), y)
 
-                row = row[: x] + ch + row[x + 1 :]
+                    row = row[:x] + ch + row[x + 1 :]
 
-                if not self.inks:
-                    bitrow[x] = 0
-                else:
-                    iprint(f"{y=} {x=} bit 1")
-                    bitrow[x] = 1
+                    if not self.inks:
+                        vvprint(f"{y=} {x=} bit 0")
+                        bitrow[x] = 0
+                    else:
+                        vvprint(f"{y=} {x=} bit 1")
+                        bitrow[x] = 1
 
-                self.x += 1
+                    assert len(bitrow) == len(row), (len(bitrow), len(row))
+
+                    # Move the Cursor past the Column Written, even off Screen
+
+                    self.x += 1
+
+                    if ch != "\t":
+                        break
+
+                    if self.x >= size.columns:
+                        assert self.x == size.columns, (self.x, size.columns)
+                        break
+                    if not (self.x % 8):
+                        break
 
             rows[self.y] = row
             assert bitrows[self.y] is bitrow
@@ -449,17 +670,17 @@ class TerminalShadow:
         assert "\x1B[7m" == Sgr.ReverseVideo  # 06/13
 
         if seq == b"\x1B[m":  # 06/13
-            iprint(f"{yx=} {seq=}")  # b"\x1B[m"
+            vvprint(f"{yx=} {seq=}")  # b"\x1B[m"
             self.inks.clear()
             return
 
         if seq == b"\x1B[0m":  # 06/13
-            iprint(f"{yx=} {seq=}")  # b"\x1B[0m"
+            vvprint(f"{yx=} {seq=}")  # b"\x1B[0m"
             self.inks.clear()
             return
 
         if seq == b"\x1B[7m":  # 06/13
-            iprint(f"{yx=} {seq=}")  # b"\x1B[7m"
+            vvprint(f"{yx=} {seq=}")  # b"\x1B[7m"
             self.inks.append(seq)
             return
 
@@ -471,7 +692,17 @@ class TerminalShadow:
         assert CUB_N == "\x1B[{}D"  # Backwards Left
 
         if tail in b"ABCD":
-            iprint(f"{yx=} {seq=}")  # \x1B[{}A but for A or B or C or D
+            vvprint(f"{yx=} {seq=}")  # \x1B[{}A but for A or B or C or D
+
+            size = os.get_terminal_size(self.fd)
+
+            assert 0 <= self.y, (self.y, self.x)
+            assert 0 <= self.x, (self.y, self.x)  # not (x, y)
+
+            if self.y >= size.lines:
+                self.y = size.lines - 1
+            if self.x >= size.columns:
+                self.x = size.columns - 1
 
             assert re.match(b"^[0-9]*$", string=body), (body,)
             body_int = int(body) if body else 1
@@ -494,7 +725,7 @@ class TerminalShadow:
 
         if tail == b"J":
             if not body:
-                iprint(f"{yx=} {seq=}")  # b"\x1B[J"
+                vvprint(f"{yx=} {seq=}")  # b"\x1B[J"
 
                 self.y_x_end_one_row(self.y, x=self.x)
                 self.y_end_the_rows(self.y + 1)
@@ -504,7 +735,7 @@ class TerminalShadow:
 
         if tail == b"K":
             if not body:
-                iprint(f"{yx=} {seq=}")  # b"\x1B[K"
+                vvprint(f"{yx=} {seq=}")  # b"\x1B[K"
 
                 self.y_x_end_one_row(self.y, x=self.x)
                 return
@@ -513,7 +744,7 @@ class TerminalShadow:
 
         # Log the Instructions we shrug off
 
-        iprint(f"skipping {yx=} {seq=}  # write_csi_seq")
+        vprint(f"skipping {yx=} {seq=}  # write_csi_seq")
 
     def y_x_end_one_row(self, y, x) -> None:
         """Truncate one Row on Demand"""
@@ -525,6 +756,8 @@ class TerminalShadow:
         if y < len(rows):
             rows[y] = rows[y][:x]
             bitrows[y] = bitrows[y][:x]
+
+            assert len(rows[y]) == len(bitrows[y]), (len(rows[y]), len(bitrows[y]))
 
     def y_end_the_rows(self, y) -> None:
         """Truncate Rows on Demand"""
@@ -749,7 +982,7 @@ def _bytes_take_c0_esc_etc_else(data) -> bytes:  # noqa C901
 
         if esc_plus == b"\x1B]":  # OSC
             find = data.find(b"\x07")
-            if find < 0:  # todo: ugh, unbounded
+            if find < 0:  # todo: ugh, unbounded delay till b"\x07" does arrive
                 return b""
 
             find_plus = find + len(b"\x07")
@@ -858,6 +1091,7 @@ class TerminalSprite:
     """Work in parallel with Sh Terminal I/O"""
 
     steps: int
+    singly: bool
 
     terminal_shadow: TerminalShadow
 
@@ -873,6 +1107,8 @@ class TerminalSprite:
         """Form Self"""
 
         self.steps = 0
+        self.singly = False
+
         self.terminal_shadow = ts
         self.goal = 0 if (index % 2) else 1
         self.yx_init()
@@ -881,10 +1117,16 @@ class TerminalSprite:
     def step_ahead(self) -> None:
         """Work in parallel with Sh Terminal I/O"""
 
+        if FIXME:
+            if self.goal != 0:
+                return
+
         self.steps += 1
 
         ts = self.terminal_shadow
         assert ts.rows, (ts.rows,)
+
+        #
 
         yx_0 = (self.y, self.x)
         yx_1 = self.yx_glide()
@@ -895,15 +1137,28 @@ class TerminalSprite:
             self.y_x_warp(*yx_0)
             yx_3 = yx_0
 
-        below = self.y_x_bitget(*yx_3)
-        ballish = not self.goal
-        if below != ballish:
-            self.y_x_bitput(*yx_3, bit=ballish)
+        vprint(f"{yx_0=} {yx_1=} {yx_2=} {yx_3=}  # step_ahead")
+
+        #
 
         self.y_x_bitput(*yx_0, bit=self.goal)
 
-        if (yx_2 != yx_1) or (below != ballish):
+        below = self.y_x_bitget(*yx_3)
+        ballish = not self.goal
+        vprint(f"{below=} {ballish=}  # step_ahead")
+
+        if below != ballish:
+            self.y_x_bitput(*yx_3, bit=ballish)
+
+        if (yx_2 != yx_1) or (below == ballish):
             self.dydx_bounce()
+
+        if self.singly:
+            vprint("singly read  # step_ahead")
+            if TextIOElse:
+                TextIOElse.flush()
+            while not sys_stdio_kbhit(ts.fd, timeout=123):
+                pass
 
     def yx_init(self) -> tuple[int, int]:
         """Land somewhere on the Text"""
@@ -915,7 +1170,16 @@ class TerminalSprite:
         y = len(rows) - 1  # the last Row
 
         row = rows[y]
-        x = len(row)  # the first Column past the Text
+        size = os.get_terminal_size(ts.fd)
+        if len(row) < size.columns:
+            x = len(row)  # the first Column past the Text
+        else:
+            x = size.columns - 1  # the last Column of the Text
+
+        if FIXME:
+            self.singly = True
+            y = 1
+            x = 85
 
         yx = self.y_x_warp(y, x)
 
@@ -942,6 +1206,10 @@ class TerminalSprite:
                 continue
 
             break
+
+        if FIXME:
+            dy = 0
+            dx = +1
 
         self.dy = dy
         self.dx = dx
@@ -995,13 +1263,17 @@ class TerminalSprite:
         elif y >= len(cloned_rows):
             y = len(cloned_rows) - 1
 
-        cloned_row = ts.cloned_rows[y]
-        beyond_x = len(cloned_row)  # the first Column beyond the Text
+        c_row = ts.cloned_rows[y]
+        beyond_x = len(c_row)  # the first Column beyond the Text
 
         if x < 0:
             x = 0
         elif x > beyond_x:
             x = beyond_x
+
+        size = os.get_terminal_size(ts.fd)
+        if x > (size.columns - 1):
+            x = size.columns - 1
 
         self.y = y
         self.x = x
@@ -1010,12 +1282,11 @@ class TerminalSprite:
 
         return yx
 
-        # todo: test writing Last Column of Screen
-
     def y_x_bitget(self, y, x) -> int:
         """Get the Bit at (Y, X)"""
 
         ts = self.terminal_shadow
+
         bitrows = ts.bitrows
         assert 0 <= y < len(bitrows), (y, len(bitrows))
         bitrow = bitrows[y]
@@ -1031,8 +1302,8 @@ class TerminalSprite:
 
         ts = self.terminal_shadow
 
-        row = ts.rows[y]
-        ch = row[x] if x < len(row) else " "  # pads beyond Row with Space's
+        c_row = ts.cloned_rows[y]
+        ch = c_row[x] if x < len(c_row) else " "  # pads beyond Row with Space's
 
         self.y_x_bitput_ch(y, x=x, ch_if=ch, bit=bit)
 
@@ -1040,6 +1311,8 @@ class TerminalSprite:
         """Put the Bit on the Ch at (Y, X)"""
 
         ts = self.terminal_shadow
+
+        vprint(f"{y=} {x=} {ch_if=} {bit=} @ {ts.y=} {ts.x=} # y_x_bitput_ch")
 
         # Work out how to flip it
 
@@ -1079,32 +1352,29 @@ class TerminalSprite:
 
         # Flip it
 
+        size = os.get_terminal_size(ts.fd)
+
         writable = yto + xto + polarity
+
         if ch_if:
-            writable += ch_if + bs
+            if x < (size.columns - 1):
+                writable += ch_if + bs
+            else:
+                assert x == (size.columns - 1), (x, size.columns)
+                writable += ch_if
+
+                # todo: \x1B{}H CUP_Y1_X1 in place of BS for Terminals who wrap
+
         writable += yfrom + xfrom + plain
 
         data = writable.encode()
         ts.write_bytes(data)
         os.write(ts.fd, data)
 
-    def y_x_visit(self, y, x, bit) -> None:
-        """Move the Cursor to (Y, X) and back, as if putting a Bit there"""
-
-        self.y_x_bitput_ch(y, x=x, ch_if="", bit=bit)
-
 
 #
-# Define variations on Print
+# Amp up Print for the TerminalShadow
 #
-
-
-# Choose a Log File
-
-TextIOElse: typing.Union[typing.TextIO, None]
-
-TextIOElse = None
-# TextIOElse = open("o.out", "w")  # jitter Sat 3/Feb
 
 
 def xprint(*args, **kwargs) -> None:
@@ -1121,7 +1391,23 @@ def xprint(*args, **kwargs) -> None:
     ts.write_text(printing + end)
 
 
-def iprint(*args, **kwargs) -> None:
+#
+# Amp up Print for Logging
+#
+
+
+def vprint(*args, **kwargs) -> None:
+    ctprint(*args, **kwargs)
+    return
+
+
+def vvprint(*args, **kwargs) -> None:
+    return
+    ctprint(*args, **kwargs)
+    return
+
+
+def ctprint(*args, **kwargs) -> None:
     """Print with Stamp to Log File not Stdout, but first compress if compressible"""
 
     if not TextIOElse:
@@ -1176,7 +1462,7 @@ def tprint(*args, **kwargs) -> None:
 
     # Add loud elapsed Milliseconds Stamp only if nonzero
 
-    if ms == "0ms":
+    if ms in ("0ms", "1ms"):
         print(printing, **kwargs, file=text_io)
     else:
         print("\n" + ms + "\n" + printing, **kwargs, file=text_io)
@@ -1191,17 +1477,13 @@ if __name__ == "__main__":
     main()
 
 
-# feature: b"\x09" Hard Tabs incorrectly occupy 1 Column, not 1..8 Columns?
-# feature: should take ASDF and HJKL impulses
-# feature: should take --input=FILE option
-
-
-# bug: 'noqa C901' marks on 4 Def's
-
-# bug: Balls moving through the last Screen Column look strange
+# bug: refactor os.get_terminal_size into TerminalShadow
+# bug: 'noqa C901' marks on 5 Def's
 
 # bug: exiting Sprites doesn't restore Reverse/Plain Video
 # bug: exiting Sprites doesn't restore Sgr Colors
+
+# bug: add -vvv depth to wake up logging without recompiling
 
 # bug: 'pty.spawn' calls for patches only when unpatched I/O available
 # bug: 'pty.spawn' wrongly flushes Input Paste, in TcsAFlush style, not TcsADrain
