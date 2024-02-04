@@ -217,7 +217,9 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
         os.putenv("LINES", str(size.lines))
         os.putenv("COLUMNS", str(size.columns))
 
+    assert ts.end == "\r\n", (repr(ts.end),)
     pty.spawn(argv, master_read=fd_patch_output, stdin_read=fd_patch_input)
+    ts.end = "\n"
 
     if sprites:
         ts.rows_restore()
@@ -235,6 +237,8 @@ class TerminalShadow:
     """Keep up a guess of what one Sh Terminal looks like"""
 
     holds = bytearray()  # partial Packet of Output Bytes
+
+    end = "\r\n"  # Encoding of Line-Break
 
     rows: list[str]  # Rows of Output Text Characters, from 0 to N-1
     rows = list()
@@ -255,6 +259,7 @@ class TerminalShadow:
         assert EL == "\x1B[K"  # Erase in Line (EL)  # 04/11
 
         rows = list(self.rows)
+        # bitrows = list(self.bitrows)
         y = self.y
 
         if y:
@@ -265,7 +270,7 @@ class TerminalShadow:
 
         el = "\x1B[K"
         for i, row in enumerate(rows):
-            xprint(el + row)
+            xprint(el + row, end=self.end)
 
     def write_text(self, text) -> None:
         """Keep up a guess of what one Sh Terminal looks like"""
@@ -363,6 +368,7 @@ class TerminalShadow:
 
                 row = row[: self.x] + ch + row[self.x + 1 :]
                 if self.inks:
+                    iprint(f"{self.y=} {self.x=} bit 1")
                     bitrow[self.x] = 1
                 else:
                     bitrow[self.x] = 0
@@ -397,7 +403,10 @@ class TerminalShadow:
             self.inks.clear()
             return
 
-            # todo: when does b"\x1B[0m" matter
+        if seq == b"\x1B[0m":  # 06/13
+            iprint(f"{yx=} {seq=}")
+            self.inks.clear()
+            return
 
         if seq == b"\x1B[7m":  # 06/13
             iprint(f"{yx=} {seq=}")
@@ -832,17 +841,21 @@ class TerminalSprite:
         yx_1 = self.yx_glide()
         yx_2 = self.yx_fit()
 
-        iprint(f"{yx_0=} {yx_1=} {yx_2=} {dydx=}  # step_ahead")
-
         if yx_2 != yx_1:
-            if self.y_x_flying_else(*yx_1) is None:  # if not flying just beyond Text
+            if self.y_x_flying_else(*yx_1) is None:  # if not flying beyond Text
+                iprint(f"{yx_0=} {yx_1=} {yx_2=} {dydx=}  # bouncing off a Wall")
                 self.dydx_bounce()  # bouncing off a Wall
+            else:
+                iprint(f"{yx_0=} {yx_1=} {yx_2=} {dydx=}  # flying beyond Text")
 
         elif self.y_x_flying_else(*yx_1):  # coasting over no Text
             assert yx_2 != yx_0, (yx_2, yx_0)
             self.y_x_visit(*yx_1, bit=not self.goal)
             if not self.y_x_flying_else(*yx_0):
+                iprint(f"{yx_0=} {yx_1=} {yx_2=} {dydx=}  # coasting after on Text")
                 self.y_x_bitput(*yx_0, bit=self.goal)
+            else:
+                iprint(f"{yx_0=} {yx_1=} {yx_2=} {dydx=}  # coasting after flying")
 
         else:  # moving over Text
             assert yx_2 != yx_0, (yx_2, yx_0)
@@ -852,10 +865,16 @@ class TerminalSprite:
             self.y_x_bitput(*yx_2, bit=not self.goal)
 
             if not self.y_x_flying_else(*yx_0):
+                iprint(f"{yx_0=} {yx_1=} {yx_2=} {dydx=}  # moving after on Text")
                 self.y_x_bitput(*yx_0, bit=self.goal)
+            else:
+                iprint(f"{yx_0=} {yx_1=} {yx_2=} {dydx=}  # moving after flying")
 
             if not coasting:  # bouncing because took a spot
+                iprint(f"{got=} {self.goal=} {coasting=}  # bouncing after take")
                 self.dydx_bounce()
+            else:
+                iprint(f"{got=} {self.goal=} {coasting=}  # not bouncing, no take")
 
     def yx_init(self) -> tuple[int, int]:
         """Land somewhere on the Text"""
@@ -1067,7 +1086,7 @@ class TerminalSprite:
 # Choose a Log File
 
 TextIO = open(os.devnull, "w")
-TextIO = open("o.out", "w")  # jitter Sat 3/Feb
+# TextIO = open("o.out", "w")  # jitter Sat 3/Feb
 
 
 def xprint(*args, **kwargs) -> None:
@@ -1147,11 +1166,10 @@ if __name__ == "__main__":
 
 # bug: 'noqa C901' marks on 4 Def's
 
-# bug: Balls often only bounce off of Walls, not also off of Taking Spots
 # bug: Balls don't fly over the Columns beyond the Text
 
 # bug: adding Sprites adds only the one, not two
-# bug: exiting Sprites doesn't restore Screen
+# bug: exiting Sprites doesn't restore Reverse/Plain Video
 # bug: exiting Sprites doesn't restore Sgr Colors
 
 # bug: 'pty.spawn' calls for patches only when unpatched I/O available
