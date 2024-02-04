@@ -125,8 +125,8 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
 
         spritely = False
         while True:
-            for sprite in sprites:
-                while not sys_stdio_kbhit(fd, timeout=0.100):
+            while not sys_stdio_kbhit(fd, timeout=0.100):
+                for sprite in sprites:
                     spritely = True
                     sprite.step_ahead()
 
@@ -169,19 +169,25 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
                     # Take the 3 Bytes b"\r~+" to mean add a Breakout Ball
 
                     if (i, j, k) == (ord("\r"), ord("~"), ord("+")):
+                        xprint("~+", end="")
                         if not sprites:
-                            xprint("~+", end="")
-                            sprite = TerminalSprite(ts, index=len(sprites))
+                            sprite_a = TerminalSprite(ts, index=len(sprites))
                             xprint(end="\r\n")
-                            sprites.append(sprite)
+                            sprites.append(sprite_a)
+
+                            sprite_b = TerminalSprite(ts, index=len(sprites))
+                            sprites.append(sprite_b)
+
                         continue
 
                     # Take the 3 Bytes b"\r~-" to mean remove a Breakout Ball
 
                     if (i, j, k) == (ord("\r"), ord("~"), ord("-")):
+                        xprint("~-", end="\r\n")
                         if sprites:
-                            xprint("~-", end="\r\n")
-                            sprite = sprites.pop()
+                            sprite = sprites.clear()
+                        ts.rows_restore()
+
                         continue
 
                     # Else forward the b"~" of b"\r~" with the next Byte
@@ -213,10 +219,9 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
 
     pty.spawn(argv, master_read=fd_patch_output, stdin_read=fd_patch_input)
 
-    # for i, row in enumerate(ts.rows):
-    #     print(f"{i=} {row=}")
-
-    print(f"{len(sprites)} Sprites walked {list(_.steps for _ in sprites)} Steps")
+    if sprites:
+        ts.rows_restore()
+        print(f"{len(sprites)} Sprites walked {list(_.steps for _ in sprites)} Steps")
 
     # compare 'def read' patching output for https://docs.python.org/3/library/pty.html
 
@@ -242,6 +247,25 @@ class TerminalShadow:
 
     bitrows: list[list[int]]  # Reverse-Video Bit per Character
     bitrows = list()  # [[1, 0], [0, 1, 0]]
+
+    def rows_restore(self) -> None:
+        """Rewrite the Rows of Text"""
+
+        assert CUU_N == "\x1B[{}A"  # Up
+        assert EL == "\x1B[K"  # Erase in Line (EL)  # 04/11
+
+        rows = list(self.rows)
+        y = self.y
+
+        if y:
+            cuu = "\x1B[{}A".format(y)
+            xprint(cuu, end="")
+
+        xprint("\r", end="")
+
+        el = "\x1B[K"
+        for i, row in enumerate(rows):
+            xprint(el + row)
 
     def write_text(self, text) -> None:
         """Keep up a guess of what one Sh Terminal looks like"""
@@ -843,7 +867,7 @@ class TerminalSprite:
         y = len(rows) - 1
         row = rows[y]
 
-        x = len(row.rstrip())
+        x = len(row)
 
         self.y_x_warp(y, x)
         yx_2 = self.yx_fit()
