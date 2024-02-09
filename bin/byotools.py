@@ -40,12 +40,13 @@ assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 ... == breakpoint  # new BuiltIn since Jun/2018 Python 3.7
 ... == dataclasses  # new Import since Jun/2018 Python 3.7
 
-... == f"{sys.version_info[:3]=}"  # new =} Syntax in Oct/2019 Python 3.8  # Ubuntu 2020
+... == f"{sys.version_info[:2]=}"  # new =} Syntax in Oct/2019 Python 3.8  # Ubuntu 2020
 ... == shlex.join  # new since Oct/2019 Python 3.8
 
 ... == str.removeprefix, str.removesuffix  # new since Oct/2020 Python 3.9
 ... == dict[str, int]  # new Syntax since Oct/2020 Python 3.9
 
+# ... == dict[str, int] | None  # new Syntax since Oct/2021 Python 3.10
 # ... == int.bit_count  # new since Oct/2021 Python 3.10  # Ubuntu 2022
 # ... == list(zip([], [], strict=True))  # new since Oct/2021 Python 3.10  # Ubuntu 2022
 
