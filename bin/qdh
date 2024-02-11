@@ -6,13 +6,13 @@ fi
 
 if [[ $# == 0 ]]; then
     set -xe
-    git diff HEAD~1
+    git diff --color-moved HEAD~1
 elif [[ "$1" =~ ^[0-9]$ ]]; then
     arg1=HEAD~$1
     shift
     set -xe
-    git diff "$arg1" "$@"
+    git diff --color-moved "$arg1" "$@"
 else
     set -xe
-    git diff HEAD~1 "$@"
+    git diff --color-moved HEAD~1 "$@"
 fi

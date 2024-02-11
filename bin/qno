@@ -1,14 +1,14 @@
 if [[ $# != 0 ]]; then
     set -xe
-    git show --pretty= --name-only "$@"
+    git show --color-moved --pretty= --name-only "$@"
 else
-    diffs=$(git diff --name-only)
+    diffs=$(git diff --color-moved --name-only)
     if [[ "$diffs" ]]; then
         set -xe
-        git diff --name-only
+        git diff --color-moved --name-only
     else
         set -xe
-        git diff --name-only
-        git show --pretty= --name-only
+        git diff --color-moved --name-only
+        git show --color-moved --pretty= --name-only
     fi
 fi

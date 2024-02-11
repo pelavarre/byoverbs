@@ -1,2 +1,2 @@
 set -xe
-git show --pretty= --name-only "$@"
+git show --color-moved --pretty= --name-only "$@"

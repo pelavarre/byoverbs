@@ -1,9 +1,9 @@
 if [[ $# == 0 ]]; then
     set -xe
-    git show ":0:$0" && : 1 Base, 2 Theirs, 3 Ours, 0 Something Else
+    git show --color-moved ":0:$0" && : 1 Base, 2 Theirs, 3 Ours, 0 Who Knows
 else
     arg1="$1"
     shift
     set -xe
-    git show ":0:$arg1" "$@" && : 1 Base, 2 Theirs, 3 Ours, 0 Something Else
+    git show --color-moved ":0:$arg1" "$@" && : 1 Base, 2 Theirs, 3 Ours, 0 Who Knows
 fi

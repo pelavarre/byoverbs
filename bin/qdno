@@ -5,4 +5,4 @@ if ! git diff "$@" >/dev/null 2>&1; then
 fi
 
 set -xe
-git diff --name-only "$@"
+git diff --color-moved --name-only "$@"
