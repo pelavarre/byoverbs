@@ -1,2 +1,2 @@
-echo '+ echo "next:  git clone $(git remote -v |awk '\''{print $2}'\'' |uniq)"' >&2
+echo "+ echo \"next:  git clone \$(git remote -v |awk '{print \$2}' |uniq)\"" >&2
 echo "next:  git clone $(git remote -v |awk '{print $2}' |uniq)"
