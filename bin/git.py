@@ -1,5 +1,7 @@
 _ = """
 
+(set -xe && git config -l --global && git config -l --local)
+
 (
 FF=bin/git.py
 

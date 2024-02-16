@@ -505,6 +505,24 @@ ZZ from demos/vi2.py -q
 
 grep out the Def that lack ' -> ' MyPy Auth
 
+:
+
+choking lately
+
+    % date
+    Thu Feb 15 19:05:34 PST 2024
+    % ./demos/byoverbs.py
+    Traceback (most recent call last):
+      File "/Users/plavarre/Public/byoverbs/./demos/byoverbs.py", line 47, in <module>
+        main()
+      File "/Users/plavarre/Public/byoverbs/./demos/byoverbs.py", line 38, in main
+        import byoverbs.bin.byotools as byo
+      File "/Users/plavarre/Public/byoverbs/demos/byoverbs.py", line 85, in <module>
+        import byoverbs
+      File "/Users/plavarre/Public/byoverbs/demos/byoverbs.py", line 64, in <module>
+        assert DIR_INDEX != (len(ABS_DIRS) - 1), (DIR_INDEX, DIR, len(sys.path), sys.path)
+    AssertionError: (5, '/Users/plavarre/Public/byoverbs/demos', 6, ['/Library/Frameworks/Python.framework/Versions/3.12/lib/python312.zip', '/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12', '/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/lib-dynload', '/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages', '/Users/plavarre/Public', '/Users/plavarre/Public/byoverbs/demos'])
+    %
 
 ## Copied from
 

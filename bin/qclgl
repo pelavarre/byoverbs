@@ -1,0 +1,14 @@
+echo '+ git config user.initials' >&2
+git config user.initials
+
+echo '+ ls -hlAF -rt ~/.gitconfig |...' >&2
+ls -hlAF -rt ~/.gitconfig |sed "s,$HOME/,~/,"
+
+echo '+ git config -l --global' >&2
+git config -l --global
+
+echo '+ ls -hlAF -rt .git/config' >&2
+ls -hlAF -rt .git/config
+
+echo '+ git config -l --local' >&2
+git config -l --local
