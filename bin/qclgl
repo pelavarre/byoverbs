@@ -1,3 +1,5 @@
+# shellcheck disable=SC2012  # Use find instead of ls to better handle non-alphanum...
+
 echo '+ git config user.initials' >&2
 git config user.initials
 
