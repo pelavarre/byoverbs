@@ -20,9 +20,12 @@
 #   p  # given no Sh Args
 #     type(urllib.parse)
 #     type(dt)
-#     print(dt.datetime.now())
+#     now = dt.datetime.now()
+#     print(now)
 #     dir(os.path)
 #     xml.__file__
+#     print(len(globals().keys()))
+#     # globals()  # would import ALL of these Modules
 #
 
 
@@ -60,9 +63,12 @@ examples:
   python3 -i demos/lazy_import.py
     type(urllib.parse)
     type(dt)
-    print(dt.datetime.now())
+    now = dt.datetime.now()
+    print(now)
     dir(os.path)
     xml.__file__
+    print(len(globals().keys()))
+    # globals()  # would import ALL of these Modules
 """
 
 import argparse
