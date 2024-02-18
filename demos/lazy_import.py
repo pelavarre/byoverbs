@@ -11,10 +11,11 @@ docs:
 
 examples:
   python3 -i demos/lazy_import.py
-    dt
+    type(urllib.parse)
+    type(dt)
+    print(dt.datetime.now())
     dir(os.path)
     xml.__file__
-    urllib.parse.quote
 """
 
 import argparse
@@ -34,6 +35,8 @@ from decimal import Decimal as D
 parser = argparse.ArgumentParser()
 
 
+_ = "argparse, builtins, importlib, os, sys, urllib.parse, ... Decimal as D"
+print(">>> import", _, file=sys.stderr)
 print(">>> import ...", file=sys.stderr)
 print(">>> ", file=sys.stderr)
 
@@ -111,16 +114,27 @@ class LazyImport:
         self.as_ = import_ if (as_ is None) else as_
 
     def __getattribute__(self, name) -> object:
-        if name in "as_ import_".split():
+        if name in "as_ import_ beep_".split():
             return super().__getattribute__(name)
+        self.beep_()
         module = importlib.import_module(self.import_)
         globals()[self.as_] = module
         return module.__getattribute__(name)
 
     def __repr__(self) -> str:
+        self.beep_()
         module = importlib.import_module(self.import_)
         globals()[self.as_] = module
         return module.__repr__()
+
+    def beep_(self):
+        auto = " # viva lazy automagic"
+        if self.import_ == self.as_:
+            print(">>> import", self.import_, auto, file=sys.stderr)
+        else:
+            print(">>> import", self.import_, "as", self.as_, auto, file=sys.stderr)
+
+        # todo: sad when 'beep_' runs in the middle of a Row
 
 
 def def_some_lazy_imports() -> None:
