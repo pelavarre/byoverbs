@@ -11,7 +11,8 @@ options:
 
 quirks:
   goes well with:  ssh-add.py
-  classic Ssh rudely exits via a Code 255 Usage Error, when given no Parms
+  classic Ssh -i PrivateKey doesn't help you log in, if you've loaded too many Keys
+  classic Ssh rudely exits nonzero, despite printing Help, when give no Sh Args
 
 examples:
 
@@ -21,14 +22,17 @@ examples:
   ssh.py --h  # show this help message and exit
   ssh.py --  # todo: run as you like it
 
-  ssh -F /dev/null $USER@localhost
-  ssh -t localhost "cd $PWD && bash -i"
+  ssh -F /dev/null $USER@localhost  # log in without interference from '~/.ssh/config'
+  ssh -t localhost "cd $PWD && bash -i"  # log in and do setup, then chat
 
   ssh-add -l  # work to shrug off differences between your '~/.ssh/config' and mine
+
   ssh -A -t -F /dev/null \
     -o 'UserKnownHostsFile /dev/null' \
     -o 'StrictHostKeyChecking no' \
     -o 'LogLevel QUIET' "$USER@localhost"
+
+  : # some people upvote:  -o IdentityFile=/dev/null
 """
 # loop to retry, only while exit codes nonzero
 

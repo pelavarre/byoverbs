@@ -524,6 +524,11 @@ choking lately
     AssertionError: (5, '/Users/plavarre/Public/byoverbs/demos', 6, ['/Library/Frameworks/Python.framework/Versions/3.12/lib/python312.zip', '/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12', '/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/lib-dynload', '/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages', '/Users/plavarre/Public', '/Users/plavarre/Public/byoverbs/demos'])
     %
 
+Mac Terminal
+
+    ⌘ R --> Toggle “Allow Mouse Reporting” option
+    ⌥ ⌘ R --> Toggle “Use Option as Meta Key” option
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md
