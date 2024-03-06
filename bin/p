@@ -180,7 +180,7 @@ class LazyImport:
         globals()[self.as_] = module
         return module.__repr__()
 
-    def beep_(self):
+    def beep_(self) -> None:
         auto = " # viva lazy automagic"
         if self.import_ == self.as_:
             print(">>> import", self.import_, auto, file=sys.stderr)
