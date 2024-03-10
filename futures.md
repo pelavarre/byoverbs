@@ -529,6 +529,15 @@ Mac Terminal
     ⌘ R --> Toggle “Allow Mouse Reporting” option
     ⌥ ⌘ R --> Toggle “Use Option as Meta Key” option
 
+Mac Terminal
+
+    $ F=__pycache__/ && echo mv -i $F{,~$(date -r $F +%m%djqd%H%M)~} |tee /dev/tty |bash
+    mv -i __pycache__/ __pycache__/~0312jqd1348~
+    mv: cannot move '__pycache__/' to a subdirectory of itself, '__pycache__/~0312jqd1348~'
+    $ F=__pycache__ && echo mv -i $F{,~$(date -r $F +%m%djqd%H%M)~} |tee /dev/tty |bash
+    mv -i __pycache__ __pycache__~0312jqd1348~
+    $ lsa
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md

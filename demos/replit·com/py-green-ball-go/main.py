@@ -29,6 +29,8 @@ print("Hello")
 print("Let's try forward, back, forward, back, done")
 print()
 
+print("\x1B[?25l")  # DecCsiCursorHide
+
 x_list = list(X_LIST)
 
 erase = ""
@@ -43,6 +45,8 @@ while x_list:
     erase = EmptyRow[: x - 1] + NoBall
 
 print("\n", end="")
+
+print("\x1B[?25h")  # DecCsiCursorShow
 
 print()
 print("Ta da")
