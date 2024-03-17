@@ -48,18 +48,20 @@ BoardLines = Board.splitlines()
 
 Y1Below = 3 + len(BoardLines)
 
+White = "\N{Medium White Circle}"
+Black = "\N{Medium Black Circle}"  # 'Medium' Black better than 'Large', but why?
 Red = "\N{Large Red Circle}"
-Black = "\N{Medium Black Circle}"  # 'Medium' better than 'Large', but why?
 Blue = "\N{Large Blue Circle}"
-Brown = "\N{Large Brown Circle}"
 Orange = "\N{Large Orange Circle}"
+Yellow = "\N{Large Yellow Circle}"
 Green = "\N{Large Green Circle}"
 Purple = "\N{Large Purple Circle}"
+Brown = "\N{Large Brown Circle}"
+
+... == White, Black, Red, Blue, Orange, Yellow, Green, Purple, Brown
 
 Colors = (Red, Blue, Orange, Green, Purple)
-... == Black, Brown
-
-Empty = "\N{Medium White Circle}"
+Empty = White
 
 
 @dataclasses.dataclass
@@ -75,40 +77,47 @@ class Tube:
 
 
 Tubes = list()
-for y3, line in enumerate(BoardLines):
-    y1 = 3 + y3
-    for m in re.finditer(r"a", string=line):
-        x1 = 1 + m.start()
 
-        index = len(Tubes)
-        name = str(index)
 
-        t = Tube(name=name, y1=y1, x1=x1, balls=list())
-        Tubes.append(t)
+def board_init() -> None:
+    """Fill up the Tubes"""
 
-assert len(Tubes) == TubeCount7, len(Tubes)
+    # Stand each Tube at & above the Ball at 'a' in the Board
 
-#
-#
-# Fill all but the last two Tubes
-#
+    for y3, line in enumerate(BoardLines):
+        y1 = 3 + y3
+        for m in re.finditer(r"a", string=line):
+            x1 = 1 + m.start()
 
-balls = list()
-for color in Colors:
-    balls.extend(4 * [color])
+            index = len(Tubes)
+            name = str(index)
 
-random.shuffle(balls)
+            t = Tube(name=name, y1=y1, x1=x1, balls=list())
+            Tubes.append(t)
 
-assert TubeCount2 == 2
-assert BallCount4 == 4
+    assert len(Tubes) == TubeCount7, len(Tubes)
 
-while balls:
-    ball = balls.pop(0)
+    # Fill up the Tubes with Balls, except not the last two Tubes
 
-    some_tubes = list(_ for _ in Tubes[:-2] if len(_.balls) < 4)
-    t = random.choice(some_tubes)
+    balls = list()
+    for color in Colors:
+        balls.extend(4 * [color])
 
-    t.balls.append(ball)
+    random.shuffle(balls)
+
+    assert TubeCount2 == 2
+    assert BallCount4 == 4
+
+    while balls:
+        ball = balls.pop(0)
+
+        some_tubes = list(_ for _ in Tubes[:-2] if len(_.balls) < 4)
+        t = random.choice(some_tubes)
+
+        t.balls.append(ball)
+
+
+board_init()
 
 #
 #
@@ -151,7 +160,10 @@ class Main:
     full_sorted_tubes: list[Tube]  # the Tubes full of matching Balls
 
 
-def board_paint(caller) -> None:
+Main.draining_tubes = list()
+
+
+def board_paint() -> None:
     """Paint over the Board on Screen"""
 
     for t in Tubes:
@@ -174,7 +186,6 @@ def board_paint(caller) -> None:
 
     print("\x1B[J", end="")
 
-    Main.turn = Main.turn + caller
     if Main.turn < 0:
         print(f"Turn {-Main.turn} - SCRAMBLING")
     else:
@@ -247,7 +258,9 @@ def balls_sort() -> None:  # noqa C901 too complex
     Main.turn = 0
 
     while True:
-        board_paint(caller=+1)
+        Main.turn = Main.turn + 1
+
+        board_paint()
         board_judge()
 
         time.sleep(0.9)
@@ -312,7 +325,9 @@ def balls_scramble() -> None:  # noqa C901 too complex
     Main.turn = 0
 
     while True:
-        board_paint(caller=-1)
+        Main.turn = Main.turn - 1
+
+        board_paint()
         board_judge()
 
         time.sleep(0.3)

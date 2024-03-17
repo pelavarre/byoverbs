@@ -20,6 +20,12 @@ import time
 # Place Tubes of Cells on the Board
 #
 
+SPEEDUP = 50
+SPEEDUP = 10
+SPEEDUP = 5
+SPEEDUP = 1
+# last wins
+
 FEATURE_STAGING = True  # jitter Fri 15/Mar
 FEATURE_STAGING = False
 
@@ -87,72 +93,81 @@ class Cell:
 
 
 Cells = list()
-for y3, line in enumerate(BoardLines):
-    y1 = 3 + y3
-    for m in re.finditer(r"x", string=line):
-        x1 = 1 + 4 + m.start()
-
-        c = Cell(y1=y1, x1=x1, color=White, y=-1, x=-1)
-        Cells.append(c)
-
-assert len(Cells) == 8 * 4, len(Cells)
-
-yy = sorted(set(_.y1 for _ in Cells))
-xx = sorted(set(_.x1 for _ in Cells))
-assert yy == list(range(3, 19, 2)), (yy,)
-assert xx == list(range(6, 36, 4)), (xx,)
-
-yx_list = list()
-for y in range(8):
-    for x in range(4):
-        yx = (y, x)
-
-        yx_list.append(yx)
-
 cell_by_yx = dict()
-for yx in yx_list:
-    (y, x) = yx
-    assert yx not in cell_by_yx.keys(), (yx,)
+yx_list = list()
 
-    y1 = Y1Below - 1 - (y * 2)
 
-    if (y % 2) == 0:
-        x1 = 6 + (x * 8)
-    else:
-        x1 = 10 + (x * 8)
+def board_init() -> None:  # noqa C901
+    """Fill out the Cells"""
 
-    cc = list(_ for _ in Cells if (_.y1, _.x1) == (y1, x1))
-    assert len(cc) == 1, (cc, (y1, x1), yx)
+    # Place 1 Cell at each X in the BoardLines
 
-    c = cc[-1]
-    cell_by_yx[yx] = c
+    for y3, line in enumerate(BoardLines):
+        y1 = 3 + y3
+        for m in re.finditer(r"x", string=line):
+            x1 = 1 + 4 + m.start()
 
-    assert c.y == -1, (c, yx)
-    assert c.x == -1, (c, yx)
+            c = Cell(y1=y1, x1=x1, color=White, y=-1, x=-1)
+            Cells.append(c)
 
-    c.y = y
-    c.x = x
+    assert len(Cells) == 8 * 4, len(Cells)
 
-#
-#
-# Fill all but the middle two Rows
-#
+    yy = sorted(set(_.y1 for _ in Cells))
+    xx = sorted(set(_.x1 for _ in Cells))
+    assert yy == list(range(3, 19, 2)), (yy,)
+    assert xx == list(range(6, 36, 4)), (xx,)
 
-for y in range(3):
-    for x in range(4):
-        yx = (y, x)
-        cell = cell_by_yx[yx]
-        assert cell.color == White, (cell.color, yx)
+    # Index the Cells as Y from Bottom to Top, and as X from Left to Right
 
-        cell.color = Red
+    for y in range(8):
+        for x in range(4):
+            yx = (y, x)
 
-for y in range(5, 8):
-    for x in range(4):
-        yx = (y, x)
-        cell = cell_by_yx[yx]
-        assert cell.color == White, (cell.color, yx)
+            yx_list.append(yx)
 
-        cell.color = Black
+    for yx in yx_list:
+        (y, x) = yx
+        assert yx not in cell_by_yx.keys(), (yx,)
+
+        y1 = Y1Below - 1 - (y * 2)
+
+        if (y % 2) == 0:
+            x1 = 6 + (x * 8)
+        else:
+            x1 = 10 + (x * 8)
+
+        cc = list(_ for _ in Cells if (_.y1, _.x1) == (y1, x1))
+        assert len(cc) == 1, (cc, (y1, x1), yx)
+
+        c = cc[-1]
+        cell_by_yx[yx] = c
+
+        assert c.y == -1, (c, yx)
+        assert c.x == -1, (c, yx)
+
+        c.y = y
+        c.x = x
+
+    # Fill all but the middle two Rows
+
+    for y in range(3):
+        for x in range(4):
+            yx = (y, x)
+            cell = cell_by_yx[yx]
+            assert cell.color == White, (cell.color, yx)
+
+            cell.color = Red
+
+    for y in range(5, 8):
+        for x in range(4):
+            yx = (y, x)
+            cell = cell_by_yx[yx]
+            assert cell.color == White, (cell.color, yx)
+
+            cell.color = Black
+
+
+board_init()
 
 #
 #
@@ -166,6 +181,10 @@ class Main:
     turn: int  # count Turns of Sorting or Scrambling
 
     future_trails: list[list[Cell]]
+    outs: list[str]  # Colors
+
+
+Main.outs = list()
 
 
 def board_paint() -> None:
@@ -182,10 +201,21 @@ def board_paint() -> None:
     print()
     print()
 
-    print("\x1B[J", end="")
+    dent = 4 * " "
+    print(f"{dent}{dent}Playing Checkers - Turn {Main.turn}")
 
-    dent = 8 * " "
-    print(f"{dent}Playing Checkers - Turn {Main.turn}")
+    print()
+    if Main.outs:
+        print("Outs")
+        print()
+        for index in range(0, len(Main.outs), 8):
+            some_outs = Main.outs[index:][:8]
+            print(" ".join(some_outs))
+            print()
+
+    print()
+
+    print("\x1B[J", end="")
 
     sys.stdout.flush()
 
@@ -195,7 +225,7 @@ def board_paint() -> None:
 Main.future_trails = list()
 
 
-def board_judge() -> None:
+def board_judge() -> None:  # noqa C901
     """Look for Moves"""
 
     future_trails = Main.future_trails
@@ -208,42 +238,66 @@ def board_judge() -> None:
         if cell.color == White:
             continue
 
-        if (cell.color in Reddish) or (cell.color == Blue):
-            yplus = (y + 1, x)
-            if (y % 2) == 0:
-                left = (y + 1, x - 1)
-                right = yplus
-            else:
-                left = yplus
-                right = (y + 1, x + 1)
+        # Look every which way the Cell can move
 
-            future_add_if(cell, left=left, right=right)
+        yx_plus_funcs = list()
+        if (cell.color == Red) or (cell.color in Queenish):
+            yx_plus_funcs.append(yx_plus_north_plus_east)
+            yx_plus_funcs.append(yx_plus_north_plus_west)
+        if (cell.color == Black) or (cell.color in Queenish):
+            yx_plus_funcs.append(yx_plus_south_plus_east)
+            yx_plus_funcs.append(yx_plus_south_plus_west)
 
-        if (cell.color in Blackish) or (cell.color == Orange):
-            yminus = (y - 1, x)
-            if (y % 2) == 0:
-                left = (y - 1, x - 1)
-                right = yminus
-            else:
-                left = yminus
-                right = (y - 1, x + 1)
+        if cell.color in Reddish:
+            them_colors = Blackish
+        else:
+            them_colors = Reddish
 
-            future_add_if(cell, left=left, right=right)
+        # Step into an adjacent Empty Cell
+
+        for yx_plus_func in yx_plus_funcs:
+            ahead_yx = yx_plus_func(yx)
+            if ahead_yx in yx_list:
+                ahead_cell = cell_by_yx[ahead_yx]
+
+                if ahead_cell.color == White:
+                    future_trail = [cell, ahead_cell]
+                    future_trails.append(future_trail)
+
+                # Jump over an Enemy into an Empty Cell
+
+                if ahead_cell.color in them_colors:
+                    far_ahead_yx = yx_plus_func(ahead_yx)
+                    if far_ahead_yx in yx_list:
+                        far_cell = cell_by_yx[far_ahead_yx]
+
+                        if far_cell.color == White:
+                            future_trail = [cell, ahead_cell, far_cell]
+                            future_trails.append(future_trail)
 
 
-def future_add_if(cell, left, right) -> None:
-    """Add the Left Move or the Right Move or both or neither, whatever works"""
+def yx_plus_north_plus_east(yx) -> tuple[int, int]:
+    (y, x) = yx
+    yx_plus = (y + 1, x) if (y % 2) else (y + 1, x - 1)
+    return yx_plus
 
-    future_trails = Main.future_trails
 
-    assert yx in yx_list, (yx,)
-    for last_yx in (left, right):
-        if last_yx in yx_list:
-            last_cell = cell_by_yx[last_yx]
-            if last_cell.color == White:
-                trail = [cell, last_cell]
+def yx_plus_north_plus_west(yx) -> tuple[int, int]:
+    (y, x) = yx
+    yx_plus = (y + 1, x + 1) if (y % 2) else (y + 1, x)
+    return yx_plus
 
-                future_trails.append(trail)
+
+def yx_plus_south_plus_east(yx) -> tuple[int, int]:
+    (y, x) = yx
+    yx_plus = (y - 1, x) if (y % 2) else (y - 1, x - 1)
+    return yx_plus
+
+
+def yx_plus_south_plus_west(yx) -> tuple[int, int]:
+    (y, x) = yx
+    yx_plus = (y - 1, x + 1) if (y % 2) else (y - 1, x)
+    return yx_plus
 
 
 #
@@ -277,41 +331,31 @@ def main() -> None:
 def try_main() -> None:  # noqa C901
     """Play the Game, over and over and over"""
 
-    breaking = False
-
     Main.turn = 0
 
-    past_trails = list()
+    # todo: pile up past Boards to undo after end of Game
     while True:
         Main.turn += 1
 
-        team = Reddish if (Main.turn % 2) else Blackish  # Reddish first
-
         board_paint()
         board_judge()
-        time.sleep(0.9)
-        # time.sleep(0.02)
+        time.sleep(0.9 / SPEEDUP)
 
-        # List Moves
+        # List Moves, but move Reddish first
 
         futures = Main.future_trails
-        team_trails = list(_ for _ in futures if _[0].color in team)
 
         reddish_trails = list(_ for _ in futures if _[0].color in Reddish)
         blackish_trails = list(_ for _ in futures if _[0].color in Blackish)
         pawnish_trails = list(_ for _ in futures if _[0].color in Pawnish)
+        ... == pawnish_trails
 
-        if (not team_trails) or (not pawnish_trails):
-            if breaking:
-                board_paint()
-                print()
-                print()
-                print()
-                print()
-                print()
-                breakpoint()
-                board_paint()
+        our_colors = Reddish if (Main.turn % 2) else Blackish
+        our_trails = list(_ for _ in futures if _[0].color in our_colors)
 
+        their_colors = Blackish if (Main.turn % 2) else Reddish
+
+        if not our_trails:  # no Tie Game at no Pawnish_Trails, Queens keep moving
             print()
             if reddish_trails:
                 print("Red won")
@@ -324,17 +368,31 @@ def try_main() -> None:  # noqa C901
 
             sys.stdout.flush()
 
-            time.sleep(0.9)
+            time.sleep(0.9 / SPEEDUP)
 
             break
 
         # Choose which Move to make
 
-        trail = random.choice(team_trails)
-        (cell, last_cell) = trail
+        trail = random.choice(our_trails)
+        assert len(trail) in (2, 3), (len(trail), trail)
 
-        assert cell.color in team, (cell.color, team, cell, trail)
+        cell = trail[0]
+        last_cell = trail[-1]
+
+        assert cell.color in our_colors, (cell.color, our_colors, cell, trail)
         assert last_cell.color == White, (last_cell.color, last_cell, trail)
+
+        # Take out the Queens or Pawns jumped over
+
+        if len(trail) == 3:
+            middle_cell = trail[1]
+
+            o = (middle_cell.color, their_colors, middle_cell, trail)
+            assert middle_cell.color in their_colors, o
+
+            Main.outs.append(middle_cell.color)
+            middle_cell.color = White
 
         # Make Queens out of Pawns
 
@@ -343,25 +401,14 @@ def try_main() -> None:  # noqa C901
         if cell.color == Red:
             if last_cell.y == 7:
                 cell_color = Orange
-                # breaking = True
         elif cell.color == Black:
             if last_cell.y == 0:
                 cell_color = Blue
-                # breaking = True
-
-        # cell_color = cell.color  # comment out to auth Queens
 
         # Make the Move
 
         last_cell.color = cell_color
         cell.color = White
-
-        if breaking:
-            board_paint()
-            breakpoint()
-            board_paint()
-
-        past_trails.append(trail)
 
 
 main()
