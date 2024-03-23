@@ -8,6 +8,7 @@ examples:
 """
 
 import calendar
+import copy
 import dataclasses
 import datetime as dt
 import os
@@ -284,9 +285,12 @@ class Main:
 def board_paint() -> None:
     """Paint over the Board on Screen"""
 
+    cells = list(Cells)  # unneeded cloning
+    out_colors = list(Main.out_colors)  # unneeded cloning
+
     sys.stdout.flush()
 
-    for c in Cells:
+    for c in cells:
         y1 = c.y1
         x1 = c.x1
 
@@ -310,11 +314,13 @@ def board_paint() -> None:
     print(f"{3 * dent}Game {game_name}")
 
     print()
-    if Main.out_colors:
+    if not out_colors:
+        print(len("Outs") * " ")  # needed to roll back
+    else:
         print("Outs")
         print()
-        for index in range(0, len(Main.out_colors), 8):
-            some_out_colors = Main.out_colors[index:][:8]
+        for index in range(0, len(out_colors), 8):
+            some_out_colors = out_colors[index:][:8]
 
             sys.stdout.flush()
             for index, color in enumerate(some_out_colors):
@@ -484,8 +490,43 @@ def main() -> None:
             print()
 
 
-def try_main() -> None:  # noqa C901
-    """Play the Game, over and over and over"""
+past_turns: list[int]
+past_cell_lists: list[list[Cell]]
+past_outs_lists: list[list[str]]
+
+past_turns = list()
+past_cell_lists = list()
+past_outs_lists = list()
+
+
+def try_main() -> None:
+    """Play the Game over and over"""
+
+    while True:
+        play_once()
+
+        print("Press Return to roll back the Game")
+        sys.stdin.readline()
+
+        tco_list = list(zip(past_turns, past_cell_lists, past_outs_lists))
+        for t, c, o in reversed(tco_list):
+            Main.turn = t
+            for index, cell in enumerate(c):
+                Cells[index].color = cell.color
+            Main.out_colors[::] = o
+
+            board_paint()
+
+            rollback_speedup = 10
+            time.sleep(0.9 / rollback_speedup)
+
+        print()
+        print("Press Return to play again")
+        sys.stdin.readline()
+
+
+def play_once() -> None:  # noqa C901
+    """Play the Game through, once"""
 
     Main.turn = 0
 
@@ -513,6 +554,10 @@ def try_main() -> None:  # noqa C901
         board_paint()
         board_judge()
         time.sleep(0.9 / SPEEDUP)
+
+        past_turns.append(Main.turn)
+        past_cell_lists.append(copy.deepcopy(Cells))
+        past_outs_lists.append(copy.deepcopy(Main.out_colors))
 
         # Fade all the Purple to White
 
