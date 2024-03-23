@@ -307,8 +307,8 @@ def board_paint() -> None:
     print()
     print()
 
-    dent = 4 * " "
-    print(f"{2 * dent}Playing Checkers - Turn {Main.turn}")
+    dent = 4 * " "  # trailing Dent needed to roll back
+    print(f"{2 * dent}Playing Checkers - Turn {Main.turn}{dent}")
 
     game_name = Main.game_name
     print(f"{3 * dent}Game {game_name}")
