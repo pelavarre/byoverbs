@@ -44,7 +44,7 @@ def tty_kbwhere() -> tuple[int, int]:
     tcgetattr = termios.tcgetattr(fd)
     tty.setraw(fd, when=termios.TCSADRAIN)
 
-    sys.stderr.write("\x1B[6n")  # Device Status Report (DSR)
+    sys.stderr.write("\x1B[6n")  # Device Status Report (DSR) 06/14
     sys.stderr.flush()
 
     ibytes = os.read(fd, 100)
@@ -54,7 +54,7 @@ def tty_kbwhere() -> tuple[int, int]:
 
     CPR_BYTES_REGEX = rb"^\x1B\[([0-9]+);([0-9]+)R$"
     m = re.match(CPR_BYTES_REGEX, string=ibytes)
-    assert m, (ibytes,)  # Cursor Position Report (CPR)
+    assert m, (ibytes,)  # Cursor Position Report (CPR) 05/02
 
     y1 = int(m.group(1))
     x1 = int(m.group(2))
@@ -315,7 +315,7 @@ def board_paint() -> None:
 
     print()
     if not out_colors:
-        print(len("Outs") * " ")  # needed to roll back
+        print("\x1B[K", end="")  # needed to roll back
     else:
         print("Outs")
         print()
@@ -330,15 +330,20 @@ def board_paint() -> None:
                 print(color, end="")
                 sys.stdout.flush()
 
+            print("\x1B[K", end="")
             print()
 
+    print("\x1B[K", end="")
     print()
     sys.stdout.flush()
 
     print("\x1B[J", end="")
     sys.stdout.flush()
 
-    # Mar/2024 ReplIt·Com didn't accept EL = "\x1B[2K"  # Erase In Line
+    # CUP_Y1 = b"\x1B[{}H"  # Cursor Position  # 04/08
+    # CUP_Y1_X1 = b"\x1B[{};{}H"  # Cursor Position  # 04/08
+    # ED = b"\x1B[J"  # Erase in Page  # 04/10
+    # EL = "\x1B[K"  # Erase In Line  # 04/11
 
 
 Main.out_colors = list()
