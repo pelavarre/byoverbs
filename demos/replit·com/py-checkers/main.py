@@ -4,27 +4,85 @@ usage: main.py
 draw a Checkers Board and move its Pieces
 
 examples:
-  clear
-  python3 main.py
+  python3 main.py --
 """
 
+import calendar
 import dataclasses
+import datetime as dt
+import os
 import random
 import re
 import sys
+import termios
 import textwrap
 import time
+import tty
+
+#
+#
+# Run differently at Replit·Com Console, vs Replit·Com Shell
+#
+
+
+def replit_is_a_console() -> bool:
+    "Guess if Sys Stderr is to a Replit Console (not Shell)"
+
+    y1x1 = tty_kbwhere()
+    isacons = y1x1 == (1, 1)
+
+    return isacons
+
+    # wrong in the Upper Left of Shell, but that's rarely tested
+
+
+def tty_kbwhere() -> tuple[int, int]:
+    """Silently drop any pending Tty Input, and report Cursor Y1 X1"""
+
+    fd = sys.stderr.fileno()
+    tcgetattr = termios.tcgetattr(fd)
+    tty.setraw(fd, when=termios.TCSADRAIN)
+
+    sys.stderr.write("\x1B[6n")  # Device Status Report (DSR)
+    sys.stderr.flush()
+
+    ibytes = os.read(fd, 100)
+
+    when = termios.TCSADRAIN
+    termios.tcsetattr(fd, when, tcgetattr)
+
+    CPR_BYTES_REGEX = rb"^\x1B\[([0-9]+);([0-9]+)R$"
+    m = re.match(CPR_BYTES_REGEX, string=ibytes)
+    assert m, (ibytes,)  # Cursor Position Report (CPR)
+
+    y1 = int(m.group(1))
+    x1 = int(m.group(2))
+    y1x1 = (y1, x1)
+
+    return y1x1
+
 
 #
 #
 # Place Tubes of Cells on the Board
 #
 
+#
+
+SPEEDUP = 750
+SPEEDUP = 100
 SPEEDUP = 50
 SPEEDUP = 10
 SPEEDUP = 5
 SPEEDUP = 1
-# last wins
+# last sticks
+
+if not replit_is_a_console():
+    SPEEDUP = 750
+
+MAX_TURN = -1
+
+#
 
 FEATURE_STAGING = True  # jitter Fri 15/Mar
 FEATURE_STAGING = False
@@ -83,18 +141,34 @@ Queenish = (Orange, Blue)
 
 @dataclasses.dataclass(order=True)
 class Cell:
-    """Give a Place to 0 or 1 Pieces"""
+    """Give a Place on the Board to 1 Queen, 1 Pawn, or No One"""
 
-    y1: int
+    y1: int  # where to paint the Cell
     x1: int
 
     color: str  # one of White, Black, Blue, Red, or Orange
+    stale_if: str  # may be empty ""
 
-    y: int
+    y: int  # index the Cells of the Board by Y Up and X Right
     x: int
 
     yx: tuple[int, int]
 
+    def __init__(self, y1, x1, color, y, x) -> None:
+        assert color, (color,)
+
+        self.y1 = y1
+        self.x1 = x1
+        self.color = color
+        self.stale_if = ""
+        self.y = y
+        self.x = x
+        self.yx = (y, x)
+
+
+Cells: list[Cell]
+cell_by_yx: dict[tuple[int, int], Cell]
+yx_list: list[tuple[int, int]]
 
 Cells = list()
 cell_by_yx = dict()
@@ -111,7 +185,8 @@ def board_init() -> None:  # noqa C901
         for m in re.finditer(r"x", string=line):
             x1 = 1 + 4 + m.start()
 
-            c = Cell(y1=y1, x1=x1, color=White, y=-1, x=-1, yx=(-1, -1))
+            c = Cell(y1=y1, x1=x1, color=White, y=-1, x=-1)
+
             Cells.append(c)
 
     assert len(Cells) == 8 * 4, len(Cells)
@@ -183,43 +258,56 @@ board_init()
 class Main:
     """Name a workspace for the Code of this Py File"""
 
+    game_name: str  # name of the Game, which is its Random Seed
     turn: int  # count Turns of Sorting or Scrambling
-    out_colors: list[str]  # Colors
 
-    future_trails: list[list[Cell]]
+    out_colors: list[str]  # Colors of Queens or Pawns taken off the Board
 
-    reddish_trails: list[list[Cell]]
-    blackish_trails: list[list[Cell]]
-    pawnish_trails: list[list[Cell]]
-    queenish_trails: list[list[Cell]]
+    future_trails: list[list[Cell]]  # the Moves found
 
-    our_colors: list[str]
-    our_trails: list[list[Cell]]
-    our_steps: list[list[Cell]]
-    our_jumps: list[list[Cell]]
+    reddish_trails: list[list[Cell]]  # of Red Queen/ Orange Pawn
+    blackish_trails: list[list[Cell]]  # of Blue Queen/ Black Pawn
+    pawnish_trails: list[list[Cell]]  # of Orange Pawn/ Black Pawn
+    queenish_trails: list[list[Cell]]  # of Red Queen/ Blue Queen
 
-    their_colors: list[str]
-    their_trails: list[list[Cell]]
-    their_steps: list[list[Cell]]
-    their_jumps: list[list[Cell]]
+    our_colors: tuple[str, str]  # our Red & Orange, else Black & Blue
+    our_trails: list[list[Cell]]  # the Moves of our Colors
+    our_steps: list[list[Cell]]  # our Moves from Cell into Empty Neighbor
+    our_jumps: list[list[Cell]]  # our Moves from Cell over Enemy
+
+    their_colors: tuple[str, str]  # their Red & Orange, else Black & Blue
+    their_trails: list[list[Cell]]  # the Moves of their Colors
+    their_steps: list[list[Cell]]  # their Moves from Cell into Empty Neighbor
+    their_jumps: list[list[Cell]]  # their Moves from Cell over Enemy
 
 
 def board_paint() -> None:
     """Paint over the Board on Screen"""
 
+    sys.stdout.flush()
+
     for c in Cells:
         y1 = c.y1
         x1 = c.x1
 
-        print(f"\x1B[{y1};{x1}H" + c.color, end="")
+        if c.stale_if != c.color:
+            print(f"\x1B[{y1};{x1}H", end="")
+            sys.stdout.flush()
+            print(c.color, end="")
+            c.stale_if = c.color
+            sys.stdout.flush()
 
     print(f"\x1B[{Y1Below}H", end="")
+    sys.stdout.flush()
 
     print()
     print()
 
     dent = 4 * " "
-    print(f"{dent}{dent}Playing Checkers - Turn {Main.turn}")
+    print(f"{2 * dent}Playing Checkers - Turn {Main.turn}")
+
+    game_name = Main.game_name
+    print(f"{3 * dent}Game {game_name}")
 
     print()
     if Main.out_colors:
@@ -227,13 +315,21 @@ def board_paint() -> None:
         print()
         for index in range(0, len(Main.out_colors), 8):
             some_out_colors = Main.out_colors[index:][:8]
-            print(" ".join(some_out_colors))
+
+            sys.stdout.flush()
+            for index, color in enumerate(some_out_colors):
+                if index:
+                    print(" ", end="")
+                    sys.stdout.flush()
+                print(color, end="")
+                sys.stdout.flush()
+
             print()
 
     print()
+    sys.stdout.flush()
 
     print("\x1B[J", end="")
-
     sys.stdout.flush()
 
     # Mar/2024 ReplIt·Com didn't accept EL = "\x1B[2K"  # Erase In Line
@@ -247,6 +343,8 @@ def board_judge() -> None:  # noqa C901
     """Look for Moves"""
 
     # List the Moves
+
+    futures: list[list[Cell]]
 
     futures = Main.future_trails
     futures.clear()
@@ -302,6 +400,11 @@ def board_judge() -> None:  # noqa C901
     pawnish_trails = list(_ for _ in futures if _[0].color in Pawnish)
     queenish_trails = list(_ for _ in futures if _[0].color in Pawnish)
 
+    Main.reddish_trails = reddish_trails
+    Main.blackish_trails = blackish_trails
+    Main.pawnish_trails = pawnish_trails
+    Main.queenish_trails = queenish_trails
+
     our_colors = Reddish if (Main.turn % 2) else Blackish
     our_trails = list(_ for _ in futures if _[0].color in our_colors)
     our_steps = list(_ for _ in our_trails if len(_) == 2)
@@ -312,12 +415,12 @@ def board_judge() -> None:  # noqa C901
     their_steps = list(_ for _ in their_trails if len(_) == 2)
     their_jumps = list(_ for _ in their_trails if len(_) == 3)
 
-    our_trail_lengths = sorted(set(len(_) for _ in our_trails))
-    their_trail_lengths = sorted(set(len(_) for _ in their_trails))
-    if our_trail_lengths:
-        assert our_trail_lengths in ([2], [2, 3], [3]), (our_trail_lengths,)
-    if their_trail_lengths:
-        assert their_trail_lengths in ([2], [2, 3], [3]), (their_trail_lengths,)
+    our_lengths = sorted(set(len(_) for _ in our_trails))
+    their_lengths = sorted(set(len(_) for _ in their_trails))
+    if our_lengths:
+        assert our_lengths in ([2], [2, 3], [3]), (our_lengths,)
+    if their_lengths:
+        assert their_lengths in ([2], [2, 3], [3]), (their_lengths,)
 
     Main.reddish_trails = reddish_trails
     Main.blackish_trails = blackish_trails
@@ -376,15 +479,9 @@ def main() -> None:
     finally:
         print("\x1B[?25h")  # DecCsiCursorShow
         print(f"\x1B[{Y1Below}H")
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
+        sys.stdout.flush()
+        for _ in range(19):
+            print()
 
 
 def try_main() -> None:  # noqa C901
@@ -392,12 +489,25 @@ def try_main() -> None:  # noqa C901
 
     Main.turn = 0
 
+    game_name = "194604.0322"  # mostly tied, but Black Pawn become Blue Queen wins
+    game_name = "195448.0322"  # often displays wrong when run at Speedup 750
+    game_name = new_game_name()  # '194604.0322'
+    # last sticks
+
+    Main.game_name = game_name
+
+    seed = float(game_name)
+    random.seed(seed)
+
     # todo: pile up past Boards to undo after end of Game
 
     inc = 1
     inc_yx = (-1, -1)
 
     while True:
+        if (MAX_TURN >= 0) and (Main.turn >= MAX_TURN):
+            sys.exit(3)
+
         Main.turn += inc
 
         board_paint()
@@ -416,6 +526,9 @@ def try_main() -> None:  # noqa C901
         # List Moves, but move Reddish first
 
         if not Main.our_trails:  # no Tie Game at no Pawnish_Trails, Queens keep moving
+            board_paint()
+            board_judge()  # unneeded unless Emptyish vs White matters
+
             print()
             if Main.reddish_trails:
                 print("Red won")
@@ -434,11 +547,12 @@ def try_main() -> None:  # noqa C901
 
         # Choose which Move to make
 
-        if inc:
+        if inc:  # any move to start with
             assert Main.our_trails, (Main.our_trails, inc, Main.turn)
             trail = random.choice(Main.our_trails)
-        else:
-            our_jumps_here = list(_ for _ in Main.our_jumps if _[0].yx == inc_yx)
+        else:  # else only a next move from where the last jump landed
+            oj = Main.our_jumps
+            our_jumps_here = list(_ for _ in oj if _[0].yx == inc_yx)
             assert our_jumps_here, (inc_yx, inc, our_jumps_here, Main.turn)
             trail = random.choice(our_jumps_here)
 
@@ -485,10 +599,61 @@ def try_main() -> None:  # noqa C901
         inc = 1
         if len(trail) == 3:
             inc_yx = trail[-1].yx
-            our_jumps_here = list(_ for _ in Main.our_jumps if _[0].yx == inc_yx)
+            oj = Main.our_jumps
+            our_jumps_here = list(_ for _ in oj if _[0].yx == inc_yx)
             if our_jumps_here:
                 if random.random() >= 0.667:
                     inc = 0
+
+
+def new_game_name() -> str:
+    """Say what MDd.HhMmSs is in California now"""
+
+    naive = dt.datetime.now()
+    pacific = pacific_timezone(naive)
+    t = naive.astimezone(pacific)
+
+    # print(t)
+
+    md = (t.month, t.day)
+    hms = (t.hour, t.minute, t.second)
+    str_md = "".join("{:02d}".format(_) for _ in md)
+    str_hms = "".join("{:02d}".format(_) for _ in hms)
+
+    md_dot_hms = f"{str_hms}.{str_md}".removeprefix("0")
+
+    return md_dot_hms
+
+    # '191041.0322'
+
+
+def pacific_timezone(t=None) -> dt.timezone:
+    """Guess when Winter and Summer is, in California"""
+
+    naive = t if t else dt.datetime.now()
+    year = naive.year
+
+    mar = dt.datetime(year, 3, 1, 2 + 8, 0, 0)
+    nov = dt.datetime(year, 11, 1, 2 + 7, 0, 0)
+
+    for nth in range(2):
+        while mar.weekday() != calendar.SUNDAY:  # 2nd Sunday in March
+            mar += dt.timedelta(days=1)
+        if nth < (2 - 1):
+            mar += dt.timedelta(days=1)
+
+    while nov.weekday() != calendar.SUNDAY:  # 1st Sunday in November
+        nov += dt.timedelta(days=1)
+
+    # print(mar)
+    # print(nov)
+
+    assert ((24 - 8) * 3600) == 57600
+    tz = dt.timezone(dt.timedelta(days=-1, seconds=57600))  # Winter
+    if (naive >= mar) or (naive < nov):
+        tz = dt.timezone(dt.timedelta(days=-1, seconds=61200))  # Summer
+
+    return tz
 
 
 main()
