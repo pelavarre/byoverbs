@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 usage: main.py
 
@@ -44,7 +45,7 @@ def tty_kbwhere() -> tuple[int, int]:
     tcgetattr = termios.tcgetattr(fd)
     tty.setraw(fd, when=termios.TCSADRAIN)
 
-    sys.stderr.write("\x1B[6n")  # Device Status Report (DSR) 06/14
+    sys.stderr.write("\x1B[6n")  # Device Status Report (DSR) 06/14 n
     sys.stderr.flush()
 
     ibytes = os.read(fd, 100)
@@ -54,7 +55,7 @@ def tty_kbwhere() -> tuple[int, int]:
 
     CPR_BYTES_REGEX = rb"^\x1B\[([0-9]+);([0-9]+)R$"
     m = re.match(CPR_BYTES_REGEX, string=ibytes)
-    assert m, (ibytes,)  # Cursor Position Report (CPR) 05/02
+    assert m, (ibytes,)  # Cursor Position Report (CPR) 05/02 R
 
     y1 = int(m.group(1))
     x1 = int(m.group(2))
@@ -62,6 +63,10 @@ def tty_kbwhere() -> tuple[int, int]:
 
     return y1x1
 
+
+ISACONS = replit_is_a_console()
+
+# print(os.get_terminal_size())
 
 #
 #
@@ -78,7 +83,7 @@ SPEEDUP = 5
 SPEEDUP = 1
 # last sticks
 
-if not replit_is_a_console():
+if not ISACONS:
     SPEEDUP = 750
 
 MAX_TURN = -1
@@ -262,7 +267,7 @@ class Main:
     game_name: str  # name of the Game, which is its Random Seed
     turn: int  # count Turns of Sorting or Scrambling
 
-    out_colors: list[str]  # Colors of Queens or Pawns taken off the Board
+    outs: list[str]  # Colors of Queens or Pawns taken off the Board
 
     future_trails: list[list[Cell]]  # the Moves found
 
@@ -282,11 +287,15 @@ class Main:
     their_jumps: list[list[Cell]]  # their Moves from Cell over Enemy
 
 
+Main.outs = list()
+Main.future_trails = list()
+
+
 def board_paint() -> None:
     """Paint over the Board on Screen"""
 
     cells = list(Cells)  # unneeded cloning
-    out_colors = list(Main.out_colors)  # unneeded cloning
+    outs = list(Main.outs)  # unneeded cloning
 
     sys.stdout.flush()
 
@@ -314,16 +323,16 @@ def board_paint() -> None:
     print(f"{3 * dent}Game {game_name}")
 
     print()
-    if not out_colors:
+    if not outs:
         print("\x1B[K", end="")  # needed to roll back
     else:
         print("Outs")
         print()
-        for index in range(0, len(out_colors), 8):
-            some_out_colors = out_colors[index:][:8]
+        for index in range(0, len(outs), 8):
+            some_outs = outs[index:][:8]
 
             sys.stdout.flush()
-            for index, color in enumerate(some_out_colors):
+            for index, color in enumerate(some_outs):
                 if index:
                     print(" ", end="")
                     sys.stdout.flush()
@@ -340,14 +349,10 @@ def board_paint() -> None:
     print("\x1B[J", end="")
     sys.stdout.flush()
 
-    # CUP_Y1 = b"\x1B[{}H"  # Cursor Position  # 04/08
-    # CUP_Y1_X1 = b"\x1B[{};{}H"  # Cursor Position  # 04/08
-    # ED = b"\x1B[J"  # Erase in Page  # 04/10
-    # EL = "\x1B[K"  # Erase In Line  # 04/11
-
-
-Main.out_colors = list()
-Main.future_trails = list()
+    # CUP_Y1 = b"\x1B[{}H"  # Cursor Position  # 04/08 H
+    # CUP_Y1_X1 = b"\x1B[{};{}H"  # Cursor Position  # 04/08 H
+    # ED = b"\x1B[J"  # Erase in Page  # 04/10 J
+    # EL = "\x1B[K"  # Erase In Line  # 04/11 K
 
 
 def board_judge() -> None:  # noqa C901
@@ -518,12 +523,16 @@ def try_main() -> None:
             Main.turn = t
             for index, cell in enumerate(c):
                 Cells[index].color = cell.color
-            Main.out_colors[::] = o
+            Main.outs[::] = o
 
             board_paint()
 
             rollback_speedup = 10
             time.sleep(0.9 / rollback_speedup)
+
+        past_turns.clear()
+        past_cell_lists.clear()
+        past_outs_lists.clear()
 
         print()
         print("Press Return to play again")
@@ -545,7 +554,7 @@ def play_once() -> None:  # noqa C901
     seed = float(game_name)
     random.seed(seed)
 
-    # todo: pile up past Boards to undo after end of Game
+    #
 
     inc = 1
     inc_yx = (-1, -1)
@@ -562,7 +571,7 @@ def play_once() -> None:  # noqa C901
 
         past_turns.append(Main.turn)
         past_cell_lists.append(copy.deepcopy(Cells))
-        past_outs_lists.append(copy.deepcopy(Main.out_colors))
+        past_outs_lists.append(copy.deepcopy(Main.outs))
 
         # Fade all the Purple to White
 
@@ -623,7 +632,7 @@ def play_once() -> None:  # noqa C901
             o3 = (middle_cell.color, Main.their_colors, middle_cell, trail)
             assert middle_cell.color in Main.their_colors, o3
 
-            Main.out_colors.append(middle_cell.color)
+            Main.outs.append(middle_cell.color)
             middle_cell.color = Purple
 
         # Make Queens out of Pawns
