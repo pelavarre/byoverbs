@@ -79,6 +79,7 @@ SPEEDUP = 50
 SPEEDUP = 10
 SPEEDUP = 5
 SPEEDUP = 1
+SPEEDUP = 5
 # last sticks
 
 if not ISACONS:
@@ -151,7 +152,7 @@ def board_init() -> None:
         for x in range(8):
             x1 = 3 + (5 * x)
 
-            color = Gray if ((y + x) % 2) else Plain
+            color = Plain if ((y + x) % 2) else Gray
             cell = Cell(y1=y1, x1=x1, color=color)
 
             yx = (y, x)
