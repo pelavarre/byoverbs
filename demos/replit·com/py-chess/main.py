@@ -509,5 +509,5 @@ judge = Judge()
 main()
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/demos/replit·com/py-chess/
+# posted into:  https://github.com/pelavarre/byoverbs/tree/main/demos/replit·com
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
