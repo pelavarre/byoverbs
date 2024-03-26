@@ -73,17 +73,9 @@ ISACONS = replit_is_a_console()
 
 #
 
-SPEEDUP = 750
-SPEEDUP = 100
-SPEEDUP = 50
-SPEEDUP = 10
 SPEEDUP = 5
-SPEEDUP = 1
-SPEEDUP = 5
-# last sticks
-
 if not ISACONS:
-    SPEEDUP = 750
+    SPEEDUP = 100
 
 MAX_TURN = -1
 
@@ -167,9 +159,15 @@ def board_init() -> None:
     for y, color in [(7, "Black"), (0, "White")]:
         for x, who in enumerate(whos):
             yx = (y, x)
+            cell = cell_by_yx[yx]
 
             piece = unicodedata.lookup(f"{color} Chess {who}")
-            cell_by_yx[yx].piece_if = piece
+            if piece == BlackChessQueen:  # "Queen on her Color"
+                assert cell.color == Gray, (cell.color, cell)
+            elif piece == WhiteChessQueen:
+                assert cell.color == Plain, (cell.color, cell)
+
+            cell.piece_if = piece
 
     for y, color in [(7 - 1, "Black"), (0 + 1, "White")]:
         for x in range(8):
@@ -298,20 +296,28 @@ def moves_add_pawns(moves) -> None:
         (y, x) = yx
 
         if cell.piece_if == BlackChessPawn:
+            first_y = 7 - 1
             delta_y = -1
         elif cell.piece_if == WhiteChessPawn:
+            first_y = 0 + 1
             delta_y = +1
         else:
             continue
 
-        next_yx = (y + delta_y, x)
-        next_cell = cell_by_yx[next_yx]
+        step_yx = (y + delta_y, x)
+        if step_yx in cell_by_yx.keys():
+            step_cell = cell_by_yx[step_yx]
+            if step_cell.piece_if == Space:
+                move = [cell, step_cell]
+                moves.append(move)
+                moves.append(move)  # 2nd Mention
 
-        if next_cell.piece_if != Space:
-            continue
-
-        move = [cell, next_cell]
-        moves.append(move)
+                if y == first_y:
+                    leap_yx = (y + 2 * delta_y, x)
+                    leap_cell = cell_by_yx[leap_yx]
+                    if leap_cell.piece_if == Space:
+                        move = [cell, leap_cell]
+                        moves.append(move)
 
 
 #
