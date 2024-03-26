@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """
 usage: main.py
 
@@ -7,6 +8,9 @@ draw a Chess Board and move its Pieces
 examples:
   python3 main.py --
 """
+
+
+# code reviewed by people, and by Black & Flake8 & MyPy
 
 import calendar
 import copy
@@ -21,65 +25,8 @@ import time
 import tty
 import unicodedata
 
-#
-#
-# Run differently at Replit·Com Console, vs Replit·Com Shell
-#
+... == dict[str, int] | None  # new since Oct/2021 Python 3.10
 
-
-def replit_is_a_console() -> bool:
-    "Guess if Sys Stderr is to a Replit Console (not Shell)"
-
-    y1x1 = tty_kbwhere()
-    isacons = y1x1 == (1, 1)
-
-    return isacons
-
-    # wrong in the Upper Left of Shell, but that's rarely tested
-
-
-def tty_kbwhere() -> tuple[int, int]:
-    """Silently drop any pending Tty Input, and report Cursor Y1 X1"""
-
-    fd = sys.stderr.fileno()
-    tcgetattr = termios.tcgetattr(fd)
-    tty.setraw(fd, when=termios.TCSADRAIN)
-
-    sys.stderr.write("\x1B[6n")  # Device Status Report (DSR) 06/14
-    sys.stderr.flush()
-
-    ibytes = os.read(fd, 100)
-
-    when = termios.TCSADRAIN
-    termios.tcsetattr(fd, when, tcgetattr)
-
-    CPR_BYTES_REGEX = rb"^\x1B\[([0-9]+);([0-9]+)R$"
-    m = re.match(CPR_BYTES_REGEX, string=ibytes)
-    assert m, (ibytes,)  # Cursor Position Report (CPR) 05/02
-
-    y1 = int(m.group(1))
-    x1 = int(m.group(2))
-    y1x1 = (y1, x1)
-
-    return y1x1
-
-
-ISACONS = replit_is_a_console()
-
-#
-#
-# Place Tubes of Cells on the Board
-#
-
-#
-
-SPEEDUP = 5
-if not ISACONS:
-    SPEEDUP = 100
-
-MAX_TURN = -1
-
-#
 
 Space = " "
 assert Space == unicodedata.lookup("Space")
@@ -98,16 +45,156 @@ WhiteChessBishop = unicodedata.lookup("White Chess Bishop")
 WhiteChessQueen = unicodedata.lookup("White Chess Queen")
 WhiteChessKing = unicodedata.lookup("White Chess King")
 
-#
 
-Plain = "\x1B[m"  # 06/13 m  # Default Rendition
-Black = "\x1B[40m"  # 40 Black Background # 06/13 m
-Gray = "\x1B[47m"  # 47 White Background # 06/13 m
+def main() -> None:
+    """Run well, inside a Sh Terminal or Replit Console"""
 
-default_eq_None = None
-if os.getenv("REPLIT_ENVIRONMENT", default_eq_None):
-    (Black, Gray) = (Gray, Black)
-    # 24/Mar/2024 Replit·Com got these backwards
+    print("\x1B[H" + "\x1B[2J" + "\x1B[3J", end="")  # a la Sh 'clear'
+
+    print("\x1B[?25l", end="")  # DecCsiCursorHide
+    try:
+        player.run_awhile()
+    finally:
+        print("\x1B[?25h", end="")  # DecCsiCursorShow
+        print(f"\x1B[{board.y1_below}H", end="")
+        sys.stdout.flush()
+        for _ in range(19):
+            print()
+
+
+@dataclasses.dataclass(order=True)
+class Player:
+    """Play the Game against your Self"""
+
+    stale_boards: list["Board"]
+
+    def __init__(self) -> None:
+        self.stale_boards = list()
+
+    def run_awhile(self) -> None:
+        """Run well, inside a Sh Terminal or Replit Console"""
+
+        if not printer.at_upper_left():
+            ... == board.forward_speed
+            board.forward_speed = 100
+            # wrong in Upper Left of Shell, but that's rarely tested
+
+        while True:
+            player.play_once()
+
+            print("Press Return to roll back the Game")
+            sys.stdin.readline()
+
+            player.roll_back()
+
+            print("Press Return to play again")
+            sys.stdin.readline()
+
+    def play_once(self) -> None:
+        """Play the Game through, once"""
+
+        stale_boards = self.stale_boards
+
+        while True:
+            board.turn += 1
+            board.paint_cells()
+
+            copied = copy.deepcopy(board)
+            stale_boards.append(copied)
+
+            time.sleep(1.000 / board.forward_speed)
+
+            judge.choose_moves()
+            if not judge.moves:
+                break
+
+            board.make_one_move()
+
+    def roll_back(self) -> None:
+        """Roll back the Game"""
+
+        stale_boards = self.stale_boards
+        cell_by_yx = board.cell_by_yx
+
+        while stale_boards:
+            stale_board = stale_boards.pop()
+
+            for yx, cell in cell_by_yx.items():
+                stale_cell = stale_board.cell_by_yx[yx]
+                assert stale_cell is not cell, (stale_cell, cell)
+
+                stale_cell.stale_if = ""  # todo: '= cell.stale_if' doesn't work??
+
+            stale_board.paint_cells()
+
+            if stale_boards:
+                time.sleep(1.000 / board.reverse_speed)
+
+        board.clear()
+
+
+@dataclasses.dataclass(order=True)
+class Printer:
+    """Print well, into a Sh Terminal or Replit Console"""
+
+    Plain = "\x1B[m"  # 06/13 m  # Default Rendition
+
+    def __init__(self) -> None:
+        default_eq_None = None
+
+        BlackBack = "\x1B[40m"  # 40 Black Background # 06/13 m
+        GrayBack = "\x1B[47m"  # 47 White Background # 06/13 m
+        if os.getenv("REPLIT_ENVIRONMENT", default_eq_None):
+            (BlackBack, GrayBack) = (GrayBack, BlackBack)
+            # 24/Mar/2024 Replit·Com got these backwards
+
+        self.BlackBack = BlackBack
+        self.GrayBack = GrayBack
+
+    def at_upper_left(self) -> bool:
+        """Guess if Stderr is to a Replit Console (not Shell)"""
+
+        fd = sys.stderr.fileno()
+        y1x1 = self.fd_fetch_cursor_position_report(fd)
+
+        result = y1x1 == (1, 1)
+        return result
+
+    def fd_fetch_cursor_position_report(self, fd) -> tuple[int, int]:
+        """Silently drop any pending Tty Input, and report Cursor Y1 X1"""
+
+        tcgetattr = termios.tcgetattr(fd)
+        tty.setraw(fd, when=termios.TCSADRAIN)
+
+        sys.stderr.write("\x1B[6n")  # Device Status Report (DSR) 06/14
+        sys.stderr.flush()
+
+        ibytes = os.read(fd, 100)
+
+        when = termios.TCSADRAIN
+        termios.tcsetattr(fd, when, tcgetattr)
+
+        CPR_BYTES_REGEX = rb"^\x1B\[([0-9]+);([0-9]+)R$"
+        m = re.match(CPR_BYTES_REGEX, string=ibytes)
+        assert m, (ibytes,)  # Cursor Position Report (CPR) 05/02
+
+        y1 = int(m.group(1))
+        x1 = int(m.group(2))
+        y1x1 = (y1, x1)
+
+        return y1x1
+
+    def color_sequence_str(self, color) -> str:
+        r"""Convert Color Name to an Unprintable Str such as '\x1B[m'"""
+
+        if color == "Plain":
+            return self.Plain
+        elif color == "Gray":
+            return self.GrayBack
+        elif color == "Black":
+            return self.BlackBack
+
+        assert False, (color,)
 
 
 @dataclasses.dataclass(order=True)
@@ -130,316 +217,258 @@ class Cell:
         self.stale_if = ""  # != Space
 
 
-cell_by_yx: dict[tuple[int, int], Cell]
-cell_by_yx = dict()
-
-
-def board_init() -> None:
-    """Fill out the Cells"""
-
-    # Empty the Board
-
-    for y in range(8):
-        y1 = 2 + (7 - y) * 2
-        for x in range(8):
-            x1 = 3 + (5 * x)
-
-            color = Plain if ((y + x) % 2) else Gray
-            cell = Cell(y1=y1, x1=x1, color=color)
-
-            yx = (y, x)
-            cell_by_yx[yx] = cell
-
-    assert len(cell_by_yx) == (8 * 8)
-
-    # Fill the Top 2 Rows and Bottom 2 Rows with 8 Pieces each
-
-    whos = "Rook Knight Bishop Queen King Bishop Knight Rook".split()
-
-    for y, color in [(7, "Black"), (0, "White")]:
-        for x, who in enumerate(whos):
-            yx = (y, x)
-            cell = cell_by_yx[yx]
-
-            piece = unicodedata.lookup(f"{color} Chess {who}")
-            if piece == BlackChessQueen:  # "Queen on her Color"
-                assert cell.color == Gray, (cell.color, cell)
-            elif piece == WhiteChessQueen:
-                assert cell.color == Plain, (cell.color, cell)
-
-            cell.piece_if = piece
-
-    for y, color in [(7 - 1, "Black"), (0 + 1, "White")]:
-        for x in range(8):
-            yx = (y, x)
-
-            piece = unicodedata.lookup(f"{color} Chess Pawn")
-            cell_by_yx[yx].piece_if = piece
-
-
-board_init()
-
-if False:
-    for yx, cell in cell_by_yx.items():
-        print(yx, cell)
-    sys.exit(2)
-
-MaxY1 = max(_.y1 for _ in cell_by_yx.values())
-Y1Below = MaxY1 + 2
-
-#
-#
-# Model, paint, and judge a Game
-#
-
-
-class Main:
-    """Name a workspace for the Code of this Py File"""
+@dataclasses.dataclass(order=True)
+class Board:
+    """Track the State of Play"""
 
     game_name: str  # name of the Game, which is its Random Seed
     turn: int  # count Turns of Sorting or Scrambling
 
+    cell_by_yx: dict[tuple[int, int], Cell]
     outs: list[str]  # Pieces taken off the Board
-    moves: list[Cell]
 
+    forward_speed = 5
+    reverse_speed = 10
 
-Main.outs = list()
-Main.moves = list()
+    y1_below: int  # Y1 of the first Sh Terminal Line beneath this Board
 
+    def __init__(self) -> None:
+        self.clear()
 
-def board_paint() -> None:
-    """Paint over the Board on Screen"""
+    def clear(self) -> None:
+        """Start a new Game"""
 
-    outs = list(Main.outs)  # unneeded cloning
+        game_name = self.new_game_name()
+        # game_name = str(0.000)  # jitter Tue 26/Mar
+        self.game_name = game_name
 
-    sys.stdout.flush()
+        seed = float(game_name)
+        random.seed(seed)
 
-    for yx, cell in cell_by_yx.items():
-        y1 = cell.y1
-        x1 = cell.x1
-        assert x1 >= 3, (x1, yx, cell)
+        self.turn = 0
+        self.cell_by_yx = dict()
+        self.outs = list()
 
-        (y, x) = yx
-        assert y1 == 2 + (7 - y) * 2, (y1, yx)
-        assert x1 == 3 + (5 * x), (x1, yx)
+        self.place_empty_cells()
+        self.add_eight_pieces_twice()
+        self.add_pawns()
 
-        if cell.stale_if != cell.piece_if:
-            cell.stale_if = cell.piece_if
+    def new_game_name(self) -> str:
+        """Say what MDd.HhMmSs is in California now"""
 
-            print(f"\x1B[{y1};{x1 - 2}H", end="")
-            if cell.color != Plain:
-                print(cell.color, end="")
-            print("  " + cell.piece_if + "  ", end="")
-            if cell.color != Plain:
-                print(Plain, end="")
+        naive = dt.datetime.now()
+        pacific = pacific_timezone(naive)
+        t = naive.astimezone(pacific)
 
-            sys.stdout.flush()
+        # print(t)
 
-    print(f"\x1B[{Y1Below}H", end="")
-    sys.stdout.flush()
+        md = (t.month, t.day)
+        hms = (t.hour, t.minute, t.second)
+        str_md = "".join("{:02d}".format(_) for _ in md)
+        str_hms = "".join("{:02d}".format(_) for _ in hms)
 
-    print()
-    print()
+        md_dot_hms = f"{str_hms}.{str_md}".removeprefix("0")
 
-    dent = 4 * " "  # trailing Dent needed to roll back
-    print(f"{2 * dent}Playing Chess - Turn {Main.turn}{dent}")
+        return md_dot_hms
 
-    game_name = Main.game_name
-    print(f"{3 * dent}Game {game_name}")
+        # '191041.0322'
 
-    print()
-    if not outs:
-        print("\x1B[K", end="")  # needed to roll back
-    else:
-        print("Outs")
-        print()
-        for index in range(0, len(outs), 8):
-            some_outs = outs[index:][:8]
+    def place_empty_cells(self) -> None:
+        """Fill this Board with Empty Cells, placed & indexed correctly"""
 
-            sys.stdout.flush()
-            for index, color in enumerate(some_outs):
-                if index:
-                    print(" ", end="")
-                    sys.stdout.flush()
-                print(color, end="")
-                sys.stdout.flush()
+        cell_by_yx = self.cell_by_yx
 
-            print("\x1B[K", end="")
-            print()
+        for y in range(8):
+            y1 = 2 + (7 - y) * 2
+            for x in range(8):
+                x1 = 3 + (5 * x)
 
-    print("\x1B[K", end="")
-    print()
-    sys.stdout.flush()
+                color = "Plain" if ((y + x) % 2) else "Gray"
+                cell = Cell(y1=y1, x1=x1, color=color)
 
-    print("\x1B[J", end="")
-    sys.stdout.flush()
+                yx = (y, x)
+                cell_by_yx[yx] = cell
 
-    # CUP_Y1 = b"\x1B[{}H"  # Cursor Position  # 04/08
-    # CUP_Y1_X1 = b"\x1B[{};{}H"  # Cursor Position  # 04/08
-    # ED = b"\x1B[J"  # Erase in Page  # 04/10
-    # EL = "\x1B[K"  # Erase In Line  # 04/11
+        assert len(cell_by_yx) == (8 * 8)
 
+        max_y1 = max(_.y1 for _ in cell_by_yx.values())
+        self.y1_below = max_y1 + 2
 
-def board_judge() -> None:
-    """Look for Moves"""
+    def add_eight_pieces_twice(self) -> None:
+        """Fill the Top Row and Bottom Row with 8 Pieces each"""
 
-    moves = list()
-    moves_add_pawns(moves)
+        cell_by_yx = self.cell_by_yx
 
-    Main.moves[::] = moves
+        whos = "Rook Knight Bishop Queen King Bishop Knight Rook".split()
 
+        for y, color in [(7, "Black"), (0, "White")]:
+            for x, who in enumerate(whos):
+                yx = (y, x)
+                cell = cell_by_yx[yx]
 
-def moves_add_pawns(moves) -> None:
-    """Move each Pawn"""
+                piece = unicodedata.lookup(f"{color} Chess {who}")
+                if piece == BlackChessQueen:  # "Queen on her Color"
+                    assert cell.color == "Gray", (cell.color, cell)
+                elif piece == WhiteChessQueen:
+                    assert cell.color == "Plain", (cell.color, cell)
 
-    for yx, cell in cell_by_yx.items():
-        (y, x) = yx
+                cell.piece_if = piece
 
-        if cell.piece_if == BlackChessPawn:
-            first_y = 7 - 1
-            delta_y = -1
-        elif cell.piece_if == WhiteChessPawn:
-            first_y = 0 + 1
-            delta_y = +1
-        else:
-            continue
+    def add_pawns(self) -> None:
+        """Fill the 2nd-to-Top Row and 2nd-toBottom Row with 8 Pawns each"""
 
-        step_yx = (y + delta_y, x)
-        if step_yx in cell_by_yx.keys():
-            step_cell = cell_by_yx[step_yx]
-            if step_cell.piece_if == Space:
-                move = [cell, step_cell]
-                moves.append(move)
-                moves.append(move)  # 2nd Mention
+        cell_by_yx = self.cell_by_yx
 
-                if y == first_y:
-                    leap_yx = (y + 2 * delta_y, x)
-                    leap_cell = cell_by_yx[leap_yx]
-                    if leap_cell.piece_if == Space:
-                        move = [cell, leap_cell]
-                        moves.append(move)
+        for y, color in [(7 - 1, "Black"), (0 + 1, "White")]:
+            for x in range(8):
+                yx = (y, x)
 
+                piece = unicodedata.lookup(f"{color} Chess Pawn")
+                cell_by_yx[yx].piece_if = piece
 
-#
-#
-# Play thyself forever
-#
+    def make_one_move(self) -> None:
+        """Move one Piece once"""
 
+        moves = judge.moves
 
-def main() -> None:
-    """Launch this Process"""
-
-    print("\x1B[H" + "\x1B[2J" + "\x1B[3J")  # a la Sh 'clear'
-
-    print("\x1B[?25l")  # DecCsiCursorHide
-    try:
-        try_main()
-    finally:
-        print("\x1B[?25h")  # DecCsiCursorShow
-        print(f"\x1B[{Y1Below}H")
-        sys.stdout.flush()
-        for _ in range(19):
-            print()
-
-
-past_turns: list[int]
-past_cell_dicts: list[dict[tuple[int, int], Cell]]
-past_outs_lists: list[list[str]]
-
-past_turns = list()
-past_cell_dicts = list()
-past_outs_lists = list()
-
-
-def try_main() -> None:
-    """Play the Game over and over"""
-
-    while True:
-        play_once()
-
-        print("Press Return to roll back the Game")
-        sys.stdin.readline()
-
-        tco_list = list(zip(past_turns, past_cell_dicts, past_outs_lists))
-        for t, c, o in reversed(tco_list):
-            Main.turn = t
-            for yx, cell in c.items():
-                cell_by_yx[yx].piece_if = cell.piece_if
-            Main.outs[::] = o
-
-            board_paint()
-
-            rollback_speedup = 10
-            time.sleep(0.9 / rollback_speedup)
-
-        past_turns.clear()
-        past_cell_dicts.clear()
-        past_outs_lists.clear()
-
-        print()
-        print("Press Return to play again")
-        sys.stdin.readline()
-
-
-def play_once() -> None:  # noqa C901
-    """Play the Game through, once"""
-
-    Main.turn = 0
-
-    game_name = new_game_name()  # FIXME '194604.0322'
-    # last sticks
-
-    Main.game_name = game_name
-
-    seed = float(game_name)
-    random.seed(seed)
-
-    #
-
-    moves = Main.moves
-    while True:
-        if (MAX_TURN >= 0) and (Main.turn >= MAX_TURN):
-            sys.exit(3)
-
-        Main.turn += 1
-
-        board_paint()
-        board_judge()
-        time.sleep(0.9 / SPEEDUP)
-
-        past_turns.append(Main.turn)
-        past_cell_dicts.append(copy.deepcopy(cell_by_yx))
-        past_outs_lists.append(copy.deepcopy(Main.outs))
-
-        if not moves:
-            break
-
+        assert moves, (moves,)
         move = random.choice(moves)
 
         piece = move[0].piece_if
         move[-1].piece_if = piece
         move[0].piece_if = Space
 
+    def paint_cells(self) -> None:
+        """Paint over the Board on Screen"""
 
-def new_game_name() -> str:
-    """Say what MDd.HhMmSs is in California now"""
+        cell_by_yx = self.cell_by_yx
+        game_name = self.game_name
+        outs = self.outs
+        turn = self.turn
+        y1_below = self.y1_below
 
-    naive = dt.datetime.now()
-    pacific = pacific_timezone(naive)
-    t = naive.astimezone(pacific)
+        #
 
-    # print(t)
+        sys.stdout.flush()
 
-    md = (t.month, t.day)
-    hms = (t.hour, t.minute, t.second)
-    str_md = "".join("{:02d}".format(_) for _ in md)
-    str_hms = "".join("{:02d}".format(_) for _ in hms)
+        for yx, cell in cell_by_yx.items():
+            y1 = cell.y1
+            x1 = cell.x1
+            assert x1 >= 3, (x1, yx, cell)
 
-    md_dot_hms = f"{str_hms}.{str_md}".removeprefix("0")
+            (y, x) = yx
+            assert y1 == 2 + (7 - y) * 2, (y1, yx)
+            assert x1 == 3 + (5 * x), (x1, yx)
 
-    return md_dot_hms
+            if cell.stale_if != cell.piece_if:
+                cell.stale_if = cell.piece_if
 
-    # '191041.0322'
+                print(f"\x1B[{y1};{x1 - 2}H", end="")  # CUP_Y1_X1
+                if cell.color != "Plain":
+                    print(printer.color_sequence_str(cell.color), end="")
+
+                print("  " + cell.piece_if + "  ", end="")
+
+                if cell.color != "Plain":
+                    print(printer.Plain, end="")
+
+                sys.stdout.flush()
+
+        #
+
+        print(f"\x1B[{y1_below}H", end="")  # CUP_Y1
+        sys.stdout.flush()
+
+        print()
+        print()
+
+        dent = 4 * " "  # trailing Dent needed to roll back
+        print(f"{2 * dent}Playing Chess - Turn {turn}{dent}")
+
+        game_name = game_name
+        print(f"{3 * dent}Game {game_name}")
+
+        print()
+        if not outs:
+            print("\x1B[K", end="")  # EL  # needed to roll back
+        else:
+            print("Outs")
+            print()
+            for index in range(0, len(outs), 8):
+                some_outs = outs[index:][:8]
+
+                sys.stdout.flush()
+                for index, color in enumerate(some_outs):
+                    if index:
+                        print(" ", end="")
+                        sys.stdout.flush()
+                    print(color, end="")
+                    sys.stdout.flush()
+
+                print("\x1B[K", end="")  # EL
+                print()
+
+        print("\x1B[K", end="")  # EL
+        print()
+        sys.stdout.flush()
+
+        print("\x1B[J", end="")  # ED
+        sys.stdout.flush()
+
+        # CUP_Y1 = b"\x1B[{}H"  # Cursor Position  # 04/08
+        # CUP_Y1_X1 = b"\x1B[{};{}H"  # Cursor Position  # 04/08
+        # ED = b"\x1B[J"  # Erase in Page  # 04/10
+        # EL = "\x1B[K"  # Erase In Line  # 04/11
+
+
+@dataclasses.dataclass(order=True)
+class Judge:
+    """Judge the State of Play"""
+
+    moves: list[list[Cell]]
+
+    def __init__(self) -> None:
+        self.moves = list()
+
+    def choose_moves(self) -> None:
+        """Choose Moves to make"""
+
+        moves = self.moves
+
+        moves.clear()
+        self.moves_add_pawns(moves)
+
+    def moves_add_pawns(self, moves) -> None:
+        """Move each Pawn"""
+
+        cell_by_yx = board.cell_by_yx
+
+        for yx, cell in cell_by_yx.items():
+            (y, x) = yx
+
+            if cell.piece_if == BlackChessPawn:
+                first_y = 7 - 1
+                delta_y = -1
+            elif cell.piece_if == WhiteChessPawn:
+                first_y = 0 + 1
+                delta_y = +1
+            else:
+                continue
+
+            step_yx = (y + delta_y, x)
+            if step_yx in cell_by_yx.keys():
+                step_cell = cell_by_yx[step_yx]
+                if step_cell.piece_if == Space:
+                    move = [cell, step_cell]
+                    moves.append(move)
+                    moves.append(move)  # 2nd Mention
+
+                    if y == first_y:
+                        leap_yx = (y + 2 * delta_y, x)
+                        leap_cell = cell_by_yx[leap_yx]
+                        if leap_cell.piece_if == Space:
+                            move = [cell, leap_cell]
+                            moves.append(move)
 
 
 def pacific_timezone(t=None) -> dt.timezone:
@@ -471,23 +500,14 @@ def pacific_timezone(t=None) -> dt.timezone:
     return tz
 
 
-if False:
-
-    def print(*args, **kwargs) -> None:
-        """Work like a Python Print, or don't"""
-
-        default_eq_Space = " "
-        sep = kwargs.get("sep", default_eq_Space)
-
-        line = sep.join(str(_) for _ in args)
-        line = line.replace("\x1B", r"\x1B")
-        line = line.replace(" ", r"_")
-
-        alt_kwargs = dict(kwargs)
-        if "end" in alt_kwargs.keys():
-            alt_kwargs["end"] = "\n"
-
-        __builtins__.print(line, **alt_kwargs)
+player = Player()
+printer = Printer()
+board = Board()
+judge = Judge()
 
 
 main()
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/demos/replit·com/py-chess/
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -538,6 +538,12 @@ Mac Terminal
     mv -i __pycache__ __pycache__~0312jqd1348~
     $ lsa
 
+Mac Terminal
+
+    qspno "" v $'' for Unicode such as:  $'demos/replit\302\267com'
+
+    also do the Posted-Into/ Copied-From Stamps for those Tracked Files
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md
