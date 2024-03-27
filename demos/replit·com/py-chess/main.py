@@ -31,6 +31,7 @@ import unicodedata
 Space = " "
 assert Space == unicodedata.lookup("Space")
 
+
 BlackChessPawn = unicodedata.lookup("Black Chess Pawn")
 BlackChessRook = unicodedata.lookup("Black Chess Rook")
 BlackChessKnight = unicodedata.lookup("Black Chess Knight")
@@ -44,6 +45,21 @@ WhiteChessKnight = unicodedata.lookup("White Chess Knight")
 WhiteChessBishop = unicodedata.lookup("White Chess Bishop")
 WhiteChessQueen = unicodedata.lookup("White Chess Queen")
 WhiteChessKing = unicodedata.lookup("White Chess King")
+
+
+Pawns = (BlackChessPawn, WhiteChessPawn)
+Rooks = (BlackChessRook, WhiteChessRook)
+Knights = (BlackChessKnight, WhiteChessKnight)
+Bishops = (BlackChessBishop, WhiteChessBishop)
+Queens = (BlackChessQueen, WhiteChessQueen)
+Kings = (BlackChessKing, WhiteChessKing)
+
+
+Axials = [(-1, 0), (0, -1), (0, +1), (+1, 0)]
+Diagonals = [(-1, -1), (-1, +1), (+1, -1), (+1, +1)]
+Royals = sorted(Axials + Diagonals)
+
+Nobles = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
 
 
 def main() -> None:
@@ -105,7 +121,8 @@ class Player:
             time.sleep(1.000 / board.forward_speed)
 
             judge.choose_moves()
-            if not judge.moves:
+            pawn_moves = list(_ for _ in judge.moves if _[0].piece_if in Pawns)
+            if not pawn_moves:
                 break
 
             board.make_one_move()
@@ -187,14 +204,12 @@ class Printer:
     def color_sequence_str(self, color) -> str:
         r"""Convert Color Name to an Unprintable Str such as '\x1B[m'"""
 
-        if color == "Plain":
+        if color == "Light":
             return self.Plain
-        elif color == "Gray":
+        elif color == "Dark":
             return self.GrayBack
-        elif color == "Black":
-            return self.BlackBack
 
-        assert False, (color,)
+        assert False, (color,)  # no need for BlackBack yet
 
 
 @dataclasses.dataclass(order=True)
@@ -283,7 +298,7 @@ class Board:
             for x in range(8):
                 x1 = 3 + (5 * x)
 
-                color = "Plain" if ((y + x) % 2) else "Gray"
+                color = "Light" if ((y + x) % 2) else "Dark"
                 cell = Cell(y1=y1, x1=x1, color=color)
 
                 yx = (y, x)
@@ -308,9 +323,9 @@ class Board:
 
                 piece = unicodedata.lookup(f"{color} Chess {who}")
                 if piece == BlackChessQueen:  # "Queen on her Color"
-                    assert cell.color == "Gray", (cell.color, cell)
+                    assert cell.color == "Dark", (cell.color, cell)
                 elif piece == WhiteChessQueen:
-                    assert cell.color == "Plain", (cell.color, cell)
+                    assert cell.color == "Light", (cell.color, cell)
 
                 cell.piece_if = piece
 
@@ -364,12 +379,12 @@ class Board:
                 cell.stale_if = cell.piece_if
 
                 print(f"\x1B[{y1};{x1 - 2}H", end="")  # CUP_Y1_X1
-                if cell.color != "Plain":
+                if cell.color != "Light":
                     print(printer.color_sequence_str(cell.color), end="")
 
                 print("  " + cell.piece_if + "  ", end="")
 
-                if cell.color != "Plain":
+                if cell.color != "Light":
                     print(printer.Plain, end="")
 
                 sys.stdout.flush()
@@ -434,12 +449,34 @@ class Judge:
         """Choose Moves to make"""
 
         moves = self.moves
-
         moves.clear()
+
         self.moves_add_pawns(moves)
 
+        self.moves_add_bishops(moves)
+        self.moves_add_rooks(moves)
+        self.moves_add_queens(moves)
+
+        self.moves_add_kings(moves)
+        self.moves_add_knights(moves)
+
+    def moves_add_bishops(self, moves) -> None:
+        """Move Bishops across Empty Cells into Empty Cells"""
+
+        self._moves_add_thataway_if_(moves, pieces=Bishops, dy_dx_vectors=Diagonals)
+
+    def moves_add_kings(self, moves) -> None:
+        """Move Kings across Empty Cells into Empty Cells"""
+
+        self._moves_add_thataway_if_(moves, pieces=Kings, dy_dx_vectors=Royals)
+
+    def moves_add_knights(self, moves) -> None:
+        """Move Knights across Empty Cells into Empty Cells"""
+
+        self._moves_add_thataway_if_(moves, pieces=Knights, dy_dx_vectors=Nobles)
+
     def moves_add_pawns(self, moves) -> None:
-        """Move each Pawn"""
+        """Move Pawns across Empty Cells into Empty Cells"""
 
         cell_by_yx = board.cell_by_yx
 
@@ -448,27 +485,69 @@ class Judge:
 
             if cell.piece_if == BlackChessPawn:
                 first_y = 7 - 1
-                delta_y = -1
+                dy = -1
             elif cell.piece_if == WhiteChessPawn:
                 first_y = 0 + 1
-                delta_y = +1
+                dy = +1
             else:
                 continue
 
-            step_yx = (y + delta_y, x)
+            step_yx = (y + dy, x)
             if step_yx in cell_by_yx.keys():
                 step_cell = cell_by_yx[step_yx]
                 if step_cell.piece_if == Space:
                     move = [cell, step_cell]
                     moves.append(move)
-                    moves.append(move)  # 2nd Mention
 
                     if y == first_y:
-                        leap_yx = (y + 2 * delta_y, x)
+                        leap_yx = (y + 2 * dy, x)
                         leap_cell = cell_by_yx[leap_yx]
                         if leap_cell.piece_if == Space:
                             move = [cell, leap_cell]
                             moves.append(move)
+
+    def moves_add_queens(self, moves) -> None:
+        """Move Queens across Empty Cells into Empty Cells"""
+
+        self._moves_add_thataway_if_(moves, pieces=Queens, dy_dx_vectors=Royals)
+
+    def moves_add_rooks(self, moves) -> None:
+        """Move Rooks across Empty Cells into Empty Cells"""
+
+        self._moves_add_thataway_if_(moves, pieces=Rooks, dy_dx_vectors=Axials)
+
+    def _moves_add_thataway_if_(self, moves, pieces, dy_dx_vectors) -> None:
+        """Move Pieces in a straight Line across Empty Cells into Empty Cells"""
+
+        cell_by_yx = board.cell_by_yx
+
+        SingleSteppers = sorted(Kings + Knights)
+        for yx, cell in cell_by_yx.items():
+            (y, x) = yx
+            if cell.piece_if not in pieces:
+                continue
+
+            for dy, dx in dy_dx_vectors:
+                move = [cell]
+                (my, mx) = (y, x)
+
+                while True:
+                    step_yx = (my + dy, mx + dx)
+                    if step_yx in cell_by_yx.keys():
+                        step_cell = cell_by_yx[step_yx]
+                        if step_cell.piece_if == Space:
+                            move.append(step_cell)
+                            moves.append(list(move))
+
+                            if cell.piece_if in SingleSteppers:
+                                break
+
+                            (my, mx) = step_yx
+                            continue
+
+                    break
+
+        # limits Kings / Knights to move only once, not again and again
 
 
 def pacific_timezone(t=None) -> dt.timezone:
