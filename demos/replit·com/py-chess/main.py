@@ -28,6 +28,11 @@ import unicodedata
 ... == dict[str, int] | None  # new since Oct/2021 Python 3.10
 
 
+#
+# Name some Chess conventions
+#
+
+
 Space = " "
 assert Space == unicodedata.lookup("Space")
 
@@ -62,20 +67,28 @@ Royals = sorted(Axials + Diagonals)
 Nobles = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
 
 
+#
+# Call on a Printer to show a Player working a Board of Cells to please a Judge
+#
+
+
 def main() -> None:
     """Run well, inside a Sh Terminal or Replit Console"""
 
-    print("\x1B[H" + "\x1B[2J" + "\x1B[3J", end="")  # a la Sh 'clear'
-
-    print("\x1B[?25l", end="")  # DecCsiCursorHide
+    print("\x1B[?25l", end="")  # DecCsiCursorHide  # 06/12 l
     try:
         player.run_awhile()
     finally:
-        print("\x1B[?25h", end="")  # DecCsiCursorShow
+        print("\x1B[?25h", end="")  # DecCsiCursorShow  # 06/12 l
         print(f"\x1B[{board.y1_below}H", end="")
         sys.stdout.flush()
         for _ in range(19):
             print()
+
+    # CUP = "\x1B[H"  # Cursor Position  # 04/08 H
+    # CUP_Y1 = "\x1B[{}H"  # Cursor Position  # 04/08 H
+    # ED2 = "\x1B[2J"  # 04/10 J  # Erase Screen
+    # ED3 = "\x1B[3J"  # 04/10 J  # Erase Scrollback
 
 
 @dataclasses.dataclass(order=True)
@@ -96,33 +109,43 @@ class Player:
             # wrong in Upper Left of Shell, but that's rarely tested
 
         while True:
+            print("\x1B[H" + "\x1B[2J" + "\x1B[3J", end="")  # a la Sh 'clear'
             player.play_once()
 
+            print()
             print("Press Return to roll back the Game")
             sys.stdin.readline()
 
+            print("\x1B[H" + "\x1B[2J" + "\x1B[3J", end="")  # a la Sh 'clear'
             player.roll_back()
 
+            print()
             print("Press Return to play again")
             sys.stdin.readline()
 
     def play_once(self) -> None:
         """Play the Game through, once"""
 
+        cell_by_yx = board.cell_by_yx
         stale_boards = self.stale_boards
+
+        board_cells = list(cell_by_yx.values())
 
         while True:
             board.turn += 1
             board.paint_cells()
+
+            judge.work_it_out()
 
             copied = copy.deepcopy(board)
             stale_boards.append(copied)
 
             time.sleep(1.000 / board.forward_speed)
 
-            judge.choose_moves()
-            pawn_moves = list(_ for _ in judge.moves if _[0].piece_if in Pawns)
-            if not pawn_moves:
+            kings = list(_ for _ in board_cells if _.piece_if in Kings)
+            if len(kings) < 2:
+                break
+            if not judge.move_list:
                 break
 
             board.make_one_move()
@@ -140,7 +163,10 @@ class Player:
                 stale_cell = stale_board.cell_by_yx[yx]
                 assert stale_cell is not cell, (stale_cell, cell)
 
-                stale_cell.stale_if = ""  # todo: '= cell.stale_if' doesn't work??
+                stale_cell.stale_if = ""
+
+                # todo: '= cell.stale_if' doesn't work??
+                # todo: not just because clearing all cells before roll back
 
             stale_board.paint_cells()
 
@@ -154,13 +180,13 @@ class Player:
 class Printer:
     """Print well, into a Sh Terminal or Replit Console"""
 
-    Plain = "\x1B[m"  # 06/13 m  # Default Rendition
+    Plain = "\x1B[m"  # Select Graphic Rendition (SGR)  # 06/13 m
 
     def __init__(self) -> None:
         default_eq_None = None
 
-        BlackBack = "\x1B[40m"  # 40 Black Background # 06/13 m
-        GrayBack = "\x1B[47m"  # 47 White Background # 06/13 m
+        BlackBack = "\x1B[40m"  # SGR 06/13 m  # 40 Black Background
+        GrayBack = "\x1B[47m"  # SGR 06/13 m  # 47 White Background
         if os.getenv("REPLIT_ENVIRONMENT", default_eq_None):
             (BlackBack, GrayBack) = (GrayBack, BlackBack)
             # 24/Mar/2024 Replit·Com got these backwards
@@ -183,7 +209,7 @@ class Printer:
         tcgetattr = termios.tcgetattr(fd)
         tty.setraw(fd, when=termios.TCSADRAIN)
 
-        sys.stderr.write("\x1B[6n")  # Device Status Report (DSR) 06/14
+        sys.stderr.write("\x1B[6n")  # Device Status Report (DSR) 06/14 n
         sys.stderr.flush()
 
         ibytes = os.read(fd, 100)
@@ -193,7 +219,7 @@ class Printer:
 
         CPR_BYTES_REGEX = rb"^\x1B\[([0-9]+);([0-9]+)R$"
         m = re.match(CPR_BYTES_REGEX, string=ibytes)
-        assert m, (ibytes,)  # Cursor Position Report (CPR) 05/02
+        assert m, (ibytes,)  # Cursor Position Report (CPR) 05/02 R
 
         y1 = int(m.group(1))
         x1 = int(m.group(2))
@@ -210,6 +236,18 @@ class Printer:
             return self.GrayBack
 
         assert False, (color,)  # no need for BlackBack yet
+
+    ... == """
+
+        lots of docs:
+          https://unicode.org/charts/PDF/U0000.pdf
+          https://unicode.org/charts/PDF/U0080.pdf
+          https://en.wikipedia.org/wiki/ANSI_escape_code
+          https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+          https://www.ecma-international.org/publications-and-standards/standards/ecma-48
+            /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+
+    """
 
 
 @dataclasses.dataclass(order=True)
@@ -294,9 +332,9 @@ class Board:
         cell_by_yx = self.cell_by_yx
 
         for y in range(8):
-            y1 = 2 + (7 - y) * 2
+            y1 = 1 + 3 + ((7 - y) * 2)
             for x in range(8):
-                x1 = 3 + (5 * x)
+                x1 = 1 + 4 + 2 + (5 * x)
 
                 color = "Light" if ((y + x) % 2) else "Dark"
                 cell = Cell(y1=y1, x1=x1, color=color)
@@ -344,10 +382,15 @@ class Board:
     def make_one_move(self) -> None:
         """Move one Piece once"""
 
-        moves = judge.moves
+        move_list = judge.move_list
+        outs = self.outs
 
-        assert moves, (moves,)
-        move = random.choice(moves)
+        assert move_list, (move_list,)
+        move = random.choice(move_list)
+
+        end_piece_if = move[-1].piece_if
+        if end_piece_if != Space:
+            outs.append(end_piece_if)
 
         piece = move[0].piece_if
         move[-1].piece_if = piece
@@ -369,11 +412,10 @@ class Board:
         for yx, cell in cell_by_yx.items():
             y1 = cell.y1
             x1 = cell.x1
-            assert x1 >= 3, (x1, yx, cell)
 
             (y, x) = yx
-            assert y1 == 2 + (7 - y) * 2, (y1, yx)
-            assert x1 == 3 + (5 * x), (x1, yx)
+            assert y1 == 1 + 3 + ((7 - y) * 2), (y1, yx, cell)
+            assert x1 == 1 + 4 + 2 + (5 * x), (x1, yx, cell)
 
             if cell.stale_if != cell.piece_if:
                 cell.stale_if = cell.piece_if
@@ -430,58 +472,60 @@ class Board:
         print("\x1B[J", end="")  # ED
         sys.stdout.flush()
 
-        # CUP_Y1 = b"\x1B[{}H"  # Cursor Position  # 04/08
-        # CUP_Y1_X1 = b"\x1B[{};{}H"  # Cursor Position  # 04/08
-        # ED = b"\x1B[J"  # Erase in Page  # 04/10
-        # EL = "\x1B[K"  # Erase In Line  # 04/11
+        # CUP_Y1 = "\x1B[{}H"  # Cursor Position  # 04/08 H
+        # CUP_Y1_X1 = "\x1B[{};{}H"  # Cursor Position  # 04/08 H
+        # ED = "\x1B[J"  # Erase in Page  # 04/10 J
+        # EL = "\x1B[K"  # Erase In Line  # 04/11 K
 
 
 @dataclasses.dataclass(order=True)
 class Judge:
     """Judge the State of Play"""
 
-    moves: list[list[Cell]]
+    move_list: list[list[Cell]]
 
     def __init__(self) -> None:
-        self.moves = list()
+        self.move_list = list()
 
-    def choose_moves(self) -> None:
-        """Choose Moves to make"""
+    def work_it_out(self) -> None:
+        """Judge the Board"""
 
-        moves = self.moves
-        moves.clear()
+        move_list = self.move_list
+        move_list.clear()
 
-        self.moves_add_pawns(moves)
+        self.moves_add_pawns(move_list)
 
-        self.moves_add_bishops(moves)
-        self.moves_add_rooks(moves)
-        self.moves_add_queens(moves)
+        self.moves_add_bishops(move_list)
+        self.moves_add_rooks(move_list)
+        self.moves_add_queens(move_list)
 
-        self.moves_add_kings(moves)
-        self.moves_add_knights(moves)
+        self.moves_add_kings(move_list)
+        self.moves_add_knights(move_list)
 
-    def moves_add_bishops(self, moves) -> None:
+    def moves_add_bishops(self, move_list) -> None:
         """Move Bishops across Empty Cells into Empty Cells"""
 
-        self._moves_add_thataway_if_(moves, pieces=Bishops, dy_dx_vectors=Diagonals)
+        self._moves_add_thataway_if_(move_list, pieces=Bishops, dy_dx_vectors=Diagonals)
 
-    def moves_add_kings(self, moves) -> None:
+    def moves_add_kings(self, move_list) -> None:
         """Move Kings across Empty Cells into Empty Cells"""
 
-        self._moves_add_thataway_if_(moves, pieces=Kings, dy_dx_vectors=Royals)
+        self._moves_add_thataway_if_(move_list, pieces=Kings, dy_dx_vectors=Royals)
 
-    def moves_add_knights(self, moves) -> None:
+    def moves_add_knights(self, move_list) -> None:
         """Move Knights across Empty Cells into Empty Cells"""
 
-        self._moves_add_thataway_if_(moves, pieces=Knights, dy_dx_vectors=Nobles)
+        self._moves_add_thataway_if_(move_list, pieces=Knights, dy_dx_vectors=Nobles)
 
-    def moves_add_pawns(self, moves) -> None:
+    def moves_add_pawns(self, move_list) -> None:
         """Move Pawns across Empty Cells into Empty Cells"""
 
         cell_by_yx = board.cell_by_yx
 
         for yx, cell in cell_by_yx.items():
             (y, x) = yx
+
+            # Move only Pawns, only ahead
 
             if cell.piece_if == BlackChessPawn:
                 first_y = 7 - 1
@@ -492,31 +536,52 @@ class Judge:
             else:
                 continue
 
-            step_yx = (y + dy, x)
+            self.moves_add_one_pawn(move_list, yx=yx, first_y=first_y, dy=dy)
+
+    def moves_add_one_pawn(self, move_list, yx, first_y, dy) -> None:
+        """Move this 1 Pawn across Empty Cells into Empty Cells"""
+
+        cell_by_yx = board.cell_by_yx
+
+        cell = cell_by_yx[yx]
+        (y, x) = yx
+
+        # Move to the Cell ahead, or leap to the Cell after that
+
+        step_yx = (y + dy, x)
+        if step_yx in cell_by_yx.keys():
+            step_cell = cell_by_yx[step_yx]
+            if step_cell.piece_if == Space:
+                move = [cell, step_cell]
+                move_list.append(move)
+
+                if y == first_y:  # leaps only from start
+                    leap_yx = (y + 2 * dy, x)
+                    leap_cell = cell_by_yx[leap_yx]
+                    if leap_cell.piece_if == Space:
+                        move = [cell, leap_cell]
+                        move_list.append(move)
+
+        # Take the Cell ahead to the left or to the right
+
+        for step_yx in [(y + dy, x - 1), (y + dy, x + 1)]:
             if step_yx in cell_by_yx.keys():
                 step_cell = cell_by_yx[step_yx]
-                if step_cell.piece_if == Space:
+                if step_cell.piece_if != Space:
                     move = [cell, step_cell]
-                    moves.append(move)
+                    move_list.append(move)
 
-                    if y == first_y:
-                        leap_yx = (y + 2 * dy, x)
-                        leap_cell = cell_by_yx[leap_yx]
-                        if leap_cell.piece_if == Space:
-                            move = [cell, leap_cell]
-                            moves.append(move)
-
-    def moves_add_queens(self, moves) -> None:
+    def moves_add_queens(self, move_list) -> None:
         """Move Queens across Empty Cells into Empty Cells"""
 
-        self._moves_add_thataway_if_(moves, pieces=Queens, dy_dx_vectors=Royals)
+        self._moves_add_thataway_if_(move_list, pieces=Queens, dy_dx_vectors=Royals)
 
-    def moves_add_rooks(self, moves) -> None:
+    def moves_add_rooks(self, move_list) -> None:
         """Move Rooks across Empty Cells into Empty Cells"""
 
-        self._moves_add_thataway_if_(moves, pieces=Rooks, dy_dx_vectors=Axials)
+        self._moves_add_thataway_if_(move_list, pieces=Rooks, dy_dx_vectors=Axials)
 
-    def _moves_add_thataway_if_(self, moves, pieces, dy_dx_vectors) -> None:
+    def _moves_add_thataway_if_(self, move_list, pieces, dy_dx_vectors) -> None:
         """Move Pieces in a straight Line across Empty Cells into Empty Cells"""
 
         cell_by_yx = board.cell_by_yx
@@ -524,8 +589,13 @@ class Judge:
         SingleSteppers = sorted(Kings + Knights)
         for yx, cell in cell_by_yx.items():
             (y, x) = yx
-            if cell.piece_if not in pieces:
+            piece_if = cell.piece_if
+
+            if piece_if not in pieces:
                 continue
+
+            title = unicodedata.name(piece_if).title()
+            color = title.split()[0]
 
             for dy, dx in dy_dx_vectors:
                 move = [cell]
@@ -535,15 +605,25 @@ class Judge:
                     step_yx = (my + dy, mx + dx)
                     if step_yx in cell_by_yx.keys():
                         step_cell = cell_by_yx[step_yx]
-                        if step_cell.piece_if == Space:
+                        far_piece_if = step_cell.piece_if
+
+                        if far_piece_if == Space:
                             move.append(step_cell)
-                            moves.append(list(move))
+                            move_list.append(list(move))
 
                             if cell.piece_if in SingleSteppers:
                                 break
 
                             (my, mx) = step_yx
                             continue
+
+                        far_title = unicodedata.name(far_piece_if).title()
+                        far_color = far_title.split()[0]
+
+                        if color != far_color:
+                            move.append(step_cell)
+                            move_list.append(list(move))
+                            break
 
                     break
 
@@ -579,6 +659,12 @@ def pacific_timezone(t=None) -> dt.timezone:
     return tz
 
 
+#
+# Create 1 Instance of each Singleton Class,
+#   rather than marking every Def as @staticmethod
+#
+
+
 player = Player()
 printer = Printer()
 board = Board()
@@ -586,6 +672,20 @@ judge = Judge()
 
 
 main()
+
+
+# todo: number the '8 7 6' Rows top down, and 'a b c' Columns left to right
+# todo: print the last move, in long figurine algebraic notation
+
+# todo: cope better with smaller Screens
+
+# todo: left and right arrow to step back and forth through the Game
+# todo: Option + Arrow to step faster
+# todo: Shift + Arrow to go to either end
+
+# todo: play the Loser's Chess of must choose a take when takes open
+
+# todo: Castling, En Passant, Check, Checkmate, Stalemate, Promotion
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/tree/main/demos/replit·com
