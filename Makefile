@@ -84,7 +84,8 @@ soon: black flake8 mypy shellcheck selftest
 	:
 	demos/last2lines.py ./ bin/ demos/
 	:
-	rm -fr bin/__pycache__/byotools.cpython-*.pyc
+	rm -fr .mypy_cache/
+	rm -fr __pycache__/ bin/__pycache__/ demos/__pycache__/
 	rm -fr tmp/
 	:
 	git log --oneline --no-decorate -1
@@ -125,7 +126,9 @@ flake8:
 
 mypy:
 	grep -nR '^ *def ' bin/*.py demos/l*.py |grep -v ') -> ' ||:
-	~/.pyvenvs/mypy/bin/mypy bin
+	mv -i __init__.py ../__init__.py~
+	~/.pyvenvs/mypy/bin/mypy bin || (mv -i ../__init__.py~ __init__.py && exit 1)
+	mv -i ../__init__.py~ __init__.py
 	# todo: more widely adopt MyPy Code-Review of Python Data-Types
 	:
 
@@ -144,6 +147,8 @@ shellcheck:
 
 
 selftest:
+	:
+	python3 demos/byoverbs.py --
 	:
 
 

@@ -75,6 +75,12 @@ Nobles = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)
 def main() -> None:
     """Run well, inside a Sh Terminal or Replit Console"""
 
+    fd = sys.stderr.fileno()  # Py Idle raises io.UnsupportedOperation here
+    (columns, rows) = os.get_terminal_size(fd)
+    if (columns < 50) or (rows < 36):
+        print("Try a larger Terminal, such as 50 Rows x 36 Columns", file=sys.stderr)
+        sys.exit(1)
+
     print("\x1B[?25l", end="")  # DecCsiCursorHide  # 06/12 l
     try:
         player.run_awhile()
@@ -648,6 +654,8 @@ def pacific_timezone(t=None) -> dt.timezone:
     while nov.weekday() != calendar.SUNDAY:  # 1st Sunday in November
         nov += dt.timedelta(days=1)
 
+        # print(f"{len(dir(__builtins__))}")
+
     # print(mar)
     # print(nov)
 
@@ -677,7 +685,8 @@ main()
 # todo: number the '8 7 6' Rows top down, and 'a b c' Columns left to right
 # todo: print the last move, in long figurine algebraic notation
 
-# todo: cope better with smaller Screens
+# todo: accept smaller Screens
+# todo: accept Dark Mode Terminals
 
 # todo: left and right arrow to step back and forth through the Game
 # todo: Option + Arrow to step faster

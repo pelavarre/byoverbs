@@ -24,6 +24,9 @@ examples:
   pbpaste |awk '{print $NF}' |sed 's,^,-- ,' |sed 's,$, --,' |pbcopy
 """
 
+# qdno |sed "s,\",echo $'," |sed "s,\",'," |bash  # converts to Sh $'' from Git ""
+
+
 import byotools as byo
 
 

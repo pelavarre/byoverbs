@@ -1,2 +1,2 @@
 set -xe
-git show --color-moved --pretty= --name-only "$@"
+git show --pretty= --name-only "$@" |xargs -I% printf %\\n

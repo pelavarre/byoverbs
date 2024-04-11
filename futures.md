@@ -544,6 +544,12 @@ Mac Terminal
 
     also do the Posted-Into/ Copied-From Stamps for those Tracked Files
 
+
+### 8 - Eighth traunch
+
+demos/script{1,2}.py echo ^M at each Return, etc
+
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md
