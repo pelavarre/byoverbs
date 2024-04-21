@@ -1,2 +1,2 @@
 set -xe
-git show --pretty= --name-only "$@" |xargs -I% printf %\\n
+git show --pretty= --name-only "$@" |sed 's,%,%%,g' |xargs -I% printf %\\n

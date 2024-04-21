@@ -1,14 +1,14 @@
 if [[ $# != 0 ]]; then
     set -xe
-    git show --pretty= --name-only "$@" |xargs -I% printf %\\n
+    git show --pretty= --name-only "$@" |sed 's,%,%%,g' |xargs -I% printf %\\n
 else
     diffs=$(git diff --name-only)
     if [[ "$diffs" ]]; then
         set -xe
-        git diff --name-only |xargs -I% printf %\\n
+        git diff --name-only |sed 's,%,%%,g' |xargs -I% printf %\\n
     else
         set -xe
-        git diff --name-only |xargs -I% printf %\\n
-        git show --pretty= --name-only |xargs -I% printf %\\n
+        git diff --name-only |sed 's,%,%%,g' |xargs -I% printf %\\n
+        git show --pretty= --name-only |sed 's,%,%%,g' |xargs -I% printf %\\n
     fi
 fi
