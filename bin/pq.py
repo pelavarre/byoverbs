@@ -35,11 +35,13 @@ import dataclasses
 import difflib
 import os
 import pathlib
+import re
 import shutil
 import stat
 import subprocess
 import sys
 import textwrap
+import urllib
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9
 
@@ -157,10 +159,66 @@ def ibytes_edit(ibytes) -> bytes:
     # todo: shadow the print, then edit it
     # todo: output the shadow, at quit
 
-    return b""
+    #
+
+    try:
+        obytes = ibytes_to_obytes(ibytes)
+        return obytes
+    except Exception:
+        pass
+
+    #
+
+    itext = ibytes.decode()
+    otext = textwrap.dedent(itext)
+    otext = "\n".join(otext.splitlines()) + "\n"
+    obytes = otext.encode()
+
+    #
+
+    return obytes
 
     # OSError: [Errno 19] Operation not supported by device
     # OSError: [Errno 25] Inappropriate ioctl for device
+
+
+def ibytes_to_obytes(ibytes) -> bytes:
+    """Guess what change we want"""
+
+    itext = ibytes.decode()
+    ilines = itext.splitlines()
+
+    assert len(ilines) == 1, (len(ilines),)
+    iline = ilines[-1]
+
+    assert iline.startswith("https:") or (iline.startswith("http:")), (iline,)
+    isplits = urllib.parse.urlsplit(iline)
+
+    http_not_s = "http"
+    netloc = isplits.netloc
+    path = isplits.path
+
+    sub_0 = netloc.split(".")[0]
+    assert sub_0 == "codereviews", sub_0
+
+    m = re.match(r"^/r/([0-9]+)", string=path)
+    assert m
+
+    r = int(m.group(1))
+
+    osplits = urllib.parse.SplitResult(
+        scheme=http_not_s, netloc=sub_0, path=f"/r/{r}/diff", query="", fragment=""
+    )
+
+    address = osplits.geturl()
+
+    otext = address + "\n"
+    obytes = otext.encode()
+
+    return obytes
+
+    # b'https://codereviews/r/186738/diff'
+    # from b'https://codereviews.example.co.uk/r/186738/diff/1/#index_header'
 
 
 #
