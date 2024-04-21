@@ -162,7 +162,7 @@ def ibytes_edit(ibytes) -> bytes:
     #
 
     try:
-        obytes = ibytes_to_obytes(ibytes)
+        obytes = ibytes_try_guess_obytes(ibytes)
         return obytes
     except Exception:
         pass
@@ -182,8 +182,8 @@ def ibytes_edit(ibytes) -> bytes:
     # OSError: [Errno 25] Inappropriate ioctl for device
 
 
-def ibytes_to_obytes(ibytes) -> bytes:
-    """Guess what change we want"""
+def ibytes_try_guess_obytes(ibytes) -> bytes:
+    """Guess what Byte change we want, else raise an Exception"""
 
     itext = ibytes.decode()
     ilines = itext.splitlines()
@@ -191,34 +191,98 @@ def ibytes_to_obytes(ibytes) -> bytes:
     assert len(ilines) == 1, (len(ilines),)
     iline = ilines[-1]
 
-    assert iline.startswith("https:") or (iline.startswith("http:")), (iline,)
+    oline = iline_try_guess_oline(iline)
+
+    otext = oline + "\n"
+    obytes = otext.encode()
+
+    return obytes
+
+
+def iline_try_guess_oline(iline) -> str:
+    """Guess what Char change we want in 1 Line, else raise an Exception"""
+
+    try:
+        oline = iline_codereviews_to_diff_address(iline)
+        return oline
+    except Exception:
+        pass
+
+    try:
+        oline = iline_hot_to_cold_address(iline)
+        return oline
+    except Exception:
+        pass
+
+    try:
+        oline = iline_cold_to_hot_address(iline)
+        return oline
+    except Exception:
+        pass
+
+    assert False
+
+
+def iline_codereviews_to_diff_address(iline) -> str:
+    """Try to convert to like 'https://codereviews/r/186738/diff'"""
+
     isplits = urllib.parse.urlsplit(iline)
 
-    http_not_s = "http"
+    scheme = isplits.scheme
     netloc = isplits.netloc
     path = isplits.path
 
+    assert scheme in ("https", "http"), (scheme,)
+
     sub_0 = netloc.split(".")[0]
-    assert sub_0 == "codereviews", sub_0
+    assert sub_0 == "codereviews", (sub_0,)
 
     m = re.match(r"^/r/([0-9]+)", string=path)
-    assert m
+    assert m, (m, path)
 
     r = int(m.group(1))
 
+    http_not_s = "http"
     osplits = urllib.parse.SplitResult(
         scheme=http_not_s, netloc=sub_0, path=f"/r/{r}/diff", query="", fragment=""
     )
 
     address = osplits.geturl()
 
-    otext = address + "\n"
-    obytes = otext.encode()
-
-    return obytes
+    return address
 
     # b'https://codereviews/r/186738/diff'
     # from b'https://codereviews.example.co.uk/r/186738/diff/1/#index_header'
+
+
+def iline_hot_to_cold_address(iline) -> str:
+    """Try to convert to like 'https :// twitter . com /pelavarre/status/123456789'"""
+
+    assert " " not in iline, (iline,)
+
+    isplits = urllib.parse.urlsplit(iline)
+    assert isplits.scheme in ("https", "http"), (isplits.scheme,)
+
+    iwords = iline.split("/")
+
+    owords = list(iwords)
+    owords[0] = owords[0].replace(":", " :")
+    owords[2] = " " + owords[2].replace(".", " . ") + " "
+
+    oline = "/".join(owords)
+
+    return oline
+
+
+def iline_cold_to_hot_address(iline) -> str:
+    """Try to convert from like 'https :// twitter . com /pelavarre/status/123456789'"""
+
+    iwords = iline.split()
+    iwords_0 = iwords[0]
+    assert iwords_0 in ("https", "http"), (iwords_0,)
+
+    oline = "".join(iwords)
+    return oline
 
 
 #
