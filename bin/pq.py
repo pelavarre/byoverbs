@@ -203,6 +203,12 @@ def iline_try_guess_oline(iline) -> str:
     """Guess what Char change we want in 1 Line, else raise an Exception"""
 
     try:
+        oline = iline_google_to_share_address(iline)
+        return oline
+    except Exception:
+        pass
+
+    try:
         oline = iline_codereviews_to_diff_address(iline)
         return oline
     except Exception:
@@ -223,8 +229,35 @@ def iline_try_guess_oline(iline) -> str:
     assert False
 
 
+def iline_google_to_share_address(iline) -> str:
+    """Convert to Google Drive without Edit Path and without Query"""
+
+    isplits = urllib.parse.urlsplit(iline)
+
+    scheme = isplits.scheme
+    netloc = isplits.netloc
+    path = isplits.path
+
+    assert scheme in ("https", "http"), (scheme,)
+    assert netloc == "docs.google.com", (netloc,)
+
+    alt_path = path.removesuffix("/edit")
+
+    osplits = urllib.parse.SplitResult(
+        scheme=scheme, netloc=netloc, path=alt_path, query="", fragment=""
+    )
+
+    address = osplits.geturl()
+
+    return address
+
+    # 'https://docs.google.com/document/d/$HASH'
+    # from 'https://docs.google.com/document/d/$HASH/edit?usp=sharing'
+    # or from 'https://docs.google.com/document/d/$HASH/edit#gid=0'
+
+
 def iline_codereviews_to_diff_address(iline) -> str:
-    """Try to convert to like 'https://codereviews/r/186738/diff'"""
+    """Convert to Http CodeReviews Diff without Fragment"""
 
     isplits = urllib.parse.urlsplit(iline)
 
@@ -251,12 +284,12 @@ def iline_codereviews_to_diff_address(iline) -> str:
 
     return address
 
-    # b'https://codereviews/r/186738/diff'
-    # from b'https://codereviews.example.co.uk/r/186738/diff/1/#index_header'
+    # 'https://codereviews/r/186738/diff'
+    # from 'https://codereviews.example.co.uk/r/186738/diff/1/#index_header'
 
 
 def iline_hot_to_cold_address(iline) -> str:
-    """Try to convert to like 'https :// twitter . com /pelavarre/status/123456789'"""
+    """Convert to like cold 'https :// twitter . com /pelavarre/status/123456789'"""
 
     assert " " not in iline, (iline,)
 
@@ -273,9 +306,12 @@ def iline_hot_to_cold_address(iline) -> str:
 
     return oline
 
+    # 'https :// twitter . com /pelavarre/status/1647691634329686016'
+    # from 'https://twitter.com/pelavarre/status/1647691634329686016'
+
 
 def iline_cold_to_hot_address(iline) -> str:
-    """Try to convert from like 'https :// twitter . com /pelavarre/status/123456789'"""
+    """Convert from like cold 'https :// twitter . com /pelavarre/status/123456789'"""
 
     iwords = iline.split()
     iwords_0 = iwords[0]
@@ -283,6 +319,9 @@ def iline_cold_to_hot_address(iline) -> str:
 
     oline = "".join(iwords)
     return oline
+
+    # 'https://twitter.com/pelavarre/status/1647691634329686016'
+    # from 'https :// twitter . com /pelavarre/status/1647691634329686016'
 
 
 #
