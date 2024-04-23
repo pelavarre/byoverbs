@@ -1,2 +1,17 @@
+unset authors
+
+authors=()
+while [[ $# != 0 ]]; do
+    if [[ "$1" =~ ^-.*$ ]]; then
+        break
+    fi
+    authors+=("--author=$1")
+    shift
+done
+
+if [[ ${#authors[@]} == 0 ]]; then
+    authors+=("--author=$(git config user.email)")
+fi
+
 set -xe
-git log --pretty=fuller --no-decorate --author="$(git config user.email)" "$@"
+git log --pretty=fuller --no-decorate "${authors[@]}" "$@"
