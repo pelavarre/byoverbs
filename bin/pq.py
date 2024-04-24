@@ -37,11 +37,12 @@ import os
 import pathlib
 import re
 import shutil
+import socket
 import stat
 import subprocess
 import sys
 import textwrap
-import urllib
+import urllib.parse
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9
 
@@ -215,13 +216,13 @@ def iline_try_guess_oline(iline) -> str:
         pass
 
     try:
-        oline = iline_hot_to_cold_address(iline)
+        oline = iline_jira_hot_to_cold_address_toggle(iline)
         return oline
     except Exception:
         pass
 
     try:
-        oline = iline_cold_to_hot_address(iline)
+        oline = iline_hot_to_cold_address_toggle(iline)
         return oline
     except Exception:
         pass
@@ -288,6 +289,22 @@ def iline_codereviews_to_diff_address(iline) -> str:
     # from 'https://codereviews.example.co.uk/r/186738/diff/1/#index_header'
 
 
+def iline_hot_to_cold_address_toggle(iline) -> str:
+    try:
+        oline = iline_hot_to_cold_address(iline)
+        return oline
+    except Exception:
+        pass
+
+    try:
+        oline = iline_cold_to_hot_address(iline)
+        return oline
+    except Exception:
+        pass
+
+    assert False
+
+
 def iline_hot_to_cold_address(iline) -> str:
     """Convert to like cold 'https :// twitter . com /pelavarre/status/123456789'"""
 
@@ -322,6 +339,29 @@ def iline_cold_to_hot_address(iline) -> str:
 
     # 'https://twitter.com/pelavarre/status/1647691634329686016'
     # from 'https :// twitter . com /pelavarre/status/1647691634329686016'
+
+
+def iline_jira_hot_to_cold_address_toggle(iline) -> str:
+    """Toggle between Jira Key 'PROJ-12345' and 'http://jira.../browse/PROJ-12345'"""
+
+    fqdn = socket.getfqdn()
+    dn = fqdn.partition(".")[-1]
+
+    if re.match(r"[A-Z]+[-][0-9]+", iline):
+        oline = f"https://jira.{dn}/browse/{iline}"
+        return oline
+
+    isplits = urllib.parse.urlsplit(iline)
+
+    inetloc = isplits.netloc
+    ipath = isplits.path
+
+    if inetloc.startswith("jira."):
+        if ipath.startswith("/browse/"):
+            oline = ipath.removeprefix("/browse/")
+            return oline
+
+    assert False
 
 
 #
