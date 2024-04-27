@@ -33,8 +33,14 @@ examples:
   F=t.txt && echo mv -i $F{,~$(date -r $F +%m%d$(qjd)%H%M)~} |tee /dev/tty |bash
   F=t.txt && echo cp -ip $F{,~$(date -r $F +%m%d$(qjd)%H%M)~} |tee /dev/tty |bash
 
-  printf '\e[8;%s;89t' "$(stty size |cut -d' ' -f2)"  # echoes inside 89 Columns
-  printf '\e[8;50;%st' "$(stty size |cut -d' ' -f2)"  # echoes inside 50 Lines
+  printf '\e[8;;89t'  # resize Sh Terminal to 89 Cols  # same Rows
+  printf '\e[8;;101t'  # resize Sh Terminal to 89 Cols  # same Rows
+  printf '\e[8;25;%dt' $(stty size |cut -d' ' -f2)  # resize to 25 Rows  # same Cols
+  printf '\e[8;42;%dt' $(stty size |cut -d' ' -f2)  # resize to 42 Rows  # same Cols
+  printf '\e[8;42;89t'  # resize Sh Terminal to 89 Cols x 42 Rows
+  printf '\e[8;;t'  # resize Sh Terminal to max Rows and Columns
+  stty size  # say what Rows and Columns you got
+
   printf '\e[H\e[2J\e[3J'  # clears Scrollback and Screen of Echoes
 """
 
