@@ -1,30 +1,40 @@
 #!/usr/bin/env python3
 
 r"""
-usage: pq.py [-h] [WORD ...]
+usage: pq.py [-h] [--py] [WORD ...]
 
-edit the Terminal Screen
+edit the Os Copy/Paste Clipboard Buffer
 
 positional arguments:
-  WORD        word of the Pq Programming Language:  dedent, dent, ...
+  WORD        word of the Pq Programming Language:  dedented, dented, ...
 
 options:
   -h, --help  show this help message and exit
+  --py        test and show the Python Code, except don't write the Clipboard Buffer
+
+words:
+  dedented, dented, reversed, sorted
+
+guesses:
+  reduces to http://codereviews/r/$R/diff from r/$R or from r/$R/diff/9?...#...
+  reduces to https://docs.google.com/document/d/$HASH from ...$=/$HASH/edit?...#...
+  toggles between http://...jenkins.../... and http://...jenkins/...
+  toggles between PROJ-12345 and http://jira.../browse/PROJ-12345
+  toggles between http://example.com and h t t p : / / e x a m p l e . c o m
 
 quirks:
   respects color and ignores case
   doesn't clear screen at launch, nor at quit either
-  looks to reject Bytes that don't decode as UTF-8
-  looks to end every line with U+000A Line-Feed
+  looks to end the last Line, and every Line, with U+000A Line-Feed
   works well with:  ⌘C pbcopy, ⌘V pbpaste, less -IRX
 
 examples:
   pq.py  # show these examples and exit
   pq.py --help  # show this help message and exit
-  pq.py --  # dump the Os Copy/Paste Clipboard Buffer on Screen, then edit the Screen
+  pq.py --  # parse the Paste to guess what to do with it
+  pq.py dent  # insert 4 Spaces at the left of each Line
+  pq.py dedent  # remove the leading Blank Columns from the Lines
 """
-
-# todo: --py  show the code without running it
 
 # code reviewed by People, Black, Flake8, & MyPy
 
@@ -56,29 +66,26 @@ import urllib.parse
 class PqPyArgs:
     """Name the Sh Command-Line Arguments of Pq Py"""
 
+    py: bool
     words: list[str]
+
+
+@dataclasses.dataclass
+class Main:
+    """Open up a shared workspace for the Code of this Py File"""
+
+    args: PqPyArgs
 
 
 def main() -> None:
     """Run well from the Sh Command Line"""
 
     args = parse_pq_py_args()
-
-    words = args.words
-    assert words in ([], ["dedent"], ["dent"]), (words,)
+    Main.args = args
 
     sponge = ShPipeSponge()
     ibytes = sponge.read_bytes()
-
-    if not words:
-        obytes = ibytes_edit(ibytes)
-    elif words == ["dedent"]:
-        obytes = ibytes_dedent(ibytes)
-    elif words == ["dent"]:
-        obytes = ibytes_dent(ibytes)
-    else:
-        assert False, (words,)
-
+    obytes = ibytes_take_words_else(ibytes)  # often prints Py Lines & exits zero
     sponge.write_bytes(data=obytes)
 
 
@@ -88,11 +95,11 @@ def parse_pq_py_args() -> PqPyArgs:
     parser = ArgumentParser()
 
     assert argparse.ZERO_OR_MORE == "*"
-    words_help = "word of the Pq Programming Language:  dedent, dent, ..."
+    words_help = "word of the Pq Programming Language:  dedented, dented, ..."
     parser.add_argument("words", metavar="WORD", nargs="*", help=words_help)
 
-    # py_help = "show the code without running it"
-    # parser.add_argument("--py", action="count", help=py_help)
+    py_help = "test and show the Python Code, except don't write the Clipboard Buffer"
+    parser.add_argument("--py", action="count", help=py_help)
 
     # Parse the Sh Args, else print help & exit zero
 
@@ -101,6 +108,7 @@ def parse_pq_py_args() -> PqPyArgs:
     # Collect up the Parsed Args
 
     args = PqPyArgs(
+        py=bool(ns.py),
         words=ns.words,
     )
 
@@ -112,34 +120,167 @@ def parse_pq_py_args() -> PqPyArgs:
 
 
 #
-# Pipe Text through Python
+# Pipe Bytes of Lines of Text through Python
 #
 
 
-def ibytes_dedent(ibytes) -> bytes:
-    """Dedent Text Lines"""
+def ibytes_take_words_else(data) -> bytes:
+    """Take Sh Words as hints, else guess without any"""
 
-    itext = ibytes.decode()
-    otext = textwrap.dedent(itext)
-    otext = "\n".join(otext.splitlines()) + "\n"
-    obytes = otext.encode()
+    ibytes = data
+
+    args = Main.args
+    words = args.words
+
+    if not words:
+        obytes = ibytes_take_or_edit_else(ibytes)
+    elif words in (["dedent"], ["dedented"]):
+        obytes = ibytes_dedented_else(ibytes)
+    elif words in (["dent"], ["dented"]):
+        obytes = ibytes_dented_else(ibytes)
+    elif words in (["reverse"], ["reversed"]):
+        obytes = ibytes_reversed_else(ibytes)
+    elif words in (["sort"], ["sorted"]):  # Py Sort, not Mac, not Linux
+        obytes = ibytes_sorted_else(ibytes)
+    else:
+        assert False, (words,)
 
     return obytes
 
 
-def ibytes_dent(ibytes) -> bytes:
+def ibytes_dedented_else(ibytes) -> bytes:
     """Dedent Text Lines"""
 
     itext = ibytes.decode()
-    ilines = itext.splitlines()
 
-    dent = 4 * " "
-    olines = list((dent + _) for _ in ilines)
+    ... == textwrap
+    alt_locals = dict(itext=itext)
+
+    py = """
+        text = textwrap.dedent(itext)
+        olines = text.splitlines()
+    """
+    py = textwrap.dedent(py).strip()
+
+    exec(py, globals(), alt_locals)
+    olines = alt_locals["olines"]
 
     otext = "\n".join(olines) + "\n"
     obytes = otext.encode()
 
+    py_trace_else(py)
+
     return obytes
+
+    # often prints Py & exits zero
+
+
+def ibytes_dented_else(ibytes) -> bytes:
+    """Dent Text Lines"""
+
+    itext = ibytes.decode()
+    ilines = itext.splitlines()
+
+    alt_globals = dict(globals())
+    alt_globals["dent"] = 4 * " "
+    alt_locals = dict(ilines=ilines)
+
+    py = """
+        dent = 4 * " "
+        olines = list((dent + _) for _ in ilines)
+    """
+    py = textwrap.dedent(py).strip()
+
+    exec(py, alt_globals, alt_locals)
+    assert alt_globals["dent"] == alt_locals["dent"], (alt_locals["dent"],)
+    olines = alt_locals["olines"]
+
+    otext = "\n".join(olines) + "\n"
+    obytes = otext.encode()
+
+    py_trace_else(py)
+
+    return obytes
+
+    # often prints Py & exits zero
+
+
+def ibytes_reversed_else(ibytes) -> bytes:
+    """Reverse the Order of Text Lines"""
+
+    itext = ibytes.decode()
+    ilines = itext.splitlines()
+
+    alt_locals = dict(ilines=ilines)
+
+    py = """
+        olines = reversed(ilines)
+    """
+    py = textwrap.dedent(py).strip()
+
+    exec(py, globals(), alt_locals)
+    olines = alt_locals["olines"]
+
+    otext = "\n".join(olines) + "\n"
+    obytes = otext.encode()
+
+    py_trace_else(py)
+
+    return obytes
+
+    # often prints Py & exits zero
+
+
+def ibytes_sorted_else(ibytes) -> bytes:
+    """Sort Text Lines"""
+
+    itext = ibytes.decode()
+    ilines = itext.splitlines()
+
+    alt_locals = dict(ilines=ilines)
+
+    py = """
+        olines = sorted(ilines)
+    """
+    py = textwrap.dedent(py).strip()
+
+    exec(py, globals(), alt_locals)
+    olines = alt_locals["olines"]
+
+    otext = "\n".join(olines) + "\n"
+    obytes = otext.encode()
+
+    py_trace_else(py)
+
+    return obytes
+
+    # often prints Py & exits zero
+
+
+def ibytes_endlines_else(ibytes) -> bytes:
+    """End the last Line, and every Line, with U+000A Line-Feed"""
+
+    itext = ibytes.decode()
+    ilines = itext.splitlines()
+
+    alt_locals = dict(ilines=ilines)
+
+    py = """
+        olines = ilines
+    """
+    py = textwrap.dedent(py).strip()
+
+    exec(py, globals(), alt_locals)
+    olines = alt_locals["olines"]
+
+    otext = "\n".join(olines) + "\n"
+    obytes = otext.encode()
+
+    py_trace_else(py)
+
+    return obytes
+
+    # often prints Py & exits zero
 
 
 #
@@ -147,8 +288,18 @@ def ibytes_dent(ibytes) -> bytes:
 #
 
 
-def ibytes_edit(ibytes) -> bytes:
-    """Edit"""
+def ibytes_take_or_edit_else(ibytes) -> bytes:
+    """Guess what to do, else print some to Screen and edit it there"""
+
+    # Guess what to do
+
+    try:
+        obytes = ibytes_take_else(ibytes)
+        return obytes
+    except Exception:
+        pass
+
+    # Else print some to Screen and edit it there
 
     fd = sys.stderr.fileno()
     size = os.get_terminal_size(fd)  # raises OSError when not a Terminal
@@ -160,31 +311,20 @@ def ibytes_edit(ibytes) -> bytes:
     # todo: shadow the print, then edit it
     # todo: output the shadow, at quit
 
-    #
+    # End the last Line, and every Line, with U+000A Line-Feed
 
-    try:
-        obytes = ibytes_try_guess_obytes(ibytes)
-        return obytes
-    except Exception:
-        pass
-
-    #
-
-    itext = ibytes.decode()
-    otext = textwrap.dedent(itext)
-    otext = "\n".join(otext.splitlines()) + "\n"
-    obytes = otext.encode()
-
-    #
+    obytes = ibytes_endlines_else(ibytes)
 
     return obytes
 
     # OSError: [Errno 19] Operation not supported by device
     # OSError: [Errno 25] Inappropriate ioctl for device
 
+    # often prints Py & exits zero
 
-def ibytes_try_guess_obytes(ibytes) -> bytes:
-    """Guess what Byte change we want, else raise an Exception"""
+
+def ibytes_take_else(ibytes) -> bytes:
+    """Guess what Bytes Change we want, else raise an Exception"""
 
     itext = ibytes.decode()
     ilines = itext.splitlines()
@@ -192,176 +332,380 @@ def ibytes_try_guess_obytes(ibytes) -> bytes:
     assert len(ilines) == 1, (len(ilines),)
     iline = ilines[-1]
 
-    oline = iline_try_guess_oline(iline)
+    oline = iline_take_else(iline)
+    olines = [oline]
 
-    otext = oline + "\n"
+    otext = "\n".join(olines) + "\n"
     obytes = otext.encode()
 
     return obytes
 
+    # often prints Py & exits zero
 
-def iline_try_guess_oline(iline) -> str:
-    """Guess what Char change we want in 1 Line, else raise an Exception"""
 
-    try:
-        oline = iline_google_to_share_address(iline)
-        return oline
-    except Exception:
-        pass
+#
+# Pipe Bytes of 1 Line of Text through Python
+#
 
-    try:
-        oline = iline_codereviews_to_diff_address(iline)
-        return oline
-    except Exception:
-        pass
 
-    try:
-        oline = iline_jira_hot_to_cold_address_toggle(iline)
-        return oline
-    except Exception:
-        pass
+def iline_take_else(iline) -> str:
+    """Guess what Line Change we want, else raise an Exception"""
 
-    try:
-        oline = iline_hot_to_cold_address_toggle(iline)
-        return oline
-    except Exception:
-        pass
+    funcs = [
+        iline_gdrive_to_share_else,
+        iline_codereviews_to_diff_else,
+        iline_jenkins_toggle_else,
+        iline_jira_toggle_else,
+        iline_address_toggle_else,
+    ]
+
+    for func in funcs:
+        try:
+            oline = func(iline)
+            return oline
+        except Exception:
+            pass
 
     assert False
 
+    # often prints Py & exits zero
 
-def iline_google_to_share_address(iline) -> str:
+
+def iline_gdrive_to_share_else(iline) -> str:
     """Convert to Google Drive without Edit Path and without Query"""
 
     isplits = urllib.parse.urlsplit(iline)
+    assert isplits.scheme in ("https", "http"), (isplits.scheme,)
+    assert isplits.netloc.endswith(".google.com"), (isplits.netloc,)
 
-    scheme = isplits.scheme
-    netloc = isplits.netloc
-    path = isplits.path
+    alt_locals = dict(iline=iline)
 
-    assert scheme in ("https", "http"), (scheme,)
-    assert netloc == "docs.google.com", (netloc,)
+    py = """
+        isplits = urllib.parse.urlsplit(iline)
+        ipath = isplits.path
 
-    alt_path = path.removesuffix("/edit")
+        opath = ipath
+        opath = opath.removesuffix("/edit")
+        opath = opath.removesuffix("/view")
 
-    osplits = urllib.parse.SplitResult(
-        scheme=scheme, netloc=netloc, path=alt_path, query="", fragment=""
-    )
+        osplits = urllib.parse.SplitResult(
+            scheme=isplits.scheme,
+            netloc=isplits.netloc,
+            path=opath,
+            query="",
+            fragment="",
+        )
+        oline = osplits.geturl()
+    """
+    py = textwrap.dedent(py).strip()
 
-    address = osplits.geturl()
+    exec(py, globals(), alt_locals)
+    oline = alt_locals["oline"]
 
-    return address
+    py_trace_else(py)
+
+    return oline
 
     # 'https://docs.google.com/document/d/$HASH'
     # from 'https://docs.google.com/document/d/$HASH/edit?usp=sharing'
     # or from 'https://docs.google.com/document/d/$HASH/edit#gid=0'
 
+    # often prints Py & exits zero
 
-def iline_codereviews_to_diff_address(iline) -> str:
+
+def iline_codereviews_to_diff_else(iline) -> str:
     """Convert to Http CodeReviews Diff without Fragment"""
 
     isplits = urllib.parse.urlsplit(iline)
+    assert isplits.scheme in ("https", "http"), (isplits.scheme,)
+    assert isplits.netloc.split(".")[0] == "codereviews", (isplits.netloc,)
 
-    scheme = isplits.scheme
-    netloc = isplits.netloc
-    path = isplits.path
+    m = re.match(r"^/r/([0-9]+)", string=isplits.path)
+    assert m, (isplits.path,)
+    ... == int(m.group(1))
 
-    assert scheme in ("https", "http"), (scheme,)
+    alt_locals = dict(iline=iline)
 
-    sub_0 = netloc.split(".")[0]
-    assert sub_0 == "codereviews", (sub_0,)
+    py = """
+        isplits = urllib.parse.urlsplit(iline)
+        m = re.match(r"^/r/([0-9]+)", string=isplits.path)  # discards end of path
+        r = int(m.group(1))
+        osplits = urllib.parse.SplitResult(
+            scheme="http",  # not "https"
+            netloc=isplits.netloc.split(".")[0],  # "codereviews"
+            path=f"/r/{r}/diff",
+            query="",
+            fragment="",
+        )
+        oline = osplits.geturl()
+    """
+    py = textwrap.dedent(py).strip()
 
-    m = re.match(r"^/r/([0-9]+)", string=path)
-    assert m, (m, path)
+    exec(py, globals(), alt_locals)
+    oline = alt_locals["oline"]
 
-    r = int(m.group(1))
-
-    http_not_s = "http"
-    osplits = urllib.parse.SplitResult(
-        scheme=http_not_s, netloc=sub_0, path=f"/r/{r}/diff", query="", fragment=""
-    )
-
-    address = osplits.geturl()
-
-    return address
+    return oline
 
     # 'https://codereviews/r/186738/diff'
     # from 'https://codereviews.example.co.uk/r/186738/diff/1/#index_header'
 
+    # often prints Py & exits zero
 
-def iline_hot_to_cold_address_toggle(iline) -> str:
+
+def iline_jenkins_toggle_else(iline) -> str:
+    """Toggle between wide HttpS and thin Http Jenkins Web Addresses"""
+
     try:
-        oline = iline_hot_to_cold_address(iline)
+        oline = iline_jenkins_thin_else(iline)
         return oline
     except Exception:
         pass
 
     try:
-        oline = iline_cold_to_hot_address(iline)
+        oline = iline_jenkins_widen_else(iline)
         return oline
     except Exception:
         pass
 
     assert False
 
+    # often prints Py & exits zero
 
-def iline_hot_to_cold_address(iline) -> str:
-    """Convert to like cold 'https :// twitter . com /pelavarre/status/123456789'"""
+
+def iline_jenkins_thin_else(iline) -> str:
+    """Convert to Thin Http-Not-S Jenkins Web Address"""
+
+    isplits = urllib.parse.urlsplit(iline)
+
+    assert isplits.scheme == "https"
+    sub = isplits.netloc.split(".")[0]
+    assert sub.casefold().endswith("jenkins"), (isplits.netloc,)
+    assert "." in isplits.netloc, (isplits.netloc,)  # as if endswith f".{dn}"
+
+    alt_locals = dict(iline=iline)
+
+    py = """
+        isplits = urllib.parse.urlsplit(iline)
+        sub = isplits.netloc.split(".")[0]
+        osplits = urllib.parse.SplitResult(
+            scheme="http",
+            netloc=sub.casefold().replace("jenkins", "Jenkins"),
+            path=isplits.path,
+            query=isplits.query,
+            fragment=isplits.fragment,
+        )
+        oline = osplits.geturl()
+    """
+    py = textwrap.dedent(py).strip()
+
+    exec(py, globals(), alt_locals)
+    oline = alt_locals["oline"]
+
+    py_trace_else(py)
+
+    return oline
+
+    # often prints Py & exits zero
+
+
+def iline_jenkins_widen_else(iline) -> str:
+    """Convert to Wide HttpS Jenkins Web Address"""
+
+    isplits = urllib.parse.urlsplit(iline)
+
+    assert isplits.scheme == "http"
+    sub = isplits.netloc.split(".")[0]
+    assert sub.casefold().endswith("jenkins"), (isplits.netloc,)
+    assert "." not in isplits.netloc, (isplits.netloc,)  # as if not endswith f".{dn}"
+
+    ... == socket
+    alt_locals = dict(iline=iline)
+
+    py = """
+        isplits = urllib.parse.urlsplit(iline)
+        fqdn = socket.getfqdn()
+        dn = fqdn.partition(".")[-1]
+        osplits = urllib.parse.SplitResult(
+            scheme="https",
+            netloc=f"{isplits.netloc}.dev.{dn}".casefold(),
+            path=isplits.path.removesuffix("/"),
+            query=isplits.query,
+            fragment=isplits.fragment,
+        )
+        oline = osplits.geturl()
+    """
+    py = textwrap.dedent(py).strip()
+
+    exec(py, globals(), alt_locals)
+    oline = alt_locals["oline"]
+
+    py_trace_else(py)
+
+    return oline
+
+    # often prints Py & exits zero
+
+
+def iline_jira_toggle_else(iline) -> str:
+    """Toggle between thin Jira Path and wide Jira Web Address"""
+
+    try:
+        oline = iline_jira_thin_else(iline)
+        return oline
+    except Exception:
+        pass
+
+    try:
+        oline = iline_jira_widen_else(iline)
+        return oline
+    except Exception:
+        pass
+
+    assert False
+
+    # often prints Py & exits zero
+
+
+def iline_jira_thin_else(iline) -> str:
+    """Convert to Thin Http-Not-S jira Web Address"""
+
+    isplits = urllib.parse.urlsplit(iline)
+
+    assert isplits.scheme == "https"
+    assert isplits.netloc.split(".")[0] == "jira", (isplits.netloc,)
+    assert "." in isplits.netloc, (isplits.netloc,)  # as if endswith f".{dn}"
+
+    alt_locals = dict(iline=iline)
+
+    py = """
+        isplits = urllib.parse.urlsplit(iline)
+        oline = isplits.path.removeprefix("/browse/")  # 'PROJ-12345'
+    """
+    py = textwrap.dedent(py).strip()
+
+    exec(py, globals(), alt_locals)
+    oline = alt_locals["oline"]
+
+    py_trace_else(py)
+
+    return oline
+
+    # often prints Py & exits zero
+
+
+def iline_jira_widen_else(iline) -> str:
+    """Convert to Wide HttpS Jenkins Web Address"""
+
+    assert re.match(r"[A-Z]+[-][0-9]+", iline)
+
+    ... == socket
+    alt_locals = dict(iline=iline)
+
+    py = """
+        isplits = urllib.parse.urlsplit(iline)
+        fqdn = socket.getfqdn()
+        dn = fqdn.partition(".")[-1]
+        osplits = urllib.parse.SplitResult(
+            scheme="https",
+            netloc=f"jira.{dn}",
+            path=f"/browse/{iline}",
+            query="",
+            fragment="",
+        )
+        oline = osplits.geturl()
+    """
+    py = textwrap.dedent(py).strip()
+
+    exec(py, globals(), alt_locals)
+    oline = alt_locals["oline"]
+
+    py_trace_else(py)
+
+    return oline
+
+    # often prints Py & exits zero
+
+
+def iline_address_toggle_else(iline) -> str:
+    """Chill a Web Address else warm a Web Address else raise an Exception"""
+
+    try:
+        oline = iline_address_chill_else(iline)
+        return oline
+    except Exception:
+        pass
+
+    try:
+        oline = iline_address_warm_else(iline)
+        return oline
+    except Exception:
+        pass
+
+    assert False
+
+    # often prints Py & exits zero
+
+
+def iline_address_chill_else(iline) -> str:
+    """Convert like to cold 'https :// twitter . com /pelavarre/status/123456789'"""
 
     assert " " not in iline, (iline,)
 
     isplits = urllib.parse.urlsplit(iline)
     assert isplits.scheme in ("https", "http"), (isplits.scheme,)
+    isplits = iline.split("/")
+    osplits = list(isplits)
+    osplits[0] = osplits[0].replace(":", " :")  # https ://
 
-    iwords = iline.split("/")
+    alt_locals = dict(iline=iline)
 
-    owords = list(iwords)
-    owords[0] = owords[0].replace(":", " :")
-    owords[2] = " " + owords[2].replace(".", " . ") + " "
+    py = """
+        isplits = iline.split("/")
+        osplits = list(isplits)
+        osplits[0] = osplits[0].replace(":", " :")  # https ://
+        osplits[2] = " " + osplits[2].replace(".", " . ") + " "  # :// sub . domain
+        oline = "/".join(osplits)
+    """
+    py = textwrap.dedent(py).strip()
 
-    oline = "/".join(owords)
+    exec(py, globals(), alt_locals)
+    oline = alt_locals["oline"]
+
+    py_trace_else(py)
 
     return oline
 
     # 'https :// twitter . com /pelavarre/status/1647691634329686016'
     # from 'https://twitter.com/pelavarre/status/1647691634329686016'
 
+    # often prints Py & exits zero
 
-def iline_cold_to_hot_address(iline) -> str:
-    """Convert from like cold 'https :// twitter . com /pelavarre/status/123456789'"""
+
+def iline_address_warm_else(iline) -> str:
+    """Convert like from cold 'https :// twitter . com /pelavarre/status/123456789'"""
 
     iwords = iline.split()
     iwords_0 = iwords[0]
     assert iwords_0 in ("https", "http"), (iwords_0,)
 
-    oline = "".join(iwords)
+    alt_locals = dict(iwords=iwords)
+
+    py = """
+        oline = "".join(iwords)
+    """
+    py = textwrap.dedent(py).strip()
+
+    exec(py, globals(), alt_locals)
+    oline = alt_locals["oline"]
+
+    py_trace_else(py)
+
     return oline
 
     # 'https://twitter.com/pelavarre/status/1647691634329686016'
     # from 'https :// twitter . com /pelavarre/status/1647691634329686016'
 
-
-def iline_jira_hot_to_cold_address_toggle(iline) -> str:
-    """Toggle between Jira Key 'PROJ-12345' and 'http://jira.../browse/PROJ-12345'"""
-
-    fqdn = socket.getfqdn()
-    dn = fqdn.partition(".")[-1]
-
-    if re.match(r"[A-Z]+[-][0-9]+", iline):
-        oline = f"https://jira.{dn}/browse/{iline}"
-        return oline
-
-    isplits = urllib.parse.urlsplit(iline)
-
-    inetloc = isplits.netloc
-    ipath = isplits.path
-
-    if inetloc.startswith("jira."):
-        if ipath.startswith("/browse/"):
-            oline = ipath.removeprefix("/browse/")
-            return oline
-
-    assert False
+    # often prints Py & exits zero
 
 
 #
@@ -447,7 +791,7 @@ class ArgumentParser(argparse.ArgumentParser):
             print(testdoc)
             print()
 
-            sys.exit(0)
+            sys.exit(0)  # exit 0, same as for --help
 
         # Print help lines & exit zero, else return Parsed Args
 
@@ -611,6 +955,28 @@ class ShPipeSponge:
             filepath.touch(mode=(stat.S_IRUSR | stat.S_IWUSR), exist_ok=True)
 
         filepath.write_bytes(data)
+
+
+#
+# Edit
+#
+
+
+def py_trace_else(py) -> None:
+    """Print the Py Lines, framed in two Blank Rows, just before running them"""
+
+    args = Main.args
+
+    if not args.py:
+        return
+
+    sys.stderr.write("\n")
+    sys.stderr.write(py + "\n")
+    sys.stderr.write("\n")
+
+    sys.exit(0)
+
+    # often prints Py & exits zero
 
 
 #
