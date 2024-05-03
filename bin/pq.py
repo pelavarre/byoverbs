@@ -988,5 +988,8 @@ if __name__ == "__main__":
     main()
 
 
+# todo: remember that 'collections.Counter' does the 'unique_everseen' work nowadays
+
+
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

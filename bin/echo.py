@@ -33,16 +33,27 @@ examples:
   F=t.txt && echo mv -i $F{,~$(date -r $F +%m%d$(qjd)%H%M)~} |tee /dev/tty |bash
   F=t.txt && echo cp -ip $F{,~$(date -r $F +%m%d$(qjd)%H%M)~} |tee /dev/tty |bash
 
-  printf '\e[8;;89t'  # resize Sh Terminal to 89 Cols  # same Rows
-  printf '\e[8;;101t'  # resize Sh Terminal to 89 Cols  # same Rows
+  printf '\e[8;42;89t'  # resize Sh Terminal to 89 Cols x 42 Rows
+
+  stty size  # say what Rows and Columns you got
+
+  printf '\e[8;%d;89t' $(stty size |cut -d' ' -f1)  # resize to 89 Cols  # same Rows
+  printf '\e[8;%d;101t' $(stty size |cut -d' ' -f1)  # resize to 101 Cols  # same Rows
   printf '\e[8;25;%dt' $(stty size |cut -d' ' -f2)  # resize to 25 Rows  # same Cols
   printf '\e[8;42;%dt' $(stty size |cut -d' ' -f2)  # resize to 42 Rows  # same Cols
-  printf '\e[8;42;89t'  # resize Sh Terminal to 89 Cols x 42 Rows
-  printf '\e[8;;t'  # resize Sh Terminal to max Rows and Columns
-  stty size  # say what Rows and Columns you got
+
+  printf '\e[8;4321;54321t'  # resize Sh Terminal to practically Max Rows & Cols
 
   printf '\e[H\e[2J\e[3J'  # clears Scrollback and Screen of Echoes
 """
+
+# sometimes works, sometimes doesn't
+#
+# printf '\e[8;;89t'  # resize Sh Terminal to 89 Cols  # same Rows
+# printf '\e[8;;101t'  # resize Sh Terminal to 101 Cols  # same Rows
+# printf '\e[8;;4321t'  # resize Sh Terminal to practically Max Cols  # same Rows
+# printf '\e[8;;t'  # resize Sh Terminal to max Rows and Columns
+#
 
 import sys
 

@@ -26,6 +26,9 @@ examples:
   ssh -t localhost "cd $PWD && bash -i"  # log in and do setup, then chat
 
   ssh-add -l  # work to shrug off differences between your '~/.ssh/config' and mine
+  SSH_AUTH_SOCK= ssh-add -l  # hide the loaded Keys
+  ssh-add -D  # forget the loaded Keys
+  ssh-add -L |ssh-keygen -L -f - |grep Valid  # guess when Keys expire
 
   ssh -A -t -F /dev/null \
     -o 'UserKnownHostsFile /dev/null' \

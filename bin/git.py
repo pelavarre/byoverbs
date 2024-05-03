@@ -16,8 +16,9 @@ for F in $FF; do
 
 
     "lgg": "git log --oneline --no-decorate -G {}",  # touches, aka Grep Source
-
     "lgs": "git log --oneline --no-decorate -S {}",  # changes, aka Pickaxe
+
+    "qlp": "git log --pretty=fuller --decorate -p {}",  # 'git show' more than one
 
 $ git clean --help
 

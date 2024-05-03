@@ -158,6 +158,8 @@ QUICK_LAZY_IMPORT_NAMES = list(_.partition("#")[0] for _ in QUICK_LAZY_IMPORT_NA
 QUICK_LAZY_IMPORT_NAMES = list(_.strip() for _ in QUICK_LAZY_IMPORT_NAMES)
 QUICK_LAZY_IMPORT_NAMES = " ".join(QUICK_LAZY_IMPORT_NAMES).split()
 
+assert len(QUICK_LAZY_IMPORT_NAMES) == 197, (len(QUICK_LAZY_IMPORT_NAMES),)
+
 
 class LazyImport:
     """Defer the work of "import X as Y" till first Y.Z fetched"""

@@ -549,6 +549,73 @@ Mac Terminal
 
 demos/script{1,2}.py echo ^M at each Return, etc
 
+pass fresh make shellcheck
+by calling for all source files together
+and asking to presume --shell=bash
+plus a bit of giving in to peer pressure as needed
+
+pq lower
+pq upper
+pq chill of cv = jqdoe@example.com
+pq title
+
+list a pile of oneline Py programs
+nope @ set up with \_\_builtins\_\_.dent = 4 * " "
+settle for single whole-word match, else single start-word, else single match
+also subordinate found inside Len
+also take more than one key, such as:  pq split len
+
+    oline = str(len(ibytes))  # |wc -c
+    oline = str(len(itext))  # |wc -m
+    oline = str(len(itext.split()))  # |wc -w
+    oline = str(len(ilines))  # |wc -l
+
+    oline = " ".join(ilines)  # |tr '\n' ' '
+    oline = (4 * " ") + iline  # as if textwrap.dent
+    oline = iline.lstrip()
+    oline = iline.rstrip()
+    oline = iline.strip()
+    oline = oline.removeprefix(4 * " ")  # as if textwrap.undent
+
+    olines = ilines  # closes every line with "\n"
+    olines = itext.split()  # |xargs -n 1
+    olines = reversed(ilines)  # |tail -r  # |tac
+    olines = shuffled(ilines)  # random.shuffle
+    olines = sorted(ilines)
+    olines = unique_everseen(ilines)  # set, unsorted
+
+    otext = itext  # closes last line with "\n"
+    otext = itext.casefold()
+    otext = itext.lower()
+    otext = itext.upper()
+    otext = json.dumps(json.loads(itext), indent=2)  # |jq .
+    otext = textwrap.dedent(itext)
+
+pq 'otext = "".join(itext.split()) + "\n"'  # tr -d ' \n'
+pq 'otext = itext.strip() + "\n"'  # removes blank Rows above and below
+pq 'oline = iwords[3] if iwords[3:] else ""  # |awk '{print $3}''
+
+PyLance Standard vs Py
+
+    apt.py
+    awk.py
+    byotools.py
+    date.py
+    ls.py
+    lsb_release.py
+    open.py
+    pbuffer.py
+    pq.py
+    pq1.py
+    pq2.py
+    pq3.py
+    pwd..py
+    time..py
+    vi.py
+
+PyLance Standard vs Sh
+
+Write Commit Message and push
 
 ## Copied from
 

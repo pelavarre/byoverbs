@@ -42,6 +42,7 @@ assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 
 ... == f"{sys.version_info[:2]=}"  # new =} Syntax in Oct/2019 Python 3.8  # Ubuntu 2020
 ... == shlex.join  # new since Oct/2019 Python 3.8
+# ... == pprint.pp  # new since Oct/2019 Python 3.8
 
 ... == str.removeprefix, str.removesuffix  # new since Oct/2020 Python 3.9
 ... == dict[str, int]  # new Syntax since Oct/2020 Python 3.9
