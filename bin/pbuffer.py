@@ -36,8 +36,8 @@ import sys
 
 import byotools as byo
 
-... == dict[str, int]  # new since Oct/2020 Python 3.9
-... == byo  # ducks Flake8 F401 imported.but.unused
+... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
+... == byo  # type: ignore
 
 
 #

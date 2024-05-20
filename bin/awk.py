@@ -60,6 +60,7 @@ A_AWK = """
   }
 """.strip()
 
+assert __main__.__doc__
 assert A_AWK.replace(";", "") in __main__.__doc__
 
 splits = A_AWK.splitlines()

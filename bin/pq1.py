@@ -777,6 +777,7 @@ def file_para_spread(sep=":") -> None:
         # Print each Hit Dented by 4 Spaces as Para Title plus Sep plus Hit
 
         else:
+            assert opart is not None  # cope better when it is
             oline = opart + sep + iline[len(dent) :]
             print(oline)
 

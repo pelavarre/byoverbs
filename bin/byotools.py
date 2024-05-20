@@ -31,25 +31,31 @@ import textwrap
 assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 
 
-... == subprocess.run  # new since Sep/2015 Python 3.5
+# Ubuntu 2018
 
-... == dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6  # Ubuntu 2018
-... == "{:_}".format(12345)  # new since Dec/2016 Python 3.6
-... == (re.search(r"..", "abcde") or [""])[0]  # new since Dec/2016 Python 3.6
+... == subprocess.run  # new since Sep/2015 Python 3.5  # type: ignore
 
-... == breakpoint  # new BuiltIn since Jun/2018 Python 3.7
-... == dataclasses  # new Import since Jun/2018 Python 3.7
+... == dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6  # type: ignore
+... == "{:_}".format(12345)  # new since Dec/2016 Python 3.6  # type: ignore
+... == (re.search(r"..", "abcde") or [""])[0]  # new since Python 3.6  # type: ignore
 
-... == f"{sys.version_info[:2]=}"  # new =} Syntax in Oct/2019 Python 3.8  # Ubuntu 2020
-... == shlex.join  # new since Oct/2019 Python 3.8
-# ... == pprint.pp  # new since Oct/2019 Python 3.8
+# Ubuntu 2020
 
-... == str.removeprefix, str.removesuffix  # new since Oct/2020 Python 3.9
-... == dict[str, int]  # new Syntax since Oct/2020 Python 3.9
+... == breakpoint  # new since Jun/2018 Python 3.7  # type: ignore
+... == dataclasses  # new since Jun/2018 Python 3.7  # type: ignore
 
-# ... == dict[str, int] | None  # new Syntax since Oct/2021 Python 3.10
-# ... == int.bit_count  # new since Oct/2021 Python 3.10  # Ubuntu 2022
-# ... == list(zip([], [], strict=True))  # new since Oct/2021 Python 3.10  # Ubuntu 2022
+... == f"{sys.version_info[:2]=}"  # new since in Oct/2019 Python 3.8   # type: ignore
+... == shlex.join  # new since Oct/2019 Python 3.8  # type: ignore
+# ... == pprint.pp  # new since Oct/2019 Python 3.8  # type: ignore
+
+... == str.removeprefix, str.removesuffix  # new since Oct/2020 Python 3.9  # type: ignore
+... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
+
+# Ubuntu 2022
+
+# ... == dict[str, int] | None  # new since Oct/2021 Python 3.10
+# ... == int.bit_count  # new since Oct/2021 Python 3.10
+# ... == list(zip([], [], strict=True))  # new since Oct/2021 Python 3.10
 
 # ... == tomllib  # new since Oct/2022 Python 3.11
 # ... == termios.tcgetwinsize(sys.stderr.fileno())  # new since Oct/2022 Python 3.11
@@ -65,11 +71,12 @@ class ArgumentParser(argparse.ArgumentParser):
     """Amp up Class ArgumentParser of Import ArgParse"""
 
     def __init__(self, add_help=True) -> None:
-        argdoc = __main__.__doc__
+        main_doc = __main__.__doc__
+        assert main_doc
 
         # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
 
-        doc_lines = argdoc.strip().splitlines()
+        doc_lines = main_doc.strip().splitlines()
         prog = doc_lines[0].split()[1]  # first word of first line
 
         doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
@@ -164,7 +171,9 @@ class ArgumentParser(argparse.ArgumentParser):
 
         # Fetch the Main Doc, and note where from
 
-        main_doc = __main__.__doc__.strip()
+        main_doc = __main__.__doc__
+        assert main_doc
+
         main_filename = os.path.split(__file__)[-1]
         got_filename = "./{} --help".format(main_filename)
 
@@ -190,7 +199,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
         # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
 
-        got_doc = main_doc
+        got_doc = main_doc.strip()
         want_doc = parser_doc
 
         diffs = list(
@@ -247,6 +256,8 @@ def ast_fetch_argdoc() -> str:
     # Form an Arg Doc containing the Main Doc as its Test Doc
 
     main_doc = __main__.__doc__
+    assert main_doc
+
     main_doc = textwrap.dedent(main_doc).strip()
     main_lines = main_doc.splitlines()
 
@@ -276,6 +287,8 @@ def ast_fetch_testdoc() -> str:
     # Pick a Test Doc out of the Main Doc, just past the last Unindented Line
 
     main_doc = __main__.__doc__
+    assert main_doc
+
     main_doc = textwrap.dedent(main_doc).strip()
     main_lines = main_doc.splitlines()
 
@@ -568,7 +581,7 @@ def subprocess_exit_run_if(stdin=subprocess.PIPE) -> None:
 
 
 def subprocess_shline_exit_if(  # ) -> subprocess.CompletedProcess:
-    shline, stdin=subprocess.PIPE
+    shline, stdin=None
 ) -> subprocess.CompletedProcess:
     """Print and exit, else run the ShLine and return after it exits zero"""
 
@@ -716,7 +729,9 @@ def sys_exit_if_argdoc_ne(parser) -> None:
 
     # Fetch the Main Doc, and note where from
 
-    main_doc = __main__.__doc__.strip()
+    main_doc = __main__.__doc__
+    assert main_doc
+
     main_filename = os.path.split(__file__)[-1]
     got_filename = "./{} --help".format(main_filename)
 
@@ -749,7 +764,7 @@ def sys_exit_if_argdoc_ne(parser) -> None:
 
     # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
 
-    got_doc = main_doc
+    got_doc = main_doc.strip()
     want_doc = parser_doc
 
     diffs = list(

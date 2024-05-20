@@ -55,9 +55,11 @@ vxk = dict(_.replace(":", "").split("\t") for _ in lines)
 description = vxk["Description"]
 major = description.split("Ubuntu ")[1].split()[0]
 
-doc = __main__.__doc__
+main_doc = __main__.__doc__
+assert main_doc
+
 chars = "Ubuntu Linux {} ".format(major)
-hits = list(_ for _ in doc.splitlines() if chars in _)
+hits = list(_ for _ in main_doc.splitlines() if chars in _)
 
 if len(hits) != 1:
     sys.stdout.write(stdout)

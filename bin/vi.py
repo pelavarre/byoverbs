@@ -81,7 +81,7 @@ import time
 import tty
 import typing
 
-... == time  # for injecting 'time.sleep'
+... == time  # 'time.sleep' often unused  # type: ignore
 
 
 #
@@ -2012,8 +2012,6 @@ class ChordsTerminal:
 
         self.row = capped_row
 
-        return capped_row
-
     def mock_jump_by_rows(self, rows) -> None:
         """Mock moving the Cursor up or down by a count of Rows"""
 
@@ -2028,8 +2026,6 @@ class ChordsTerminal:
         capped_column = min(max(column, 1), columns)
 
         self.column = capped_column
-
-        return capped_column
 
     def mock_jump_by_columns(self, columns) -> None:
         """Mock moving the Cursor left or right by a count of Columns"""
@@ -2867,11 +2863,12 @@ class ArgumentParser(argparse.ArgumentParser):
     """Amp up Class ArgumentParser of Import ArgParse"""
 
     def __init__(self, add_help=True) -> None:
-        argdoc = __main__.__doc__
+        main_doc = __main__.__doc__
+        assert main_doc
 
         # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
 
-        doc_lines = argdoc.strip().splitlines()
+        doc_lines = main_doc.strip().splitlines()
         prog = doc_lines[0].split()[1]  # first word of first line
 
         doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
@@ -2966,7 +2963,9 @@ class ArgumentParser(argparse.ArgumentParser):
 
         # Fetch the Main Doc, and note where from
 
-        main_doc = __main__.__doc__.strip()
+        main_doc = __main__.__doc__
+        assert main_doc
+
         main_filename = os.path.split(__file__)[-1]
         got_filename = "./{} --help".format(main_filename)
 
@@ -2992,7 +2991,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
         # Print the Diff to Parser Doc from Main Doc and exit, if Diff exists
 
-        got_doc = main_doc
+        got_doc = main_doc.strip()
         want_doc = parser_doc
 
         diffs = list(
@@ -3033,7 +3032,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
 Terminal Windows smaller than the MacOS min of 5 Rows x 20 Columns
 
-"""
+"""  # type: ignore
 
 
 #
@@ -3122,7 +3121,7 @@ copy in older Vi dreams from:  demos/vi1.py, futures.md, etc
 
 add patch on the side to test random match to real Vi
 
-"""
+"""  # type: ignore
 
 
 #

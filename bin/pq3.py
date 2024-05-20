@@ -319,17 +319,18 @@ def fetch_pq_py_docs() -> tuple[str, str, str]:
     # Define '--help' as print the DocString from top of Main Py File
 
     main_doc = __main__.__doc__
-    main_doc = main_doc.strip()
+    assert main_doc
+    main_strip = main_doc.strip()
 
     big_lines = big_doc.splitlines()
     alt_big_lines = alt_big_doc.splitlines()
-    for main_line in main_doc.splitlines():
+    for main_line in main_strip.splitlines():
         if main_line not in alt_big_lines:
             assert main_line in big_lines, (main_line, len(big_lines))
 
     # Define no Sh Args as print the last Graf of the Main Doc, but framed
 
-    lil_doc = main_doc  # todo: each LIL_DOC Line consistent with BIG_DOC?
+    lil_doc = main_strip  # todo: each LIL_DOC Line consistent with BIG_DOC?
     lil_doc = lil_doc[lil_doc.rindex("\n\n") :].strip()  # splitgrafs [-1]
     assert lil_doc[0] != " "  # requires not-dented
     lil_doc = lil_doc[lil_doc.index("\n") :]  # drops first Line
@@ -338,7 +339,7 @@ def fetch_pq_py_docs() -> tuple[str, str, str]:
 
     # Succeed
 
-    return (main_doc, lil_doc, big_doc)
+    return (main_strip, lil_doc, big_doc)
 
 
 #
@@ -383,29 +384,32 @@ def picks_pop_0_heads(picks: list[str]) -> list[str]:
     """Pop one or zero Picks from the front, return a Decoder of Bytes"""
 
     if not picks:
-        heads = "decode splitlines".split()
+        literals = "decode splitlines".split()
     else:
         pick = picks[0]
         if pick in ": bytes".split():
             picks.pop(0)
-            heads = list()
+            literals = list()
         elif pick in "decode str".split():
             picks.pop(0)
-            heads = "decode".split()
+            literals = "decode".split()
         elif pick in "list list[str]".split():
             picks.pop(0)
-            heads = "decode splitlines list".split()
+            literals = "decode splitlines list".split()
         elif pick in "loads".split():
             picks.pop(0)
-            heads = "decode loads".split()
+            literals = "decode loads".split()
         elif pick in "split".split():
             picks.pop(0)
-            heads = "decode split".split()
+            literals = "decode split".split()
         elif pick in "splitlines".split():
             picks.pop(0)
-            heads = "decode splitlines".split()
+            literals = "decode splitlines".split()
         else:
-            heads = "decode splitlines".split()
+            literals = "decode splitlines".split()
+
+    heads: list[str]
+    heads = list(literals)
 
     return heads
 

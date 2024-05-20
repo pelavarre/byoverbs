@@ -88,6 +88,7 @@ def main() -> None:
 
 
 MAIN_DOC = __main__.__doc__  # not stripped
+assert MAIN_DOC
 
 LIL_DOC = MAIN_DOC  # todo: each LIL_DOC Line consistent with BIG_DOC?
 LIL_DOC = LIL_DOC[LIL_DOC.rindex("\n\n") :].strip()
@@ -387,7 +388,9 @@ class PqPyArgs:
 def parse_pq_py_args() -> PqPyArgs:
     """Parse the Command-Line Arguments of Pq Py"""
 
-    main_doc = __main__.__doc__  # not stripped
+    main_doc = __main__.__doc__
+    assert main_doc
+
     lil_doc = LIL_DOC
     big_doc = BIG_DOC
 
@@ -1520,7 +1523,7 @@ examples of Python for Grafs of Lines:
   git grep -Hn '^def ' |pq splitgrafs gather |cat -  # print one Graf of Hits per File
   git grep -Hn '^def ' |pq splitgrafs gather spread |cat -  # undo Gather with Spread
 
-"""
+"""  # type: ignore
 
 # todo: dig back into bytes byte str char words word lines line grafs graf
 # todo: trace + pbpaste |split |pbcopy also as:  + aka:  pbpaste |xargs -n 1 |pbcopy

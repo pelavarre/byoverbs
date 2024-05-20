@@ -65,7 +65,7 @@ import typing
 
 import byotools as byo
 
-... == dict[str, int]  # new Syntax since Oct/2020 Python 3.9
+... == dict[str, int]  # new Syntax since Oct/2020 Python 3.9  # type: ignore
 
 
 class Main:

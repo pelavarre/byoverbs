@@ -148,6 +148,7 @@ def address_form_nears(address) -> tuple[Graf, Graf]:  # FIXME  # noqa C901
     if netloc.startswith("www."):
         alt_splits = alt_splits._replace(netloc=byo.str_removeprefix(netloc, "www."))
 
+    alt_unsplit: str  # needed by PyLance vs .urlunsplit
     alt_unsplit = urllib.parse.urlunsplit(alt_splits)
     if alt_unsplit != address:
         lines.append(urllib.parse.urlunsplit(alt_splits))
@@ -157,6 +158,7 @@ def address_form_nears(address) -> tuple[Graf, Graf]:  # FIXME  # noqa C901
         alt_vpn_splits = urllib.parse.urlsplit(alt_unsplit)
         if "." in netloc:
             alt_vpn_netloc = alt_vpn_splits.netloc.split(".")[0]
+
             alt_vpn_splits = alt_vpn_splits._replace(netloc=alt_vpn_netloc)
             alt_vpn_unsplit = urllib.parse.urlunsplit(alt_vpn_splits)
 
@@ -169,6 +171,7 @@ def address_form_nears(address) -> tuple[Graf, Graf]:  # FIXME  # noqa C901
         vpn_netloc = vpn_splits.netloc.split(".")[0]
         vpn_splits = vpn_splits._replace(netloc=vpn_netloc)
 
+        vpn_unsplit: str  # needed by PyLance vs .urlunsplit
         vpn_unsplit = urllib.parse.urlunsplit(vpn_splits)
         # may also drop ':$port', i'm not sure when
 
@@ -244,6 +247,8 @@ def address_form_nears(address) -> tuple[Graf, Graf]:  # FIXME  # noqa C901
         joinable_query = urllib.parse.urlencode(pairs)
         joinable_splits = urllib.parse.urlsplit(kv_address)
         joinable_splits = joinable_splits._replace(query=joinable_query)
+
+        joinable_unsplit: str  # needed by PyLance vs .urlunsplit
         joinable_unsplit = urllib.parse.urlunsplit(joinable_splits)
         joinable_unsplit = joinable_unsplit.replace("?", kv_ch, COUNT_1)
 

@@ -54,7 +54,7 @@ import sys
 import textwrap
 import urllib.parse
 
-... == dict[str, int]  # new since Oct/2020 Python 3.9
+... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
 
 
 #
@@ -153,7 +153,7 @@ def ibytes_dedented_else(ibytes) -> bytes:
 
     itext = ibytes.decode()
 
-    ... == textwrap
+    ... == textwrap  # type: ignore
     alt_locals = dict(itext=itext)
 
     py = """
@@ -422,7 +422,7 @@ def iline_codereviews_to_diff_else(iline) -> str:
 
     m = re.match(r"^/r/([0-9]+)", string=isplits.path)
     assert m, (isplits.path,)
-    ... == int(m.group(1))
+    ... == int(m.group(1))  # type: ignore
 
     alt_locals = dict(iline=iline)
 
@@ -518,7 +518,7 @@ def iline_jenkins_widen_else(iline) -> str:
     assert sub.casefold().endswith("jenkins"), (isplits.netloc,)
     assert "." not in isplits.netloc, (isplits.netloc,)  # as if not endswith f".{dn}"
 
-    ... == socket
+    ... == socket  # type: ignore
     alt_locals = dict(iline=iline)
 
     py = """
@@ -598,7 +598,7 @@ def iline_jira_widen_else(iline) -> str:
 
     assert re.match(r"[A-Z]+[-][0-9]+", iline)
 
-    ... == socket
+    ... == socket  # type: ignore
     alt_locals = dict(iline=iline)
 
     py = """
@@ -717,11 +717,12 @@ class ArgumentParser(argparse.ArgumentParser):
     """Amp up Class ArgumentParser of Import ArgParse"""
 
     def __init__(self, add_help=True) -> None:
-        argdoc = __main__.__doc__
+        main_doc = __main__.__doc__
+        assert main_doc
 
         # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
 
-        doc_lines = argdoc.strip().splitlines()
+        doc_lines = main_doc.strip().splitlines()
         prog = doc_lines[0].split()[1]  # second word of first line
 
         doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
@@ -806,7 +807,9 @@ class ArgumentParser(argparse.ArgumentParser):
 
         # Fetch the Main Doc, and note where from
 
-        main_doc = __main__.__doc__.strip()
+        main_doc = __main__.__doc__
+        assert main_doc
+
         main_filename = os.path.split(__file__)[-1]
         got_filename = "./{} --help".format(main_filename)
 

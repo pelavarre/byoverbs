@@ -39,10 +39,10 @@ import tty  # unhappy at Windows
 import byo
 from byo import byoargparse
 
-... == dict[str, int]  # new since Oct/2020 Python 3.9
-# ... == typing.Self  # new since Oct/2022 Python 3.11
+... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
+# ... == typing.Self  # new since Oct/2022 Python 3.11  # type: ignore
 
-... == byo  # ducks Flake8 F401 imported.but.unused
+... == byo  # ducks Flake8 F401 imported.but.unused  # type: ignore
 
 
 #

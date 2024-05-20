@@ -28,7 +28,7 @@ examples:
 
 import byohelper
 
-... == byohelper
+... == byohelper  # type: ignore
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/time..py

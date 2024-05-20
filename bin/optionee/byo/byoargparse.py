@@ -29,7 +29,7 @@ import os
 import sys
 import textwrap
 
-... == dict[str, int]  # new since Oct/2020 Python 3.9
+... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
 
 
 _SELF_TEST_DOC = """
@@ -59,11 +59,12 @@ class ArgumentParser(argparse.ArgumentParser):
     """Amp up Class ArgumentParser of Import ArgParse"""
 
     def __init__(self, add_help=True) -> None:  # ,doc=None  # FIXME
-        argdoc = __main__.__doc__
+        main_doc = __main__.__doc__
+        assert main_doc
 
         # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
 
-        doc_lines = argdoc.strip().splitlines()
+        doc_lines = main_doc.strip().splitlines()
         prog = doc_lines[0].split()[1]  # first word of first line
 
         doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
@@ -158,7 +159,9 @@ class ArgumentParser(argparse.ArgumentParser):
 
         # Fetch the Main Doc, and note where from
 
-        main_doc = __main__.__doc__.strip()
+        main_doc = __main__.__doc__
+        assert main_doc
+
         main_filename = os.path.split(__file__)[-1]
         got_filename = "./{} --help".format(main_filename)
 
@@ -184,7 +187,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
         # Return the Diff to Parser Doc from Main Doc, may be empty
 
-        got_doc = main_doc
+        got_doc = main_doc.strip()
         want_doc = parser_doc
 
         diffs = list(
@@ -226,7 +229,7 @@ class ArgumentParser(argparse.ArgumentParser):
         alt_subparsers = SubParser(subparsers)
         return alt_subparsers
 
-    """
+    """  # type: ignore
 
 
 # def aspy(parser):  # FIXME
