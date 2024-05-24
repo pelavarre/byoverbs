@@ -615,7 +615,8 @@ PyLance Standard vs Py
 
 PyLance Standard vs Sh
 
-Write Commit Message and push
+xargs: unterminated quote
+cat -tv: wrong for \xA0 Nbsp
 
 ## Copied from
 

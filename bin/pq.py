@@ -835,7 +835,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
         # Return the Diff to Parser Doc from Main Doc, may be empty
 
-        got_doc = main_doc
+        got_doc = main_doc.strip()
         want_doc = parser_doc
 
         diffs = list(
