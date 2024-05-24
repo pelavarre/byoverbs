@@ -1,0 +1,2 @@
+set -xe
+git log --oneline --no-decorate -10 "$@" |nl -v0 |awk '{$1 = "HEAD~"$1; print}'
