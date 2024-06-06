@@ -559,37 +559,18 @@ pq upper
 pq chill of cv = jqdoe@example.com
 pq title
 
+!!!
+first spell these out and name them myself
+then show them passing test
+then write Code to give them multiple names
+then show test passing again
+!!!
+
 list a pile of oneline Py programs
 nope @ set up with \_\_builtins\_\_.dent = 4 * " "
 settle for single whole-word match, else single start-word, else single match
 also subordinate found inside Len
 also take more than one key, such as:  pq split len
-
-    oline = str(len(ibytes))  # |wc -c
-    oline = str(len(itext))  # |wc -m
-    oline = str(len(itext.split()))  # |wc -w
-    oline = str(len(ilines))  # |wc -l
-
-    oline = " ".join(ilines)  # |tr '\n' ' '
-    oline = (4 * " ") + iline  # as if textwrap.dent
-    oline = iline.lstrip()
-    oline = iline.rstrip()
-    oline = iline.strip()
-    oline = oline.removeprefix(4 * " ")  # as if textwrap.undent
-
-    olines = ilines  # closes every line with "\n"
-    olines = itext.split()  # |xargs -n 1
-    olines = reversed(ilines)  # |tail -r  # |tac
-    olines = shuffled(ilines)  # random.shuffle
-    olines = sorted(ilines)
-    olines = unique_everseen(ilines)  # set, unsorted
-
-    otext = itext  # closes last line with "\n"
-    otext = itext.casefold()
-    otext = itext.lower()
-    otext = itext.upper()
-    otext = json.dumps(json.loads(itext), indent=2)  # |jq .
-    otext = textwrap.dedent(itext)
 
 pq 'otext = "".join(itext.split()) + "\n"'  # tr -d ' \n'
 pq 'otext = itext.strip() + "\n"'  # removes blank Rows above and below
@@ -615,8 +596,23 @@ PyLance Standard vs Py
 
 PyLance Standard vs Sh
 
-xargs: unterminated quote
-cat -tv: wrong for \xA0 Nbsp
+macOS Terminal Sh inadequate
+
+    cat -n  # default of 6+2 Columns vs Vi 5+1 for 10_000 .. 99_0000 Lines
+
+    cat -tv: wrong for \xA0 Nbsp
+
+    sort: -k -1,-1: Invalid argument
+
+    % echo "'" |xargs -n 1
+    xargs: unterminated quote
+    %
+
+    sleep --until 18:04
+
+    vim: +'set numberwidth=0'
+    E487: Argument must be positive
+    :g/ to show the line is a way to copy out line-number + wrapped text
 
 ## Copied from
 

@@ -1,2 +1,3 @@
 set -xe
 git checkout "$@"
+# such as: git checkout -b nickname topname/midname/nickname  # adding into:  git branch

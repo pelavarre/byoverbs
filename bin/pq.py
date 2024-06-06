@@ -12,10 +12,15 @@ options:
   -h, --help  show this help message and exit
   --py        test and show the Python Code, except don't write the Clipboard Buffer
 
-words:
-  dedented, dented, reversed, sorted
+words of the Pq Programming Language = words indexing popular Paragraphs of Py Code:
+  casefold, lower, lstrip, rstrip, strip, title, upper,
+  dedented, dented, reversed, shuffled, sorted, undented,
+  len bytes, len text, len words, len lines,
+  dumps, endlines, endfile, json, loads,
+  tac, wc c, wc m, wc w, wc l, x, xn1,
+  ...
 
-guesses:
+guesses by data:
   reduces to http://codereviews/r/$R/diff from r/$R or from r/$R/diff/9?...#...
   reduces to https://docs.google.com/document/d/$HASH from ...$=/$HASH/edit?...#...
   toggles between http://...jenkins.../... and http://...jenkins/...
@@ -23,10 +28,8 @@ guesses:
   toggles between http://example.com and h t t p : / / e x a m p l e . c o m
 
 quirks:
-  respects color and ignores case
-  doesn't clear screen at launch, nor at quit either
   looks to end the last Line, and every Line, with U+000A Line-Feed
-  works well with:  ⌘C pbcopy, ⌘V pbpaste, less -IRX
+  works well with:  ⌘C pbcopy, ⌘V pbpaste, less -FIRX
 
 examples:
   pq.py  # show these examples and exit
@@ -34,7 +37,14 @@ examples:
   pq.py --  # parse the Paste to guess what to do with it
   pq.py dent  # insert 4 Spaces at the left of each Line
   pq.py dedent  # remove the leading Blank Columns from the Lines
+  pq.py len lines  # count Lines
+  pq.py --py len lines  # show how to count Lines
+  echo '[0, 11, 22]' |pq.py json |cat -  # format Json consistently
 """
+
+# quirks to come inside 'pq vi':
+#   respects color and ignores case
+#   doesn't clear screen at launch, nor at quit either
 
 # code reviewed by People, Black, Flake8, & MyPy
 
@@ -43,8 +53,11 @@ import __main__
 import argparse
 import dataclasses
 import difflib
+import itertools
+import json
 import os
 import pathlib
+import random
 import re
 import shutil
 import socket
@@ -55,6 +68,69 @@ import textwrap
 import urllib.parse
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
+... == json, random  # often unused  # type: ignore
+
+
+#
+# List Paragraphs of Py Code to Abbreviate Intensely
+#
+
+
+PY_GRAFS_TEXT = r"""
+
+
+    oline = str(len(ibytes))  # len bytes  # |wc -c
+
+    oline = str(len(itext))  # len text  # |wc -m
+
+    oline = str(len(itext.split()))  # len words  # |wc -w
+
+    oline = str(len(itext.splitlines()))  # len lines  # |wc -l
+
+
+    oline = " ".join(ilines)  # |tr '\n' ' '  # |xargs  # |x  # |x
+
+    oline = (4 * " ") + iline  # as if textwrap.dented  # dent
+
+    oline = iline.lstrip()  # |sed 's,^ *,,'
+
+    oline = iline.rstrip()  # |sed 's, *$,,'
+
+    oline = iline.strip()  # |sed 's,^ *,,' |sed 's, *$,,'
+
+    oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
+
+
+    olines = ilines  # endlines  # ends every line with "\n"
+
+    olines = itext.split()  # |xargs -n 1  # |xn1
+
+    olines = reversed(ilines)  # reverse  # |tail -r  # |tac
+
+    olines = list(ilines); random.shuffle(olines)  # shuffled
+
+    olines = sorted(ilines)  # sort
+
+    olines = list(dict((_, _) for _ in ilines).keys())
+    # set, uniq, uniq_everseen, unsorted
+
+    otext = itext if itext.endswith("\n") else (itext + "\n")
+    # endfile  # ends last line with "\n"
+
+    otext = itext.casefold()
+
+    otext = itext.lower()  # |tr '[A-Z]' '[a-z]'
+
+    otext = itext.title()
+
+    otext = itext.upper()  # |tr '[a-z]' '[A-Z]'
+
+    otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .
+
+    otext = textwrap.dedent(itext)  # dedented
+
+
+"""
 
 
 #
@@ -124,7 +200,7 @@ def parse_pq_py_args() -> PqPyArgs:
 #
 
 
-def ibytes_take_words_else(data) -> bytes:
+def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
     """Take Sh Words as hints, else guess without any"""
 
     ibytes = data
@@ -132,159 +208,94 @@ def ibytes_take_words_else(data) -> bytes:
     args = Main.args
     words = args.words
 
+    #
+
     if not words:
         obytes = ibytes_take_or_edit_else(ibytes)
-    elif words in (["dedent"], ["dedented"]):
-        obytes = ibytes_dedented_else(ibytes)
-    elif words in (["dent"], ["dented"]):
-        obytes = ibytes_dented_else(ibytes)
-    elif words in (["reverse"], ["reversed"]):
-        obytes = ibytes_reversed_else(ibytes)
-    elif words in (["sort"], ["sorted"]):  # Py Sort, not Mac, not Linux
-        obytes = ibytes_sorted_else(ibytes)
-    else:
-        assert False, (words,)
+        return obytes
 
-    return obytes
+    #
 
+    keys = words
+    py_grafs = keys_to_py_grafs(keys)
 
-def ibytes_dedented_else(ibytes) -> bytes:
-    """Dedent Text Lines"""
+    if not py_grafs:
+        print(f"pq.py: No Py Paragraphs matched by {keys}", file=sys.stderr)
 
-    itext = ibytes.decode()
+        sys.exit(2)  # exit 2 for wrong args
 
-    ... == textwrap  # type: ignore
-    alt_locals = dict(itext=itext)
+    n = len(py_grafs)
+    if n != 1:
+        print(
+            f"pq.py: {n} Py Paragraphs matched, not just 1, by {keys}",
+            file=sys.stderr,
+        )
 
-    py = """
-        text = textwrap.dedent(itext)
-        olines = text.splitlines()
-    """
-    py = textwrap.dedent(py).strip()
+        for graf in py_grafs:
+            print(file=sys.stderr)
+            print(graf, file=sys.stderr)
 
-    exec(py, globals(), alt_locals)
-    olines = alt_locals["olines"]
+        sys.exit(2)  # exit 2 for wrong args
 
-    otext = "\n".join(olines) + "\n"
-    obytes = otext.encode()
+    hit_py_graf = py_grafs[-1]
 
-    py_trace_else(py)
+    py_words_text = "\n".join(hit_py_graf)
+    py_words = py_text_split(py_words_text)
 
-    return obytes
+    #
 
-    # often prints Py & exits zero
+    dent = ""
 
+    before_py_graf = list()
+    if ("itext" in py_words) or ("ilines" in py_words) or ("iline" in py_words):
+        before_py_graf.append("itext = ibytes.decode()")
 
-def ibytes_dented_else(ibytes) -> bytes:
-    """Dent Text Lines"""
+    if ("ilines" in py_words) or ("iline" in py_words):
+        before_py_graf.append("ilines = itext.splitlines()")
 
-    itext = ibytes.decode()
-    ilines = itext.splitlines()
+    middle_py_graf = list(hit_py_graf)
+    if "iline" in py_words:
+        before_py_graf.append("olines = list()")
+        before_py_graf.append("for iline in ilines:")
 
-    alt_globals = dict(globals())
-    alt_globals["dent"] = 4 * " "
-    alt_locals = dict(ilines=ilines)
-
-    py = """
         dent = 4 * " "
-        olines = list((dent + _) for _ in ilines)
-    """
-    py = textwrap.dedent(py).strip()
+        middle_py_graf[::] = list((dent + _) for _ in middle_py_graf)
+        middle_py_graf.append(dent + "olines.append(oline)")
 
-    exec(py, alt_globals, alt_locals)
-    assert alt_globals["dent"] == alt_locals["dent"], (alt_locals["dent"],)
-    olines = alt_locals["olines"]
+    after_py_graf = list()
+    if ("iline" not in py_words) and ("oline" in py_words):
+        after_py_graf.append("olines = [oline]")
 
-    otext = "\n".join(olines) + "\n"
-    obytes = otext.encode()
+    if ("olines" in py_words) or ("oline" in py_words):
+        after_py_graf.append(r'otext = "\n".join(olines) + "\n"')
 
-    py_trace_else(py)
+    after_py_graf.append("obytes = otext.encode()")
 
-    return obytes
+    py_graf = before_py_graf + middle_py_graf + after_py_graf
+    py_text = "\n".join(py_graf)
 
-    # often prints Py & exits zero
+    #
 
+    alt_locals = dict(ibytes=ibytes)
 
-def ibytes_reversed_else(ibytes) -> bytes:
-    """Reverse the Order of Text Lines"""
+    if False:  # jitter Fri 7/Jun
+        print("<<<", file=sys.stderr)
+        print(py_text, file=sys.stderr)
+        print(">>>", file=sys.stderr)
+        breakpoint()
 
-    itext = ibytes.decode()
-    ilines = itext.splitlines()
+    exec(py_text, globals(), alt_locals)  # ibytes_take_words_else
+    obytes = alt_locals["obytes"]
 
-    alt_locals = dict(ilines=ilines)
+    py_trace_else(py_text)
 
-    py = """
-        olines = reversed(ilines)
-    """
-    py = textwrap.dedent(py).strip()
-
-    exec(py, globals(), alt_locals)
-    olines = alt_locals["olines"]
-
-    otext = "\n".join(olines) + "\n"
-    obytes = otext.encode()
-
-    py_trace_else(py)
+    #
 
     return obytes
-
-    # often prints Py & exits zero
-
-
-def ibytes_sorted_else(ibytes) -> bytes:
-    """Sort Text Lines"""
-
-    itext = ibytes.decode()
-    ilines = itext.splitlines()
-
-    alt_locals = dict(ilines=ilines)
-
-    py = """
-        olines = sorted(ilines)
-    """
-    py = textwrap.dedent(py).strip()
-
-    exec(py, globals(), alt_locals)
-    olines = alt_locals["olines"]
-
-    otext = "\n".join(olines) + "\n"
-    obytes = otext.encode()
-
-    py_trace_else(py)
-
-    return obytes
-
-    # often prints Py & exits zero
-
-
-def ibytes_endlines_else(ibytes) -> bytes:
-    """End the last Line, and every Line, with U+000A Line-Feed"""
-
-    itext = ibytes.decode()
-    ilines = itext.splitlines()
-
-    alt_locals = dict(ilines=ilines)
-
-    py = """
-        olines = ilines
-    """
-    py = textwrap.dedent(py).strip()
-
-    exec(py, globals(), alt_locals)
-    olines = alt_locals["olines"]
-
-    otext = "\n".join(olines) + "\n"
-    obytes = otext.encode()
-
-    py_trace_else(py)
-
-    return obytes
-
-    # often prints Py & exits zero
 
 
 #
-# Edit
+# Edit the Bytes
 #
 
 
@@ -319,6 +330,32 @@ def ibytes_take_or_edit_else(ibytes) -> bytes:
 
     # OSError: [Errno 19] Operation not supported by device
     # OSError: [Errno 25] Inappropriate ioctl for device
+
+    # often prints Py & exits zero
+
+
+def ibytes_endlines_else(ibytes) -> bytes:
+    """End the last Line, and every Line, with U+000A Line-Feed"""
+
+    itext = ibytes.decode()
+    ilines = itext.splitlines()
+
+    alt_locals = dict(ilines=ilines)
+
+    py = """
+        olines = ilines
+    """
+    py = textwrap.dedent(py).strip()
+
+    exec(py, globals(), alt_locals)
+    olines = alt_locals["olines"]
+
+    otext = "\n".join(olines) + "\n"
+    obytes = otext.encode()
+
+    py_trace_else(py)
+
+    return obytes
 
     # often prints Py & exits zero
 
@@ -399,7 +436,7 @@ def iline_gdrive_to_share_else(iline) -> str:
     """
     py = textwrap.dedent(py).strip()
 
-    exec(py, globals(), alt_locals)
+    exec(py, globals(), alt_locals)  # iline_gdrive_to_share_else
     oline = alt_locals["oline"]
 
     py_trace_else(py)
@@ -441,7 +478,7 @@ def iline_codereviews_to_diff_else(iline) -> str:
     """
     py = textwrap.dedent(py).strip()
 
-    exec(py, globals(), alt_locals)
+    exec(py, globals(), alt_locals)  # iline_codereviews_to_diff_else
     oline = alt_locals["oline"]
 
     return oline
@@ -498,7 +535,7 @@ def iline_jenkins_thin_else(iline) -> str:
     """
     py = textwrap.dedent(py).strip()
 
-    exec(py, globals(), alt_locals)
+    exec(py, globals(), alt_locals)  # iline_jenkins_thin_else
     oline = alt_locals["oline"]
 
     py_trace_else(py)
@@ -536,7 +573,7 @@ def iline_jenkins_widen_else(iline) -> str:
     """
     py = textwrap.dedent(py).strip()
 
-    exec(py, globals(), alt_locals)
+    exec(py, globals(), alt_locals)  # iline_jenkins_widen_else
     oline = alt_locals["oline"]
 
     py_trace_else(py)
@@ -583,7 +620,7 @@ def iline_jira_thin_else(iline) -> str:
     """
     py = textwrap.dedent(py).strip()
 
-    exec(py, globals(), alt_locals)
+    exec(py, globals(), alt_locals)  # iline_jira_thin_else
     oline = alt_locals["oline"]
 
     py_trace_else(py)
@@ -616,7 +653,7 @@ def iline_jira_widen_else(iline) -> str:
     """
     py = textwrap.dedent(py).strip()
 
-    exec(py, globals(), alt_locals)
+    exec(py, globals(), alt_locals)  # iline_jira_widen_else
     oline = alt_locals["oline"]
 
     py_trace_else(py)
@@ -668,7 +705,7 @@ def iline_address_chill_else(iline) -> str:
     """
     py = textwrap.dedent(py).strip()
 
-    exec(py, globals(), alt_locals)
+    exec(py, globals(), alt_locals)  # iline_address_chill_else
     oline = alt_locals["oline"]
 
     py_trace_else(py)
@@ -695,7 +732,7 @@ def iline_address_warm_else(iline) -> str:
     """
     py = textwrap.dedent(py).strip()
 
-    exec(py, globals(), alt_locals)
+    exec(py, globals(), alt_locals)  # iline_address_warm_else
     oline = alt_locals["oline"]
 
     py_trace_else(py)
@@ -980,6 +1017,91 @@ def py_trace_else(py) -> None:
     sys.exit(0)
 
     # often prints Py & exits zero
+
+
+#
+# Search popular Py Grafs
+#
+
+
+def keys_to_py_grafs(keys) -> list[list[str]]:
+    """Search popular Py Grafs"""
+
+    text = textwrap.dedent(PY_GRAFS_TEXT)
+    lines = text.splitlines()
+    lines = list(lines)
+
+    grafs = list(list(v) for k, v in itertools.groupby(lines, key=bool) if k)
+
+    score_by_graf_text = dict()
+    for graf in grafs:
+        score = keys_graf_score(keys, graf)
+
+        graf_text = "\n".join(graf)
+        score_by_graf_text[graf_text] = score
+
+    scores = list(score_by_graf_text.values())
+
+    most = max(scores)
+    if not most:
+        return list()
+
+    py_grafs = list()
+    for graf in grafs:
+        graf_text = "\n".join(graf)
+        score = score_by_graf_text[graf_text]
+        if score == most:
+            py_grafs.append(graf)
+
+    return py_grafs
+
+
+def keys_graf_score(keys, graf) -> int:  # noqa C901 complex
+    """Pick out which popular Py Grafs match the Keys most closely"""
+
+    score = 0
+
+    for line in graf:  # found
+        for key in keys:
+            score += line.count(key)
+
+    for line in graf:  # found in Str Word
+        words = line.split()
+        for key in keys:
+            score += words.count(key)
+
+            for word in words:  # starts Str Word
+                if word.startswith(key):
+                    score += 1
+
+    for line in graf:  # found in Py Words
+        words = py_text_split(py_text=line)
+        for key in keys:
+            score += words.count(key)
+
+            for word in words:  # starts Py Word
+                if word.startswith(key):
+                    score += 1
+
+    # if "wc -m" in graf_text:
+    #     breakpoint()
+    #     pass
+
+    return score
+
+
+def py_text_split(py_text) -> list[str]:
+    """Split a Line into Words to search up"""
+
+    words = list(
+        _.group(0)
+        for _ in re.finditer(r"[a-zA-Z][a-zA-Z0-9_]*|[-.+0-9Ee]|.", string=py_text)
+    )
+
+    return words
+
+    # todo: split more by the Py Rules, or even totally exactly like Py Rules
+    # except don't drop Comments
 
 
 #
