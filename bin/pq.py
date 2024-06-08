@@ -14,9 +14,9 @@ options:
 
 words of the Pq Programming Language = words indexing popular Paragraphs of Py Code:
   casefold, lower, lstrip, rstrip, strip, title, upper,
-  dedented, dented, reversed, shuffled, sorted, undented,
+  closed, dedented, dented, ended, reversed, shuffled, sorted, undented,
   len bytes, len text, len words, len lines,
-  dumps, endlines, endfile, json, loads,
+  dumps, json, loads,
   tac, wc c, wc m, wc w, wc l, x, xn1,
   ...
 
@@ -79,55 +79,55 @@ import urllib.parse
 PY_GRAFS_TEXT = r"""
 
 
-    oline = str(len(ibytes))  # len bytes  # |wc -c
+    oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c
 
-    oline = str(len(itext))  # len text  # |wc -m
+    oline = str(len(itext))  # text len  # |wc -m  # wc m
 
-    oline = str(len(itext.split()))  # len words  # |wc -w
+    oline = str(len(itext.split()))  # words len  # |wc -w  # wc w
 
-    oline = str(len(itext.splitlines()))  # len lines  # |wc -l
+    oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l
 
 
-    oline = " ".join(ilines)  # |tr '\n' ' '  # |xargs  # |x  # |x
+    oline = " ".join(ilines)  # |tr '\n' ' '  # |xargs  # x x
 
     oline = (4 * " ") + iline  # as if textwrap.dented  # dent
 
-    oline = iline.lstrip()  # |sed 's,^ *,,'
+    oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
 
-    oline = iline.rstrip()  # |sed 's, *$,,'
+    oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
 
-    oline = iline.strip()  # |sed 's,^ *,,' |sed 's, *$,,'
+    oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
 
     oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
 
 
-    olines = ilines  # endlines  # ends every line with "\n"
+    olines = ilines  # ended  # end  # ends every line with "\n"
 
     olines = itext.split()  # |xargs -n 1  # |xn1
 
-    olines = reversed(ilines)  # reverse  # |tail -r  # |tac
+    olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
 
     olines = list(ilines); random.shuffle(olines)  # shuffled
 
-    olines = sorted(ilines)  # sort
+    olines = sorted(ilines)  # sort  # s s
 
     olines = list(dict((_, _) for _ in ilines).keys())
     # set, uniq, uniq_everseen, unsorted
 
     otext = itext if itext.endswith("\n") else (itext + "\n")
-    # endfile  # ends last line with "\n"
+    # closed # close  # ends last line with "\n"
 
-    otext = itext.casefold()
+    otext = itext.casefold()  # casefolded  # folded
 
-    otext = itext.lower()  # |tr '[A-Z]' '[a-z]'
+    otext = itext.lower()  # lowercased  # |tr '[A-Z]' '[a-z]'
 
-    otext = itext.title()
+    otext = itext.title()  # titled
 
-    otext = itext.upper()  # |tr '[a-z]' '[A-Z]'
+    otext = itext.upper()  # uppercased  # |tr '[a-z]' '[A-Z]'
 
-    otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .
+    otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
 
-    otext = textwrap.dedent(itext)  # dedented
+    otext = textwrap.dedent(itext) + "\n"  # dedented
 
 
 """
@@ -208,13 +208,13 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
     args = Main.args
     words = args.words
 
-    #
+    # Guess how to edit when given no Sh Words
 
     if not words:
         obytes = ibytes_take_or_edit_else(ibytes)
         return obytes
 
-    #
+    # Pick out the Py Graf most closely matching the Sh Words
 
     keys = words
     py_grafs = keys_to_py_grafs(keys)
@@ -242,9 +242,7 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
     py_words_text = "\n".join(hit_py_graf)
     py_words = py_text_split(py_words_text)
 
-    #
-
-    dent = ""
+    # Auto-complete the Py Graf  # todo: more competently
 
     before_py_graf = list()
     if ("itext" in py_words) or ("ilines" in py_words) or ("iline" in py_words):
@@ -274,7 +272,7 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
     py_graf = before_py_graf + middle_py_graf + after_py_graf
     py_text = "\n".join(py_graf)
 
-    #
+    # Run the chosen Py Graf
 
     alt_locals = dict(ibytes=ibytes)
 
@@ -287,9 +285,9 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
     exec(py_text, globals(), alt_locals)  # ibytes_take_words_else
     obytes = alt_locals["obytes"]
 
-    py_trace_else(py_text)
+    py_trace_else(py_text)  # often prints Py & exits zero (without writing the OBytes)
 
-    #
+    # Succeed
 
     return obytes
 
