@@ -6,6 +6,9 @@ set -x
 #
 # Try Auto-Completion's of revisions of the Os Copy-Paste Clipboard Buffer
 #
+# todo: Bash Filters race to reach 'set -x' inside a Sh Pipe
+# todo: Msft GitHub $$ Copilot feels Zsh fixes this
+#
 
 
 :
@@ -44,9 +47,13 @@ T=$(echo $A |bin/pq.py --yolo) # 2  # only works for me onsite in work-for-hire
 
 :
 
-# # json.dumps of json.loads
-T=$(echo '{"//":[""]}' |bin/pq.py --py jq)
+# json.dumps of json.loads  # j or jq
+T=$(echo '{"//":[""]}' |bin/pq.py --py j)
 T=$(echo '{"//":[""]}' |bin/pq.py jq |cat -)
+
+:
+
+echo "$T" >/dev/null  # shut up ShellCheck 'T appears unused'
 
 :
 
@@ -105,6 +112,7 @@ func wc m
 func wc w
 func xargs
 
+# func j  # nope, tested separately
 func s
 func u
 func x

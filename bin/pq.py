@@ -52,6 +52,7 @@ examples:
 
 import __main__
 import argparse
+import collections
 import dataclasses
 import difflib
 import itertools
@@ -82,7 +83,7 @@ PY_GRAFS_TEXT = r"""
 
     oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c
 
-    oline = str(len(itext))  # text len  # |wc -m  # wc m
+    oline = str(len(itext))  # text characters len  # |wc -m  # wc m
 
     oline = str(len(itext.split()))  # words len  # |wc -w  # wc w
 
@@ -1071,33 +1072,49 @@ def keys_to_py_grafs(keys) -> list[list[str]]:
 def keys_graf_score(keys, graf) -> int:  # noqa C901 complex
     """Pick out which popular Py Grafs match the Keys most closely"""
 
-    score = 0
+    # Count up the Matches, when searching with one kind of Fuzz or another
+
+    score_by_key: dict
+    score_by_key = collections.defaultdict(int)
 
     for line in graf:  # found
         for key in keys:
-            score += line.count(key)
+            score_by_key[key] += line.count(key)
 
     for line in graf:  # found in Str Word
         words = line.split()
         for key in keys:
-            score += words.count(key)
+            score_by_key[key] += words.count(key)
 
             for word in words:  # starts Str Word
                 if word.startswith(key):
-                    score += 1
+                    score_by_key[key] += 1
 
     for line in graf:  # found in Py Words
         words = py_text_split(py_text=line)
         for key in keys:
-            score += words.count(key)
+            score_by_key[key] += words.count(key)
 
             for word in words:  # starts Py Word
                 if word.startswith(key):
-                    score += 1
+                    score_by_key[key] += 1
 
-    # if "wc -m" in graf_text:
-    #     breakpoint()
-    #     pass
+    # Count up the Matches, when searching with one kind of Fuzz or another
+
+    for key in keys:
+        key_score = score_by_key[key]
+        if not key_score:
+            return 0
+
+    score = sum(score_by_key.values())
+
+    # Succeed
+
+    if False:  # jitter Sat 8/Jun
+        graf_text = "\n".join(graf)
+        if "wc -m" in graf_text:
+            breakpoint()
+            pass
 
     return score
 

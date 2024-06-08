@@ -35,7 +35,7 @@
 + T=https://jira./browse/PROJ-123456
 + :
 ++ echo '{"//":[""]}'
-++ bin/pq.py --py jq
+++ bin/pq.py --py j
 
 itext = ibytes.decode()
 otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
@@ -46,6 +46,12 @@ obytes = otext.encode()
 ++ bin/pq.py jq
 ++ cat -
 + T='{
+  "//": [
+    ""
+  ]
+}'
++ :
++ echo '{
   "//": [
     ""
   ]
@@ -67,7 +73,7 @@ obytes = otext.encode()
 + bin/pq.py --py text len
 
 itext = ibytes.decode()
-oline = str(len(itext))  # text len  # |wc -m  # wc m
+oline = str(len(itext))  # text characters len  # |wc -m  # wc m
 olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
@@ -432,7 +438,7 @@ obytes = otext.encode()
 + bin/pq.py --py wc m
 
 itext = ibytes.decode()
-oline = str(len(itext))  # text len  # |wc -m  # wc m
+oline = str(len(itext))  # text characters len  # |wc -m  # wc m
 olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
