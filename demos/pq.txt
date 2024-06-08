@@ -83,9 +83,18 @@ obytes = otext.encode()
 + func frame
 + set -xe
 + bin/pq.py --py frame
-pq.py: No Py Paragraphs matched by ['frame']
-+ echo + exit 2
-+ exit 2
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()  # frame  # framed
+olines.extend(2 * [""])  # top margin
+for iline in ilines:
+    oline = (4 * " ") + iline  # left margin
+    olines.append(oline)
+olines.extend(2 * [""])  # bottom margin
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
 + func end
 + set -xe
 + bin/pq.py --py end
@@ -221,9 +230,18 @@ obytes = otext.encode()
 + func framed
 + set -xe
 + bin/pq.py --py framed
-pq.py: No Py Paragraphs matched by ['framed']
-+ echo + exit 2
-+ exit 2
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()  # frame  # framed
+olines.extend(2 * [""])  # top margin
+for iline in ilines:
+    oline = (4 * " ") + iline  # left margin
+    olines.append(oline)
+olines.extend(2 * [""])  # bottom margin
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
 + func lstripped
 + set -xe
 + bin/pq.py --py lstripped

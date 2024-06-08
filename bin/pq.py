@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 r"""
-usage: pq.py [-h] [--py] [WORD ...]
+usage: pq.py [-h] [--py] [--yolo] [WORD ...]
 
 edit the Os Copy/Paste Clipboard Buffer
 
@@ -11,6 +11,7 @@ positional arguments:
 options:
   -h, --help  show this help message and exit
   --py        test and show the Python Code, except don't write the Clipboard Buffer
+  --yolo      run ahead with our freshest default choices, do damage as needed
 
 words of the Pq Programming Language = words indexing popular Paragraphs of Py Code:
   casefold, lower, lstrip, rstrip, strip, title, upper,
@@ -34,7 +35,7 @@ quirks:
 examples:
   pq.py  # show these examples and exit
   pq.py --help  # show this help message and exit
-  pq.py --  # parse the Paste to guess what to do with it
+  pq.py --yolo  # parse the Paste to guess what to do to it
   pq.py dent  # insert 4 Spaces at the left of each Line
   pq.py dedent  # remove the leading Blank Columns from the Lines
   pq.py len lines  # count Lines
@@ -92,6 +93,13 @@ PY_GRAFS_TEXT = r"""
 
     oline = (4 * " ") + iline  # as if textwrap.dented  # dent
 
+    olines = list()  # frame  # framed
+    olines.extend(2 * [""])  # top margin
+    for iline in ilines:
+        oline = (4 * " ") + iline  # left margin
+        olines.append(oline)
+    olines.extend(2 * [""])  # bottom margin
+
     oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
 
     oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
@@ -99,7 +107,6 @@ PY_GRAFS_TEXT = r"""
     oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
 
     oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
-
 
     olines = ilines  # ended  # end  # ends every line with "\n"
 
@@ -170,12 +177,15 @@ def parse_pq_py_args() -> PqPyArgs:
 
     parser = ArgumentParser()
 
-    assert argparse.ZERO_OR_MORE == "*"
     words_help = "word of the Pq Programming Language:  dedented, dented, ..."
+    py_help = "test and show the Python Code, except don't write the Clipboard Buffer"
+    yolo_help = "run ahead with our freshest default choices, do damage as needed"
+
+    assert argparse.ZERO_OR_MORE == "*"
     parser.add_argument("words", metavar="WORD", nargs="*", help=words_help)
 
-    py_help = "test and show the Python Code, except don't write the Clipboard Buffer"
     parser.add_argument("--py", action="count", help=py_help)
+    parser.add_argument("--yolo", action="count", help=yolo_help)  # --yolo, --y, --
 
     # Parse the Sh Args, else print help & exit zero
 
@@ -253,19 +263,22 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
 
     middle_py_graf = list(hit_py_graf)
     if "iline" in py_words:
-        before_py_graf.append("olines = list()")
-        before_py_graf.append("for iline in ilines:")
+        if "olines" not in py_words:
+            before_py_graf.append("olines = list()")
+            before_py_graf.append("for iline in ilines:")
 
-        dent = 4 * " "
-        middle_py_graf[::] = list((dent + _) for _ in middle_py_graf)
-        middle_py_graf.append(dent + "olines.append(oline)")
+            dent = 4 * " "
+            middle_py_graf[::] = list((dent + _) for _ in middle_py_graf)
+            middle_py_graf.append(dent + "olines.append(oline)")
 
     after_py_graf = list()
     if ("iline" not in py_words) and ("oline" in py_words):
-        after_py_graf.append("olines = [oline]")
+        if "olines" not in py_words:
+            after_py_graf.append("olines = [oline]")
 
     if ("olines" in py_words) or ("oline" in py_words):
-        after_py_graf.append(r'otext = "\n".join(olines) + "\n"')
+        if "otext" not in py_words:
+            after_py_graf.append(r'otext = "\n".join(olines) + "\n"')
 
     after_py_graf.append("obytes = otext.encode()")
 

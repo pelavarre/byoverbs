@@ -554,28 +554,6 @@ by calling for all source files together
 and asking to presume --shell=bash
 plus a bit of giving in to peer pressure as needed
 
-pq lower
-pq upper
-pq chill of cv = jqdoe@example.com
-pq title
-
-!!!
-first spell these out and name them myself
-then show them passing test
-then write Code to give them multiple names
-then show test passing again
-!!!
-
-list a pile of oneline Py programs
-nope @ set up with \_\_builtins\_\_.dent = 4 * " "
-settle for single whole-word match, else single start-word, else single match
-also subordinate found inside Len
-also take more than one key, such as:  pq split len
-
-pq 'otext = "".join(itext.split()) + "\n"'  # tr -d ' \n'
-pq 'otext = itext.strip() + "\n"'  # removes blank Rows above and below
-pq 'oline = iwords[3] if iwords[3:] else ""  # |awk '{print $3}''
-
 PyLance Standard vs Py
 
     apt.py
@@ -613,6 +591,22 @@ macOS Terminal Sh inadequate
     vim: +'set numberwidth=0'
     E487: Argument must be positive
     :g/ to show the line is a way to copy out line-number + wrapped text
+
+
+### 8 - Ninth traunch
+
+as part of 'make soon'
+git-track the --py result of each of the popular Py Grafs
+test them again as changed lately and be happy, then push
+
+pq --yolo chill of cv = jqdoe@example.com
+
+pq 'otext = "".join(itext.split()) + "\n"'  # tr -d ' \n'
+pq 'otext = itext.strip() + "\n"'  # removes blank Rows above and below
+pq 'oline = iwords[3] if iwords[3:] else ""  # |awk '{print $3}''
+
+
+### 8 - Eighth traunch
 
 ## Copied from
 
