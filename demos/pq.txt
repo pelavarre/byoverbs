@@ -1,3 +1,56 @@
++ :
+++ echo http://example.com
+++ bin/pq.py --yolo
++ T='http :// example . com'
+++ echo http :// example . com
+++ bin/pq.py --yolo
++ T=http://example.com
++ :
++ A=https://codereviews.purestorage.com/r/123456
+++ echo https://codereviews.purestorage.com/r/123456/
+++ bin/pq.py --yolo
++ T=http://codereviews/r/123456/diff
++ :
++ A=https://docs.google.com/document/d/1YfkPxiJjVJXvf4G1-Ql6-IgxE7J22eEG2JzueNjl2T4
+++ echo https://docs.google.com/document/d/1YfkPxiJjVJXvf4G1-Ql6-IgxE7J22eEG2JzueNjl2T4/edit#heading=h.xedwnjmaewr
+++ bin/pq.py --yolo
++ T=https://docs.google.com/document/d/1YfkPxiJjVJXvf4G1-Ql6-IgxE7J22eEG2JzueNjl2T4
++ :
++ A=https://ourjenkins.dev.example.com
+++ echo https://ourjenkins.dev.example.com/
+++ bin/pq.py --yolo
++ T=http://ourJenkins/
++ A=http://ourJenkins/
+++ echo http://ourJenkins//
+++ bin/pq.py --yolo
++ T=https://ourjenkins.dev./
++ :
++ A=https://jira.example.com/browse/PROJ-123456
+++ echo https://jira.example.com/browse/PROJ-123456
+++ bin/pq.py --yolo
++ T=PROJ-123456
++ A=PROJ-123456
+++ echo PROJ-123456
+++ bin/pq.py --yolo
++ T=https://jira./browse/PROJ-123456
++ :
+++ echo '{"//":[""]}'
+++ bin/pq.py --py jq
+
+itext = ibytes.decode()
+otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
+obytes = otext.encode()
+
++ T=
+++ echo '{"//":[""]}'
+++ bin/pq.py jq
+++ cat -
++ T='{
+  "//": [
+    ""
+  ]
+}'
++ :
 + echo +
 +
 + func bytes len
@@ -322,15 +375,6 @@ for iline in ilines:
     oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
     olines.append(oline)
 otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
-
-+ echo '{"//":[""]}'
-+ func jq
-+ set -xe
-+ bin/pq.py --py jq
-
-itext = ibytes.decode()
-otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
 obytes = otext.encode()
 
 + func tac

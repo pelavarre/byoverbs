@@ -323,8 +323,9 @@ def ibytes_take_or_edit_else(ibytes) -> bytes:
 
     # Else print some to Screen and edit it there
 
-    fd = sys.stderr.fileno()
-    size = os.get_terminal_size(fd)  # raises OSError when not a Terminal
+    with open("/dev/tty", "rb") as ttyin:
+        fd = ttyin.fileno()
+        size = os.get_terminal_size(fd)
 
     assert size.columns >= 20  # vs Mac Sh Terminal Columns >= 20
     assert size.lines >= 5  # vs Mac Sh Terminal Lines >= 5
@@ -712,7 +713,7 @@ def iline_address_chill_else(iline) -> str:
         osplits = list(isplits)
         osplits[0] = osplits[0].replace(":", " :")  # https ://
         osplits[2] = " " + osplits[2].replace(".", " . ") + " "  # :// sub . domain
-        oline = "/".join(osplits)
+        oline = "/".join(osplits).strip()
     """
     py = textwrap.dedent(py).strip()
 
