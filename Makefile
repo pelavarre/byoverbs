@@ -23,6 +23,7 @@ default:
 	@echo
 	@echo 'make bin  # puts bin dir files under test at home bin dir'
 	@echo 'make dotfiles  # updates local dotfiles dir from home dot files'
+	@echo "make slow  # run the expensive self-test's"
 	@echo
 	@echo 'open https://twitter.com/intent/tweet?text=.@PELaVarre'
 	@echo
@@ -48,6 +49,7 @@ help:
 	@echo
 	@echo '  make bin  # puts bin dir files under test at home bin dir'
 	@echo '  make dotfiles  # updates local dotfiles dir from home dot files'
+	@echo "  make slow  # run the expensive self-test's"
 	@echo
 	@echo '  open https://twitter.com/intent/tweet?text=.@PELaVarre'
 	@echo
@@ -149,6 +151,12 @@ shellcheck:
 selftest:
 	:
 	python3 demos/byoverbs.py --
+	:
+
+slow:
+	:
+	date && time demos/make-pq-txt.bash >demos/pq.txt 2>&1
+	git diff demos/pq.txt
 	:
 
 

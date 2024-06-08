@@ -1,0 +1,440 @@
++ echo +
++
++ func bytes len
++ set -xe
++ bin/pq.py --py bytes len
+
+oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func text len
++ set -xe
++ bin/pq.py --py text len
+
+itext = ibytes.decode()
+oline = str(len(itext))  # text len  # |wc -m  # wc m
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func lines len
++ set -xe
++ bin/pq.py --py lines len
+
+itext = ibytes.decode()
+oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func words len
++ set -xe
++ bin/pq.py --py words len
+
+itext = ibytes.decode()
+oline = str(len(itext.split()))  # words len  # |wc -w  # wc w
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func set
++ set -xe
++ bin/pq.py --py set
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list(dict((_, _) for _ in ilines).keys())
+# set, uniq, uniq_everseen, unsorted
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func close
++ set -xe
++ bin/pq.py --py close
+
+itext = ibytes.decode()
+otext = itext if itext.endswith("\n") else (itext + "\n")
+# closed # close  # ends last line with "\n"
+obytes = otext.encode()
+
++ func dedent
++ set -xe
++ bin/pq.py --py dedent
+
+itext = ibytes.decode()
+otext = textwrap.dedent(itext) + "\n"  # dedented
+obytes = otext.encode()
+
++ func dent
++ set -xe
++ bin/pq.py --py dent
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+    oline = (4 * " ") + iline  # as if textwrap.dented  # dent
+    olines.append(oline)
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func frame
++ set -xe
++ bin/pq.py --py frame
+pq.py: No Py Paragraphs matched by ['frame']
++ echo + exit 2
++ exit 2
++ func end
++ set -xe
++ bin/pq.py --py end
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = ilines  # ended  # end  # ends every line with "\n"
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func lstrip
++ set -xe
++ bin/pq.py --py lstrip
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+    oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
+    olines.append(oline)
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func reverse
++ set -xe
++ bin/pq.py --py reverse
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func rstrip
++ set -xe
++ bin/pq.py --py rstrip
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+    oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
+    olines.append(oline)
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func shuffle
++ set -xe
++ bin/pq.py --py shuffle
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list(ilines); random.shuffle(olines)  # shuffled
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func sort
++ set -xe
++ bin/pq.py --py sort
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = sorted(ilines)  # sort  # s s
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func strip
++ set -xe
++ bin/pq.py --py strip
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+    oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
+    olines.append(oline)
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func undent
++ set -xe
++ bin/pq.py --py undent
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+    oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
+    olines.append(oline)
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func closed
++ set -xe
++ bin/pq.py --py closed
+
+itext = ibytes.decode()
+otext = itext if itext.endswith("\n") else (itext + "\n")
+# closed # close  # ends last line with "\n"
+obytes = otext.encode()
+
++ func dedented
++ set -xe
++ bin/pq.py --py dedented
+
+itext = ibytes.decode()
+otext = textwrap.dedent(itext) + "\n"  # dedented
+obytes = otext.encode()
+
++ func dented
++ set -xe
++ bin/pq.py --py dented
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+    oline = (4 * " ") + iline  # as if textwrap.dented  # dent
+    olines.append(oline)
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func ended
++ set -xe
++ bin/pq.py --py ended
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = ilines  # ended  # end  # ends every line with "\n"
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func framed
++ set -xe
++ bin/pq.py --py framed
+pq.py: No Py Paragraphs matched by ['framed']
++ echo + exit 2
++ exit 2
++ func lstripped
++ set -xe
++ bin/pq.py --py lstripped
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+    oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
+    olines.append(oline)
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func rstripped
++ set -xe
++ bin/pq.py --py rstripped
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+    oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
+    olines.append(oline)
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func reversed
++ set -xe
++ bin/pq.py --py reversed
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func sorted
++ set -xe
++ bin/pq.py --py sorted
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = sorted(ilines)  # sort  # s s
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func shuffled
++ set -xe
++ bin/pq.py --py shuffled
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list(ilines); random.shuffle(olines)  # shuffled
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func stripped
++ set -xe
++ bin/pq.py --py stripped
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+    oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
+    olines.append(oline)
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func undented
++ set -xe
++ bin/pq.py --py undented
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+    oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
+    olines.append(oline)
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ echo '{"//":[""]}'
++ func jq
++ set -xe
++ bin/pq.py --py jq
+
+itext = ibytes.decode()
+otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
+obytes = otext.encode()
+
++ func tac
++ set -xe
++ bin/pq.py --py tac
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func tail r
++ set -xe
++ bin/pq.py --py tail r
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func uniq
++ set -xe
++ bin/pq.py --py uniq
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list(dict((_, _) for _ in ilines).keys())
+# set, uniq, uniq_everseen, unsorted
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func wc c
++ set -xe
++ bin/pq.py --py wc c
+
+oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func wc l
++ set -xe
++ bin/pq.py --py wc l
+
+itext = ibytes.decode()
+oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func wc m
++ set -xe
++ bin/pq.py --py wc m
+
+itext = ibytes.decode()
+oline = str(len(itext))  # text len  # |wc -m  # wc m
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func wc w
++ set -xe
++ bin/pq.py --py wc w
+
+itext = ibytes.decode()
+oline = str(len(itext.split()))  # words len  # |wc -w  # wc w
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func xargs
++ set -xe
++ bin/pq.py --py xargs
+pq.py: 2 Py Paragraphs matched, not just 1, by ['xargs']
+
+['oline = " ".join(ilines)  # |tr \'\\n\' \' \'  # |xargs  # x x']
+
+['olines = itext.split()  # |xargs -n 1  # |xn1']
++ echo + exit 2
++ exit 2
++ func s
++ set -xe
++ bin/pq.py --py s
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = sorted(ilines)  # sort  # s s
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func u
++ set -xe
++ bin/pq.py --py u
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list(dict((_, _) for _ in ilines).keys())
+# set, uniq, uniq_everseen, unsorted
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func x
++ set -xe
++ bin/pq.py --py x
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+oline = " ".join(ilines)  # |tr '\n' ' '  # |xargs  # x x
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func xn1
++ set -xe
++ bin/pq.py --py xn1
+
+itext = ibytes.decode()
+olines = itext.split()  # |xargs -n 1  # |xn1
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ echo +
++
