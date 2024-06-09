@@ -13,7 +13,7 @@ options:
   --py        test and show the Python Code, except don't write the Clipboard Buffer
   --yolo      run ahead with our freshest default choices, do damage as needed
 
-words of the Pq Programming Language = words indexing popular Paragraphs of Py Code:
+words of the Pq Programming Language = words indexing popular Grafs of Py Code:
   casefold, lower, lstrip, rstrip, strip, title, upper,
   closed, dedented, dented, ended, reversed, shuffled, sorted, undented,
   len bytes, len text, len words, len lines,
@@ -74,25 +74,42 @@ import urllib.parse
 
 
 #
-# List Paragraphs of Py Code to Abbreviate Intensely
+# List Grafs of Py Code to Abbreviate Intensely
 #
 
 
-PY_GRAFS_TEXT = r"""
-
-
-    oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c
-
-    oline = str(len(itext))  # text characters len  # |wc -m  # wc m
-
-    oline = str(len(itext.split()))  # words len  # |wc -w  # wc w
-
-    oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l
-
+PY_LINES_TEXT = r"""
 
     oline = " ".join(ilines)  # |tr '\n' ' '  # |xargs  # x x
-
     oline = (4 * " ") + iline  # as if textwrap.dented  # dent
+    oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
+    oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
+    oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
+    oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
+    oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c
+    oline = str(len(itext))  # text characters len  # |wc -m  # wc m
+    oline = str(len(itext.split()))  # words len  # |wc -w  # wc w
+    oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l
+
+    olines = ilines  # ended  # end  # ends every line with "\n"
+    olines = itext.split()  # |xargs -n 1  # |xn1
+    olines = list(ilines); random.shuffle(olines)  # shuffled
+    olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
+    olines = sorted(ilines)  # sort  # s s
+
+    otext = itext.casefold()  # casefolded  # folded
+    otext = itext.lower()  # lowercased  # |tr '[A-Z]' '[a-z]'
+    otext = itext.title()  # titled
+    otext = itext.upper()  # uppercased  # |tr '[a-z]' '[A-Z]'
+    otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
+    otext = textwrap.dedent(itext) + "\n"  # dedented
+
+"""
+
+# todo: assert rstripped and sorted
+
+
+PY_GRAFS_TEXT = r"""
 
     olines = list()  # frame  # framed
     olines.extend(2 * [""])  # top margin
@@ -101,44 +118,15 @@ PY_GRAFS_TEXT = r"""
         olines.append(oline)
     olines.extend(2 * [""])  # bottom margin
 
-    oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
-
-    oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
-
-    oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
-
-    oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
-
-    olines = ilines  # ended  # end  # ends every line with "\n"
-
-    olines = itext.split()  # |xargs -n 1  # |xn1
-
-    olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
-
-    olines = list(ilines); random.shuffle(olines)  # shuffled
-
-    olines = sorted(ilines)  # sort  # s s
-
     olines = list(dict((_, _) for _ in ilines).keys())
     # set, uniq, uniq_everseen, unsorted
 
     otext = itext if itext.endswith("\n") else (itext + "\n")
     # closed # close  # ends last line with "\n"
 
-    otext = itext.casefold()  # casefolded  # folded
-
-    otext = itext.lower()  # lowercased  # |tr '[A-Z]' '[a-z]'
-
-    otext = itext.title()  # titled
-
-    otext = itext.upper()  # uppercased  # |tr '[a-z]' '[A-Z]'
-
-    otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
-
-    otext = textwrap.dedent(itext) + "\n"  # dedented
-
-
 """
+
+# todo: assert rstripped and sorted
 
 
 #
@@ -231,14 +219,14 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
     py_grafs = keys_to_py_grafs(keys)
 
     if not py_grafs:
-        print(f"pq.py: No Py Paragraphs matched by {keys}", file=sys.stderr)
+        print(f"pq.py: No Py Grafs matched by {keys}", file=sys.stderr)
 
         sys.exit(2)  # exit 2 for wrong args
 
     n = len(py_grafs)
     if n != 1:
         print(
-            f"pq.py: {n} Py Paragraphs matched, not just 1, by {keys}",
+            f"pq.py: {n} Py Grafs matched, not just 1, by {keys}",
             file=sys.stderr,
         )
 
@@ -286,6 +274,11 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
     py_graf = before_py_graf + middle_py_graf + after_py_graf
     py_text = "\n".join(py_graf)
 
+    # Trace the chosen Py Graf before testing it, on request
+
+    if False:  # jitter Sat 9/Jun
+        py_trace_else(py_text)
+
     # Run the chosen Py Graf
 
     alt_locals = dict(ibytes=ibytes)
@@ -299,7 +292,9 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
     exec(py_text, globals(), alt_locals)  # ibytes_take_words_else
     obytes = alt_locals["obytes"]
 
-    py_trace_else(py_text)  # often prints Py & exits zero (without writing the OBytes)
+    # Print Py and exit zero, without writing the OBytes, when running to show --py
+
+    py_trace_else(py_text)
 
     # Succeed
 
@@ -776,7 +771,7 @@ class ArgumentParser(argparse.ArgumentParser):
         prog = doc_lines[0].split()[1]  # second word of first line
 
         doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
-        alt_description = doc_firstlines[1]  # first line of second paragraph
+        alt_description = doc_firstlines[1]  # first Line of second Graf
 
         # Say when Doc Lines stand plainly outside of the Epilog
 
@@ -1040,11 +1035,21 @@ def py_trace_else(py) -> None:
 def keys_to_py_grafs(keys) -> list[list[str]]:
     """Search popular Py Grafs"""
 
-    text = textwrap.dedent(PY_GRAFS_TEXT)
-    lines = text.splitlines()
-    lines = list(lines)
+    # Fetch the multi-line Py Graf, and add in the single-line Py Grafs
 
-    grafs = list(list(v) for k, v in itertools.groupby(lines, key=bool) if k)
+    mtext = textwrap.dedent(PY_GRAFS_TEXT)
+    mlines = mtext.splitlines()
+    mlines = list(mlines)
+    mgrafs = list(list(v) for k, v in itertools.groupby(mlines, key=bool) if k)
+
+    stext = textwrap.dedent(PY_LINES_TEXT)
+    slines = stext.splitlines()
+    slines = list(_ for _ in slines if _)
+    sgrafs = list([_] for _ in slines)
+
+    grafs = mgrafs + sgrafs
+
+    # Score each Py Graf
 
     score_by_graf_text = dict()
     for graf in grafs:
@@ -1054,6 +1059,8 @@ def keys_to_py_grafs(keys) -> list[list[str]]:
         score_by_graf_text[graf_text] = score
 
     scores = list(score_by_graf_text.values())
+
+    # Pick out all the equally strong Matches
 
     most = max(scores)
     if not most:
@@ -1065,6 +1072,8 @@ def keys_to_py_grafs(keys) -> list[list[str]]:
         score = score_by_graf_text[graf_text]
         if score == most:
             py_grafs.append(graf)
+
+    # Succeed
 
     return py_grafs
 

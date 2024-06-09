@@ -456,7 +456,7 @@ obytes = otext.encode()
 + func xargs
 + set -xe
 + bin/pq.py --py xargs
-pq.py: 2 Py Paragraphs matched, not just 1, by ['xargs']
+pq.py: 2 Py Grafs matched, not just 1, by ['xargs']
 
 ['oline = " ".join(ilines)  # |tr \'\\n\' \' \'  # |xargs  # x x']
 
