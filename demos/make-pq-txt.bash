@@ -74,7 +74,9 @@ func text len
 func lines len
 func words len
 
+func join
 func set
+func split
 
 func close
 func dedent
@@ -114,18 +116,34 @@ func wc w
 func xargs
 
 func a  # |pq a ...| could mean not |awk '{print $NF}' |
-# func c  # |pq c| could relate to:  pbpaste, cat -, cat - >/dev/null
-# func d  # |pq d| could relate to:  diff -brpu a b
-# func e  # |pq e| could relate to:  emacs -nw --no-splash --eval '(menu-bar-mode -1)'
-# func f  # |pq f| could relate to:  find .
-# func g  # |pq g| could relate to:  grep -h -i -n
-# func h  # |pq h| could relate to:  pbpaste, stty size, head
+# func c  # bin/c did relate to:  pbpaste, cat -, cat - >/dev/null
+# func d  # bin/d did relate to:  diff -brpu a b
+# func e  # bin/e did relate to:  emacs -nw --no-splash --eval '(menu-bar-mode -1)'
+# func f  # bin/f did relate to:  find .
+# func g  # bin/g did relate to:  grep -e -h -i -n
+# func h  # bin/h did relate to:  pbpaste, stty size, head
 # func j  # nope, tested separately
-# func p  # |pq p| could relate to:  python3 -m pdb
+# func p  # bin/p did relate to:  python3 -m pdb
+# func q  # bin/q did relate to:  git
 func s
-# func t  # |pq t| could relate to:  pbpaste, stty size, tail
+# func t  # bin/t did relate to:  pbpaste, stty size, tail
 func u
 func x
+
+# bin/:h did relate to:  short wide Landscape Terminal Sh
+# bin/:v did relate to:  tall thin Portrait Terminal Sh
+# bin/cv did relate to:  pbpaste, pbcopy
+# bin/dt did relate to:  date stamp, measure time interval
+# bin/fh did relate to:  cat ~/.*.log
+# bin/mo did relate to:  less -FIRX
+# bin/pq did relate to:  pq.py --yolo
+# bin/sh did relate to:  /bin/shs
+# bin/vp did relate to creating ./p.py more rapidly, fluidly
+# bin/xd did relate to:  hexdump -C
+
+# bin/cls did relate to the 'printf '\e[H\e[2J\e[3J' kind of:  clear
+# bin/lsa did relate to:  ls -dhlAF -rt
+func wcl
 func xn1
 
 echo +

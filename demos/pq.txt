@@ -63,7 +63,7 @@ obytes = otext.encode()
 + set -xe
 + bin/pq.py --py bytes len
 
-oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c
+oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c  # wcc
 olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
@@ -73,7 +73,7 @@ obytes = otext.encode()
 + bin/pq.py --py text len
 
 itext = ibytes.decode()
-oline = str(len(itext))  # text characters len  # |wc -m  # wc m
+oline = str(len(itext))  # text characters len  # |wc -m  # wc m  # wcm
 olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
@@ -83,7 +83,7 @@ obytes = otext.encode()
 + bin/pq.py --py lines len
 
 itext = ibytes.decode()
-oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l
+oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l  # wcl
 olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
@@ -93,7 +93,18 @@ obytes = otext.encode()
 + bin/pq.py --py words len
 
 itext = ibytes.decode()
-oline = str(len(itext.split()))  # words len  # |wc -w  # wc w
+oline = str(len(itext.split()))  # words len  # |wc -w  # wc w  # wcw
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func join
++ set -xe
++ bin/pq.py --py join
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+oline = " ".join(ilines)  # |tr '\n' ' '  # |xargs  # x x
 olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
@@ -106,6 +117,15 @@ itext = ibytes.decode()
 ilines = itext.splitlines()
 # set, uniq, uniq_everseen, unsorted
 olines = list(dict((_, _) for _ in ilines).keys())
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func split
++ set -xe
++ bin/pq.py --py split
+
+itext = ibytes.decode()
+olines = itext.split()  # |xargs -n 1  # |xn1  # split
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
@@ -420,7 +440,7 @@ obytes = otext.encode()
 + set -xe
 + bin/pq.py --py wc c
 
-oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c
+oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c  # wcc
 olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
@@ -430,7 +450,7 @@ obytes = otext.encode()
 + bin/pq.py --py wc l
 
 itext = ibytes.decode()
-oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l
+oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l  # wcl
 olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
@@ -440,7 +460,7 @@ obytes = otext.encode()
 + bin/pq.py --py wc m
 
 itext = ibytes.decode()
-oline = str(len(itext))  # text characters len  # |wc -m  # wc m
+oline = str(len(itext))  # text characters len  # |wc -m  # wc m  # wcm
 olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
@@ -450,7 +470,7 @@ obytes = otext.encode()
 + bin/pq.py --py wc w
 
 itext = ibytes.decode()
-oline = str(len(itext.split()))  # words len  # |wc -w  # wc w
+oline = str(len(itext.split()))  # words len  # |wc -w  # wc w  # wcw
 olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
@@ -462,7 +482,7 @@ pq.py: 2 Py Grafs matched, not just 1, by ['xargs']
 
 ['oline = " ".join(ilines)  # |tr \'\\n\' \' \'  # |xargs  # x x']
 
-['olines = itext.split()  # |xargs -n 1  # |xn1']
+['olines = itext.split()  # |xargs -n 1  # |xn1  # split']
 + echo + exit 2
 + exit 2
 + func a
@@ -512,12 +532,22 @@ olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
++ func wcl
++ set -xe
++ bin/pq.py --py wcl
+
+itext = ibytes.decode()
+oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l  # wcl
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
 + func xn1
 + set -xe
 + bin/pq.py --py xn1
 
 itext = ibytes.decode()
-olines = itext.split()  # |xargs -n 1  # |xn1
+olines = itext.split()  # |xargs -n 1  # |xn1  # split
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 

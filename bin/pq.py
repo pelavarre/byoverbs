@@ -16,9 +16,8 @@ options:
 words of the Pq Programming Language = words indexing popular Grafs of Py Code:
   casefold, lower, lstrip, rstrip, strip, title, upper,
   closed, dedented, dented, ended, reversed, shuffled, sorted, undented,
-  len bytes, len text, len words, len lines,
-  dumps, json, loads,
-  tac, wc c, wc m, wc w, wc l, x, xn1,
+  len bytes, len text, len words, len lines, wcc, wcm, wcw, wcl, wc c, wc m, wc w, wc l,
+  a, dumps, json, join, loads, s, split, tac, u, x, xn1,
   ...
 
 guesses by data:
@@ -79,19 +78,20 @@ import urllib.parse
 
 
 PY_LINES_TEXT = r"""
+
     oline = " ".join(ilines)  # |tr '\n' ' '  # |xargs  # x x
     oline = (4 * " ") + iline  # as if textwrap.dented  # dent
     oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
     oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
     oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
     oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
-    oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c
-    oline = str(len(itext))  # text characters len  # |wc -m  # wc m
-    oline = str(len(itext.split()))  # words len  # |wc -w  # wc w
-    oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l
+    oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c  # wcc
+    oline = str(len(itext))  # text characters len  # |wc -m  # wc m  # wcm
+    oline = str(len(itext.split()))  # words len  # |wc -w  # wc w  # wcw
+    oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l  # wcl
 
     olines = ilines  # ended  # end  # ends every line with "\n"
-    olines = itext.split()  # |xargs -n 1  # |xn1
+    olines = itext.split()  # |xargs -n 1  # |xn1  # split
     olines = list(ilines); random.shuffle(olines)  # shuffled
     olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
     olines = sorted(ilines)  # sort  # s s
