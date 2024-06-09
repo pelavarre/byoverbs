@@ -104,8 +104,8 @@ obytes = otext.encode()
 
 itext = ibytes.decode()
 ilines = itext.splitlines()
-olines = list(dict((_, _) for _ in ilines).keys())
 # set, uniq, uniq_everseen, unsorted
+olines = list(dict((_, _) for _ in ilines).keys())
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
@@ -114,8 +114,8 @@ obytes = otext.encode()
 + bin/pq.py --py close
 
 itext = ibytes.decode()
-otext = itext if itext.endswith("\n") else (itext + "\n")
 # closed # close  # ends last line with "\n"
+otext = itext if itext.endswith("\n") else (itext + "\n")
 obytes = otext.encode()
 
 + func dedent
@@ -145,7 +145,8 @@ obytes = otext.encode()
 
 itext = ibytes.decode()
 ilines = itext.splitlines()
-olines = list()  # frame  # framed
+# frame  # framed
+olines = list()
 olines.extend(2 * [""])  # top margin
 for iline in ilines:
     oline = (4 * " ") + iline  # left margin
@@ -251,8 +252,8 @@ obytes = otext.encode()
 + bin/pq.py --py closed
 
 itext = ibytes.decode()
-otext = itext if itext.endswith("\n") else (itext + "\n")
 # closed # close  # ends last line with "\n"
+otext = itext if itext.endswith("\n") else (itext + "\n")
 obytes = otext.encode()
 
 + func dedented
@@ -292,7 +293,8 @@ obytes = otext.encode()
 
 itext = ibytes.decode()
 ilines = itext.splitlines()
-olines = list()  # frame  # framed
+# frame  # framed
+olines = list()
 olines.extend(2 * [""])  # top margin
 for iline in ilines:
     oline = (4 * " ") + iline  # left margin
@@ -409,8 +411,8 @@ obytes = otext.encode()
 
 itext = ibytes.decode()
 ilines = itext.splitlines()
-olines = list(dict((_, _) for _ in ilines).keys())
 # set, uniq, uniq_everseen, unsorted
+olines = list(dict((_, _) for _ in ilines).keys())
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
@@ -463,6 +465,21 @@ pq.py: 2 Py Grafs matched, not just 1, by ['xargs']
 ['olines = itext.split()  # |xargs -n 1  # |xn1']
 + echo + exit 2
 + exit 2
++ func a
++ set -xe
++ bin/pq.py --py a
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+    # |awk '{print $NF}'  # a a
+    ilinewords = iline.split()
+    oline = ilinewords[-1] if ilinewords else ""
+    olines.append(oline)
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
 + func s
 + set -xe
 + bin/pq.py --py s
@@ -479,8 +496,8 @@ obytes = otext.encode()
 
 itext = ibytes.decode()
 ilines = itext.splitlines()
-olines = list(dict((_, _) for _ in ilines).keys())
 # set, uniq, uniq_everseen, unsorted
+olines = list(dict((_, _) for _ in ilines).keys())
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 

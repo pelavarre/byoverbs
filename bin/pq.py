@@ -79,7 +79,6 @@ import urllib.parse
 
 
 PY_LINES_TEXT = r"""
-
     oline = " ".join(ilines)  # |tr '\n' ' '  # |xargs  # x x
     oline = (4 * " ") + iline  # as if textwrap.dented  # dent
     oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
@@ -111,18 +110,23 @@ PY_LINES_TEXT = r"""
 
 PY_GRAFS_TEXT = r"""
 
-    olines = list()  # frame  # framed
+    # |awk '{print $NF}'  # a a
+    ilinewords = iline.split()
+    oline = ilinewords[-1] if ilinewords else ""
+
+    # frame  # framed
+    olines = list()
     olines.extend(2 * [""])  # top margin
     for iline in ilines:
         oline = (4 * " ") + iline  # left margin
         olines.append(oline)
     olines.extend(2 * [""])  # bottom margin
 
-    olines = list(dict((_, _) for _ in ilines).keys())
     # set, uniq, uniq_everseen, unsorted
+    olines = list(dict((_, _) for _ in ilines).keys())
 
-    otext = itext if itext.endswith("\n") else (itext + "\n")
     # closed # close  # ends last line with "\n"
+    otext = itext if itext.endswith("\n") else (itext + "\n")
 
 """
 

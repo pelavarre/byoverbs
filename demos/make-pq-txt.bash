@@ -104,6 +104,7 @@ func undented
 
 # func jq  # nope, tested separately
 func tac
+# func tee  # |pq tee| could mean |tee /dev/tty |
 func tail r
 func uniq
 func wc c
@@ -112,8 +113,17 @@ func wc m
 func wc w
 func xargs
 
+func a  # |pq a ...| could mean not |awk '{print $NF}' |
+# func c  # |pq c| could relate to:  pbpaste, cat -, cat - >/dev/null
+# func d  # |pq d| could relate to:  diff -brpu a b
+# func e  # |pq e| could relate to:  emacs -nw --no-splash --eval '(menu-bar-mode -1)'
+# func f  # |pq f| could relate to:  find .
+# func g  # |pq g| could relate to:  grep -h -i -n
+# func h  # |pq h| could relate to:  pbpaste, stty size, head
 # func j  # nope, tested separately
+# func p  # |pq p| could relate to:  python3 -m pdb
 func s
+# func t  # |pq t| could relate to:  pbpaste, stty size, tail
 func u
 func x
 func xn1
