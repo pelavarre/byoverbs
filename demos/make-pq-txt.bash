@@ -137,7 +137,7 @@ func x
 # bin/fh did relate to:  cat ~/.*.log
 # bin/mo did relate to:  less -FIRX
 # bin/pq did relate to:  pq.py --yolo
-# bin/sh did relate to:  /bin/shs
+# bin/sh did relate to:  /bin/sh
 # bin/vp did relate to creating ./p.py more rapidly, fluidly
 # bin/xd did relate to:  hexdump -C
 

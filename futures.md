@@ -595,9 +595,9 @@ macOS Terminal Sh inadequate
 
 ### 8 - Ninth traunch
 
-as part of 'make soon'
-git-track the --py result of each of the popular Py Grafs
-test them again as changed lately and be happy, then push
+pq --py
+could lift up the middle - like split graf vs boiler before, boiler after
+maybe only when the total is more than 3 Lines
 
 pq --yolo chill of cv = jqdoe@example.com
 
