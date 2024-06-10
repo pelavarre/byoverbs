@@ -593,7 +593,7 @@ macOS Terminal Sh inadequate
     :g/ to show the line is a way to copy out line-number + wrapped text
 
 
-### 8 - Ninth traunch
+### 9 - Ninth traunch
 
 pq --py
 could lift up the middle - like split graf vs boiler before, boiler after
@@ -605,8 +605,10 @@ pq 'otext = "".join(itext.split()) + "\n"'  # tr -d ' \n'
 pq 'otext = itext.strip() + "\n"'  # removes blank Rows above and below
 pq 'oline = iwords[3] if iwords[3:] else ""  # |awk '{print $3}''
 
+block git-push till after work-for-hire Domain-Name deleted from Source Files
 
-### 8 - Eighth traunch
+    fqdn = socket.getfqdn()
+    dn = fqdn.partition(".")[-1]  # Domain Name of HostName
 
 ## Copied from
 

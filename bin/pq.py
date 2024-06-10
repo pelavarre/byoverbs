@@ -242,40 +242,7 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
 
     hit_py_graf = py_grafs[-1]
 
-    py_words_text = "\n".join(hit_py_graf)
-    py_words = py_text_split(py_words_text)
-
-    # Auto-complete the Py Graf  # todo: more competently
-
-    before_py_graf = list()
-    if ("itext" in py_words) or ("ilines" in py_words) or ("iline" in py_words):
-        before_py_graf.append("itext = ibytes.decode()")
-
-    if ("ilines" in py_words) or ("iline" in py_words):
-        before_py_graf.append("ilines = itext.splitlines()")
-
-    middle_py_graf = list(hit_py_graf)
-    if "iline" in py_words:
-        if "olines" not in py_words:
-            before_py_graf.append("olines = list()")
-            before_py_graf.append("for iline in ilines:")
-
-            dent = 4 * " "
-            middle_py_graf[::] = list((dent + _) for _ in middle_py_graf)
-            middle_py_graf.append(dent + "olines.append(oline)")
-
-    after_py_graf = list()
-    if ("iline" not in py_words) and ("oline" in py_words):
-        if "olines" not in py_words:
-            after_py_graf.append("olines = [oline]")
-
-    if ("olines" in py_words) or ("oline" in py_words):
-        if "otext" not in py_words:
-            after_py_graf.append(r'otext = "\n".join(olines) + "\n"')
-
-    after_py_graf.append("obytes = otext.encode()")
-
-    py_graf = before_py_graf + middle_py_graf + after_py_graf
+    py_graf = py_graf_complete(py_graf=hit_py_graf)
     py_text = "\n".join(py_graf)
 
     # Trace the chosen Py Graf before testing it, on request
@@ -303,6 +270,71 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
     # Succeed
 
     return obytes
+
+
+def py_graf_complete(py_graf) -> list[str]:
+    """Auto-complete one Py Graf"""  # todo: more competently
+
+    py_words_text = "\n".join(py_graf)
+    py_words = py_text_split(py_words_text)
+
+    # Guess how to set up
+
+    before_py_graf = list()
+    if ("itext" in py_words) or ("ilines" in py_words) or ("iline" in py_words):
+        before_py_graf.append(r"itext = ibytes.decode()")
+
+    if ("ilines" in py_words) or ("iline" in py_words):
+        before_py_graf.append(r"ilines = itext.splitlines()")
+
+    # Guess if and how much to dent
+
+    middle_py_graf = list(py_graf)
+    if "iline" in py_words:
+        if "olines" not in py_words:
+            before_py_graf.append(r"olines = list()")
+            before_py_graf.append(r"for iline in ilines:")
+
+            dent = 4 * " "
+            middle_py_graf[::] = list((dent + _) for _ in middle_py_graf)
+            middle_py_graf.append(dent + r"olines.append(oline)")
+
+    # Guess how to tear down
+
+    after_py_graf = list()
+    if ("iline" not in py_words) and ("oline" in py_words):
+        if "olines" not in py_words:
+            after_py_graf.append(r"olines = [oline]")
+
+    if ("olines" in py_words) or ("oline" in py_words):
+        if "otext" not in py_words:
+            after_py_graf.append(r'otext = "\n".join(olines) + "\n"')
+
+    after_py_graf.append(r"obytes = otext.encode()")
+
+    # Frame the Seed in the Middle with blank Lines, if lotsa Set Up or Tear Down
+
+    py_graf = before_py_graf + middle_py_graf + after_py_graf
+    if len(py_graf) > 3:
+        py_graf = before_py_graf + [""] + middle_py_graf + [""] + after_py_graf
+        py_graf = graf_strip(py_graf)
+
+    # Succeed
+
+    return py_graf
+
+
+def graf_strip(graf) -> list[str]:
+    """Drop the leading Empty Lines and the trailing Empty Lines"""
+
+    alt_graf = list(graf)
+
+    while alt_graf[0] == "":
+        alt_graf.pop(0)
+    while alt_graf[-1] == "":
+        alt_graf.pop(-1)
+
+    return alt_graf
 
 
 #
@@ -336,7 +368,7 @@ def ibytes_take_or_edit_else(ibytes) -> bytes:
 
     # End the last Line, and every Line, with U+000A Line-Feed
 
-    obytes = ibytes_endlines_else(ibytes)
+    obytes = ibytes_ended_else(ibytes)
 
     return obytes
 
@@ -346,7 +378,7 @@ def ibytes_take_or_edit_else(ibytes) -> bytes:
     # often prints Py & exits zero
 
 
-def ibytes_endlines_else(ibytes) -> bytes:
+def ibytes_ended_else(ibytes) -> bytes:
     """End the last Line, and every Line, with U+000A Line-Feed"""
 
     itext = ibytes.decode()
@@ -354,18 +386,18 @@ def ibytes_endlines_else(ibytes) -> bytes:
 
     alt_locals = dict(ilines=ilines)
 
-    py = """
+    py_text = """
         olines = ilines
     """
-    py = textwrap.dedent(py).strip()
+    py_text = textwrap.dedent(py_text).strip()
 
-    exec(py, globals(), alt_locals)
+    exec(py_text, globals(), alt_locals)  # ibytes_ended_else
     olines = alt_locals["olines"]
 
     otext = "\n".join(olines) + "\n"
     obytes = otext.encode()
 
-    py_trace_else(py)
+    py_trace_else(py_text)
 
     return obytes
 
@@ -429,7 +461,7 @@ def iline_gdrive_to_share_else(iline) -> str:
 
     alt_locals = dict(iline=iline)
 
-    py = """
+    py_text = """
         isplits = urllib.parse.urlsplit(iline)
         ipath = isplits.path
 
@@ -446,12 +478,12 @@ def iline_gdrive_to_share_else(iline) -> str:
         )
         oline = osplits.geturl()
     """
-    py = textwrap.dedent(py).strip()
+    py_text = textwrap.dedent(py_text).strip()
 
-    exec(py, globals(), alt_locals)  # iline_gdrive_to_share_else
+    exec(py_text, globals(), alt_locals)  # iline_gdrive_to_share_else
     oline = alt_locals["oline"]
 
-    py_trace_else(py)
+    py_trace_else(py_text)
 
     return oline
 
@@ -475,7 +507,7 @@ def iline_codereviews_to_diff_else(iline) -> str:
 
     alt_locals = dict(iline=iline)
 
-    py = """
+    py_text = """
         isplits = urllib.parse.urlsplit(iline)
         m = re.match(r"^/r/([0-9]+)", string=isplits.path)  # discards end of path
         r = int(m.group(1))
@@ -488,10 +520,12 @@ def iline_codereviews_to_diff_else(iline) -> str:
         )
         oline = osplits.geturl()
     """
-    py = textwrap.dedent(py).strip()
+    py_text = textwrap.dedent(py_text).strip()
 
-    exec(py, globals(), alt_locals)  # iline_codereviews_to_diff_else
+    exec(py_text, globals(), alt_locals)  # iline_codereviews_to_diff_else
     oline = alt_locals["oline"]
+
+    py_trace_else(py_text)
 
     return oline
 
@@ -533,7 +567,7 @@ def iline_jenkins_thin_else(iline) -> str:
 
     alt_locals = dict(iline=iline)
 
-    py = """
+    py_text = """
         isplits = urllib.parse.urlsplit(iline)
         sub = isplits.netloc.split(".")[0]
         osplits = urllib.parse.SplitResult(
@@ -545,12 +579,12 @@ def iline_jenkins_thin_else(iline) -> str:
         )
         oline = osplits.geturl()
     """
-    py = textwrap.dedent(py).strip()
+    py_text = textwrap.dedent(py_text).strip()
 
-    exec(py, globals(), alt_locals)  # iline_jenkins_thin_else
+    exec(py_text, globals(), alt_locals)  # iline_jenkins_thin_else
     oline = alt_locals["oline"]
 
-    py_trace_else(py)
+    py_trace_else(py_text)
 
     return oline
 
@@ -570,10 +604,10 @@ def iline_jenkins_widen_else(iline) -> str:
     ... == socket  # type: ignore
     alt_locals = dict(iline=iline)
 
-    py = """
+    py_text = """
         isplits = urllib.parse.urlsplit(iline)
         fqdn = socket.getfqdn()
-        dn = fqdn.partition(".")[-1]
+        dn = fqdn.partition(".")[-1]  # Domain Name of HostName
         osplits = urllib.parse.SplitResult(
             scheme="https",
             netloc=f"{isplits.netloc}.dev.{dn}".casefold(),
@@ -583,12 +617,12 @@ def iline_jenkins_widen_else(iline) -> str:
         )
         oline = osplits.geturl()
     """
-    py = textwrap.dedent(py).strip()
+    py_text = textwrap.dedent(py_text).strip()
 
-    exec(py, globals(), alt_locals)  # iline_jenkins_widen_else
+    exec(py_text, globals(), alt_locals)  # iline_jenkins_widen_else
     oline = alt_locals["oline"]
 
-    py_trace_else(py)
+    py_trace_else(py_text)
 
     return oline
 
@@ -626,16 +660,16 @@ def iline_jira_thin_else(iline) -> str:
 
     alt_locals = dict(iline=iline)
 
-    py = """
+    py_text = """
         isplits = urllib.parse.urlsplit(iline)
         oline = isplits.path.removeprefix("/browse/")  # 'PROJ-12345'
     """
-    py = textwrap.dedent(py).strip()
+    py_text = textwrap.dedent(py_text).strip()
 
-    exec(py, globals(), alt_locals)  # iline_jira_thin_else
+    exec(py_text, globals(), alt_locals)  # iline_jira_thin_else
     oline = alt_locals["oline"]
 
-    py_trace_else(py)
+    py_trace_else(py_text)
 
     return oline
 
@@ -650,10 +684,10 @@ def iline_jira_widen_else(iline) -> str:
     ... == socket  # type: ignore
     alt_locals = dict(iline=iline)
 
-    py = """
+    py_text = """
         isplits = urllib.parse.urlsplit(iline)
         fqdn = socket.getfqdn()
-        dn = fqdn.partition(".")[-1]
+        dn = fqdn.partition(".")[-1]  # Domain Name of HostName
         osplits = urllib.parse.SplitResult(
             scheme="https",
             netloc=f"jira.{dn}",
@@ -663,12 +697,12 @@ def iline_jira_widen_else(iline) -> str:
         )
         oline = osplits.geturl()
     """
-    py = textwrap.dedent(py).strip()
+    py_text = textwrap.dedent(py_text).strip()
 
-    exec(py, globals(), alt_locals)  # iline_jira_widen_else
+    exec(py_text, globals(), alt_locals)  # iline_jira_widen_else
     oline = alt_locals["oline"]
 
-    py_trace_else(py)
+    py_trace_else(py_text)
 
     return oline
 
@@ -708,19 +742,19 @@ def iline_address_chill_else(iline) -> str:
 
     alt_locals = dict(iline=iline)
 
-    py = """
+    py_text = """
         isplits = iline.split("/")
         osplits = list(isplits)
         osplits[0] = osplits[0].replace(":", " :")  # https ://
         osplits[2] = " " + osplits[2].replace(".", " . ") + " "  # :// sub . domain
         oline = "/".join(osplits).strip()
     """
-    py = textwrap.dedent(py).strip()
+    py_text = textwrap.dedent(py_text).strip()
 
-    exec(py, globals(), alt_locals)  # iline_address_chill_else
+    exec(py_text, globals(), alt_locals)  # iline_address_chill_else
     oline = alt_locals["oline"]
 
-    py_trace_else(py)
+    py_trace_else(py_text)
 
     return oline
 
@@ -739,15 +773,15 @@ def iline_address_warm_else(iline) -> str:
 
     alt_locals = dict(iwords=iwords)
 
-    py = """
+    py_text = """
         oline = "".join(iwords)
     """
-    py = textwrap.dedent(py).strip()
+    py_text = textwrap.dedent(py_text).strip()
 
-    exec(py, globals(), alt_locals)  # iline_address_warm_else
+    exec(py_text, globals(), alt_locals)  # iline_address_warm_else
     oline = alt_locals["oline"]
 
-    py_trace_else(py)
+    py_trace_else(py_text)
 
     return oline
 
@@ -1014,7 +1048,7 @@ class ShPipeSponge:
 #
 
 
-def py_trace_else(py) -> None:
+def py_trace_else(py_text) -> None:
     """Print the Py Lines, framed in two Blank Rows, just before running them"""
 
     args = Main.args
@@ -1023,7 +1057,7 @@ def py_trace_else(py) -> None:
         return
 
     sys.stderr.write("\n")
-    sys.stderr.write(py + "\n")
+    sys.stderr.write(py_text + "\n")
     sys.stderr.write("\n")
 
     sys.exit(0)

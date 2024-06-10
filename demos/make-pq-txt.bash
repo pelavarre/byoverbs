@@ -14,41 +14,49 @@ set -x
 :
 
 # def iline_address_toggle_else
+T=$(echo http://example.com |bin/pq.py --py)
 T=$(echo http://example.com |bin/pq.py --yolo)
+T=$(echo http :// example . com |bin/pq.py --py)
 T=$(echo http :// example . com |bin/pq.py --yolo)
 
 :
 
 # def iline_codereviews_to_diff_else
-A=https://codereviews.purestorage.com/r/123456
+A=https://codereviews.example.com/r/123456
+T=$(echo $A/ |bin/pq.py --py)
 T=$(echo $A/ |bin/pq.py --yolo)
 
 :
 
 # def iline_gdrive_to_share_else
 A=https://docs.google.com/document/d/1YfkPxiJjVJXvf4G1-Ql6-IgxE7J22eEG2JzueNjl2T4
+T=$(echo $A/edit#heading=h.xedwnjmaewr |bin/pq.py --py)
 T=$(echo $A/edit#heading=h.xedwnjmaewr |bin/pq.py --yolo)
 
 :
 
 # def iline_jenkins_toggle_else
 A=https://ourjenkins.dev.example.com
+T=$(echo $A/ |bin/pq.py --py) # 1
 T=$(echo $A/ |bin/pq.py --yolo) # 1
 A=http://ourJenkins/
+T=$(echo $A/ |bin/pq.py --py) # 2  # only works for me onsite in work-for-hire
 T=$(echo $A/ |bin/pq.py --yolo) # 2  # only works for me onsite in work-for-hire
 
 :
 
 # def iline_jira_toggle_else
 A=https://jira.example.com/browse/PROJ-123456
+T=$(echo $A |bin/pq.py --py) # 1
 T=$(echo $A |bin/pq.py --yolo) # 1
 A=PROJ-123456
+T=$(echo $A |bin/pq.py --py) # 2  # only works for me onsite in work-for-hire
 T=$(echo $A |bin/pq.py --yolo) # 2  # only works for me onsite in work-for-hire
 
 :
 
 # json.dumps of json.loads  # j or jq
-T=$(echo '{"//":[""]}' |bin/pq.py --py j)
+T=$(echo '{"//":[""]}' |bin/pq.py --py j)  # a race lost here on Mon 10/Jun
 T=$(echo '{"//":[""]}' |bin/pq.py jq |cat -)
 
 :
