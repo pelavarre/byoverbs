@@ -21,7 +21,7 @@ T=$(echo http :// example . com |bin/pq.py --yolo)
 
 :
 
-# def iline_codereviews_to_diff_else
+# def iline_codereviews_to_diff_else  # todo: test with LocalHost Domain Name
 A=https://codereviews.example.com/r/123456
 T=$(echo $A/ |bin/pq.py --py)
 T=$(echo $A/ |bin/pq.py --yolo)
@@ -88,6 +88,7 @@ func split
 
 func close
 func dedent
+func deframe
 func dent
 func frame
 func end
@@ -96,11 +97,13 @@ func reverse
 func rstrip
 func shuffle
 func sort
+func sponge
 func strip
 func undent
 
 func closed
 func dedented
+func deframed
 func dented
 func ended
 func framed
@@ -108,6 +111,7 @@ func lstripped
 func rstripped
 func reversed
 func sorted
+func sponged
 func shuffled
 func stripped
 func undented

@@ -15,9 +15,9 @@ options:
 
 words of the Pq Programming Language = words indexing popular Grafs of Py Code:
   casefold, lower, lstrip, rstrip, strip, title, upper,
-  closed, dedented, dented, ended, reversed, shuffled, sorted, undented,
+  closed, dedented, dented, ended, reversed, shuffled, sorted, sponged, undented,
   len bytes, len text, len words, len lines, wcc, wcm, wcw, wcl, wc c, wc m, wc w, wc l,
-  a, dumps, json, join, loads, s, split, tac, u, x, xn1,
+  a, deframed, dumps, framed, json, join, loads, s, split, tac, u, x, xn1,
   ...
 
 guesses by data:
@@ -79,7 +79,9 @@ import urllib.parse
 
 PY_LINES_TEXT = r"""
 
-    oline = " ".join(ilines)  # |tr '\n' ' '  # |xargs  # x x
+    obytes = ibytes  # sponged  # sponge
+
+    oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # x x
     oline = (4 * " ") + iline  # as if textwrap.dented  # dent
     oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
     oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
@@ -114,6 +116,12 @@ PY_GRAFS_TEXT = r"""
     ilinewords = iline.split()
     oline = ilinewords[-1] if ilinewords else ""
 
+    # deframe  # deframed
+    otext = textwrap.dedent(itext) + "\n"  # no left margin
+    olines = otext.splitlines()
+    olines = list(_.rstrip() for _ in olines)  # no right margin
+    otext = "\n".join(olines).strip() + "\n"  # no top/bottom margins
+
     # frame  # framed
     olines = list()
     olines.extend(2 * [""])  # top margin
@@ -122,7 +130,7 @@ PY_GRAFS_TEXT = r"""
         olines.append(oline)
     olines.extend(2 * [""])  # bottom margin
 
-    # set, uniq, uniq_everseen, unsorted
+    # collections.Counter.keys, set, uniq, uniq_everseen, unsorted
     olines = list(dict((_, _) for _ in ilines).keys())
 
     # closed # close  # ends last line with "\n"
@@ -203,7 +211,7 @@ def parse_pq_py_args() -> PqPyArgs:
 #
 
 
-def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
+def ibytes_take_words_else(data) -> bytes:
     """Take Sh Words as hints, else guess without any"""
 
     ibytes = data
@@ -245,34 +253,23 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
     py_graf = py_graf_complete(py_graf=hit_py_graf)
     py_text = "\n".join(py_graf)
 
-    # Trace the chosen Py Graf before testing it, on request
-
-    if False:  # jitter Sat 9/Jun
-        py_trace_else(py_text)
-
     # Run the chosen Py Graf
 
-    alt_locals = dict(ibytes=ibytes)
+    py_trace_else(py_text)  # does Trace before trying Exec
 
-    if False:  # jitter Fri 7/Jun
-        print("<<<", file=sys.stderr)
-        print(py_text, file=sys.stderr)
-        print(">>>", file=sys.stderr)
-        breakpoint()
+    alt_locals = dict(ibytes=ibytes)
 
     exec(py_text, globals(), alt_locals)  # ibytes_take_words_else
     obytes = alt_locals["obytes"]
 
-    # Print Py and exit zero, without writing the OBytes, when running to show --py
-
-    py_trace_else(py_text)
+    pass  # py_trace_else(py_text)  # doesn't Trace after trying Exec
 
     # Succeed
 
     return obytes
 
 
-def py_graf_complete(py_graf) -> list[str]:
+def py_graf_complete(py_graf) -> list[str]:  # noqa C901 complex
     """Auto-complete one Py Graf"""  # todo: more competently
 
     py_words_text = "\n".join(py_graf)
@@ -310,7 +307,8 @@ def py_graf_complete(py_graf) -> list[str]:
         if "otext" not in py_words:
             after_py_graf.append(r'otext = "\n".join(olines) + "\n"')
 
-    after_py_graf.append(r"obytes = otext.encode()")
+    if "obytes" not in py_words:
+        after_py_graf.append(r"obytes = otext.encode()")
 
     # Frame the Seed in the Middle with blank Lines, if lotsa Set Up or Tear Down
 
@@ -1187,9 +1185,6 @@ def py_text_split(py_text) -> list[str]:
 
 if __name__ == "__main__":
     main()
-
-
-# todo: remember that 'collections.Counter' does the 'unique_everseen' work nowadays
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq.py

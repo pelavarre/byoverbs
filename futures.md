@@ -601,7 +601,6 @@ maybe only when the total is more than 3 Lines
 
 pq --yolo chill of cv = jqdoe@example.com
 
-pq 'otext = "".join(itext.split()) + "\n"'  # tr -d ' \n'
 pq 'otext = itext.strip() + "\n"'  # removes blank Rows above and below
 pq 'oline = iwords[3] if iwords[3:] else ""  # |awk '{print $3}''
 
@@ -609,6 +608,12 @@ block git-push till after work-for-hire Domain-Name deleted from Source Files
 
     fqdn = socket.getfqdn()
     dn = fqdn.partition(".")[-1]  # Domain Name of HostName
+
+pq # |ts, but with aware time and elapsed time, into dt.datetime.fromisoformat
+
+2 Args in pq '... #' '...' should run as 2 Lines, auto-completed
+etc for N Args at N >= 1
+
 
 ## Copied from
 
