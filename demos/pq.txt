@@ -94,6 +94,7 @@ oline = osplits.geturl()
 isplits = urllib.parse.urlsplit(iline)
 fqdn = socket.getfqdn()
 dn = fqdn.partition(".")[-1]  # Domain Name of HostName
+dn = dn or "example.com"
 osplits = urllib.parse.SplitResult(
     scheme="https",
     netloc=f"{isplits.netloc}.dev.{dn}".casefold(),
@@ -126,6 +127,7 @@ oline = isplits.path.removeprefix("/browse/")  # 'PROJ-12345'
 isplits = urllib.parse.urlsplit(iline)
 fqdn = socket.getfqdn()
 dn = fqdn.partition(".")[-1]  # Domain Name of HostName
+dn = dn or "example.com"
 osplits = urllib.parse.SplitResult(
     scheme="https",
     netloc=f"jira.{dn}",
@@ -211,6 +213,36 @@ olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
++ func ascii
++ set -xe
++ bin/pq.py --py ascii
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+
+    oline = ascii(iline)  # |cat -tv, but don't show $'\xA0' as $'\x20' Space
+    olines.append(oline)
+
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func eval
++ set -xe
++ bin/pq.py --py eval
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+
+    oline = ast.literal_eval(iline)  # undo 'ascii' or 'repr'
+    olines.append(oline)
+
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
 + func join
 + set -xe
 + bin/pq.py --py join
@@ -221,6 +253,21 @@ ilines = itext.splitlines()
 oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # x x
 
 olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func repr
++ set -xe
++ bin/pq.py --py repr
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+
+    oline = repr(iline)  # undo 'ast.literal_eval'
+    olines.append(oline)
+
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
@@ -326,6 +373,14 @@ olines = ilines  # ended  # end  # ends every line with "\n"
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
++ func lower
++ set -xe
++ bin/pq.py --py lower
+
+itext = ibytes.decode()
+otext = itext.lower()  # lowered lowercased  # |tr '[A-Z]' '[a-z]'
+obytes = otext.encode()
+
 + func lstrip
 + set -xe
 + bin/pq.py --py lstrip
@@ -413,6 +468,14 @@ for iline in ilines:
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
++ func title
++ set -xe
++ bin/pq.py --py title
+
+itext = ibytes.decode()
+otext = itext.title()  # titled
+obytes = otext.encode()
+
 + func undent
 + set -xe
 + bin/pq.py --py undent
@@ -426,6 +489,14 @@ for iline in ilines:
     olines.append(oline)
 
 otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func upper
++ set -xe
++ bin/pq.py --py upper
+
+itext = ibytes.decode()
+otext = itext.upper()  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
 obytes = otext.encode()
 
 + func closed
@@ -504,6 +575,14 @@ for iline in ilines:
 olines.extend(2 * [""])  # bottom margin
 
 otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func lowered
++ set -xe
++ bin/pq.py --py lowered
+
+itext = ibytes.decode()
+otext = itext.lower()  # lowered lowercased  # |tr '[A-Z]' '[a-z]'
 obytes = otext.encode()
 
 + func lstripped
@@ -593,6 +672,14 @@ for iline in ilines:
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
++ func titled
++ set -xe
++ bin/pq.py --py titled
+
+itext = ibytes.decode()
+otext = itext.title()  # titled
+obytes = otext.encode()
+
 + func undented
 + set -xe
 + bin/pq.py --py undented
@@ -606,6 +693,14 @@ for iline in ilines:
     olines.append(oline)
 
 otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func uppered
++ set -xe
++ bin/pq.py --py uppered
+
+itext = ibytes.decode()
+otext = itext.upper()  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
 obytes = otext.encode()
 
 + func tac

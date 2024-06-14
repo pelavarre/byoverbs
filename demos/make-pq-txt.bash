@@ -82,7 +82,10 @@ func text len
 func lines len
 func words len
 
+func ascii
+func eval
 func join
+func repr
 func set
 func split
 
@@ -92,6 +95,7 @@ func deframe
 func dent
 func frame
 func end
+func lower
 func lstrip
 func reverse
 func rstrip
@@ -99,7 +103,9 @@ func shuffle
 func sort
 func sponge
 func strip
+func title
 func undent
+func upper
 
 func closed
 func dedented
@@ -107,6 +113,7 @@ func deframed
 func dented
 func ended
 func framed
+func lowered
 func lstripped
 func rstripped
 func reversed
@@ -114,7 +121,9 @@ func sorted
 func sponged
 func shuffled
 func stripped
+func titled
 func undented
+func uppered
 
 # func jq  # nope, tested separately
 func tac

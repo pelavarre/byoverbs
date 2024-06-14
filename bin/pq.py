@@ -14,7 +14,7 @@ options:
   --yolo      run ahead with our freshest default choices, do damage as needed
 
 words of the Pq Programming Language = words indexing popular Grafs of Py Code:
-  casefold, lower, lstrip, rstrip, strip, title, upper,
+  ascii, casefold, eval, lower, lstrip, repr, rstrip, strip, title, upper,
   closed, dedented, dented, ended, reversed, shuffled, sorted, sponged, undented,
   len bytes, len text, len words, len lines, wcc, wcm, wcw, wcl, wc c, wc m, wc w, wc l,
   a, deframed, dumps, framed, json, join, loads, s, split, tac, u, x, xn1,
@@ -51,6 +51,7 @@ examples:
 
 import __main__
 import argparse
+import ast
 import collections
 import dataclasses
 import difflib
@@ -69,7 +70,7 @@ import textwrap
 import urllib.parse
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
-... == json, random  # often unused  # type: ignore
+... == ast, json, random  # often unused  # type: ignore
 
 
 #
@@ -84,10 +85,12 @@ PY_LINES_TEXT = r"""
     oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # x x
     oline = (4 * " ") + iline  # as if textwrap.dented  # dent
     oline = ascii(iline)  # |cat -tv, but don't show $'\xA0' as $'\x20' Space
+    oline = ast.literal_eval(iline)  # undo 'ascii' or 'repr'
     oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
     oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
     oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
     oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
+    oline = repr(iline)  # undo 'ast.literal_eval'
     oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c  # wcc
     oline = str(len(itext))  # text characters len  # |wc -m  # wc m  # wcm
     oline = str(len(itext.split()))  # words len  # |wc -w  # wc w  # wcw
@@ -100,9 +103,9 @@ PY_LINES_TEXT = r"""
     olines = sorted(ilines)  # sort  # s s
 
     otext = itext.casefold()  # casefolded  # folded
-    otext = itext.lower()  # lowercased  # |tr '[A-Z]' '[a-z]'
+    otext = itext.lower()  # lowered lowercased  # |tr '[A-Z]' '[a-z]'
     otext = itext.title()  # titled
-    otext = itext.upper()  # uppercased  # |tr '[a-z]' '[A-Z]'
+    otext = itext.upper()  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
     otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
     otext = textwrap.dedent(itext) + "\n"  # dedented
 
@@ -611,6 +614,7 @@ def iline_jenkins_widen_else(iline) -> str:
         isplits = urllib.parse.urlsplit(iline)
         fqdn = socket.getfqdn()
         dn = fqdn.partition(".")[-1]  # Domain Name of HostName
+        dn = dn or "example.com"
         osplits = urllib.parse.SplitResult(
             scheme="https",
             netloc=f"{isplits.netloc}.dev.{dn}".casefold(),
@@ -691,6 +695,7 @@ def iline_jira_widen_else(iline) -> str:
         isplits = urllib.parse.urlsplit(iline)
         fqdn = socket.getfqdn()
         dn = fqdn.partition(".")[-1]  # Domain Name of HostName
+        dn = dn or "example.com"
         osplits = urllib.parse.SplitResult(
             scheme="https",
             netloc=f"jira.{dn}",
@@ -1074,7 +1079,92 @@ def py_trace_else(py_text) -> None:
 
 
 def keys_to_py_grafs(keys) -> list[list[str]]:
-    """Search popular Py Grafs"""
+    """Search up our popular Py Grafs"""
+
+    if False:  # jitter Fri 14/Jun
+        if keys == "text len".split():
+            breakpoint()
+
+    py_grafs_by_keepends = keys_to_py_grafs_by_keepends(keys)
+
+    lesser_py_grafs = py_grafs_by_keepends[False]
+    greater_py_grafs = py_grafs_by_keepends[True]
+
+    # Forward the only Pile of Matches, if only one Pile found
+    # Forward the smaller Pile of Matches, if two Piles found
+
+    if lesser_py_grafs:
+        if not greater_py_grafs:
+            return lesser_py_grafs
+        if len(lesser_py_grafs) < len(greater_py_grafs):
+            return lesser_py_grafs
+
+    if greater_py_grafs:
+        if not lesser_py_grafs:
+            return greater_py_grafs
+        if len(greater_py_grafs) < len(lesser_py_grafs):
+            return greater_py_grafs
+
+    # Forward the Matches found with arbitrarily editable Comments,
+    # when just as many Matches found with and without searching Comments
+
+    o = (lesser_py_grafs, greater_py_grafs)
+    if lesser_py_grafs and greater_py_grafs:
+        assert len(lesser_py_grafs) == len(greater_py_grafs), o
+        return greater_py_grafs
+
+    # Otherwise say No Matches Found
+
+    assert not lesser_py_grafs, lesser_py_grafs
+    assert not greater_py_grafs, greater_py_grafs
+
+    return list()
+
+
+def keys_to_py_grafs_by_keepends(keys) -> dict[bool, list[list[str]]]:
+    """Search up our popular Py Grafs, by searching only in Code, or in Comments too"""
+
+    less_by_more = fetch_bookmarked_grafs()
+
+    # Try matching without Comments, and only then try again with Comments
+
+    py_grafs_by_keepends = dict()
+    for keepends in (False, True):
+
+        # Score each Py Graf
+
+        score_by_more_text = dict()
+        for more_text, less_text in less_by_more.items():
+            text = more_text if keepends else less_text
+
+            graf = text.splitlines()
+            score = keys_graf_score(keys, graf)
+
+            score_by_more_text[more_text] = score
+
+        scores = list(score_by_more_text.values())
+
+        # Pick out all the equally strong Matches
+
+        py_grafs = list()
+
+        most = max(scores)
+        if most:
+
+            for more_text in less_by_more.keys():
+                graf = more_text.splitlines()
+
+                score = score_by_more_text[more_text]
+                if score == most:
+                    py_grafs.append(graf)
+
+        py_grafs_by_keepends[keepends] = py_grafs
+
+    return py_grafs_by_keepends
+
+
+def fetch_bookmarked_grafs() -> dict[str, str]:
+    """Fetch the Bookmarked Grafs, but as Without-Comments indexed by With-Comments"""
 
     # Fetch the multi-line Py Graf, and add in the single-line Py Grafs
 
@@ -1090,33 +1180,23 @@ def keys_to_py_grafs(keys) -> list[list[str]]:
 
     grafs = mgrafs + sgrafs
 
-    # Score each Py Graf
+    # Index the Full Graf by the Graf without Comments
 
-    score_by_graf_text = dict()
+    less_by_more = dict()
     for graf in grafs:
-        score = keys_graf_score(keys, graf)
+        more_text = "\n".join(graf)
 
-        graf_text = "\n".join(graf)
-        score_by_graf_text[graf_text] = score
+        alt_graf = list(graf)
+        alt_graf = list(_.partition("#")[0].rstrip() for _ in alt_graf)
+        alt_graf = list(_ for _ in alt_graf if _)
 
-    scores = list(score_by_graf_text.values())
+        less_text = "\n".join(alt_graf)
 
-    # Pick out all the equally strong Matches
-
-    most = max(scores)
-    if not most:
-        return list()
-
-    py_grafs = list()
-    for graf in grafs:
-        graf_text = "\n".join(graf)
-        score = score_by_graf_text[graf_text]
-        if score == most:
-            py_grafs.append(graf)
+        less_by_more[more_text] = less_text
 
     # Succeed
 
-    return py_grafs
+    return less_by_more
 
 
 def keys_graf_score(keys, graf) -> int:  # noqa C901 complex
