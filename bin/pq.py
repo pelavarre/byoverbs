@@ -229,7 +229,11 @@ def ibytes_take_words_else(data) -> bytes:
     # Pick out the Py Graf most closely matching the Sh Words
 
     keys = words
+
     py_grafs = keys_to_py_grafs(keys)
+    if not py_grafs:
+        if any((" " in _) for _ in keys):
+            py_grafs = [words]  # take our 'hit_py_graf' from the Sh Args
 
     if not py_grafs:
         print(f"pq.py: No Py Grafs matched by {keys}", file=sys.stderr)
