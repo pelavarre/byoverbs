@@ -83,6 +83,7 @@ PY_LINES_TEXT = r"""
 
     oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # x x
     oline = (4 * " ") + iline  # as if textwrap.dented  # dent
+    oline = ascii(iline)  # |cat -tv, but don't show $'\xA0' as $'\x20' Space
     oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
     oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
     oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'

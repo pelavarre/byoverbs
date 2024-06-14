@@ -577,10 +577,15 @@ PyLance Standard vs Sh
 macOS Terminal Sh inadequate
 
     cat -n  # default of 6+2 Columns vs Vi 5+1 for 10_000 .. 99_0000 Lines
-
     cat -tv: wrong for \xA0 Nbsp
 
+    cd old new  # works in Zsh, not Bash
+
+    grep .  # in macOS Terminal when wider than the screen
+    grep -n .  # same Issue
+
     sort: -k -1,-1: Invalid argument
+        LC_ALL=C not the default at Linux, e.g.:  b1.bash, b2.bash, b.bash
 
     % echo "'" |xargs -n 1
     xargs: unterminated quote
@@ -595,9 +600,11 @@ macOS Terminal Sh inadequate
 
 ### 9 - Ninth traunch
 
-pq --py
-could lift up the middle - like split graf vs boiler before, boiler after
-maybe only when the total is more than 3 Lines
+pq 'dict(enumerate(words))' is close to # grep -n .
+
+pq emoji lock
+    runs as if emoji.py
+    looks up "lock" inside UnicodeData Names
 
 pq --yolo chill of cv = jqdoe@example.com
 
@@ -605,7 +612,6 @@ pq 'otext = itext.strip() + "\n"'  # removes blank Rows above and below
 pq 'oline = iwords[3] if iwords[3:] else ""  # |awk '{print $3}''
 
 block git-push till after work-for-hire Domain-Name deleted from Source Files
-
     fqdn = socket.getfqdn()
     dn = fqdn.partition(".")[-1]  # Domain Name of HostName
 
