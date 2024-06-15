@@ -67,6 +67,7 @@ import stat
 import subprocess
 import sys
 import textwrap
+import unicodedata
 import urllib.parse
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
@@ -74,7 +75,7 @@ import urllib.parse
 
 
 #
-# List Grafs of Py Code to Abbreviate Intensely
+# List Grafs of Awkish Py Code to Abbreviate Intensely
 #
 
 
@@ -82,7 +83,7 @@ PY_LINES_TEXT = r"""
 
     obytes = ibytes  # sponged  # sponge
 
-    oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # x x
+    oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs  # x x
     oline = (4 * " ") + iline  # as if textwrap.dented  # dent
     oline = ascii(iline)  # |cat -tv, but don't show $'\xA0' as $'\x20' Space
     oline = ast.literal_eval(iline)  # undo 'ascii' or 'repr'
@@ -215,7 +216,7 @@ def parse_pq_py_args() -> PqPyArgs:
 #
 
 
-def ibytes_take_words_else(data) -> bytes:
+def ibytes_take_words_else(data) -> bytes:  # todo: 'noqa C901 complex'
     """Take Sh Words as hints, else guess without any"""
 
     ibytes = data
@@ -231,22 +232,44 @@ def ibytes_take_words_else(data) -> bytes:
 
     # Pick out the Py Graf most closely matching the Sh Words
 
-    keys = words
+    keys = list(words)
 
-    py_grafs = keys_to_py_grafs(keys)
+    less_by_more = fetch_less_by_more_awkish_py_texts()
+    py_grafs = keys_to_py_grafs(less_by_more, keys=keys, i=0)
+
     if not py_grafs:
         if any((" " in _) for _ in keys):
             py_grafs = [words]  # take our 'hit_py_graf' from the Sh Args
 
     if not py_grafs:
-        print(f"pq.py: No Py Grafs matched by {keys}", file=sys.stderr)
 
-        sys.exit(2)  # exit 2 for wrong args
+        emo_keys = list(keys)
+        for emo_verb in "emojis emoji emo".split():
+            if emo_verb in emo_keys:
+                emo_keys.remove(emo_verb)
+                break
+
+        if emo_keys != keys:
+            less_by_more = fetch_less_by_more_emoji_py_texts()
+            near_py_grafs = keys_to_py_grafs(less_by_more, keys=emo_keys, i=1)
+
+            py_grafs = list()
+            if near_py_grafs:
+                flat_py_graf = list(py for graf in near_py_grafs for py in graf)
+                flat_py_graf = ["olines = list()"] + flat_py_graf
+                py_grafs = [flat_py_graf]
+
+    if not py_grafs:
+        print(f"pq.py: No Py Grafs found by {keys}", file=sys.stderr)
+
+        sys.exit(2)  # exit 2 for wrong args at No Py Grafs found
+
+    # Reject Multiple Matches
 
     n = len(py_grafs)
     if n != 1:
         print(
-            f"pq.py: {n} Py Grafs matched, not just 1, by {keys}",
+            f"pq.py: {n} Py Grafs found, not just 1, by {keys}",
             file=sys.stderr,
         )
 
@@ -254,16 +277,18 @@ def ibytes_take_words_else(data) -> bytes:
             print(file=sys.stderr)
             print(graf, file=sys.stderr)
 
-        sys.exit(2)  # exit 2 for wrong args
+        sys.exit(2)  # exit 2 for wrong args at Too Many Py Graphs found
+
+    # Trace the chosen Py Graf and exit, else fall through
 
     hit_py_graf = py_grafs[-1]
 
     py_graf = py_graf_complete(py_graf=hit_py_graf)
     py_text = "\n".join(py_graf)
 
-    # Run the chosen Py Graf
-
     py_trace_else(py_text)  # does Trace before trying Exec
+
+    # Run the chosen Py Graf
 
     alt_locals = dict(ibytes=ibytes)
 
@@ -342,7 +367,7 @@ def py_trace_else(py_text) -> None:
     sys.stderr.write(py_text + "\n")
     sys.stderr.write("\n")
 
-    sys.exit(0)
+    sys.exit(0)  # exit 0 after printing Py, as if after printing help
 
     # often prints Py & exits zero
 
@@ -821,14 +846,14 @@ def iline_address_warm_else(iline) -> str:
 #
 
 
-def keys_to_py_grafs(keys) -> list[list[str]]:
+def keys_to_py_grafs(less_by_more, keys, i) -> list[list[str]]:
     """Search up our popular Py Grafs"""
 
     if False:  # jitter Fri 14/Jun
         if keys == "text len".split():
             breakpoint()
 
-    py_grafs_by_keepends = keys_to_py_grafs_by_keepends(keys)
+    py_grafs_by_keepends = keys_to_grafs_by_keepends(less_by_more, keys=keys, i=i)
 
     lesser_py_grafs = py_grafs_by_keepends[False]
     greater_py_grafs = py_grafs_by_keepends[True]
@@ -864,10 +889,8 @@ def keys_to_py_grafs(keys) -> list[list[str]]:
     return list()
 
 
-def keys_to_py_grafs_by_keepends(keys) -> dict[bool, list[list[str]]]:
+def keys_to_grafs_by_keepends(less_by_more, keys, i) -> dict[bool, list[list[str]]]:
     """Search up our popular Py Grafs, by searching only in Code, or in Comments too"""
-
-    less_by_more = fetch_bookmarked_grafs()
 
     # Try matching without Comments, and only then try again with Comments
 
@@ -882,6 +905,8 @@ def keys_to_py_grafs_by_keepends(keys) -> dict[bool, list[list[str]]]:
 
             graf = text.splitlines()
             score = keys_graf_score(keys, graf)
+            if i:
+                score = min(1, score)
 
             score_by_more_text[more_text] = score
 
@@ -906,7 +931,7 @@ def keys_to_py_grafs_by_keepends(keys) -> dict[bool, list[list[str]]]:
     return py_grafs_by_keepends
 
 
-def fetch_bookmarked_grafs() -> dict[str, str]:
+def fetch_less_by_more_awkish_py_texts() -> dict[str, str]:
     """Fetch the Bookmarked Grafs, but as Without-Comments indexed by With-Comments"""
 
     # Fetch the multi-line Py Graf, and add in the single-line Py Grafs
@@ -1080,7 +1105,7 @@ class ArgumentParser(argparse.ArgumentParser):
         if diffs:
             print("\n".join(diffs))
 
-            sys.exit(2)  # exit 2, same as for bad Sh Args
+            sys.exit(2)  # exit 2 for wrong args at Main Doc wrong
 
         # Print examples & exit zero, if no Sh Args
 
@@ -1090,7 +1115,7 @@ class ArgumentParser(argparse.ArgumentParser):
             print(testdoc)
             print()
 
-            sys.exit(0)  # exit 0, same as for --help
+            sys.exit(0)  # exit 0 after printing examples, as if after printing help
 
         # Print help lines & exit zero, else return Parsed Args
 
@@ -1166,6 +1191,23 @@ class ArgumentParser(argparse.ArgumentParser):
 
 
 #
+# Amp up Import Ast
+#
+
+
+def black_repr(obj) -> str:
+    """Form a Py Repr of an Object, but as styled by PyPi·Black"""
+
+    s = repr(obj)
+
+    if s.startswith("'") and s.endswith("'"):
+        if '"' not in s:
+            s = s.replace("'", '"')
+
+    return s
+
+
+#
 # Amp up Import Io
 #
 
@@ -1231,8 +1273,8 @@ class ShPipeSponge:
                 opath.write_bytes(data)
             except BrokenPipeError as exc:  # todo: how much output written?
                 line = f"BrokenPipeError: {exc}"
-                sys.stderr.write(f"{line}\n")
-                # sys.exit(1)  # nope, don't raise BrokenPipeError as Nonzero Exit
+                sys.stderr.write(f"{line}\n")  # yep, do mention BrokenPipeError
+                # sys.exit(1)  # nope, don't re-raise BrokenPipeError as Nonzero Exit
 
             return
 
@@ -1256,6 +1298,38 @@ class ShPipeSponge:
             filepath.touch(mode=(stat.S_IRUSR | stat.S_IWUSR), exist_ok=True)
 
         filepath.write_bytes(data)
+
+
+#
+# List Grafs of Emoji Py Code to Abbreviate Intensely
+#
+
+
+def fetch_less_by_more_emoji_py_texts() -> dict[str, str]:
+    """Auto-complete Py Grafs out of the 'unicodedata.name's"""
+
+    less_by_more = dict()
+    for i in range(0x110000):
+        char = chr(i)
+
+        try:
+            name = unicodedata.name(char)
+        except ValueError as exc:
+            assert str(exc) == "no such name"
+            continue
+
+        lit = black_repr(name.title())
+        if i < 0x10000:
+            text = f"# U+{i:04X}  # {char}  # unicodedata.lookup({lit})"
+        else:
+            text = f"# U+{i:06X}  # {char}  # unicodedata.lookup({lit})"
+
+        less_text = "olines.append(" + repr(text) + ")"
+        more_text = less_text
+
+        less_by_more[more_text] = less_text
+
+    return less_by_more
 
 
 #

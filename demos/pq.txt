@@ -250,7 +250,7 @@ obytes = otext.encode()
 itext = ibytes.decode()
 ilines = itext.splitlines()
 
-oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # x x
+oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs  # x x
 
 olines = [oline]
 otext = "\n".join(olines) + "\n"
@@ -789,13 +789,16 @@ obytes = otext.encode()
 + func xargs
 + set -xe
 + bin/pq.py --py xargs
-pq.py: 2 Py Grafs matched, not just 1, by ['xargs']
 
-['oline = " ".join(ilines)  # joined  # |tr \'\\n\' \' \'  # |xargs  # x x']
+itext = ibytes.decode()
+ilines = itext.splitlines()
 
-['olines = itext.split()  # |xargs -n 1  # |xn1  # split']
-+ echo + exit 2
-+ exit 2
+oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs  # x x
+
+olines = [oline]
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
 + func a
 + set -xe
 + bin/pq.py --py a
@@ -845,7 +848,7 @@ obytes = otext.encode()
 itext = ibytes.decode()
 ilines = itext.splitlines()
 
-oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # x x
+oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs  # x x
 
 olines = [oline]
 otext = "\n".join(olines) + "\n"
