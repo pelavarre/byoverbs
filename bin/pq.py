@@ -330,6 +330,23 @@ def py_graf_complete(py_graf) -> list[str]:  # noqa C901 complex
     return py_graf
 
 
+def py_trace_else(py_text) -> None:
+    """Print the Py Lines, framed in two Blank Rows, just before running them"""
+
+    args = Main.args
+
+    if not args.py:
+        return
+
+    sys.stderr.write("\n")
+    sys.stderr.write(py_text + "\n")
+    sys.stderr.write("\n")
+
+    sys.exit(0)
+
+    # often prints Py & exits zero
+
+
 def graf_strip(graf) -> list[str]:
     """Drop the leading Empty Lines and the trailing Empty Lines"""
 
@@ -800,6 +817,196 @@ def iline_address_warm_else(iline) -> str:
 
 
 #
+# Search popular Py Grafs
+#
+
+
+def keys_to_py_grafs(keys) -> list[list[str]]:
+    """Search up our popular Py Grafs"""
+
+    if False:  # jitter Fri 14/Jun
+        if keys == "text len".split():
+            breakpoint()
+
+    py_grafs_by_keepends = keys_to_py_grafs_by_keepends(keys)
+
+    lesser_py_grafs = py_grafs_by_keepends[False]
+    greater_py_grafs = py_grafs_by_keepends[True]
+
+    # Forward the only Pile of Matches, if only one Pile found
+    # Forward the smaller Pile of Matches, if two Piles found
+
+    if lesser_py_grafs:
+        if not greater_py_grafs:
+            return lesser_py_grafs
+        if len(lesser_py_grafs) < len(greater_py_grafs):
+            return lesser_py_grafs
+
+    if greater_py_grafs:
+        if not lesser_py_grafs:
+            return greater_py_grafs
+        if len(greater_py_grafs) < len(lesser_py_grafs):
+            return greater_py_grafs
+
+    # Forward the Matches found with arbitrarily editable Comments,
+    # when just as many Matches found with and without searching Comments
+
+    o = (lesser_py_grafs, greater_py_grafs)
+    if lesser_py_grafs and greater_py_grafs:
+        assert len(lesser_py_grafs) == len(greater_py_grafs), o
+        return greater_py_grafs
+
+    # Otherwise say No Matches Found
+
+    assert not lesser_py_grafs, lesser_py_grafs
+    assert not greater_py_grafs, greater_py_grafs
+
+    return list()
+
+
+def keys_to_py_grafs_by_keepends(keys) -> dict[bool, list[list[str]]]:
+    """Search up our popular Py Grafs, by searching only in Code, or in Comments too"""
+
+    less_by_more = fetch_bookmarked_grafs()
+
+    # Try matching without Comments, and only then try again with Comments
+
+    py_grafs_by_keepends = dict()
+    for keepends in (False, True):
+
+        # Score each Py Graf
+
+        score_by_more_text = dict()
+        for more_text, less_text in less_by_more.items():
+            text = more_text if keepends else less_text
+
+            graf = text.splitlines()
+            score = keys_graf_score(keys, graf)
+
+            score_by_more_text[more_text] = score
+
+        scores = list(score_by_more_text.values())
+
+        # Pick out all the equally strong Matches
+
+        py_grafs = list()
+
+        most = max(scores)
+        if most:
+
+            for more_text in less_by_more.keys():
+                graf = more_text.splitlines()
+
+                score = score_by_more_text[more_text]
+                if score == most:
+                    py_grafs.append(graf)
+
+        py_grafs_by_keepends[keepends] = py_grafs
+
+    return py_grafs_by_keepends
+
+
+def fetch_bookmarked_grafs() -> dict[str, str]:
+    """Fetch the Bookmarked Grafs, but as Without-Comments indexed by With-Comments"""
+
+    # Fetch the multi-line Py Graf, and add in the single-line Py Grafs
+
+    mtext = textwrap.dedent(PY_GRAFS_TEXT)
+    mlines = mtext.splitlines()
+    mlines = list(mlines)
+    mgrafs = list(list(v) for k, v in itertools.groupby(mlines, key=bool) if k)
+
+    stext = textwrap.dedent(PY_LINES_TEXT)
+    slines = stext.splitlines()
+    slines = list(_ for _ in slines if _)
+    sgrafs = list([_] for _ in slines)
+
+    grafs = mgrafs + sgrafs
+
+    # Index the Full Graf by the Graf without Comments
+
+    less_by_more = dict()
+    for graf in grafs:
+        more_text = "\n".join(graf)
+
+        alt_graf = list(graf)
+        alt_graf = list(_.partition("#")[0].rstrip() for _ in alt_graf)
+        alt_graf = list(_ for _ in alt_graf if _)
+
+        less_text = "\n".join(alt_graf)
+
+        less_by_more[more_text] = less_text
+
+    # Succeed
+
+    return less_by_more
+
+
+def keys_graf_score(keys, graf) -> int:  # noqa C901 complex
+    """Pick out which popular Py Grafs match the Keys most closely"""
+
+    # Count up the Matches, when searching with one kind of Fuzz or another
+
+    score_by_key: dict
+    score_by_key = collections.defaultdict(int)
+
+    for line in graf:  # found
+        for key in keys:
+            score_by_key[key] += line.count(key)
+
+    for line in graf:  # found in Str Word
+        words = line.split()
+        for key in keys:
+            score_by_key[key] += words.count(key)
+
+            for word in words:  # starts Str Word
+                if word.startswith(key):
+                    score_by_key[key] += 1
+
+    for line in graf:  # found in Py Words
+        words = py_text_split(py_text=line)
+        for key in keys:
+            score_by_key[key] += words.count(key)
+
+            for word in words:  # starts Py Word
+                if word.startswith(key):
+                    score_by_key[key] += 1
+
+    # Count up the Matches, when searching with one kind of Fuzz or another
+
+    for key in keys:
+        key_score = score_by_key[key]
+        if not key_score:
+            return 0
+
+    score = sum(score_by_key.values())
+
+    # Succeed
+
+    if False:  # jitter Sat 8/Jun
+        graf_text = "\n".join(graf)
+        if "wc -m" in graf_text:
+            breakpoint()
+            pass
+
+    return score
+
+
+def py_text_split(py_text) -> list[str]:
+    """Split a Line into Words to search up"""
+
+    words = list(
+        _.group(0)
+        for _ in re.finditer(r"[a-zA-Z][a-zA-Z0-9_]*|[-.+0-9Ee]|.", string=py_text)
+    )
+
+    return words
+
+    # todo: split more by the Py Rules, or even totally exactly like Py Rules
+    # except don't drop Comments
+
+
+#
 # Amp up Import ArgParse
 #
 
@@ -1049,218 +1256,6 @@ class ShPipeSponge:
             filepath.touch(mode=(stat.S_IRUSR | stat.S_IWUSR), exist_ok=True)
 
         filepath.write_bytes(data)
-
-
-#
-# Edit
-#
-
-
-def py_trace_else(py_text) -> None:
-    """Print the Py Lines, framed in two Blank Rows, just before running them"""
-
-    args = Main.args
-
-    if not args.py:
-        return
-
-    sys.stderr.write("\n")
-    sys.stderr.write(py_text + "\n")
-    sys.stderr.write("\n")
-
-    sys.exit(0)
-
-    # often prints Py & exits zero
-
-
-#
-# Search popular Py Grafs
-#
-
-
-def keys_to_py_grafs(keys) -> list[list[str]]:
-    """Search up our popular Py Grafs"""
-
-    if False:  # jitter Fri 14/Jun
-        if keys == "text len".split():
-            breakpoint()
-
-    py_grafs_by_keepends = keys_to_py_grafs_by_keepends(keys)
-
-    lesser_py_grafs = py_grafs_by_keepends[False]
-    greater_py_grafs = py_grafs_by_keepends[True]
-
-    # Forward the only Pile of Matches, if only one Pile found
-    # Forward the smaller Pile of Matches, if two Piles found
-
-    if lesser_py_grafs:
-        if not greater_py_grafs:
-            return lesser_py_grafs
-        if len(lesser_py_grafs) < len(greater_py_grafs):
-            return lesser_py_grafs
-
-    if greater_py_grafs:
-        if not lesser_py_grafs:
-            return greater_py_grafs
-        if len(greater_py_grafs) < len(lesser_py_grafs):
-            return greater_py_grafs
-
-    # Forward the Matches found with arbitrarily editable Comments,
-    # when just as many Matches found with and without searching Comments
-
-    o = (lesser_py_grafs, greater_py_grafs)
-    if lesser_py_grafs and greater_py_grafs:
-        assert len(lesser_py_grafs) == len(greater_py_grafs), o
-        return greater_py_grafs
-
-    # Otherwise say No Matches Found
-
-    assert not lesser_py_grafs, lesser_py_grafs
-    assert not greater_py_grafs, greater_py_grafs
-
-    return list()
-
-
-def keys_to_py_grafs_by_keepends(keys) -> dict[bool, list[list[str]]]:
-    """Search up our popular Py Grafs, by searching only in Code, or in Comments too"""
-
-    less_by_more = fetch_bookmarked_grafs()
-
-    # Try matching without Comments, and only then try again with Comments
-
-    py_grafs_by_keepends = dict()
-    for keepends in (False, True):
-
-        # Score each Py Graf
-
-        score_by_more_text = dict()
-        for more_text, less_text in less_by_more.items():
-            text = more_text if keepends else less_text
-
-            graf = text.splitlines()
-            score = keys_graf_score(keys, graf)
-
-            score_by_more_text[more_text] = score
-
-        scores = list(score_by_more_text.values())
-
-        # Pick out all the equally strong Matches
-
-        py_grafs = list()
-
-        most = max(scores)
-        if most:
-
-            for more_text in less_by_more.keys():
-                graf = more_text.splitlines()
-
-                score = score_by_more_text[more_text]
-                if score == most:
-                    py_grafs.append(graf)
-
-        py_grafs_by_keepends[keepends] = py_grafs
-
-    return py_grafs_by_keepends
-
-
-def fetch_bookmarked_grafs() -> dict[str, str]:
-    """Fetch the Bookmarked Grafs, but as Without-Comments indexed by With-Comments"""
-
-    # Fetch the multi-line Py Graf, and add in the single-line Py Grafs
-
-    mtext = textwrap.dedent(PY_GRAFS_TEXT)
-    mlines = mtext.splitlines()
-    mlines = list(mlines)
-    mgrafs = list(list(v) for k, v in itertools.groupby(mlines, key=bool) if k)
-
-    stext = textwrap.dedent(PY_LINES_TEXT)
-    slines = stext.splitlines()
-    slines = list(_ for _ in slines if _)
-    sgrafs = list([_] for _ in slines)
-
-    grafs = mgrafs + sgrafs
-
-    # Index the Full Graf by the Graf without Comments
-
-    less_by_more = dict()
-    for graf in grafs:
-        more_text = "\n".join(graf)
-
-        alt_graf = list(graf)
-        alt_graf = list(_.partition("#")[0].rstrip() for _ in alt_graf)
-        alt_graf = list(_ for _ in alt_graf if _)
-
-        less_text = "\n".join(alt_graf)
-
-        less_by_more[more_text] = less_text
-
-    # Succeed
-
-    return less_by_more
-
-
-def keys_graf_score(keys, graf) -> int:  # noqa C901 complex
-    """Pick out which popular Py Grafs match the Keys most closely"""
-
-    # Count up the Matches, when searching with one kind of Fuzz or another
-
-    score_by_key: dict
-    score_by_key = collections.defaultdict(int)
-
-    for line in graf:  # found
-        for key in keys:
-            score_by_key[key] += line.count(key)
-
-    for line in graf:  # found in Str Word
-        words = line.split()
-        for key in keys:
-            score_by_key[key] += words.count(key)
-
-            for word in words:  # starts Str Word
-                if word.startswith(key):
-                    score_by_key[key] += 1
-
-    for line in graf:  # found in Py Words
-        words = py_text_split(py_text=line)
-        for key in keys:
-            score_by_key[key] += words.count(key)
-
-            for word in words:  # starts Py Word
-                if word.startswith(key):
-                    score_by_key[key] += 1
-
-    # Count up the Matches, when searching with one kind of Fuzz or another
-
-    for key in keys:
-        key_score = score_by_key[key]
-        if not key_score:
-            return 0
-
-    score = sum(score_by_key.values())
-
-    # Succeed
-
-    if False:  # jitter Sat 8/Jun
-        graf_text = "\n".join(graf)
-        if "wc -m" in graf_text:
-            breakpoint()
-            pass
-
-    return score
-
-
-def py_text_split(py_text) -> list[str]:
-    """Split a Line into Words to search up"""
-
-    words = list(
-        _.group(0)
-        for _ in re.finditer(r"[a-zA-Z][a-zA-Z0-9_]*|[-.+0-9Ee]|.", string=py_text)
-    )
-
-    return words
-
-    # todo: split more by the Py Rules, or even totally exactly like Py Rules
-    # except don't drop Comments
 
 
 #
