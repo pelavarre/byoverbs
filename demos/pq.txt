@@ -143,7 +143,7 @@ oline = osplits.geturl()
 + T=https://jira.example.com/browse/PROJ-123456
 + :
 ++ echo '{"//":[""]}'
-++ bin/pq.py --py j
+++ bin/pq.py --py jq .
 
 itext = ibytes.decode()
 otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
@@ -151,7 +151,7 @@ obytes = otext.encode()
 
 + T=
 ++ echo '{"//":[""]}'
-++ bin/pq.py jq
+++ bin/pq.py jq .
 ++ cat -
 + T='{
   "//": [
@@ -167,9 +167,9 @@ obytes = otext.encode()
 + :
 + echo +
 +
-+ func bytes len
++ func len bytes
 + set -xe
-+ bin/pq.py --py bytes len
++ bin/pq.py --py len bytes
 
 oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c  # wcc
 
@@ -177,9 +177,9 @@ olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
-+ func text len
++ func len text
 + set -xe
-+ bin/pq.py --py text len
++ bin/pq.py --py len text
 
 itext = ibytes.decode()
 
@@ -189,9 +189,9 @@ olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
-+ func lines len
++ func len lines
 + set -xe
-+ bin/pq.py --py lines len
++ bin/pq.py --py len lines
 
 itext = ibytes.decode()
 
@@ -201,9 +201,9 @@ olines = [oline]
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
-+ func words len
++ func len words
 + set -xe
-+ bin/pq.py --py words len
++ bin/pq.py --py len words
 
 itext = ibytes.decode()
 
@@ -211,6 +211,14 @@ oline = str(len(itext.split()))  # words len  # |wc -w  # wc w  # wcw
 
 olines = [oline]
 otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func text set
++ set -xe
++ bin/pq.py --py text set
+
+itext = ibytes.decode()
+otext = "".join(sorted(set(itext)))
 obytes = otext.encode()
 
 + func ascii
@@ -222,7 +230,7 @@ ilines = itext.splitlines()
 olines = list()
 for iline in ilines:
 
-    oline = ascii(iline)  # |cat -tv, but don't show $'\xA0' as $'\x20' Space
+    oline = ascii(iline)  # |cat -etv, but don't show $'\xA0' as $'\x20' Space
     olines.append(oline)
 
 otext = "\n".join(olines) + "\n"
@@ -243,6 +251,14 @@ for iline in ilines:
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
++ func expand
++ set -xe
++ bin/pq.py --py expand
+
+itext = ibytes.decode()
+otext = itext.expandtabs(tabsize=8)  # |expand  # expand
+obytes = otext.encode()
+
 + func join
 + set -xe
 + bin/pq.py --py join
@@ -250,7 +266,7 @@ obytes = otext.encode()
 itext = ibytes.decode()
 ilines = itext.splitlines()
 
-oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs  # x x
+oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
 
 olines = [oline]
 otext = "\n".join(olines) + "\n"
@@ -265,7 +281,7 @@ ilines = itext.splitlines()
 olines = list()
 for iline in ilines:
 
-    oline = repr(iline)  # undo 'ast.literal_eval'
+    oline = repr(iline)  # repr  # undo 'ast.literal_eval'
     olines.append(oline)
 
 otext = "\n".join(olines) + "\n"
@@ -290,7 +306,22 @@ obytes = otext.encode()
 
 itext = ibytes.decode()
 
-olines = itext.split()  # |xargs -n 1  # |xn1  # split
+olines = itext.split()  # |xargs -n 1  # |xn1  # split xargs xn1
+
+otext = "\n".join(olines) + "\n"
+obytes = otext.encode()
+
++ func unexpand
++ set -xe
++ bin/pq.py --py unexpand
+
+itext = ibytes.decode()
+ilines = itext.splitlines()
+olines = list()
+for iline in ilines:
+
+    oline = re.sub(r" {8}", repl="\t", string=iline)  # |unexpand  # unexpand
+    olines.append(oline)
 
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
@@ -703,9 +734,9 @@ itext = ibytes.decode()
 otext = itext.upper()  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
 obytes = otext.encode()
 
-+ func tac
++ func tail -r
 + set -xe
-+ bin/pq.py --py tac
++ bin/pq.py --py tail -r
 
 itext = ibytes.decode()
 ilines = itext.splitlines()
@@ -715,9 +746,9 @@ olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()
 
-+ func tail r
++ func tac
 + set -xe
-+ bin/pq.py --py tail r
++ bin/pq.py --py tac
 
 itext = ibytes.decode()
 ilines = itext.splitlines()
@@ -793,7 +824,7 @@ obytes = otext.encode()
 itext = ibytes.decode()
 ilines = itext.splitlines()
 
-oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs  # x x
+oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
 
 olines = [oline]
 otext = "\n".join(olines) + "\n"
@@ -848,7 +879,7 @@ obytes = otext.encode()
 itext = ibytes.decode()
 ilines = itext.splitlines()
 
-oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs  # x x
+oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
 
 olines = [oline]
 otext = "\n".join(olines) + "\n"
@@ -872,7 +903,7 @@ obytes = otext.encode()
 
 itext = ibytes.decode()
 
-olines = itext.split()  # |xargs -n 1  # |xn1  # split
+olines = itext.split()  # |xargs -n 1  # |xn1  # split xargs xn1
 
 otext = "\n".join(olines) + "\n"
 obytes = otext.encode()

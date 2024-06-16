@@ -16,8 +16,9 @@ options:
 words of the Pq Programming Language = words indexing popular Grafs of Py Code:
   ascii, casefold, eval, lower, lstrip, repr, rstrip, strip, title, upper,
   closed, dedented, dented, ended, reversed, shuffled, sorted, sponged, undented,
-  len bytes, len text, len words, len lines, wcc, wcm, wcw, wcl, wc c, wc m, wc w, wc l,
-  a, deframed, dumps, framed, json, join, loads, s, split, tac, u, x, xn1,
+  deframed, dumps, expand, framed, json, join, loads, split, tail -r, tac, unexpand,
+  a, jq ., s, u, wc c, wc m, wc w, wc l,  wc c, wc m, wc w, wc l, x, xn1,
+  len bytes, len text, len words, len lines, text set,
   ...
 
 guesses by data:
@@ -83,31 +84,35 @@ PY_LINES_TEXT = r"""
 
     obytes = ibytes  # sponged  # sponge
 
-    oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs  # x x
+    oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
     oline = (4 * " ") + iline  # as if textwrap.dented  # dent
-    oline = ascii(iline)  # |cat -tv, but don't show $'\xA0' as $'\x20' Space
+    oline = ascii(iline)  # |cat -etv, but don't show $'\xA0' as $'\x20' Space
     oline = ast.literal_eval(iline)  # undo 'ascii' or 'repr'
     oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
     oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
     oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
     oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
-    oline = repr(iline)  # undo 'ast.literal_eval'
+    oline = re.sub(r" {8}", repl="\t", string=iline)  # |unexpand  # unexpand
+    oline = repr(iline)  # repr  # undo 'ast.literal_eval'
+    oline = repr(iline)[1:0-1]  # |cat -tv  # except like '"' comes out as \'"\'
     oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c  # wcc
     oline = str(len(itext))  # text characters len  # |wc -m  # wc m  # wcm
     oline = str(len(itext.split()))  # words len  # |wc -w  # wc w  # wcw
     oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l  # wcl
 
     olines = ilines  # ended  # end  # ends every line with "\n"
-    olines = itext.split()  # |xargs -n 1  # |xn1  # split
+    olines = itext.split()  # |xargs -n 1  # |xn1  # split xargs xn1
     olines = list(ilines); random.shuffle(olines)  # shuffled
     olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
     olines = sorted(ilines)  # sort  # s s
 
     otext = itext.casefold()  # casefolded  # folded
+    otext = itext.expandtabs(tabsize=8)  # |expand  # expand
     otext = itext.lower()  # lowered lowercased  # |tr '[A-Z]' '[a-z]'
     otext = itext.title()  # titled
     otext = itext.upper()  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
     otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
+    otext = "".join(sorted(set(itext)))
     otext = textwrap.dedent(itext) + "\n"  # dedented
 
 """
@@ -181,6 +186,8 @@ def main() -> None:
 def parse_pq_py_args() -> PqPyArgs:
     """Parse the Sh Command-Line Arguments of Pq Py"""
 
+    # Declare our Positional Arguments and Options
+
     parser = ArgumentParser()
 
     words_help = "word of the Pq Programming Language:  dedented, dented, ..."
@@ -193,9 +200,24 @@ def parse_pq_py_args() -> PqPyArgs:
     parser.add_argument("--py", action="count", help=py_help)
     parser.add_argument("--yolo", action="count", help=yolo_help)  # --yolo, --y, --
 
+    # Run ahead as if "--" came before the 1st Sh Arg that doesn't start with Dash "-"
+
+    shargs = list()
+    for index, sharg in enumerate(sys.argv):
+        if not index:
+            continue
+        if sharg == "--":
+            shargs.extend(sys.argv[index:])
+            break
+        if not sharg.startswith("-"):
+            shargs.append("--")
+            shargs.extend(sys.argv[index:])
+            break
+        shargs.append(sharg)
+
     # Parse the Sh Args, else print help & exit zero
 
-    ns = parser.parse_args_else()
+    ns = parser.parse_args_else(shargs)
 
     # Collect up the Parsed Args
 
@@ -216,7 +238,7 @@ def parse_pq_py_args() -> PqPyArgs:
 #
 
 
-def ibytes_take_words_else(data) -> bytes:  # todo: 'noqa C901 complex'
+def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
     """Take Sh Words as hints, else guess without any"""
 
     ibytes = data
@@ -1339,6 +1361,9 @@ def fetch_less_by_more_emoji_py_texts() -> dict[str, str]:
 
 if __name__ == "__main__":
     main()
+
+
+# todo: solve the 'noqa C901 complex'
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq.py

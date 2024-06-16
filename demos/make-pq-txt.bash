@@ -55,9 +55,9 @@ T=$(echo $A |bin/pq.py --yolo) # 2  # only works for me onsite in work-for-hire
 
 :
 
-# json.dumps of json.loads  # j or jq
-T=$(echo '{"//":[""]}' |bin/pq.py --py j)  # a race lost here on Mon 10/Jun
-T=$(echo '{"//":[""]}' |bin/pq.py jq |cat -)
+# json.dumps of json.loads  # j or jq or jq .
+T=$(echo '{"//":[""]}' |bin/pq.py --py jq .)  # a race lost here on Mon 10/Jun
+T=$(echo '{"//":[""]}' |bin/pq.py jq . |cat -)
 
 :
 
@@ -77,17 +77,20 @@ function func() {
 
 echo +
 
-func bytes len
-func text len
-func lines len
-func words len
+func len bytes
+func len text
+func len lines
+func len words
+func text set
 
 func ascii
 func eval
+func expand
 func join
 func repr
 func set
 func split
+func unexpand
 
 func close
 func dedent
@@ -126,9 +129,9 @@ func undented
 func uppered
 
 # func jq  # nope, tested separately
+func tail -r
 func tac
 # func tee  # |pq tee| could mean |tee /dev/tty |
-func tail r
 func uniq
 func wc c
 func wc l
