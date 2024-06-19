@@ -171,3 +171,10 @@ func wcl
 func xn1
 
 echo +
+
+
+# todo: md5sum, sha256, 16:59 09:00 -
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/pq-make-txt.bash
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

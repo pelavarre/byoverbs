@@ -16,7 +16,8 @@ options:
 words of the Pq Programming Language = words indexing popular Grafs of Py Code:
   ascii, casefold, eval, lower, lstrip, repr, rstrip, strip, title, upper,
   closed, dedented, dented, ended, reversed, shuffled, sorted, sponged, undented,
-  deframed, dumps, expand, framed, json, join, loads, split, tail -r, tac, unexpand,
+  deframed, dumps, framed, json, join, loads, split,
+  expand, md5sum, sha256, tail -r, tac, unexpand,
   a, jq ., s, u, wc c, wc m, wc w, wc l,  wc c, wc m, wc w, wc l, x, xn1,
   len bytes, len text, len words, len lines, text set,
   ...
@@ -55,7 +56,9 @@ import argparse
 import ast
 import collections
 import dataclasses
+import datetime as dt
 import difflib
+import hashlib
 import itertools
 import json
 import os
@@ -72,7 +75,7 @@ import unicodedata
 import urllib.parse
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
-... == ast, json, random  # often unused  # type: ignore
+... == ast, dt, hashlib, json, random  # often unused  # type: ignore
 
 
 #
@@ -87,7 +90,7 @@ PY_LINES_TEXT = r"""
     oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
     oline = (4 * " ") + iline  # as if textwrap.dented  # dent
     oline = ascii(iline)  # |cat -etv, but don't show $'\xA0' as $'\x20' Space
-    oline = ast.literal_eval(iline)  # undo 'ascii' or 'repr'
+    oline = str(ast.literal_eval(iline))  # undo 'ascii' or 'repr'
     oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
     oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
     oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
@@ -122,9 +125,15 @@ PY_LINES_TEXT = r"""
 
 PY_GRAFS_TEXT = r"""
 
-    # |awk '{print $NF}'  # a a
+    # awk  # |awk '{print $NF}'  # a a
     ilinewords = iline.split()
     oline = ilinewords[-1] if ilinewords else ""
+
+    # collections.Counter.keys  # set, uniq, uniq_everseen, unsorted
+    olines = list(dict((_, _) for _ in ilines).keys())
+
+    # closed # close  # ends last line with "\n"
+    otext = itext if itext.endswith("\n") else (itext + "\n")
 
     # deframe  # deframed
     otext = textwrap.dedent(itext) + "\n"  # no left margin
@@ -140,11 +149,15 @@ PY_GRAFS_TEXT = r"""
         olines.append(oline)
     olines.extend(2 * [""])  # bottom margin
 
-    # collections.Counter.keys, set, uniq, uniq_everseen, unsorted
-    olines = list(dict((_, _) for _ in ilines).keys())
+    # md5sum
+    md5 = hashlib.md5()
+    md5.update(ibytes)
+    otext = md5.hexdigest() + "\n"
 
-    # closed # close  # ends last line with "\n"
-    otext = itext if itext.endswith("\n") else (itext + "\n")
+    # sha256
+    sha256 = hashlib.sha256()
+    sha256.update(ibytes)
+    otext = sha256.hexdigest() + "\n"
 
 """
 
@@ -264,6 +277,10 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
             py_grafs = [words]  # take our 'hit_py_graf' from the Sh Args
 
     if not py_grafs:
+        py_graf = rpn_words_to_one_py_graf(words)
+        py_grafs = [py_graf]
+
+    if not py_grafs:
 
         emo_keys = list(keys)
         for emo_verb in "emojis emoji emo".split():
@@ -327,6 +344,8 @@ def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
 def py_graf_complete(py_graf) -> list[str]:  # noqa C901 complex
     """Auto-complete one Py Graf"""  # todo: more competently
 
+    # py_graf = list()  # jitter Wed 19/Jun
+
     py_words_text = "\n".join(py_graf)
     py_words = py_text_split(py_words_text)
 
@@ -375,6 +394,8 @@ def py_graf_complete(py_graf) -> list[str]:  # noqa C901 complex
     # Succeed
 
     return py_graf
+
+    # todo: stop completing [""] as ['obytes = otext.encode()']
 
 
 def py_trace_else(py_text) -> None:
@@ -953,42 +974,6 @@ def keys_to_grafs_by_keepends(less_by_more, keys, i) -> dict[bool, list[list[str
     return py_grafs_by_keepends
 
 
-def fetch_less_by_more_awkish_py_texts() -> dict[str, str]:
-    """Fetch the Bookmarked Grafs, but as Without-Comments indexed by With-Comments"""
-
-    # Fetch the multi-line Py Graf, and add in the single-line Py Grafs
-
-    mtext = textwrap.dedent(PY_GRAFS_TEXT)
-    mlines = mtext.splitlines()
-    mlines = list(mlines)
-    mgrafs = list(list(v) for k, v in itertools.groupby(mlines, key=bool) if k)
-
-    stext = textwrap.dedent(PY_LINES_TEXT)
-    slines = stext.splitlines()
-    slines = list(_ for _ in slines if _)
-    sgrafs = list([_] for _ in slines)
-
-    grafs = mgrafs + sgrafs
-
-    # Index the Full Graf by the Graf without Comments
-
-    less_by_more = dict()
-    for graf in grafs:
-        more_text = "\n".join(graf)
-
-        alt_graf = list(graf)
-        alt_graf = list(_.partition("#")[0].rstrip() for _ in alt_graf)
-        alt_graf = list(_ for _ in alt_graf if _)
-
-        less_text = "\n".join(alt_graf)
-
-        less_by_more[more_text] = less_text
-
-    # Succeed
-
-    return less_by_more
-
-
 def keys_graf_score(keys, graf) -> int:  # noqa C901 complex
     """Pick out which popular Py Grafs match the Keys most closely"""
 
@@ -1051,6 +1036,109 @@ def py_text_split(py_text) -> list[str]:
 
     # todo: split more by the Py Rules, or even totally exactly like Py Rules
     # except don't drop Comments
+
+
+#
+# Index some Alt Phrase Books
+#
+
+
+def rpn_words_to_one_py_graf(words) -> list[str]:
+    """Translate to 1 Py Graf from Reverse Polish Notation (RPN)"""
+
+    try:
+        py_phrases = try_rpn_words_to_py_phrases(words)
+    except Exception:
+        # raise  # jitter Wed 19/Jun
+        return list()
+
+    py_graf = list()
+    py_graf.append("olines = list()")
+    for py_phrase in py_phrases:
+        py_graf.append(f"olines.append({py_phrase})")
+
+    return py_graf
+
+
+def try_rpn_words_to_py_phrases(words) -> list:
+    """Translate to 1 Py Graf from Reverse Polish Notation (RPN)"""
+
+    stack: list
+    stack = list()
+
+    now = dt.datetime.now()
+    midnight = dt.datetime.fromordinal(now.toordinal())
+
+    # Run a Py Forth Vm once at Compile Time
+
+    for word in words:
+        m = re.match(r"([0-9]+):([0-9]+)", string=word)
+        if m:
+            hour = int(m.group(1))
+            minute = int(m.group(2))
+            stamp = midnight.replace(hour=hour, minute=minute)
+            stack.append(stamp)
+            continue
+
+        if word == "-":
+            x = stack.pop()
+            y = stack.pop()
+            stack.append(y - x)
+            continue
+
+        assert False, (word,)
+
+    # Speak a List of Any | None as a List of Evallable Py Phrases
+
+    py_phrases = list()
+
+    for stacked in stack:
+        py_phrase = repr(stacked)
+        py_phrase = re.sub(r"\bdatetime[.]", repl="dt.", string=py_phrase)
+        if not isinstance(stacked, str):
+            py_phrase = f"str({py_phrase})"
+
+        py_phrases.append(py_phrase)
+
+    # Succeed
+
+    return py_phrases
+
+
+def fetch_less_by_more_awkish_py_texts() -> dict[str, str]:
+    """Fetch the Bookmarked Grafs, but as Without-Comments indexed by With-Comments"""
+
+    # Fetch the multi-line Py Graf, and add in the single-line Py Grafs
+
+    mtext = textwrap.dedent(PY_GRAFS_TEXT)
+    mlines = mtext.splitlines()
+    mlines = list(mlines)
+    mgrafs = list(list(v) for k, v in itertools.groupby(mlines, key=bool) if k)
+
+    stext = textwrap.dedent(PY_LINES_TEXT)
+    slines = stext.splitlines()
+    slines = list(_ for _ in slines if _)
+    sgrafs = list([_] for _ in slines)
+
+    grafs = mgrafs + sgrafs
+
+    # Index the Full Graf by the Graf without Comments
+
+    less_by_more = dict()
+    for graf in grafs:
+        more_text = "\n".join(graf)
+
+        alt_graf = list(graf)
+        alt_graf = list(_.partition("#")[0].rstrip() for _ in alt_graf)
+        alt_graf = list(_ for _ in alt_graf if _)
+
+        less_text = "\n".join(alt_graf)
+
+        less_by_more[more_text] = less_text
+
+    # Succeed
+
+    return less_by_more
 
 
 #
@@ -1362,6 +1450,8 @@ def fetch_less_by_more_emoji_py_texts() -> dict[str, str]:
 if __name__ == "__main__":
     main()
 
+
+# todo: lazily import every module name mentioned in the auto-completed Code
 
 # todo: solve the 'noqa C901 complex'
 
