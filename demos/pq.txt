@@ -245,7 +245,7 @@ ilines = itext.splitlines()
 olines = list()
 for iline in ilines:
 
-    oline = ast.literal_eval(iline)  # undo 'ascii' or 'repr'
+    oline = str(ast.literal_eval(iline))  # undo 'ascii' or 'repr'
     olines.append(oline)
 
 otext = "\n".join(olines) + "\n"
@@ -294,7 +294,7 @@ obytes = otext.encode()
 itext = ibytes.decode()
 ilines = itext.splitlines()
 
-# collections.Counter.keys, set, uniq, uniq_everseen, unsorted
+# collections.Counter.keys  # set, uniq, uniq_everseen, unsorted
 olines = list(dict((_, _) for _ in ilines).keys())
 
 otext = "\n".join(olines) + "\n"
@@ -765,7 +765,7 @@ obytes = otext.encode()
 itext = ibytes.decode()
 ilines = itext.splitlines()
 
-# collections.Counter.keys, set, uniq, uniq_everseen, unsorted
+# collections.Counter.keys  # set, uniq, uniq_everseen, unsorted
 olines = list(dict((_, _) for _ in ilines).keys())
 
 otext = "\n".join(olines) + "\n"
@@ -839,7 +839,7 @@ ilines = itext.splitlines()
 olines = list()
 for iline in ilines:
 
-    # |awk '{print $NF}'  # a a
+    # awk  # |awk '{print $NF}'  # a a
     ilinewords = iline.split()
     oline = ilinewords[-1] if ilinewords else ""
     olines.append(oline)
@@ -866,7 +866,7 @@ obytes = otext.encode()
 itext = ibytes.decode()
 ilines = itext.splitlines()
 
-# collections.Counter.keys, set, uniq, uniq_everseen, unsorted
+# collections.Counter.keys  # set, uniq, uniq_everseen, unsorted
 olines = list(dict((_, _) for _ in ilines).keys())
 
 otext = "\n".join(olines) + "\n"

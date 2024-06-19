@@ -1156,7 +1156,7 @@ class ArgumentParser(argparse.ArgumentParser):
         # Compile much of the Arg Doc to Args of 'argparse.ArgumentParser'
 
         doc_lines = main_doc.strip().splitlines()
-        prog = doc_lines[0].split()[1]  # second word of first line
+        prog = doc_lines[0].split()[1]  # second Word of first Line
 
         doc_firstlines = list(_ for _ in doc_lines if _ and (_ == _.lstrip()))
         alt_description = doc_firstlines[1]  # first Line of second Graf
@@ -1215,7 +1215,7 @@ class ArgumentParser(argparse.ArgumentParser):
         if diffs:
             print("\n".join(diffs))
 
-            sys.exit(2)  # exit 2 for wrong args at Main Doc wrong
+            sys.exit(2)  # exit 2 for wrong Args in Main Doc
 
         # Print examples & exit zero, if no Sh Args
 

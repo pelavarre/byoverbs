@@ -600,25 +600,41 @@ macOS Terminal Sh inadequate
 
 ### 9 - Ninth traunch
 
-pq 'dict(enumerate(words))' is close to # grep -n .
+pq
 
-pq emoji lock
-    runs as if emoji.py
-    looks up "lock" inside UnicodeData Names
+    pq number - could be like Awk to fetch that field
+        tabs unless none found, then split
 
-pq --yolo chill of cv = jqdoe@example.com
+    pq filename could copy the filename into the Clipboard
 
-pq 'otext = itext.strip() + "\n"'  # removes blank Rows above and below
-pq 'oline = iwords[3] if iwords[3:] else ""  # |awk '{print $3}''
+    pq 'dict(enumerate(words))' is close to # grep -n .
 
-block git-push till after work-for-hire Domain-Name deleted from Source Files
-    fqdn = socket.getfqdn()
-    dn = fqdn.partition(".")[-1]  # Domain Name of HostName
+    pq emoji lock
+        runs as if emoji.py
+        looks up "lock" inside UnicodeData Names
 
-pq # |ts, but with aware time and elapsed time, into dt.datetime.fromisoformat
+    pq --yolo chill of cv = jqdoe@example.com
 
-2 Args in pq '... #' '...' should run as 2 Lines, auto-completed
-etc for N Args at N >= 1
+    pq 'otext = itext.strip() + "\n"'  # removes blank Rows above and below
+    pq 'oline = iwords[3] if iwords[3:] else ""  # |awk '{print $3}''
+
+    block git-push till after work-for-hire Domain-Name deleted from Source Files
+        fqdn = socket.getfqdn()
+        dn = fqdn.partition(".")[-1]  # Domain Name of HostName
+
+    pq # |ts, but with aware time and elapsed time, into dt.datetime.fromisoformat
+
+    2 Args in pq '... #' '...' should run as 2 Lines, auto-completed
+    etc for N Args at N >= 1
+
+auto-format for Py, for Json, for Jql/Sql
+
+why doesn't Tab completion work in Zsh when i write a new .py file into my Sh Path?
+what does 'rehash' mean in Zsh?
+
+unreadable Linux sym links when not found
+
+poll often to back up fresh revisions of the Clipboard
 
 
 ## Copied from

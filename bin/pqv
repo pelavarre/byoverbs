@@ -1,0 +1,8 @@
+#!/bin/bash
+
+D=$(dirname "$0")
+if [[ $# == 0 ]]; then
+    python3 "$D"/pq.py --yolo |tee /dev/tty |pbcopy
+else
+    python3 "$D"/pq.py "$@" |tee /dev/tty |pbcopy
+fi
