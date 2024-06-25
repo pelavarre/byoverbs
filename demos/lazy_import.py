@@ -99,7 +99,7 @@ QUICK_LAZY_IMPORT_NAMES = """
 
     # from VEnv Pip Install
 
-    jira pandas redis requests
+    jira matplotlib numpy pandas psycopg2 redis requests
 
 
 """.splitlines()
@@ -108,7 +108,7 @@ QUICK_LAZY_IMPORT_NAMES = list(_.partition("#")[0] for _ in QUICK_LAZY_IMPORT_NA
 QUICK_LAZY_IMPORT_NAMES = list(_.strip() for _ in QUICK_LAZY_IMPORT_NAMES)
 QUICK_LAZY_IMPORT_NAMES = " ".join(QUICK_LAZY_IMPORT_NAMES).split()
 
-assert len(QUICK_LAZY_IMPORT_NAMES) == 197, (len(QUICK_LAZY_IMPORT_NAMES),)
+assert len(QUICK_LAZY_IMPORT_NAMES) == 200, (len(QUICK_LAZY_IMPORT_NAMES),)
 
 
 class LazyImport:
@@ -157,6 +157,18 @@ def def_some_lazy_imports() -> None:
     if "et" not in g.keys():
         et = LazyImport(import_="xml.etree.ElementTree", as_="et")
         g["et"] = et
+
+    if "np" not in g.keys():
+        np = LazyImport(import_="numpy", as_="np")
+        g["np"] = np
+
+    if "pd" not in g.keys():
+        pd = LazyImport(import_="pandas", as_="pd")
+        g["pd"] = pd
+
+    if "plt" not in g.keys():
+        plt = LazyImport(import_="matplotlib.pyplot", as_="plt")
+        g["plt"] = plt
 
 
 def discover_more_lazy_imports() -> None:
