@@ -840,8 +840,8 @@ olines = list()
 for iline in ilines:
 
     # awk  # |awk '{print $NF}'  # a a
-    ilinewords = iline.split()
-    oline = ilinewords[-1] if ilinewords else ""
+    iwords = iline.split()
+    oline = iwords[-1] if iwords else ""
     olines.append(oline)
 
 otext = "\n".join(olines) + "\n"

@@ -602,7 +602,14 @@ macOS Terminal Sh inadequate
 
 pq
 
-    pq number - could be like Awk to fetch that field
+    pq emoji hear
+
+    pq --py  # could give pbpaste/ pbcopy context for obytes/ ibytes
+        reduced to otext/ itext context whenever possible
+
+    pq large number - could be quote timestamp around the world
+
+    pq small number - could be like Awk to fetch that field
         tabs unless none found, then split
 
     pq filename could copy the filename into the Clipboard
@@ -635,6 +642,14 @@ what does 'rehash' mean in Zsh?
 unreadable Linux sym links when not found
 
 poll often to back up fresh revisions of the Clipboard
+
+run the Paste Buffer back through Black/ Flake8/ Python at each save?
+
+lazy imports - np plt psycopg2
+
+screen.py vs mac
+
+git show 55558ec  # rewrite Pq to show, and often run, whole brief python -c '''
 
 
 ## Copied from

@@ -103,6 +103,15 @@ pwd
 ls
 screen -ls ||:  # perhaps No Sockets found
 
+screen
+script ~/s1.script
+screen -X logfile ~/s1.screen
+screen -X log on
+
+:
+
+screen -X hardcopy -h ~/s1.screenlog
+
 screen -S Session
 screen -X logfile Session.screen
 screen -X log on

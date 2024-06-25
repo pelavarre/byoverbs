@@ -33,6 +33,9 @@ examples:
   : : Jul/2019 Python 3.6.9  # micro release date
   : : Dec/2019 Python 3.6.10  # micro release date
   : Dec/2016 CPython 3.6  # minor release date  # Dict Keys ordered by Insertion
+
+  : 2011 + Minor-Version = year of Python Minor-Version since 3.7
+
   : Jun/2018 Python 3.7  # minor release date  # Dict Keys ordered by Insertion
   : : Mar/2019 Python 3.7.3  # micro release date
   : : Dec/2019 Python 3.7.6  # micro release date
@@ -55,6 +58,7 @@ examples:
   : : Apr/2023 Python 3.11.3  # micro release date
   : : Oct/2023 Python 3.11.6  # micro release date
   : Oct/2022 Python 3.12  # minor release date
+
 """
 
 # https://packages.ubuntu.com/ > Long Term Stable (LTS)
