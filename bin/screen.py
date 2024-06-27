@@ -103,7 +103,7 @@ pwd
 ls
 screen -ls ||:  # perhaps No Sockets found
 
-screen
+screen  # FIXME: tell me again is it Screen or Script for low-latency no-wrap
 script ~/s1.script
 screen -X logfile ~/s1.screen
 screen -X log on

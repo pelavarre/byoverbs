@@ -20,6 +20,14 @@ echo c
 export PS1="$PS1\n\\$ "
 
 bash -c '( IFS=:; for P in $PATH; do ls -1 $P/python3* 2>/dev/null; done )'
+
+bash ~/.bash_profile  # screen for:  bind: warning: line editing not enabled
+# see also:  bin/bind.py
+
+: Aug/2004 Bash 2  # major release date
+: Oct/2006 Bash 3.2  # minor release date
+: : Nov/2014 Bash 3.2.57  # micro release date
+
 """
 
 import byotools as byo

@@ -598,9 +598,14 @@ macOS Terminal Sh inadequate
     :g/ to show the line is a way to copy out line-number + wrapped text
 
 
-### 9 - Ninth traunch
+### 9 - Ninth traunch - focused on PQ
 
 pq
+
+    pq tty  # Press ⌃C to quit, ⌃D to save & quit
+        don't mention ⌃\ to quit faster, ⌃Z to pause
+
+    pq for  # |awk 'length($0)<2000{print $0}'
 
     pq emoji hear
 
@@ -634,6 +639,60 @@ pq
     2 Args in pq '... #' '...' should run as 2 Lines, auto-completed
     etc for N Args at N >= 1
 
+next Pq traunch
+
+    pq ht
+    pq wc
+    … lines, words, chars, bytes
+
+    pq info
+
+
+
+    pq ls
+    pq find
+    pq find dot
+
+    pathlib Path’s
+    stat not hidden
+
+
+    pq ls -AhlF
+
+
+
+    nonnegative ints as iwords[n]
+    negative ints as iwords[-n]
+    x.y for y split() inside of x split("\t")
+
+
+    pq dao
+    insert into the tail -n +3 cat -n
+    ordered better than muddled
+    copied better than aliased
+
+
+    pq easter
+    import this # tail -n +3 cat -n
+    future import braces
+
+
+    pq emo .
+
+    pq .
+
+    pq y
+
+    pq tty
+    pq cat
+
+    #! env pq.py
+
+
+### 10 - Tenth traunch
+
+Y@ lazy imports - np plt psycopg2 <= jupyterlab, psycopg2-binary, matplotlib
+
 auto-format for Py, for Json, for Jql/Sql
 
 why doesn't Tab completion work in Zsh when i write a new .py file into my Sh Path?
@@ -645,11 +704,59 @@ poll often to back up fresh revisions of the Clipboard
 
 run the Paste Buffer back through Black/ Flake8/ Python at each save?
 
-lazy imports - np plt psycopg2
-
 screen.py vs mac
 
 git show 55558ec  # rewrite Pq to show, and often run, whole brief python -c '''
+
+choose from many popular forms of Tabular Markdown
+
+    || ... || ... ||
+    | ... | ... |
+    ... | ...
+    ... - ...
+    \t
+    '  '
+    r'  *'
+
+build my confidence in cp.py/ mv.py, stop falling back to
+
+    F=t.txt && echo cp -ip $F{,~$(date -r $F +%m%djqd%H%M)~} |tee /dev/tty |bash
+    F=t.txt && echo mv -i $F{,~$(date -r $F +%m%djqd%H%M)~} |tee /dev/tty |bash
+
+screen  # FIXME: tell me again is it Screen or Script for low-latency no-wrap
+https://github.com/pelavarre/pybashish/blob/main/.local/share/grep/files/tmux.bash
+tmux => set -g 99999
+Control B Right-Bracket [
+toggle pane sync
+set -w sync
+Control B %  horizontal split and focus bottom  # a la Terminal > View > Split Lane
+Control B "  vertical split - maybe two small then big, or big then two smalls
+Control B Z  toggles occupy whole window
+Control B 0  move focus
+Control B 1  move focus
+Control B 2  move focus
+Control B W  interactive
+these B Z are not ⇧B ⇧Z
+
+do come fix:  cd ~/Public/byoverbs && b $(qdno |grep [.]py$)
+with a more complete workaround of
+
+    % rm -f __init__.py
+    % ~/.pyvenvs/mypy/bin/mypy bin/bind.py
+    Success: no issues found in 1 source file
+    %
+    % qcoh __init__.py
+    + git checkout HEAD __init__.py
+    Updated 1 path from 1738b75
+    % ~/.pyvenvs/mypy/bin/mypy bin/bind.py
+    bin/bind.py:21: error: Cannot find implementation or library stub for module named "byotools"  [import-not-found]
+    bin/bind.py:21: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+    Found 1 error in 1 file (checked 1 source file)
+    %
+
+histogram of McCabe Complexity - weirdly piled up against 11 - 1, maybe?
+
+cal.py option to call for more than two months, such as three!
 
 
 ## Copied from

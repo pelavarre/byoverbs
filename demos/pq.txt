@@ -1,21 +1,23 @@
 + :
 ++ echo http://example.com
-++ bin/pq.py --py
+++ bin/pq.py -q --py
 
-isplits = iline.split("/")
-osplits = list(isplits)
-osplits[0] = osplits[0].replace(":", " :")  # https ://
-osplits[2] = " " + osplits[2].replace(".", " . ") + " "  # :// sub . domain
-oline = "/".join(osplits).strip()
+# chill
+assert iline.startswith("http")  # "https", "http", etc
+assert " " not in iline
+oline = iline.replace("://", " :// ").replace(".", " . ").rstrip()
 
 + T=
 ++ echo http://example.com
 ++ bin/pq.py --yolo
 + T='http :// example . com'
 ++ echo http :// example . com
-++ bin/pq.py --py
+++ bin/pq.py -q --py
 
-oline = "".join(iwords)
+# warm
+assert iline.startswith("http")  # "https", "http", etc
+assert " " in iline
+oline = iline.replace(" ", "")
 
 + T=
 ++ echo http :// example . com
@@ -24,8 +26,10 @@ oline = "".join(iwords)
 + :
 + A=https://codereviews.example.com/r/123456
 ++ echo https://codereviews.example.com/r/123456/
-++ bin/pq.py --py
+++ bin/pq.py -q --py
 
+# crthin
+assert re.match(r"http.*codereviews[./]", string=iline)
 isplits = urllib.parse.urlsplit(iline)
 m = re.match(r"^/r/([0-9]+)", string=isplits.path)  # discards end of path
 r = int(m.group(1))
@@ -45,15 +49,16 @@ oline = osplits.geturl()
 + :
 + A=https://docs.google.com/document/d/1YfkPxiJjVJXvf4G1-Ql6-IgxE7J22eEG2JzueNjl2T4
 ++ echo https://docs.google.com/document/d/1YfkPxiJjVJXvf4G1-Ql6-IgxE7J22eEG2JzueNjl2T4/edit#heading=h.xedwnjmaewr
-++ bin/pq.py --py
+++ bin/pq.py -q --py
 
+# glink
+assert re.match(r"http.*[.]google.com/", string=iline)
 isplits = urllib.parse.urlsplit(iline)
-ipath = isplits.path
-
-opath = ipath
+#
+opath = isplits.path
 opath = opath.removesuffix("/edit")
 opath = opath.removesuffix("/view")
-
+#
 osplits = urllib.parse.SplitResult(
     scheme=isplits.scheme,
     netloc=isplits.netloc,
@@ -61,6 +66,7 @@ osplits = urllib.parse.SplitResult(
     query="",
     fragment="",
 )
+#
 oline = osplits.geturl()
 
 + T=
@@ -70,51 +76,56 @@ oline = osplits.geturl()
 + :
 + A=https://ourjenkins.dev.example.com
 ++ echo https://ourjenkins.dev.example.com/
-++ bin/pq.py --py
+++ bin/pq.py -q --py
 
-isplits = urllib.parse.urlsplit(iline)
-sub = isplits.netloc.split(".")[0]
-osplits = urllib.parse.SplitResult(
-    scheme="http",
-    netloc=sub.casefold().replace("jenkins", "Jenkins"),
-    path=isplits.path,
-    query=isplits.query,
-    fragment=isplits.fragment,
-)
-oline = osplits.geturl()
+# jkthin
+assert re.match(r"^http.*jenkins[0-9]*[.]", string=iline)
+#
+iosplits = urllib.parse.urlsplit(iline)
+iosplits = iosplits._replace(scheme="http")
+iosplits = iosplits._replace(path=iosplits.path.rstrip("/") + "/")
+#
+netloc = iosplits.netloc.split(".")[0]
+netloc = string.capwords(netloc).replace("jenkins", "Jenkins")
+iosplits = iosplits._replace(netloc=netloc)
+#
+oline = iosplits.geturl()
 
 + T=
 ++ echo https://ourjenkins.dev.example.com/
 ++ bin/pq.py --yolo
-+ T=http://ourJenkins/
++ T=http://OurJenkins/
 + A=http://ourJenkins/
 ++ echo http://ourJenkins//
-++ bin/pq.py --py
+++ bin/pq.py -q --py
 
-isplits = urllib.parse.urlsplit(iline)
+# jkwide
+assert re.search(r"[jJ]enkins[0-9]*/", string=iline)
+#
 fqdn = socket.getfqdn()
-dn = fqdn.partition(".")[-1]  # Domain Name of HostName
+dn = fqdn.partition(".")[-1]  # 'Domain Name of HostName'
 dn = dn or "example.com"
-osplits = urllib.parse.SplitResult(
-    scheme="https",
-    netloc=f"{isplits.netloc}.dev.{dn}".casefold(),
-    path=isplits.path.removesuffix("/"),
-    query=isplits.query,
-    fragment=isplits.fragment,
-)
-oline = osplits.geturl()
+#
+iosplits = urllib.parse.urlsplit(iline)
+iosplits = iosplits._replace(scheme="https")
+iosplits = iosplits._replace(path=iosplits.path.rstrip("/"))
+iosplits = iosplits._replace(netloc=f"{iosplits.netloc.casefold()}.dev.{dn}")
+#
+oline = iosplits.geturl()
 
 + T=
 ++ echo http://ourJenkins//
 ++ bin/pq.py --yolo
-+ T=https://ourjenkins.dev.example.com/
++ T=https://ourjenkins.dev.example.com
 + :
 + A=https://jira.example.com/browse/PROJ-123456
 ++ echo https://jira.example.com/browse/PROJ-123456
-++ bin/pq.py --py
+++ bin/pq.py -q --py
 
+# jkey
+assert re.match(r"^http.*jira.*/browse/.*$", string=iline)
 isplits = urllib.parse.urlsplit(iline)
-oline = isplits.path.removeprefix("/browse/")  # 'PROJ-12345'
+oline = isplits.path.removeprefix("/browse/")
 
 + T=
 ++ echo https://jira.example.com/browse/PROJ-123456
@@ -122,12 +133,16 @@ oline = isplits.path.removeprefix("/browse/")  # 'PROJ-12345'
 + T=PROJ-123456
 + A=PROJ-123456
 ++ echo PROJ-123456
-++ bin/pq.py --py
+++ bin/pq.py -q --py
 
-isplits = urllib.parse.urlsplit(iline)
+# jlink
+assert re.match(r"^[A-Z]+[-][0-9]+$", string=iline)
+#
 fqdn = socket.getfqdn()
-dn = fqdn.partition(".")[-1]  # Domain Name of HostName
+dn = fqdn.partition(".")[-1]  # 'Domain Name of HostName'
 dn = dn or "example.com"
+#
+isplits = urllib.parse.urlsplit(iline)
 osplits = urllib.parse.SplitResult(
     scheme="https",
     netloc=f"jira.{dn}",
@@ -143,11 +158,9 @@ oline = osplits.geturl()
 + T=https://jira.example.com/browse/PROJ-123456
 + :
 ++ echo '{"//":[""]}'
-++ bin/pq.py --py jq .
+++ bin/pq.py -q --py jq .
 
-itext = ibytes.decode()
 otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
-obytes = otext.encode()
 
 + T=
 ++ echo '{"//":[""]}'
@@ -169,217 +182,118 @@ obytes = otext.encode()
 +
 + func len bytes
 + set -xe
-+ bin/pq.py --py len bytes
++ bin/pq.py -q --py len bytes
 
-oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c  # wcc
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oobject = len(ibytes)  # bytes len  # |wc -c  # wc c  # wcc
 
 + func len text
 + set -xe
-+ bin/pq.py --py len text
++ bin/pq.py -q --py len text
 
-itext = ibytes.decode()
-
-oline = str(len(itext))  # text characters len  # |wc -m  # wc m  # wcm
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oobject = len(itext)  # text characters chars len  # |wc -m  # wc m  # wcm
 
 + func len lines
 + set -xe
-+ bin/pq.py --py len lines
++ bin/pq.py -q --py len lines
 
-itext = ibytes.decode()
-
-oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l  # wcl
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oobject = len(itext.splitlines())  # lines len  # |wc -l  # wc l  # wcl
 
 + func len words
 + set -xe
-+ bin/pq.py --py len words
++ bin/pq.py -q --py len words
 
-itext = ibytes.decode()
-
-oline = str(len(itext.split()))  # words len  # |wc -w  # wc w  # wcw
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oobject = len(itext.split())  # words len  # |wc -w  # wc w  # wcw
 
 + func text set
 + set -xe
-+ bin/pq.py --py text set
++ bin/pq.py -q --py text set
 
-itext = ibytes.decode()
-otext = "".join(sorted(set(itext)))
-obytes = otext.encode()
+otext = "".join(dict((_, _) for _ in itext).keys())  # text set  # text set
 
 + func ascii
 + set -xe
-+ bin/pq.py --py ascii
++ bin/pq.py -q --py ascii
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = ascii(iline)  # |cat -etv, but don't show $'\xA0' as $'\x20' Space
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = ascii(iline)  # ascii  # |cat -etv  # cat etv  # shows $'\xA0' Nbsp
 
 + func eval
 + set -xe
-+ bin/pq.py --py eval
++ bin/pq.py -q --py eval
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = str(ast.literal_eval(iline))  # undo 'ascii' or 'repr'
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = str(ast.literal_eval(iline))  # eval  # undo 'ascii' or 'repr'
 
 + func expand
 + set -xe
-+ bin/pq.py --py expand
++ bin/pq.py -q --py expand
 
-itext = ibytes.decode()
-otext = itext.expandtabs(tabsize=8)  # |expand  # expand
-obytes = otext.encode()
+otext = itext.expandtabs(tabsize=8)  # |expand  # expand expand
 
 + func join
 + set -xe
-+ bin/pq.py --py join
++ bin/pq.py -q --py join
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+# join  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
+otext = " ".join(ilines) + "\n"
 
 + func repr
 + set -xe
-+ bin/pq.py --py repr
++ bin/pq.py -q --py repr
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = repr(iline)  # repr  # undo 'ast.literal_eval'
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = repr(iline)  # repr  # undo 'ast.literal_eval'
 
 + func set
 + set -xe
-+ bin/pq.py --py set
++ bin/pq.py -q --py set
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-# collections.Counter.keys  # set, uniq, uniq_everseen, unsorted
-olines = list(dict((_, _) for _ in ilines).keys())
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+# collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen
+olines = list(dict((_, _) for _ in ilines).keys())  # unsort  # unsorted  # dedupe
 
 + func split
 + set -xe
-+ bin/pq.py --py split
++ bin/pq.py -q --py split
 
-itext = ibytes.decode()
-
-olines = itext.split()  # |xargs -n 1  # |xn1  # split xargs xn1
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+# split split split  # |sed 's,  *,$,g' |tr '$' '\n'
+# |xargs -n 1  # xargs n 1  # xn1
+olines = itext.split()
 
 + func unexpand
 + set -xe
-+ bin/pq.py --py unexpand
++ bin/pq.py -q --py unexpand
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = re.sub(r" {8}", repl="\t", string=iline)  # |unexpand  # unexpand
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = re.sub(r" {8}", repl="\t", string=iline)  # unexpanded  # |unexpand
 
 + func close
 + set -xe
-+ bin/pq.py --py close
-
-itext = ibytes.decode()
++ bin/pq.py -q --py close
 
 # closed # close  # ends last line with "\n"
 otext = itext if itext.endswith("\n") else (itext + "\n")
 
-obytes = otext.encode()
-
 + func dedent
 + set -xe
-+ bin/pq.py --py dedent
++ bin/pq.py -q --py dedent
 
-itext = ibytes.decode()
-otext = textwrap.dedent(itext) + "\n"  # dedented
-obytes = otext.encode()
+otext = textwrap.dedent(itext) + "\n"  # dedent  # dedented  # textwrap.dedent
 
 + func deframe
 + set -xe
-+ bin/pq.py --py deframe
-
-itext = ibytes.decode()
++ bin/pq.py -q --py deframe
 
 # deframe  # deframed
-otext = textwrap.dedent(itext) + "\n"  # no left margin
-olines = otext.splitlines()
-olines = list(_.rstrip() for _ in olines)  # no right margin
+dedent = textwrap.dedent(itext) + "\n"  # no left margin
+dlines = dedent.splitlines()
+olines = list(_.rstrip() for _ in dlines)  # no right margin
 otext = "\n".join(olines).strip() + "\n"  # no top/bottom margins
-
-obytes = otext.encode()
 
 + func dent
 + set -xe
-+ bin/pq.py --py dent
++ bin/pq.py -q --py dent
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = (4 * " ") + iline  # as if textwrap.dented  # dent
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = (4 * " ") + iline  # dent  # dented  # textwrap.dented
 
 + func frame
 + set -xe
-+ bin/pq.py --py frame
-
-itext = ibytes.decode()
-ilines = itext.splitlines()
++ bin/pq.py -q --py frame
 
 # frame  # framed
 olines = list()
@@ -388,214 +302,118 @@ for iline in ilines:
     oline = (4 * " ") + iline  # left margin
     olines.append(oline)
 olines.extend(2 * [""])  # bottom margin
-
 otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
 
 + func end
 + set -xe
-+ bin/pq.py --py end
++ bin/pq.py -q --py end
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-olines = ilines  # ended  # end  # ends every line with "\n"
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+olines = ilines  # end  # ended  # ends every line with "\n"
 
 + func lower
 + set -xe
-+ bin/pq.py --py lower
++ bin/pq.py -q --py lower
 
-itext = ibytes.decode()
-otext = itext.lower()  # lowered lowercased  # |tr '[A-Z]' '[a-z]'
-obytes = otext.encode()
+otext = itext.lower()  # lower  # lowered  # lowercased  # |tr '[A-Z]' '[a-z]'
 
 + func lstrip
 + set -xe
-+ bin/pq.py --py lstrip
++ bin/pq.py -q --py lstrip
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = iline.lstrip()  # lstrip  # lstripped  # |sed 's,^ *,,'
 
 + func reverse
 + set -xe
-+ bin/pq.py --py reverse
++ bin/pq.py -q --py reverse
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+iolines.reverse()  # reverse  # reversed  # |tac  # |tail -r  # tail r
 
 + func rstrip
 + set -xe
-+ bin/pq.py --py rstrip
++ bin/pq.py -q --py rstrip
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = iline.rstrip()  # rstrip  # rstripped  # |sed 's, *$,,'
 
 + func shuffle
 + set -xe
-+ bin/pq.py --py shuffle
++ bin/pq.py -q --py shuffle
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-olines = list(ilines); random.shuffle(olines)  # shuffled
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+random.shuffle(iolines) # shuffle  # shuffled
 
 + func sort
 + set -xe
-+ bin/pq.py --py sort
++ bin/pq.py -q --py sort
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-olines = sorted(ilines)  # sort  # s s
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+iolines.sort()  # sort  # sorted sorted  # s s s s s s s
 
 + func sponge
 + set -xe
-+ bin/pq.py --py sponge
++ bin/pq.py -q --py sponge
 
 obytes = ibytes  # sponged  # sponge
 
 + func strip
 + set -xe
-+ bin/pq.py --py strip
++ bin/pq.py -q --py strip
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = iline.strip()  # strip  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
 
 + func title
 + set -xe
-+ bin/pq.py --py title
++ bin/pq.py -q --py title
 
-itext = ibytes.decode()
-otext = itext.title()  # titled
-obytes = otext.encode()
+otext = itext.title()  # title  # titled
 
 + func undent
 + set -xe
-+ bin/pq.py --py undent
++ bin/pq.py -q --py undent
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = iline.removeprefix(4 * " ")  # undent  # undented  # textwrap.undent
 
 + func upper
 + set -xe
-+ bin/pq.py --py upper
++ bin/pq.py -q --py upper
 
-itext = ibytes.decode()
-otext = itext.upper()  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
-obytes = otext.encode()
+otext = itext.upper()  # upper  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
 
 + func closed
 + set -xe
-+ bin/pq.py --py closed
-
-itext = ibytes.decode()
++ bin/pq.py -q --py closed
 
 # closed # close  # ends last line with "\n"
 otext = itext if itext.endswith("\n") else (itext + "\n")
 
-obytes = otext.encode()
-
 + func dedented
 + set -xe
-+ bin/pq.py --py dedented
++ bin/pq.py -q --py dedented
 
-itext = ibytes.decode()
-otext = textwrap.dedent(itext) + "\n"  # dedented
-obytes = otext.encode()
+otext = textwrap.dedent(itext) + "\n"  # dedent  # dedented  # textwrap.dedent
 
 + func deframed
 + set -xe
-+ bin/pq.py --py deframed
-
-itext = ibytes.decode()
++ bin/pq.py -q --py deframed
 
 # deframe  # deframed
-otext = textwrap.dedent(itext) + "\n"  # no left margin
-olines = otext.splitlines()
-olines = list(_.rstrip() for _ in olines)  # no right margin
+dedent = textwrap.dedent(itext) + "\n"  # no left margin
+dlines = dedent.splitlines()
+olines = list(_.rstrip() for _ in dlines)  # no right margin
 otext = "\n".join(olines).strip() + "\n"  # no top/bottom margins
-
-obytes = otext.encode()
 
 + func dented
 + set -xe
-+ bin/pq.py --py dented
++ bin/pq.py -q --py dented
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = (4 * " ") + iline  # as if textwrap.dented  # dent
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = (4 * " ") + iline  # dent  # dented  # textwrap.dented
 
 + func ended
 + set -xe
-+ bin/pq.py --py ended
++ bin/pq.py -q --py ended
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-olines = ilines  # ended  # end  # ends every line with "\n"
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+olines = ilines  # end  # ended  # ends every line with "\n"
 
 + func framed
 + set -xe
-+ bin/pq.py --py framed
-
-itext = ibytes.decode()
-ilines = itext.splitlines()
++ bin/pq.py -q --py framed
 
 # frame  # framed
 olines = list()
@@ -604,309 +422,219 @@ for iline in ilines:
     oline = (4 * " ") + iline  # left margin
     olines.append(oline)
 olines.extend(2 * [""])  # bottom margin
-
 otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
 
 + func lowered
 + set -xe
-+ bin/pq.py --py lowered
++ bin/pq.py -q --py lowered
 
-itext = ibytes.decode()
-otext = itext.lower()  # lowered lowercased  # |tr '[A-Z]' '[a-z]'
-obytes = otext.encode()
+otext = itext.lower()  # lower  # lowered  # lowercased  # |tr '[A-Z]' '[a-z]'
 
 + func lstripped
 + set -xe
-+ bin/pq.py --py lstripped
++ bin/pq.py -q --py lstripped
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = iline.lstrip()  # lstrip  # lstripped  # |sed 's,^ *,,'
 
 + func rstripped
 + set -xe
-+ bin/pq.py --py rstripped
++ bin/pq.py -q --py rstripped
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = iline.rstrip()  # rstrip  # rstripped  # |sed 's, *$,,'
 
 + func reversed
 + set -xe
-+ bin/pq.py --py reversed
++ bin/pq.py -q --py reversed
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+iolines.reverse()  # reverse  # reversed  # |tac  # |tail -r  # tail r
 
 + func sorted
 + set -xe
-+ bin/pq.py --py sorted
++ bin/pq.py -q --py sorted
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-olines = sorted(ilines)  # sort  # s s
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+iolines.sort()  # sort  # sorted sorted  # s s s s s s s
 
 + func sponged
 + set -xe
-+ bin/pq.py --py sponged
++ bin/pq.py -q --py sponged
 
 obytes = ibytes  # sponged  # sponge
 
 + func shuffled
 + set -xe
-+ bin/pq.py --py shuffled
++ bin/pq.py -q --py shuffled
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-olines = list(ilines); random.shuffle(olines)  # shuffled
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+random.shuffle(iolines) # shuffle  # shuffled
 
 + func stripped
 + set -xe
-+ bin/pq.py --py stripped
++ bin/pq.py -q --py stripped
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = iline.strip()  # strip  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
 
 + func titled
 + set -xe
-+ bin/pq.py --py titled
++ bin/pq.py -q --py titled
 
-itext = ibytes.decode()
-otext = itext.title()  # titled
-obytes = otext.encode()
+otext = itext.title()  # title  # titled
 
 + func undented
 + set -xe
-+ bin/pq.py --py undented
++ bin/pq.py -q --py undented
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oline = iline.removeprefix(4 * " ")  # undent  # undented  # textwrap.undent
 
 + func uppered
 + set -xe
-+ bin/pq.py --py uppered
++ bin/pq.py -q --py uppered
 
-itext = ibytes.decode()
-otext = itext.upper()  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
-obytes = otext.encode()
+otext = itext.upper()  # upper  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
+
++ func e
++ set -xe
++ bin/pq.py -q --py e
+
+oobject = math.e  # e e e e e e e
+
++ func pi
++ set -xe
++ bin/pq.py -q --py pi
+
+oobject = math.pi
+
++ func tau
++ set -xe
++ bin/pq.py -q --py tau
+
+oobject = math.tau
+
++ func iline.title
++ set -xe
++ bin/pq.py -q --py iline.title
+
+oline = iline.title()
+
++ func 'iline.title()'
++ set -xe
++ bin/pq.py -q --py 'iline.title()'
+
+oline = iline.title()
+
++ func math.inf
++ set -xe
++ bin/pq.py -q --py math.inf
+
+oobject = math.inf
+
++ set -xe
++ bin/pq.py --py sort
+
+python3 -c '''
+
+import subprocess
+
+irun = subprocess.run(["pbpaste"], capture_output=True, text=True, check=True)
+itext = irun.stdout
+iolines = itext.splitlines()
+
+iolines.sort()  # sort  # sorted sorted  # s s s s s s s
+
+otext = "\n".join(iolines) + "\n"
+subprocess.run(["pbcopy"], input=otext, text=True, check=True)
+
+'''
 
 + func tail -r
 + set -xe
-+ bin/pq.py --py tail -r
++ bin/pq.py -q --py tail -r
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+iolines.reverse()  # reverse  # reversed  # |tac  # |tail -r  # tail r
 
 + func tac
 + set -xe
-+ bin/pq.py --py tac
++ bin/pq.py -q --py tac
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+iolines.reverse()  # reverse  # reversed  # |tac  # |tail -r  # tail r
 
 + func uniq
 + set -xe
-+ bin/pq.py --py uniq
++ bin/pq.py -q --py uniq
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-# collections.Counter.keys  # set, uniq, uniq_everseen, unsorted
-olines = list(dict((_, _) for _ in ilines).keys())
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+# collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen
+olines = list(dict((_, _) for _ in ilines).keys())  # unsort  # unsorted  # dedupe
 
 + func wc c
 + set -xe
-+ bin/pq.py --py wc c
++ bin/pq.py -q --py wc c
 
-oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c  # wcc
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oobject = len(ibytes)  # bytes len  # |wc -c  # wc c  # wcc
 
 + func wc l
 + set -xe
-+ bin/pq.py --py wc l
++ bin/pq.py -q --py wc l
 
-itext = ibytes.decode()
-
-oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l  # wcl
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oobject = len(itext.splitlines())  # lines len  # |wc -l  # wc l  # wcl
 
 + func wc m
 + set -xe
-+ bin/pq.py --py wc m
++ bin/pq.py -q --py wc m
 
-itext = ibytes.decode()
-
-oline = str(len(itext))  # text characters len  # |wc -m  # wc m  # wcm
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oobject = len(itext)  # text characters chars len  # |wc -m  # wc m  # wcm
 
 + func wc w
 + set -xe
-+ bin/pq.py --py wc w
++ bin/pq.py -q --py wc w
 
-itext = ibytes.decode()
-
-oline = str(len(itext.split()))  # words len  # |wc -w  # wc w  # wcw
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oobject = len(itext.split())  # words len  # |wc -w  # wc w  # wcw
 
 + func xargs
 + set -xe
-+ bin/pq.py --py xargs
++ bin/pq.py -q --py xargs
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+# join  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
+otext = " ".join(ilines) + "\n"
 
 + func a
 + set -xe
-+ bin/pq.py --py a
++ bin/pq.py -q --py a
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-olines = list()
-for iline in ilines:
-
-    # awk  # |awk '{print $NF}'  # a a
-    iwords = iline.split()
-    oline = iwords[-1] if iwords else ""
-    olines.append(oline)
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+# awk  # |awk '{print $NF}'  # a a a
+iwords = iline.split()
+oline = iwords[-1] if iwords else ""
 
 + func s
 + set -xe
-+ bin/pq.py --py s
++ bin/pq.py -q --py s
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-olines = sorted(ilines)  # sort  # s s
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+iolines.sort()  # sort  # sorted sorted  # s s s s s s s
 
 + func u
 + set -xe
-+ bin/pq.py --py u
++ bin/pq.py -q --py u
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-# collections.Counter.keys  # set, uniq, uniq_everseen, unsorted
-olines = list(dict((_, _) for _ in ilines).keys())
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+# collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen
+olines = list(dict((_, _) for _ in ilines).keys())  # unsort  # unsorted  # dedupe
 
 + func x
 + set -xe
-+ bin/pq.py --py x
++ bin/pq.py -q --py x
 
-itext = ibytes.decode()
-ilines = itext.splitlines()
-
-oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+# join  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
+otext = " ".join(ilines) + "\n"
 
 + func wcl
 + set -xe
-+ bin/pq.py --py wcl
++ bin/pq.py -q --py wcl
 
-itext = ibytes.decode()
-
-oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l  # wcl
-
-olines = [oline]
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+oobject = len(itext.splitlines())  # lines len  # |wc -l  # wc l  # wcl
 
 + func xn1
 + set -xe
-+ bin/pq.py --py xn1
++ bin/pq.py -q --py xn1
 
-itext = ibytes.decode()
-
-olines = itext.split()  # |xargs -n 1  # |xn1  # split xargs xn1
-
-otext = "\n".join(olines) + "\n"
-obytes = otext.encode()
+# split split split  # |sed 's,  *,$,g' |tr '$' '\n'
+# |xargs -n 1  # xargs n 1  # xn1
+olines = itext.split()
 
 + echo +
 +

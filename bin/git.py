@@ -1,5 +1,10 @@
 _ = """
 
+git push origin HEAD:guests/jqdoe
+git push origin --delete guests/jqdoe
+git checkout guests/jqdoe
+git branch -D guests/jqdoe
+
 (set -xe && git config -l --global && git config -l --local)
 
 (

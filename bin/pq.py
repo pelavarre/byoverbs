@@ -1,50 +1,55 @@
 #!/usr/bin/env python3
 
 r"""
-usage: pq.py [-h] [--py] [--yolo] [WORD ...]
+usage: pq [-h] [-q] [--py] [--yolo] [WORD ...]
 
-edit the Os Copy/Paste Clipboard Buffer
+edit the Os Copy/Paste Clipboard Buffer and the Dev Tty Screen
 
 positional arguments:
-  WORD        word of the Pq Programming Language:  dedented, dented, ...
+  WORD         word of the Pq Programming Language:  dedented, dented, ...
 
 options:
-  -h, --help  show this help message and exit
-  --py        test and show the Python Code, except don't write the Clipboard Buffer
-  --yolo      do whatever's popular now
+  -h, --help   show this help message and exit
+  -q, --quiet  say less and less, when called with -q or -qq or -qqq
+  --py         test and show the Python Code, but don't write the Paste Buffer
+  --yolo       do whatever's popular now
 
-words of the Pq Programming Language = words indexing popular Grafs of Py Code:
+words and phrases of the Pq Programming Language:
   ascii, casefold, eval, lower, lstrip, repr, rstrip, strip, title, upper,
-  closed, dedented, dented, ended, reversed, shuffled, sorted, sponged, undented,
-  deframed, dumps, framed, json, join, loads, split,
+  close, dedent, dent, end, reverse, shuffle, sort, spong, undent,
+  deframe, dumps, frame, json, join, loads, split,
   expand, md5sum, sha256, tail -r, tac, unexpand,
   a, jq ., s, u, wc c, wc m, wc w, wc l,  wc c, wc m, wc w, wc l, x, xn1,
   len bytes, len text, len words, len lines, text set,
   ...
 
-guesses by data:
-  reduces to http://codereviews/r/$R/diff from r/$R or from r/$R/diff/9?...#...
-  reduces to https://docs.google.com/document/d/$HASH from ...$=/$HASH/edit?...#...
-  toggles between http://...jenkins.../... and http://...jenkins/...
-  toggles between PROJ-12345 and http://jira.../browse/PROJ-12345
+meanings found when no words chosen:
   toggles between http://example.com and h t t p : / / e x a m p l e . c o m
+  toggles between http://...jenkins.../... and http://...jenkins/...
+  toggles between https://jira.../browse/PROJ-12345 and PROJ-12345
+  shrinks to https://docs.google.com/document/d/$HASH from ...$=/$HASH/edit?...#...
+  shrinks to http://codereviews/r/$R/diff from r/$R or from r/$R/diff/9?...#...
+  shrinks Py Tracebacks to just 4 Lines
 
 quirks:
   looks to end the last Line, and every Line, with U+000A Line-Feed
+  takes no words to mean 'olines = ilines' after running self-tests
   works well with:  ⌘C pbcopy, ⌘V pbpaste, less -FIRX
 
 examples:
-  pq.py  # show these examples and exit
-  pq.py --help  # show this help message and exit
-  pq.py --yolo  # parse the Paste to guess what to do to it
-  pq.py dent  # insert 4 Spaces at the left of each Line
-  pq.py dedent  # remove the leading Blank Columns from the Lines
-  pq.py len lines  # count Lines
-  pq.py --py len lines  # show how to count Lines
-  echo '[0, 11, 22]' |pq.py json |cat -  # format Json consistently
+  pq  # show these examples, run self-tests, and exit
+  pq --help  # show this help message and exit
+  pq --yolo  # parse the Paste to guess what to do to it
+  pq dent  # insert 4 Spaces at the left of each Line
+  pq dedent  # remove the leading Blank Columns from the Lines
+  pq len lines  # count Lines
+  pq --py len lines  # show how to count Lines
+  echo '[0, 11, 22]' |pq json |cat -  # format Json consistently
+  pq 'oline = "<< " + iline + " >>"'  # add Prefix and Suffix to each Line
+  pq 'olines = ilines[:3] + ["..."] + ilines[-3:]'  # show Head and Tail
 """
 
-# quirks to come inside 'pq vi':
+# quirks to come when we add 'pq vi':
 #   respects color and ignores case
 #   doesn't clear screen at launch, nor at quit either
 
@@ -53,115 +58,24 @@ examples:
 
 import __main__
 import argparse
-import ast
+import bdb
 import collections
 import dataclasses
-import datetime as dt
 import difflib
-import hashlib
 import itertools
-import json
 import os
 import pathlib
-import random
+import pdb
 import re
+import shlex
 import shutil
-import socket
 import stat
-import subprocess
 import sys
 import textwrap
+import traceback
 import unicodedata
-import urllib.parse
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
-... == ast, dt, hashlib, json, random  # often unused  # type: ignore
-
-
-#
-# List Grafs of Awkish Py Code to Abbreviate Intensely
-#
-
-
-PY_LINES_TEXT = r"""
-
-    obytes = ibytes  # sponged  # sponge
-
-    oline = " ".join(ilines)  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
-    oline = (4 * " ") + iline  # as if textwrap.dented  # dent
-    oline = ascii(iline)  # |cat -etv, but don't show $'\xA0' as $'\x20' Space
-    oline = str(ast.literal_eval(iline))  # undo 'ascii' or 'repr'
-    oline = iline.lstrip()  # lstripped  # |sed 's,^ *,,'
-    oline = iline.removeprefix(4 * " ")  # as if textwrap.undented  # undent
-    oline = iline.rstrip()  # rstripped  # |sed 's, *$,,'
-    oline = iline.strip()  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
-    oline = re.sub(r" {8}", repl="\t", string=iline)  # |unexpand  # unexpand
-    oline = repr(iline)  # repr  # undo 'ast.literal_eval'
-    oline = repr(iline)[1:0-1]  # |cat -tv  # except like '"' comes out as \'"\'
-    oline = str(len(ibytes))  # bytes len  # |wc -c  # wc c  # wcc
-    oline = str(len(itext))  # text characters len  # |wc -m  # wc m  # wcm
-    oline = str(len(itext.split()))  # words len  # |wc -w  # wc w  # wcw
-    oline = str(len(itext.splitlines()))  # lines len  # |wc -l  # wc l  # wcl
-
-    olines = ilines  # ended  # end  # ends every line with "\n"
-    olines = itext.split()  # |xargs -n 1  # |xn1  # split xargs xn1
-    olines = list(ilines); random.shuffle(olines)  # shuffled
-    olines = reversed(ilines)  # reverse  # |tail -r  # tail r  # |tac  # tac
-    olines = sorted(ilines)  # sort  # s s
-
-    otext = itext.casefold()  # casefolded  # folded
-    otext = itext.expandtabs(tabsize=8)  # |expand  # expand
-    otext = itext.lower()  # lowered lowercased  # |tr '[A-Z]' '[a-z]'
-    otext = itext.title()  # titled
-    otext = itext.upper()  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
-    otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
-    otext = "".join(sorted(set(itext)))
-    otext = textwrap.dedent(itext) + "\n"  # dedented
-
-"""
-
-# todo: assert rstripped and sorted
-
-
-PY_GRAFS_TEXT = r"""
-
-    # awk  # |awk '{print $NF}'  # a a
-    iwords = iline.split()
-    oline = iwords[-1] if iwords else ""
-
-    # collections.Counter.keys  # set, uniq, uniq_everseen, unsorted
-    olines = list(dict((_, _) for _ in ilines).keys())
-
-    # closed # close  # ends last line with "\n"
-    otext = itext if itext.endswith("\n") else (itext + "\n")
-
-    # deframe  # deframed
-    otext = textwrap.dedent(itext) + "\n"  # no left margin
-    olines = otext.splitlines()
-    olines = list(_.rstrip() for _ in olines)  # no right margin
-    otext = "\n".join(olines).strip() + "\n"  # no top/bottom margins
-
-    # frame  # framed
-    olines = list()
-    olines.extend(2 * [""])  # top margin
-    for iline in ilines:
-        oline = (4 * " ") + iline  # left margin
-        olines.append(oline)
-    olines.extend(2 * [""])  # bottom margin
-
-    # md5sum
-    md5 = hashlib.md5()
-    md5.update(ibytes)
-    otext = md5.hexdigest() + "\n"
-
-    # sha256
-    sha256 = hashlib.sha256()
-    sha256.update(ibytes)
-    otext = sha256.hexdigest() + "\n"
-
-"""
-
-# todo: assert rstripped and sorted
 
 
 #
@@ -169,879 +83,1017 @@ PY_GRAFS_TEXT = r"""
 #
 
 
-@dataclasses.dataclass
-class PqPyArgs:
-    """Name the Sh Command-Line Arguments of Pq Py"""
-
-    py: bool
-    words: list[str]
-
-
-@dataclasses.dataclass
-class Main:
-    """Open up a shared workspace for the Code of this Py File"""
-
-    args: PqPyArgs
-
-
 def main() -> None:
     """Run well from the Sh Command Line"""
 
-    args = parse_pq_py_args()
-    Main.args = args
+    def func() -> None:
+        peqr = PyExecQueryResult()
+        peqr.try_main(shargs=sys.argv[1:])  # often prints help & exits zero
 
-    sponge = ShPipeSponge()
-    ibytes = sponge.read_bytes()
-    obytes = ibytes_take_words_else(ibytes)  # often prints Py Lines & exits zero
-    sponge.write_bytes(data=obytes)
+    try_func_else_pdb_pm(func)
 
 
-def parse_pq_py_args() -> PqPyArgs:
-    """Parse the Sh Command-Line Arguments of Pq Py"""
+def try_func_else_pdb_pm(func) -> None:
+    """Call a Py Func, but post-mortem debug an unhandled Exc"""
 
-    # Declare our Positional Arguments and Options
+    try:
+        peqr = PyExecQueryResult()
+        peqr.try_main(shargs=sys.argv[1:])  # often prints help & exits zero
+    except bdb.BdbQuit:
+        raise
+    except Exception as exc:
+        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        assert exc is exc_value
 
-    parser = ArgumentParser()
+        traceback.print_exc(file=sys.stderr)
 
-    words_help = "word of the Pq Programming Language:  dedented, dented, ..."
-    py_help = "test and show the Python Code, except don't write the Clipboard Buffer"
-    yolo_help = "do whatever's popular now"
+        print("\n", file=sys.stderr)
+        print("\n", file=sys.stderr)
+        print("\n", file=sys.stderr)
 
-    assert argparse.ZERO_OR_MORE == "*"
-    parser.add_argument("words", metavar="WORD", nargs="*", help=words_help)
+        print(">>> sys.last_traceback = sys.exc_info()[-1]", file=sys.stderr)
+        sys.last_traceback = exc_traceback
 
-    parser.add_argument("--py", action="count", help=py_help)
-    parser.add_argument("--yolo", action="count", help=yolo_help)  # --yolo, --y, --
+        print(">>> pdb.pm()", file=sys.stderr)
+        pdb.pm()
 
-    # Run ahead as if "--" came before the 1st Sh Arg that doesn't start with Dash "-"
-
-    shargs = list()
-    for index, sharg in enumerate(sys.argv):
-        if not index:
-            continue
-        if sharg == "--":
-            shargs.extend(sys.argv[index:])
-            break
-        if not sharg.startswith("-"):
-            shargs.append("--")
-            shargs.extend(sys.argv[index:])
-            break
-        shargs.append(sharg)
-
-    # Parse the Sh Args, else print help & exit zero
-
-    ns = parser.parse_args_else(shargs)
-
-    # Collect up the Parsed Args
-
-    args = PqPyArgs(
-        py=bool(ns.py),
-        words=ns.words,
-    )
-
-    # Succeed
-
-    return args
-
-    # often prints help & exits zero
+        raise
 
 
-#
-# Pipe Bytes of Lines of Text through Python
-#
+@dataclasses.dataclass
+class PyExecQueryResult:
+    """Parse, compose, and run fragments of Python Code"""
 
+    cued_py_grafs: list[list[str]]
 
-def ibytes_take_words_else(data) -> bytes:  # noqa C901 complex
-    """Take Sh Words as hints, else guess without any"""
+    pbcopy_else: str | None
+    pbpaste_else: str | None
 
-    ibytes = data
+    pq_words: list[str]  # mutable
+    py: int  # mutable
+    quiet: int  # mutable
 
-    args = Main.args
-    words = args.words
+    stdin_isatty: bool
+    stdout_isatty: bool
 
-    # Guess how to edit when given no Sh Words
+    ibytes_else: bytes | None  # mutable
+    itext_else: str | None  # mutable
 
-    if not words:
-        obytes = ibytes_take_or_edit_else(ibytes)
-        return obytes
+    def __init__(self) -> None:
 
-    # Pick out the Py Graf most closely matching the Sh Words
+        mgrafs = self.fetch_cued_mgrafs()
+        sgrafs = self.fetch_cued_sgrafs()
+        cued_py_grafs = mgrafs + sgrafs  # ordered, not sorted
+        self.cued_py_grafs = cued_py_grafs
 
-    keys = list(words)
+        self.pbcopy_else = shutil.which("pbcopy")
+        self.pbpaste_else = shutil.which("pbpaste")
 
-    less_by_more = fetch_less_by_more_awkish_py_texts()
-    py_grafs = keys_to_py_grafs(less_by_more, keys=keys, i=0)
+        self.pq_words = list()
+        self.py = 0
+        self.quiet = 0
 
-    if not py_grafs:
-        if any((" " in _) for _ in keys):
-            py_grafs = [words]  # take our 'hit_py_graf' from the Sh Args
+        self.stdin_isatty = sys.stdin.isatty()
+        self.stdout_isatty = sys.stdout.isatty()
 
-    if not py_grafs:
-        py_graf = rpn_words_to_one_py_graf(words)
-        py_grafs = [py_graf]
+        self.ibytes_else = None
 
-    if not py_grafs:
+    #
+    # Run well from the Sh Command Line
+    #
 
-        emo_keys = list(keys)
-        for emo_verb in "emojis emoji emo".split():
-            if emo_verb in emo_keys:
-                emo_keys.remove(emo_verb)
+    def try_main(self, shargs) -> None:
+        """Run well from the Sh Command Line"""
+
+        # Mutate Self as per the Sh Args
+
+        assert not self.pq_words, (self.pq_words,)
+        assert not self.py, (self.py,)
+        assert not self.quiet, (self.quiet,)
+
+        ns = self.parse_pq_args_else(shargs)  # often prints help & exits zero
+
+        self.pq_words = ns.words or list()
+        self.py = ns.py or 0
+        self.quiet = min(3, ns.quiet or 0)
+
+        # Parse some Py Code and compose the rest,
+        # and maybe sponge up 'self.ibytes_else', and maybe also 'self.itext_else'
+
+        (found_py_graf, complete_py_graf) = self.find_and_form_py_lines()
+
+        # Option to trace the Py Code without running it
+
+        self.py_trace_else(  # often prints Py & exits zero
+            found_py_graf, complete_py_graf=complete_py_graf
+        )
+
+        # Run the Py Code, after patching it to drop Lines already run, if any
+
+        lines = complete_py_graf
+        cgrafs = list(list(v) for k, v in itertools.groupby(lines, key=bool) if k)
+
+        alt_locals: dict[str, object | None]
+        alt_locals = dict()
+
+        if self.ibytes_else is not None:
+            assert len(cgrafs) > 2, (cgrafs, lines)  # Imports, I Bytes/Text, more
+            assert all(_.startswith("import ") for _ in cgrafs[0]), (cgrafs[0],)
+
+            cgrafs_1 = cgrafs[1]
+            bindices = list(
+                i for i, _ in enumerate(cgrafs_1) if _.startswith("ibytes = ")
+            )
+            tindices = list(
+                i for i, _ in enumerate(cgrafs_1) if _.startswith("itext = ")
+            )
+            if tindices:
+                assert self.itext_else is not None, (self.itext_else, found_py_graf)
+                alt_locals["itext"] = self.itext_else
+                cgrafs[1][::] = cgrafs_1[max(tindices) + 1 :]
+            elif bindices:
+                alt_locals["ibytes"] = self.ibytes_else
+                cgrafs[1][::] = cgrafs_1[max(bindices) + 1 :]
+
+        alt_py_graf = list(line for cgraf in cgrafs for line in cgraf)
+        py_text = "\n".join(alt_py_graf)
+
+        exec(py_text, globals(), alt_locals)  # because "i'm feeling lucky"
+
+        # sys.stdout.flush()  # todo: to flush the Stdout, or not
+
+    def parse_pq_args_else(self, shargs) -> argparse.Namespace:
+        """Parse the Sh Args of Pq"""
+
+        # Declare Positional Arguments and Options
+
+        parser = ArgumentParser()
+
+        words_help = "word of the Pq Programming Language:  dedented, dented, ..."
+        quiet_help = "say less and less, when called with -q or -qq or -qqq"
+        py_help = "test and show the Python Code, but don't write the Paste Buffer"
+        yolo_help = "do whatever's popular now"
+
+        assert argparse.ZERO_OR_MORE == "*"
+        parser.add_argument("words", metavar="WORD", nargs="*", help=words_help)
+
+        parser.add_argument("-q", "--quiet", action="count", help=quiet_help)
+        parser.add_argument("--py", action="count", help=py_help)
+        parser.add_argument("--yolo", action="count", help=yolo_help)  # --yolo, --y, --
+
+        # Take up Sh Args as if "--" comes before the first Positional Argument
+
+        lotsa_shargs = list()
+        for index, sharg in enumerate(shargs):
+            if sharg == "--":  # accepts explicit "--" Sh Arg
+                lotsa_shargs.extend(shargs[index:])
                 break
 
-        if emo_keys != keys:
-            less_by_more = fetch_less_by_more_emoji_py_texts()
-            near_py_grafs = keys_to_py_grafs(less_by_more, keys=emo_keys, i=1)
+            if not sharg.startswith("-"):  # inserts implicit "--" Sh Arg
+                lotsa_shargs.append("--")
+                lotsa_shargs.extend(shargs[index:])
+                break
+
+            lotsa_shargs.append(sharg)
+
+        # Parse the Sh Args
+
+        try:
+            ns = parser.parse_args_else(lotsa_shargs)  # often prints help & exits zero
+        except SystemExit:
+            self.assert_lots_ok()  # ~100 ms in Jun/2024
+            raise
+
+        # Succeed
+
+        return ns
+
+        # often prints help & exits zero
+
+    def py_trace_else(self, found_py_graf, complete_py_graf) -> None:
+        """Print the Py Lines, framed in two Blank Rows, just before running them"""
+
+        found_py_text = "\n".join(found_py_graf)
+        complete_py_text = "\n".join(complete_py_graf)
+
+        ipipe = "" if self.stdin_isatty else "|"
+        opipe = "" if self.stdout_isatty else "|"
+
+        if not self.py:
+            return
+
+        if self.quiet:
+            print("\n" + found_py_text + "\n", file=sys.stderr)
+        else:
+            e = sys.stderr
+            print(file=e)
+            print(f"{ipipe}python3 -c '''", file=e)
+            print("\n" + complete_py_text + "\n", file=e)
+            print(f"''' {opipe}".rstrip(), file=e)
+            print(file=e)
+
+        sys.exit(0)  # exit 0 after printing Py, as if after printing help
+
+        # often prints Py & exits zero
+
+    def fetch_cued_mgrafs(self) -> list[list[str]]:
+        """Fetch the Cued Multi-Line Paragraphs"""
+
+        mgrafs0 = text_to_grafs(CUED_PY_GRAFS_TEXT)
+        list_assert_eq(mgrafs0, b=sorted(mgrafs0))
+
+        mgrafs1 = text_to_grafs(ITEXT_PY_GRAFS_TEXT)  # ordered, not sorted
+
+        mgrafs = mgrafs0 + mgrafs1
+
+        return mgrafs
+
+    def fetch_cued_sgrafs(self) -> list[list[str]]:
+        """Fetch the Cued Single-Line Paragraphs"""
+
+        sgrafs = text_to_grafs(CUED_PY_LINES_TEXT)
+        list_assert_eq(sgrafs, b=sorted(sgrafs))
+
+        return sgrafs
+
+    def assert_lots_ok(self) -> None:  # ~100 ms in Jun/2024
+        """Run slow Self-Test's and assert they all pass"""
+
+        cued_py_grafs = self.cued_py_grafs
+
+        for cued_py_graf in cued_py_grafs:
+            self.py_graf_assert_ipull_to_opush(py_graf=cued_py_graf)
+
+        py_graf_by_cues = self.py_grafs_to_graf_by_cues(cued_py_grafs)
+        for cues, py_graf in py_graf_by_cues.items():
+            py_grafs = self.cues_to_py_grafs(cues=cues)
+
+            assert py_grafs, (cues, py_graf, py_grafs)
+            assert len(py_grafs) == 1, (cues, py_graf, py_grafs)
+            assert py_graf == tuple(py_grafs[-1]), (cues, py_graf, py_grafs)
+
+        # often chokes and exits nonzero
+
+    def py_graf_assert_ipull_to_opush(self, py_graf) -> None:
+        """Assert this Graf has 1 Input and 1 Output"""
+
+        (ipulls, opushes) = self.py_graf_to_i_pulls_o_pushes(py_graf)
+
+        if ipulls == ["iolines"]:  # pq reverse  # pq sort
+            assert not opushes, (ipulls, opushes)
+        elif ipulls == ["print"]:  # pq reverse  # pq sort
+            assert not opushes, (ipulls, opushes)
+        elif ipulls == ["print", "stdin", "stdout"]:  # pq ts
+            assert not opushes, (ipulls, opushes)
+
+        elif (not ipulls) and (opushes == ["oobject"]):  # pq pi
+            pass
+
+        else:
+            assert len(ipulls) == 1, (ipulls, opushes)
+            assert len(opushes) == 1, (ipulls, opushes)
+
+    def py_graf_to_i_pulls_o_pushes(self, py_graf) -> tuple[list[str], list[str]]:
+        """Pick out the one Sh Pipe Input and one Sh Pipe Output from the Py Graf"""
+
+        iowords = ["iolines", "print", "stdout"]  # mutations, not inits
+        iwords = iowords + ["stdin", "ibytes", "itext", "ilines", "iline"]  # mentions
+        owords = ["obytes", "otext", "olines", "oline", "oobject", "oobjects"]  # inits
+
+        (ipulls, opushes) = py_graf_to_pulls_pushes(py_graf)
+
+        ipulls = list(_ for _ in ipulls if _ in iwords)
+        opushes = list(_ for _ in opushes if _ in owords)
+
+        return (ipulls, opushes)
+
+    def py_grafs_to_graf_by_cues(self, py_grafs) -> dict[tuple[str], tuple[str]]:
+        """Index each Py Graf by its own Keys"""
+
+        py_graf_by_cues: dict[tuple, tuple]
+        py_graf_by_cues = dict()
+
+        for py_graf in py_grafs:
+            for py_line in py_graf:
+                (_, _, py_right) = py_line.partition("#")
+
+                cues_py_list = py_right.split("#")
+                cues_py_list = list(_.strip() for _ in cues_py_list if _)
+                cues_py_list = list(dict((_, _) for _ in cues_py_list).keys())
+
+                cues_list = list()
+                for cues_py in cues_py_list:
+                    if not re.match(r"^[- .0-9A-Za-z|]+$", string=cues_py):
+                        continue
+
+                    cues = tuple(shlex.split(cues_py.replace("|", "")))
+                    if cues == (len(cues) * cues[:1]):
+                        cues = cues[:1]
+
+                    if cues not in cues_list:
+                        cues_list.append(cues)
+
+                for cues in cues_list:
+                    assert cues not in py_graf_by_cues.keys(), (cues,)
+                    py_graf_by_cues[cues] = tuple(py_graf)
+
+        return py_graf_by_cues
+
+    #
+    # Parse some Py Code and compose the rest
+    #
+
+    def find_and_form_py_lines(self) -> tuple[list[str], list[str]]:
+        """Parse some Py Code and compose the rest"""
+
+        pq_words = self.pq_words
+
+        py_graf: list[str]
+        py_graf = list()
+
+        # Take whole Input File as Cues, if no match found
+
+        if not pq_words:
+            py_graf = self.sponge_to_one_py_graf()
+
+            # falls back to ending each Text Line, else ending each Byte Line
+
+        # Search for one or zero Py Grafs matching the Cues (but reject many if found)
+
+        if not py_graf:
+            py_graf = self.cues_to_one_py_graf_if(cues=pq_words)  # often exits nonzero
+
+        # Take Cues with Spaces in them as fragments of Python, if no match found
+
+        if not py_graf:
+            if any((" " in _) for _ in pq_words):
+                py_graf = list(pq_words)  # better copied than aliased
+            elif len(pq_words) == 1:
+                pq_word = pq_words[-1]
+                if ("." in pq_word) and ("=" not in pq_word):
+                    if "iline" in py_split(pq_word):
+                        py_line = f"oline = {pq_word}"  # iline.title()
+                        if ("(" not in py_line) and (")" not in py_line):
+                            py_line = f"oline = {pq_word}()"  # iline.title
+                    else:
+                        py_line = f"oobject = {pq_word}"  # math.inf
+                    py_graf = [py_line]
+
+        if not py_graf:
+            print(f"pq.py: No Py Grafs found by {pq_words}", file=sys.stderr)
+
+            sys.exit(2)  # exit 2 for wrong args at No Py Graphs found
+
+        # Compose the rest of the Python
+
+        found_py_graf = py_graf
+
+        (ipulls, opushes) = self.py_graf_to_i_pulls_o_pushes(py_graf)
+
+        complete_py_graf = self.py_graf_complete(
+            py_graf, ipulls=ipulls, opushes=opushes
+        )
+
+        # Succeed
+
+        return (found_py_graf, complete_py_graf)
+
+        # may sponge up 'self.ibytes_else', and maybe also 'self.itext_else'
+
+    def py_graf_complete(self, py_graf, ipulls, opushes) -> list[str]:
+        """Compose the rest of the Py Code"""
+
+        dent = 4 * " "
+
+        # Compose more Py Code to run before and after
+
+        before_py_graf = self.form_before_py_graf(
+            py_graf, ipulls=ipulls, opushes=opushes
+        )
+
+        after_py_graf = self.form_after_py_graf(py_graf, ipulls=ipulls, opushes=opushes)
+
+        # Take the parsed Py Code as is, or dent it
+
+        o = (ipulls, opushes, py_graf)
+        assert ("iline" in ipulls) == ("oline" in opushes), o
+
+        run_py_graf = list(py_graf)
+
+        if "iline" in ipulls:
+            run_py_graf = list((dent + _) for _ in py_graf)
+
+        # Stitch together the composed and the parsed, maybe dented, Py Code
+
+        div = list([""])
+
+        full_py_graf = before_py_graf + run_py_graf + after_py_graf
+        full_py_graf = graf_deframe(full_py_graf)
+        if len(full_py_graf) > 3:
+            full_py_graf = before_py_graf + div + run_py_graf + div + after_py_graf
+            full_py_graf = graf_deframe(full_py_graf)
+
+        fuller_py_graf = py_graf_insert_imports(py_graf=full_py_graf)
+
+        # Succeed
+
+        return fuller_py_graf
+
+    def form_before_py_graf(self, py_graf, ipulls, opushes) -> list[str]:
+        """Say to read Bytes or Text or neither"""
+
+        self.py_graf_assert_ipull_to_opush(py_graf)
+
+        #
+
+        py_graf = list()
+
+        self.py_graf_extend_stdinout(py_graf, ipulls=ipulls, opushes=opushes)
+
+        if "ibytes" in ipulls:
+            py_graf.extend(self.form_read_bytes_py_graf())
+
+        py_words = "itext ilines iline iolines".split()
+        if any((_ in ipulls) for _ in py_words):
+            py_graf.extend(self.form_read_text_py_graf())
+
+        py_words = "ilines iline".split()
+        if any((_ in ipulls) for _ in py_words):
+            py_graf.append("ilines = itext.splitlines()")
+
+        if "iolines" in ipulls:
+            py_graf.append("iolines = itext.splitlines()")
+
+        if "oline" in opushes:
+            py_graf.append("olines = list()")
+
+        if "iline" in ipulls:
+            py_graf.append("for iline in ilines:")
+
+        #
+
+        return py_graf
+
+    def py_graf_extend_stdinout(self, py_graf, ipulls, opushes) -> None:
+        """Say to read Stdin and write Stdout or neither or either"""
+
+        stdin_isatty = self.stdin_isatty
+        stdout_isatty = self.stdout_isatty
+
+        if "stdout" in ipulls:
+            if not stdout_isatty:
+                py_graf.append("stdout = sys.stdout")
+
+        if "stdin" in ipulls:
+            if not stdin_isatty:
+                py_graf.append("stdin = sys.stdin")
+            else:
+                py_graf.extend(self.form_read_text_py_graf())
+                py_graf.append("stdin = io.StringIO(itext)")
+
+    def form_after_py_graf(self, py_graf, ipulls, opushes) -> list[str]:
+        """Say to write Bytes or Text or neither"""
+
+        self.py_graf_assert_ipull_to_opush(py_graf)
+
+        dent = 4 * " "
+        stdout_isatty = self.stdout_isatty
+
+        #
+
+        py_graf = list()
+
+        if "oline" in opushes:
+            py_graf.append(dent + "olines.append(oline)")
+
+        py_words = "olines oline".split()
+        if any((_ in opushes) for _ in py_words):
+            py_graf.append(r'otext = "\n".join(olines) + "\n"')
+
+        if "oobject" in opushes:
+            py_graf.append(r'otext = str(oobject) + "\n"')
+
+        if "iolines" in ipulls:
+            py_graf.append(r'otext = "\n".join(iolines) + "\n"')
+            py_graf.extend(self.form_write_text_py_graf())
+
+        if "stdout" in ipulls:
+            if stdout_isatty:
+                py_graf.append("otext = stdout.getvalue()")
+                py_graf.extend(self.form_write_text_py_graf())
+
+        py_words = "otext olines oline oobject".split()
+        if any((_ in opushes) for _ in py_words):
+            py_graf.extend(self.form_write_text_py_graf())
+
+        if "obytes" in opushes:
+            py_graf.extend(self.form_write_bytes_py_graf())
+
+        #
+
+        return py_graf
+
+    def form_read_bytes_py_graf(self) -> list[str]:
+        """Plan to read Bytes before the chosen Py Graf"""
+
+        stdin_isatty = self.stdin_isatty
+        pbpaste_else = self.pbpaste_else
+
+        # Number 3 Py Grafs
+
+        bdented = """
+
+            ibytes = pathlib.Path("/dev/stdin").read_bytes()
+
+            irun = subprocess.run(["pbpaste"], stdout=subprocess.PIPE, check=True)
+            ibytes = irun.stdout
+
+            ipath = pathlib.Path("~/.ssh/pbpaste.bin")
+            ibytes = ipath.read_bytes()
+
+        """
+
+        btext = textwrap.dedent(bdented).strip()
+        blines = btext.splitlines()
+        bgrafs = list(list(v) for k, v in itertools.groupby(blines, key=bool) if k)
+        assert len(bgrafs) == 3, (len(bgrafs), bgrafs)
+
+        # Pick 1 Py Graf
+
+        if not stdin_isatty:
+            bgraf = bgrafs[0]
+        elif pbpaste_else is not None:
+            bgraf = bgrafs[1]  # recklessly allows read Tty at Stdin, write Stderr
+        else:
+            bgraf = bgrafs[2]
+            pathlib_create_pbpaste_bin()  # creates before talking of reading
+
+        # Succeed
+
+        return bgraf
+
+        # chooses 1 of 3 Input Sources
+
+    def form_read_text_py_graf(self) -> list[str]:
+        """Plan to read Text before the chosen Py Graf"""
+
+        stdin_isatty = self.stdin_isatty
+        pbpaste_else = self.pbpaste_else
+
+        # Number 3 Py Grafs
+
+        bdented = """
+
+            itext = sys.stdin.read()
+
+            irun = subprocess.run(["pbpaste"], capture_output=True, text=True, check=True)
+            itext = irun.stdout
+
+            ipath = pathlib.Path("~/.ssh/pbpaste.bin")
+            itext = ipath.read_text()
+
+        """
+
+        btext = textwrap.dedent(bdented).strip()
+        blines = btext.splitlines()
+        bgrafs = list(list(v) for k, v in itertools.groupby(blines, key=bool) if k)
+        assert len(bgrafs) == 3, (len(bgrafs), bgrafs)
+
+        # Pick 1 Py Graf
+
+        if not stdin_isatty:
+            bgraf = bgrafs[0]
+        elif pbpaste_else is not None:
+            bgraf = bgrafs[1]  # recklessly allows read Tty at Stdin, write Stderr
+        else:
+            bgraf = bgrafs[2]
+            pathlib_create_pbpaste_bin()  # creates before talking of reading
+
+        # Succeed
+
+        return bgraf
+
+        # chooses 1 of 3 Input Sources
+
+    def form_write_text_py_graf(self) -> list[str]:
+        """Plan to write Text after the chosen Py Graf"""
+
+        stdout_isatty = self.stdout_isatty
+        pbcopy_else = self.pbcopy_else
+
+        # Number 3 Py Grafs
+
+        bdented = """
+
+            try:
+                sys.stdout.write(otext)
+            except BrokenPipeError:
+                pass
+
+            subprocess.run(["pbcopy"], input=otext, text=True, check=True)
+
+            opath = pathlib.Path("~/.ssh/pbpaste.bin")
+            opath.write_text(otext)
+
+        """
+
+        btext = textwrap.dedent(bdented).strip()
+        blines = btext.splitlines()
+        bgrafs = list(list(v) for k, v in itertools.groupby(blines, key=bool) if k)
+        assert len(bgrafs) == 3, (len(bgrafs), bgrafs)
+
+        # Pick 1 Py Graf
+
+        if not stdout_isatty:
+            bgraf = bgrafs[0]
+        elif pbcopy_else is not None:
+            bgraf = bgrafs[1]  # recklessly allows write Stdout/ Stderr
+        else:
+            bgraf = bgrafs[2]
+            pathlib_create_pbpaste_bin()  # creates before talking of rewriting
+
+        # Succeed
+
+        return bgraf
+
+        # chooses 1 of 3 Output Sinks
+
+    def form_write_bytes_py_graf(self) -> list[str]:
+        """Plan to write Bytes after the chosen Py Graf"""
+
+        stdout_isatty = self.stdout_isatty
+        pbcopy_else = self.pbcopy_else
+
+        # Number 3 Py Grafs
+
+        bdented = """
+
+            try:
+                pathlib.Path("/dev/stdout").write_bytes(obytes)
+            except BrokenPipeError:
+                pass
+
+            subprocess.run(["pbcopy"], input=obytes, check=True)
+
+            opath = pathlib.Path("~/.ssh/pbpaste.bin")
+            opath.write_bytes(obytes)
+
+        """
+
+        btext = textwrap.dedent(bdented).strip()
+        blines = btext.splitlines()
+        bgrafs = list(list(v) for k, v in itertools.groupby(blines, key=bool) if k)
+        assert len(bgrafs) == 3, (len(bgrafs), bgrafs)
+
+        # Pick 1 Py Graf
+
+        if not stdout_isatty:
+            bgraf = bgrafs[0]
+        elif pbcopy_else is not None:
+            bgraf = bgrafs[1]  # recklessly allows write Stdout/ Stderr
+        else:
+            bgraf = bgrafs[2]
+            pathlib_create_pbpaste_bin()  # creates before talking of rewriting
+
+        # Succeed
+
+        return bgraf
+
+        # chooses 1 of 3 Output Sinks
+
+    #
+    # Pick out the one Py Graf most closely matching the Sh Words
+    #
+
+    def cues_to_one_py_graf_if(self, cues) -> list[str]:
+        """Pick out the nearest one Py Graf, else zero Py Grafs"""
+
+        py_grafs = self.cues_to_py_grafs(cues=cues)
+        if not py_grafs:
+            py_grafs = self.emo_cues_to_py_grafs(cues=cues)
+
+        if not py_grafs:
+            return list()
+
+        if len(py_grafs) != 1:
+            print(
+                f"pq.py: {len(py_grafs)} Py Grafs found, not just 1, by {cues}",
+                file=sys.stderr,
+            )
+
+            for graf in py_grafs:
+                print(file=sys.stderr)
+                print(graf, file=sys.stderr)
+
+            sys.exit(2)  # exit 2 for wrong args at Too Many Py Graphs found
+
+        py_graf = py_grafs[-1]
+        assert py_graf, (cues, py_grafs)
+
+        return py_graf
+
+        # often exits nonzero
+
+    def cues_to_py_grafs(self, cues) -> list[list[str]]:
+        """Search up popular Py Grafs"""
+
+        cued_py_grafs = self.cued_py_grafs
+
+        less_by_more = self.grafs_to_less_by_more(cued_py_grafs)
+        py_grafs = self.dict_cues_to_py_grafs(less_by_more, cues=cues, few=True)
+
+        return py_grafs
+
+    def emo_cues_to_py_grafs(self, cues) -> list[list[str]]:
+        """Pick out UnicodeData Lookup Prints by Cues"""
+
+        emo_cues = "emojis emoji emo".split()
+        hits = list(_ for _ in cues if _ in emo_cues)
+        misses = list(_ for _ in cues if _ not in emo_cues)
+        if not hits:
+            return list()
+
+        less_by_more = fetch_less_by_more_emoji_py_texts()
+        dict_py_grafs = self.dict_cues_to_py_grafs(less_by_more, cues=misses, few=False)
+
+        py_graf = list(line for py_graf in dict_py_grafs for line in py_graf)
+        py_grafs = [py_graf]
+
+        return py_grafs
+
+    def dict_cues_to_py_grafs(self, less_by_more, cues, few) -> list[list[str]]:
+
+        py_grafs_by_keepends = self.cues_to_py_grafs_by_keepends(
+            cues, less_by_more=less_by_more, few=few
+        )
+
+        lesser_py_grafs = py_grafs_by_keepends[False]
+        greater_py_grafs = py_grafs_by_keepends[True]
+
+        # Forward the only Pile of Py Grafs, if only one Pile found
+        # Forward the smaller Pile of Py Grafs, if two Piles found
+
+        if lesser_py_grafs:
+            if not greater_py_grafs:
+                return lesser_py_grafs
+            if len(lesser_py_grafs) < len(greater_py_grafs):
+                return lesser_py_grafs
+
+        if greater_py_grafs:
+            if not lesser_py_grafs:
+                return greater_py_grafs
+            if len(greater_py_grafs) < len(lesser_py_grafs):
+                return greater_py_grafs
+
+        # Forward the Py Grafs found with arbitrarily editable Comments,
+        # when just as many Py Grafs found with and without searching Comments
+
+        o = (lesser_py_grafs, greater_py_grafs)
+        if lesser_py_grafs and greater_py_grafs:
+            assert len(lesser_py_grafs) == len(greater_py_grafs), o
+            return greater_py_grafs
+
+        # Otherwise say Py Grafs found
+
+        assert not lesser_py_grafs, lesser_py_grafs
+        assert not greater_py_grafs, greater_py_grafs
+
+        return list()  # No Py Grafs found
+
+    def grafs_to_less_by_more(self, grafs) -> dict[str, str]:
+        """Fetch the Curated Grafs, but as Without-Comments indexed by With-Comments"""
+
+        less_by_more = dict()
+
+        for graf in grafs:
+            more_text = "\n".join(graf)
+
+            alt_graf = list(graf)
+            alt_graf = list(_.partition("#")[0].rstrip() for _ in alt_graf)
+            alt_graf = list(_ for _ in alt_graf if _)
+
+            less_text = "\n".join(alt_graf)
+
+            less_by_more[more_text] = less_text
+
+        return less_by_more
+
+    def cues_to_py_grafs_by_keepends(  # ) -> dict[bool, list[list[str]]]:
+        self, cues, less_by_more, few
+    ) -> dict[bool, list[list[str]]]:
+        """Search up popular Py Grafs, by searching only in Code, or in Comments too"""
+
+        # Try matching without Comments, and only then try again with Comments
+
+        py_grafs_by_keepends = dict()
+        for keepends in (False, True):
+
+            # Score each Py Graf
+
+            score_by_more_text = dict()
+            for more_text, less_text in less_by_more.items():
+                text = more_text if keepends else less_text
+
+                graf = text.splitlines()
+                score = self.cues_graf_score(cues, graf)
+                if not few:
+                    score = min(1, score)
+
+                score_by_more_text[more_text] = score
+
+            scores = list(score_by_more_text.values())
+
+            # Pick out all the equally strong Matches
 
             py_grafs = list()
-            if near_py_grafs:
-                flat_py_graf = list(py for graf in near_py_grafs for py in graf)
-                flat_py_graf = ["olines = list()"] + flat_py_graf
-                py_grafs = [flat_py_graf]
 
-    if not py_grafs:
-        print(f"pq.py: No Py Grafs found by {keys}", file=sys.stderr)
+            most = max(scores)
+            if most:
 
-        sys.exit(2)  # exit 2 for wrong args at No Py Grafs found
+                for more_text in less_by_more.keys():
+                    graf = more_text.splitlines()
 
-    # Reject Multiple Matches
+                    score = score_by_more_text[more_text]
+                    if score == most:
+                        py_grafs.append(graf)
 
-    n = len(py_grafs)
-    if n != 1:
-        print(
-            f"pq.py: {n} Py Grafs found, not just 1, by {keys}",
-            file=sys.stderr,
-        )
+            py_grafs_by_keepends[keepends] = py_grafs
 
-        for graf in py_grafs:
-            print(file=sys.stderr)
-            print(graf, file=sys.stderr)
+        return py_grafs_by_keepends
 
-        sys.exit(2)  # exit 2 for wrong args at Too Many Py Graphs found
+    def cues_graf_score(self, cues, graf) -> int:
+        """Pick out which popular Py Grafs match the Keys most closely"""
 
-    # Trace the chosen Py Graf and exit, else fall through
+        # Count up the Matches, when searching with one kind of Fuzz or another
 
-    hit_py_graf = py_grafs[-1]
+        score_by_cue: dict[str, int]
+        score_by_cue = collections.defaultdict(int)
 
-    py_graf = py_graf_complete(py_graf=hit_py_graf)
-    py_text = "\n".join(py_graf)
+        d0 = self.cues_graf_score_by_str_split(cues, graf=graf)
+        d1 = self.cues_graf_score_by_py_split(cues, graf=graf)
+        d2 = self.cues_graf_score_by_str_in(cues, graf=graf)
 
-    py_trace_else(py_text)  # does Trace before trying Exec
+        for cue in cues:
+            score = d0[cue] + d1[cue] + d2[cue]
+            score_by_cue[cue] = score
 
-    # Run the chosen Py Graf
+        # Count up the Matches, when searching with one kind of Fuzz or another
 
-    alt_locals = dict(ibytes=ibytes)
+        for cue in cues:
+            cue_score = score_by_cue[cue]
+            if not cue_score:
+                return 0
 
-    exec(py_text, globals(), alt_locals)  # ibytes_take_words_else
-    obytes = alt_locals["obytes"]
+        score = sum(score_by_cue.values())
 
-    pass  # py_trace_else(py_text)  # doesn't Trace after trying Exec
+        # Succeed
 
-    # Succeed
+        return score
 
-    return obytes
+    def cues_graf_score_by_str_in(self, cues, graf) -> dict[str, int]:
+        """Count out how often each Cue found in an unsplit Graf Line"""
 
+        score_by_cue: dict[str, int]
+        score_by_cue = collections.defaultdict(int)
 
-def py_graf_complete(py_graf) -> list[str]:  # noqa C901 complex
-    """Auto-complete one Py Graf"""  # todo: more competently
+        for line in graf:  # found
+            casefold_line = line.casefold()
 
-    # py_graf = list()  # jitter Wed 19/Jun
+            for cue in cues:
+                casefold_cue = cue.casefold()
 
-    py_words_text = "\n".join(py_graf)
-    py_words = py_text_split(py_words_text)
+                score_by_cue[cue] += line.count(cue)
+                score_by_cue[cue] += casefold_line.count(casefold_cue)
 
-    # Guess how to set up
+        return score_by_cue
 
-    before_py_graf = list()
-    if ("itext" in py_words) or ("ilines" in py_words) or ("iline" in py_words):
-        before_py_graf.append(r"itext = ibytes.decode()")
+    def cues_graf_score_by_str_split(self, cues, graf) -> dict[str, int]:
+        """Count out how often each Cue found as a Str Split in a Graf Line"""
 
-    if ("ilines" in py_words) or ("iline" in py_words):
-        before_py_graf.append(r"ilines = itext.splitlines()")
+        score_by_cue: dict[str, int]
+        score_by_cue = collections.defaultdict(int)
 
-    # Guess if and how much to dent
+        for line in graf:  # found in Str Word
+            casefold_line = line.casefold()
 
-    middle_py_graf = list(py_graf)
-    if "iline" in py_words:
-        if "olines" not in py_words:
-            before_py_graf.append(r"olines = list()")
-            before_py_graf.append(r"for iline in ilines:")
+            words = line.split()
+            casefold_words = casefold_line.split()
 
-            dent = 4 * " "
-            middle_py_graf[::] = list((dent + _) for _ in middle_py_graf)
-            middle_py_graf.append(dent + r"olines.append(oline)")
+            for cue in cues:
+                casefold_cue = cue.casefold()
 
-    # Guess how to tear down
+                score_by_cue[cue] += words.count(cue)
+                score_by_cue[cue] += casefold_words.count(casefold_cue)
 
-    after_py_graf = list()
-    if ("iline" not in py_words) and ("oline" in py_words):
-        if "olines" not in py_words:
-            after_py_graf.append(r"olines = [oline]")
+                for word in words:  # starts Str Word
+                    casefold_word = word.casefold()
 
-    if ("olines" in py_words) or ("oline" in py_words):
-        if "otext" not in py_words:
-            after_py_graf.append(r'otext = "\n".join(olines) + "\n"')
+                    if word.startswith(cue):
+                        score_by_cue[cue] += 1
+                    if casefold_word.startswith(casefold_cue):
+                        score_by_cue[cue] += 1
 
-    if "obytes" not in py_words:
-        after_py_graf.append(r"obytes = otext.encode()")
+        return score_by_cue
 
-    # Frame the Seed in the Middle with blank Lines, if lotsa Set Up or Tear Down
+    def cues_graf_score_by_py_split(self, cues, graf) -> dict[str, int]:
+        """Count out how often each Cue found as a Py Split in a Graf Line"""
 
-    py_graf = before_py_graf + middle_py_graf + after_py_graf
-    if len(py_graf) > 3:
-        py_graf = before_py_graf + [""] + middle_py_graf + [""] + after_py_graf
-        py_graf = graf_strip(py_graf)
+        score_by_cue: dict[str, int]
+        score_by_cue = collections.defaultdict(int)
 
-    # Succeed
+        for line in graf:  # found in Py Words
+            py_words = py_split(py_text=line)
+            for cue in cues:
+                score_by_cue[cue] += py_words.count(cue)
 
-    return py_graf
+                for py_word in py_words:  # starts Py Word
+                    if py_word.startswith(cue):
+                        score_by_cue[cue] += 1
 
-    # todo: stop completing [""] as ['obytes = otext.encode()']
+        return score_by_cue
 
+        # no extra points for Py Word matched when casefolded
 
-def py_trace_else(py_text) -> None:
-    """Print the Py Lines, framed in two Blank Rows, just before running them"""
+    #
+    # Take whole Input File as Cues, and fall back to ending each Line
+    #
 
-    args = Main.args
+    def sponge_to_one_py_graf(self) -> list[str]:
+        """Take the whole Input File as Cues"""
 
-    if not args.py:
-        return
+        # Read the Bytes, as if some of the completed Py Graf already ran
 
-    sys.stderr.write("\n")
-    sys.stderr.write(py_text + "\n")
-    sys.stderr.write("\n")
+        read_py_graf = self.form_read_bytes_py_graf()
+        read_py_text = "\n".join(read_py_graf)
 
-    sys.exit(0)  # exit 0 after printing Py, as if after printing help
+        alt_locals = dict(ibytes=b"")
+        exec(read_py_text, globals(), alt_locals)
+        ibytes = alt_locals["ibytes"]
 
-    # often prints Py & exits zero
+        self.ibytes_else = ibytes
 
+        # End the Byte Lines and exit zero, if UTF-8 Decoding fails
 
-def graf_strip(graf) -> list[str]:
-    """Drop the leading Empty Lines and the trailing Empty Lines"""
-
-    alt_graf = list(graf)
-
-    while alt_graf[0] == "":
-        alt_graf.pop(0)
-    while alt_graf[-1] == "":
-        alt_graf.pop(-1)
-
-    return alt_graf
-
-
-#
-# Edit the Bytes
-#
-
-
-def ibytes_take_or_edit_else(ibytes) -> bytes:
-    """Guess what to do, else print some to Screen and edit it there"""
-
-    # Guess what to do
-
-    try:
-        obytes = ibytes_take_else(ibytes)
-        return obytes
-    except Exception:
-        pass
-
-    # Else print some to Screen and edit it there
-
-    with open("/dev/tty", "rb") as ttyin:
-        fd = ttyin.fileno()
-        size = os.get_terminal_size(fd)
-
-    assert size.columns >= 20  # vs Mac Sh Terminal Columns >= 20
-    assert size.lines >= 5  # vs Mac Sh Terminal Lines >= 5
-
-    # todo: print the input that fits, to screen - even to last column & row
-    # todo: shadow the print, then edit it
-    # todo: output the shadow, at quit
-
-    # End the last Line, and every Line, with U+000A Line-Feed
-
-    obytes = ibytes_ended_else(ibytes)
-
-    return obytes
-
-    # OSError: [Errno 19] Operation not supported by device
-    # OSError: [Errno 25] Inappropriate ioctl for device
-
-    # often prints Py & exits zero
-
-
-def ibytes_ended_else(ibytes) -> bytes:
-    """End the last Line, and every Line, with U+000A Line-Feed"""
-
-    itext = ibytes.decode()
-    ilines = itext.splitlines()
-
-    alt_locals = dict(ilines=ilines)
-
-    py_text = """
-        olines = ilines
-    """
-    py_text = textwrap.dedent(py_text).strip()
-
-    exec(py_text, globals(), alt_locals)  # ibytes_ended_else
-    olines = alt_locals["olines"]
-
-    otext = "\n".join(olines) + "\n"
-    obytes = otext.encode()
-
-    py_trace_else(py_text)
-
-    return obytes
-
-    # often prints Py & exits zero
-
-
-def ibytes_take_else(ibytes) -> bytes:
-    """Guess what Bytes Change we want, else raise an Exception"""
-
-    itext = ibytes.decode()
-    ilines = itext.splitlines()
-
-    assert len(ilines) == 1, (len(ilines),)
-    iline = ilines[-1]
-
-    oline = iline_take_else(iline)
-    olines = [oline]
-
-    otext = "\n".join(olines) + "\n"
-    obytes = otext.encode()
-
-    return obytes
-
-    # often prints Py & exits zero
-
-
-#
-# Pipe Bytes of 1 Line of Text through Python
-#
-
-
-def iline_take_else(iline) -> str:
-    """Guess what Line Change we want, else raise an Exception"""
-
-    funcs = [
-        iline_gdrive_to_share_else,
-        iline_codereviews_to_diff_else,
-        iline_jenkins_toggle_else,
-        iline_jira_toggle_else,
-        iline_address_toggle_else,
-    ]
-
-    for func in funcs:
         try:
-            oline = func(iline)
-            return oline
-        except Exception:
-            pass
+            itext = ibytes.decode()
+        except UnicodeDecodeError:
+            py_graf = ['obytes = b"\n".join(ibytes.splitlines()) + b"\n"']
+            return py_graf
 
-    assert False
+        self.itext_else = itext
 
-    # often prints Py & exits zero
+        # Take the whole Input File as Cues, if it matches one Python Graf
 
+        py_graf_if = self.itext_to_one_pygraf_if(itext)
+        if py_graf_if:
+            return py_graf_if
 
-def iline_gdrive_to_share_else(iline) -> str:
-    """Convert to Google Drive without Edit Path and without Query"""
+        # Else steal some time to run the Self-Tests more often
 
-    isplits = urllib.parse.urlsplit(iline)
-    assert isplits.scheme in ("https", "http"), (isplits.scheme,)
-    assert isplits.netloc.endswith(".google.com"), (isplits.netloc,)
+        self.assert_lots_ok()  # ~100 ms in Jun/2024
 
-    alt_locals = dict(iline=iline)
+        # Fall back to end the Text Lines and exit zero
 
-    py_text = """
-        isplits = urllib.parse.urlsplit(iline)
-        ipath = isplits.path
+        default_py_graf = [
+            r"""
+            olines = ilines  # end  # ended  # ends every line with "\n"
+        """.strip()
+        ]
 
-        opath = ipath
-        opath = opath.removesuffix("/edit")
-        opath = opath.removesuffix("/view")
+        return default_py_graf
 
-        osplits = urllib.parse.SplitResult(
-            scheme=isplits.scheme,
-            netloc=isplits.netloc,
-            path=opath,
-            query="",
-            fragment="",
-        )
-        oline = osplits.geturl()
-    """
-    py_text = textwrap.dedent(py_text).strip()
+        # falls back to ending each Text Line, else ending each Byte Line
 
-    exec(py_text, globals(), alt_locals)  # iline_gdrive_to_share_else
-    oline = alt_locals["oline"]
+    def itext_to_one_pygraf_if(self, itext) -> list[str]:
+        """Take the first Py Graf that doesn't choke over the Input File"""
 
-    py_trace_else(py_text)
+        ilines = itext.splitlines()
 
-    return oline
+        dent = 4 * " "
+        mgrafs = text_to_grafs(ITEXT_PY_GRAFS_TEXT)  # ordered, not sorted
 
-    # 'https://docs.google.com/document/d/$HASH'
-    # from 'https://docs.google.com/document/d/$HASH/edit?usp=sharing'
-    # or from 'https://docs.google.com/document/d/$HASH/edit#gid=0'
+        for mgraf in mgrafs:
+            raw_py_graf = ["for iline in ilines:"] + list((dent + _) for _ in mgraf)
+            py_graf = py_graf_insert_imports(py_graf=raw_py_graf)
+            py_text = "\n".join(py_graf)
 
-    # often prints Py & exits zero
+            alt_locals = dict(ilines=ilines)
+            try:
+                exec(py_text, globals(), alt_locals)
+            except Exception:
+                continue
 
+            return mgraf
 
-def iline_codereviews_to_diff_else(iline) -> str:
-    """Convert to Http CodeReviews Diff without Fragment"""
-
-    isplits = urllib.parse.urlsplit(iline)
-    assert isplits.scheme in ("https", "http"), (isplits.scheme,)
-    assert isplits.netloc.split(".")[0] == "codereviews", (isplits.netloc,)
-
-    m = re.match(r"^/r/([0-9]+)", string=isplits.path)
-    assert m, (isplits.path,)
-    ... == int(m.group(1))  # type: ignore
-
-    alt_locals = dict(iline=iline)
-
-    py_text = """
-        isplits = urllib.parse.urlsplit(iline)
-        m = re.match(r"^/r/([0-9]+)", string=isplits.path)  # discards end of path
-        r = int(m.group(1))
-        osplits = urllib.parse.SplitResult(
-            scheme="http",  # not "https"
-            netloc=isplits.netloc.split(".")[0],  # "codereviews"
-            path=f"/r/{r}/diff",
-            query="",
-            fragment="",
-        )
-        oline = osplits.geturl()
-    """
-    py_text = textwrap.dedent(py_text).strip()
-
-    exec(py_text, globals(), alt_locals)  # iline_codereviews_to_diff_else
-    oline = alt_locals["oline"]
-
-    py_trace_else(py_text)
-
-    return oline
-
-    # 'https://codereviews/r/186738/diff'
-    # from 'https://codereviews.example.co.uk/r/186738/diff/1/#index_header'
-
-    # often prints Py & exits zero
-
-
-def iline_jenkins_toggle_else(iline) -> str:
-    """Toggle between wide HttpS and thin Http Jenkins Web Addresses"""
-
-    try:
-        oline = iline_jenkins_thin_else(iline)
-        return oline
-    except Exception:
-        pass
-
-    try:
-        oline = iline_jenkins_widen_else(iline)
-        return oline
-    except Exception:
-        pass
-
-    assert False
-
-    # often prints Py & exits zero
-
-
-def iline_jenkins_thin_else(iline) -> str:
-    """Convert to Thin Http-Not-S Jenkins Web Address"""
-
-    isplits = urllib.parse.urlsplit(iline)
-
-    assert isplits.scheme == "https"
-    sub = isplits.netloc.split(".")[0]
-    assert sub.casefold().endswith("jenkins"), (isplits.netloc,)
-    assert "." in isplits.netloc, (isplits.netloc,)  # as if endswith f".{dn}"
-
-    alt_locals = dict(iline=iline)
-
-    py_text = """
-        isplits = urllib.parse.urlsplit(iline)
-        sub = isplits.netloc.split(".")[0]
-        osplits = urllib.parse.SplitResult(
-            scheme="http",
-            netloc=sub.casefold().replace("jenkins", "Jenkins"),
-            path=isplits.path,
-            query=isplits.query,
-            fragment=isplits.fragment,
-        )
-        oline = osplits.geturl()
-    """
-    py_text = textwrap.dedent(py_text).strip()
-
-    exec(py_text, globals(), alt_locals)  # iline_jenkins_thin_else
-    oline = alt_locals["oline"]
-
-    py_trace_else(py_text)
-
-    return oline
-
-    # often prints Py & exits zero
-
-
-def iline_jenkins_widen_else(iline) -> str:
-    """Convert to Wide HttpS Jenkins Web Address"""
-
-    isplits = urllib.parse.urlsplit(iline)
-
-    assert isplits.scheme == "http"
-    sub = isplits.netloc.split(".")[0]
-    assert sub.casefold().endswith("jenkins"), (isplits.netloc,)
-    assert "." not in isplits.netloc, (isplits.netloc,)  # as if not endswith f".{dn}"
-
-    ... == socket  # type: ignore
-    alt_locals = dict(iline=iline)
-
-    py_text = """
-        isplits = urllib.parse.urlsplit(iline)
-        fqdn = socket.getfqdn()
-        dn = fqdn.partition(".")[-1]  # Domain Name of HostName
-        dn = dn or "example.com"
-        osplits = urllib.parse.SplitResult(
-            scheme="https",
-            netloc=f"{isplits.netloc}.dev.{dn}".casefold(),
-            path=isplits.path.removesuffix("/"),
-            query=isplits.query,
-            fragment=isplits.fragment,
-        )
-        oline = osplits.geturl()
-    """
-    py_text = textwrap.dedent(py_text).strip()
-
-    exec(py_text, globals(), alt_locals)  # iline_jenkins_widen_else
-    oline = alt_locals["oline"]
-
-    py_trace_else(py_text)
-
-    return oline
-
-    # often prints Py & exits zero
-
-
-def iline_jira_toggle_else(iline) -> str:
-    """Toggle between thin Jira Path and wide Jira Web Address"""
-
-    try:
-        oline = iline_jira_thin_else(iline)
-        return oline
-    except Exception:
-        pass
-
-    try:
-        oline = iline_jira_widen_else(iline)
-        return oline
-    except Exception:
-        pass
-
-    assert False
-
-    # often prints Py & exits zero
-
-
-def iline_jira_thin_else(iline) -> str:
-    """Convert to Thin Http-Not-S jira Web Address"""
-
-    isplits = urllib.parse.urlsplit(iline)
-
-    assert isplits.scheme == "https"
-    assert isplits.netloc.split(".")[0] == "jira", (isplits.netloc,)
-    assert "." in isplits.netloc, (isplits.netloc,)  # as if endswith f".{dn}"
-
-    alt_locals = dict(iline=iline)
-
-    py_text = """
-        isplits = urllib.parse.urlsplit(iline)
-        oline = isplits.path.removeprefix("/browse/")  # 'PROJ-12345'
-    """
-    py_text = textwrap.dedent(py_text).strip()
-
-    exec(py_text, globals(), alt_locals)  # iline_jira_thin_else
-    oline = alt_locals["oline"]
-
-    py_trace_else(py_text)
-
-    return oline
-
-    # often prints Py & exits zero
-
-
-def iline_jira_widen_else(iline) -> str:
-    """Convert to Wide HttpS Jenkins Web Address"""
-
-    assert re.match(r"[A-Z]+[-][0-9]+", iline)
-
-    ... == socket  # type: ignore
-    alt_locals = dict(iline=iline)
-
-    py_text = """
-        isplits = urllib.parse.urlsplit(iline)
-        fqdn = socket.getfqdn()
-        dn = fqdn.partition(".")[-1]  # Domain Name of HostName
-        dn = dn or "example.com"
-        osplits = urllib.parse.SplitResult(
-            scheme="https",
-            netloc=f"jira.{dn}",
-            path=f"/browse/{iline}",
-            query="",
-            fragment="",
-        )
-        oline = osplits.geturl()
-    """
-    py_text = textwrap.dedent(py_text).strip()
-
-    exec(py_text, globals(), alt_locals)  # iline_jira_widen_else
-    oline = alt_locals["oline"]
-
-    py_trace_else(py_text)
-
-    return oline
-
-    # often prints Py & exits zero
-
-
-def iline_address_toggle_else(iline) -> str:
-    """Chill a Web Address else warm a Web Address else raise an Exception"""
-
-    try:
-        oline = iline_address_chill_else(iline)
-        return oline
-    except Exception:
-        pass
-
-    try:
-        oline = iline_address_warm_else(iline)
-        return oline
-    except Exception:
-        pass
-
-    assert False
-
-    # often prints Py & exits zero
-
-
-def iline_address_chill_else(iline) -> str:
-    """Convert like to cold 'https :// twitter . com /pelavarre/status/123456789'"""
-
-    assert " " not in iline, (iline,)
-
-    isplits = urllib.parse.urlsplit(iline)
-    assert isplits.scheme in ("https", "http"), (isplits.scheme,)
-    isplits = iline.split("/")
-    osplits = list(isplits)
-    osplits[0] = osplits[0].replace(":", " :")  # https ://
-
-    alt_locals = dict(iline=iline)
-
-    py_text = """
-        isplits = iline.split("/")
-        osplits = list(isplits)
-        osplits[0] = osplits[0].replace(":", " :")  # https ://
-        osplits[2] = " " + osplits[2].replace(".", " . ") + " "  # :// sub . domain
-        oline = "/".join(osplits).strip()
-    """
-    py_text = textwrap.dedent(py_text).strip()
-
-    exec(py_text, globals(), alt_locals)  # iline_address_chill_else
-    oline = alt_locals["oline"]
-
-    py_trace_else(py_text)
-
-    return oline
-
-    # 'https :// twitter . com /pelavarre/status/1647691634329686016'
-    # from 'https://twitter.com/pelavarre/status/1647691634329686016'
-
-    # often prints Py & exits zero
-
-
-def iline_address_warm_else(iline) -> str:
-    """Convert like from cold 'https :// twitter . com /pelavarre/status/123456789'"""
-
-    iwords = iline.split()
-    iwords_0 = iwords[0]
-    assert iwords_0 in ("https", "http"), (iwords_0,)
-
-    alt_locals = dict(iwords=iwords)
-
-    py_text = """
-        oline = "".join(iwords)
-    """
-    py_text = textwrap.dedent(py_text).strip()
-
-    exec(py_text, globals(), alt_locals)  # iline_address_warm_else
-    oline = alt_locals["oline"]
-
-    py_trace_else(py_text)
-
-    return oline
-
-    # 'https://twitter.com/pelavarre/status/1647691634329686016'
-    # from 'https :// twitter . com /pelavarre/status/1647691634329686016'
-
-    # often prints Py & exits zero
-
-
-#
-# Search popular Py Grafs
-#
-
-
-def keys_to_py_grafs(less_by_more, keys, i) -> list[list[str]]:
-    """Search up our popular Py Grafs"""
-
-    if False:  # jitter Fri 14/Jun
-        if keys == "text len".split():
-            breakpoint()
-
-    py_grafs_by_keepends = keys_to_grafs_by_keepends(less_by_more, keys=keys, i=i)
-
-    lesser_py_grafs = py_grafs_by_keepends[False]
-    greater_py_grafs = py_grafs_by_keepends[True]
-
-    # Forward the only Pile of Matches, if only one Pile found
-    # Forward the smaller Pile of Matches, if two Piles found
-
-    if lesser_py_grafs:
-        if not greater_py_grafs:
-            return lesser_py_grafs
-        if len(lesser_py_grafs) < len(greater_py_grafs):
-            return lesser_py_grafs
-
-    if greater_py_grafs:
-        if not lesser_py_grafs:
-            return greater_py_grafs
-        if len(greater_py_grafs) < len(lesser_py_grafs):
-            return greater_py_grafs
-
-    # Forward the Matches found with arbitrarily editable Comments,
-    # when just as many Matches found with and without searching Comments
-
-    o = (lesser_py_grafs, greater_py_grafs)
-    if lesser_py_grafs and greater_py_grafs:
-        assert len(lesser_py_grafs) == len(greater_py_grafs), o
-        return greater_py_grafs
-
-    # Otherwise say No Matches Found
-
-    assert not lesser_py_grafs, lesser_py_grafs
-    assert not greater_py_grafs, greater_py_grafs
-
-    return list()
-
-
-def keys_to_grafs_by_keepends(less_by_more, keys, i) -> dict[bool, list[list[str]]]:
-    """Search up our popular Py Grafs, by searching only in Code, or in Comments too"""
-
-    # Try matching without Comments, and only then try again with Comments
-
-    py_grafs_by_keepends = dict()
-    for keepends in (False, True):
-
-        # Score each Py Graf
-
-        score_by_more_text = dict()
-        for more_text, less_text in less_by_more.items():
-            text = more_text if keepends else less_text
-
-            graf = text.splitlines()
-            score = keys_graf_score(keys, graf)
-            if i:
-                score = min(1, score)
-
-            score_by_more_text[more_text] = score
-
-        scores = list(score_by_more_text.values())
-
-        # Pick out all the equally strong Matches
-
-        py_grafs = list()
-
-        most = max(scores)
-        if most:
-
-            for more_text in less_by_more.keys():
-                graf = more_text.splitlines()
-
-                score = score_by_more_text[more_text]
-                if score == most:
-                    py_grafs.append(graf)
-
-        py_grafs_by_keepends[keepends] = py_grafs
-
-    return py_grafs_by_keepends
-
-
-def keys_graf_score(keys, graf) -> int:  # noqa C901 complex
-    """Pick out which popular Py Grafs match the Keys most closely"""
-
-    # Count up the Matches, when searching with one kind of Fuzz or another
-
-    score_by_key: dict
-    score_by_key = collections.defaultdict(int)
-
-    for line in graf:  # found
-        for key in keys:
-            score_by_key[key] += line.count(key)
-
-    for line in graf:  # found in Str Word
-        words = line.split()
-        for key in keys:
-            score_by_key[key] += words.count(key)
-
-            for word in words:  # starts Str Word
-                if word.startswith(key):
-                    score_by_key[key] += 1
-
-    for line in graf:  # found in Py Words
-        words = py_text_split(py_text=line)
-        for key in keys:
-            score_by_key[key] += words.count(key)
-
-            for word in words:  # starts Py Word
-                if word.startswith(key):
-                    score_by_key[key] += 1
-
-    # Count up the Matches, when searching with one kind of Fuzz or another
-
-    for key in keys:
-        key_score = score_by_key[key]
-        if not key_score:
-            return 0
-
-    score = sum(score_by_key.values())
-
-    # Succeed
-
-    if False:  # jitter Sat 8/Jun
-        graf_text = "\n".join(graf)
-        if "wc -m" in graf_text:
-            breakpoint()
-            pass
-
-    return score
-
-
-def py_text_split(py_text) -> list[str]:
-    """Split a Line into Words to search up"""
-
-    words = list(
-        _.group(0)
-        for _ in re.finditer(r"[a-zA-Z][a-zA-Z0-9_]*|[-.+0-9Ee]|.", string=py_text)
-    )
-
-    return words
-
-    # todo: split more by the Py Rules, or even totally exactly like Py Rules
-    # except don't drop Comments
+        return list()  # empty Py Graf
 
 
 #
 # Index some Alt Phrase Books
 #
 
+
+RPN_SCRAPS = '''  # todo: migrate/ delete
 
 def rpn_words_to_one_py_graf(words) -> list[str]:
     """Translate to 1 Py Graf from Reverse Polish Notation (RPN)"""
@@ -1104,41 +1156,29 @@ def try_rpn_words_to_py_phrases(words) -> list:
 
     return py_phrases
 
+'''  # type ignore
 
-def fetch_less_by_more_awkish_py_texts() -> dict[str, str]:
-    """Fetch the Bookmarked Grafs, but as Without-Comments indexed by With-Comments"""
 
-    # Fetch the multi-line Py Graf, and add in the single-line Py Grafs
+VIM_SCRAPS = """  # todo: migrate/ delete
 
-    mtext = textwrap.dedent(PY_GRAFS_TEXT)
-    mlines = mtext.splitlines()
-    mlines = list(mlines)
-    mgrafs = list(list(v) for k, v in itertools.groupby(mlines, key=bool) if k)
+    # Else print some to Screen and edit it there
 
-    stext = textwrap.dedent(PY_LINES_TEXT)
-    slines = stext.splitlines()
-    slines = list(_ for _ in slines if _)
-    sgrafs = list([_] for _ in slines)
+    with open("/dev/tty", "rb") as ttyin:
+        fd = ttyin.fileno()
+        size = os.get_terminal_size(fd)
 
-    grafs = mgrafs + sgrafs
+    assert size.columns >= 20  # vs Mac Sh Terminal Columns >= 20
+    assert size.lines >= 5  # vs Mac Sh Terminal Lines >= 5
 
-    # Index the Full Graf by the Graf without Comments
+    # todo: print the input that fits, to screen - even to last column & row
+    # todo: shadow the print, then edit it
+    # todo: output the shadow, at quit
 
-    less_by_more = dict()
-    for graf in grafs:
-        more_text = "\n".join(graf)
 
-        alt_graf = list(graf)
-        alt_graf = list(_.partition("#")[0].rstrip() for _ in alt_graf)
-        alt_graf = list(_ for _ in alt_graf if _)
+    # OSError: [Errno 19] Operation not supported by device
+    # OSError: [Errno 25] Inappropriate ioctl for device
 
-        less_text = "\n".join(alt_graf)
-
-        less_by_more[more_text] = less_text
-
-    # Succeed
-
-    return less_by_more
+"""  # type ignore
 
 
 #
@@ -1317,99 +1357,276 @@ def black_repr(obj) -> str:
     return s
 
 
+def py_graf_to_pulls_pushes(py_graf) -> tuple[list[str], list[str]]:
+    """Pick out Py Names bound, bound and mentioned, or only mentioned"""
+
+    # Split each Py Line by ';' up to '#'
+
+    alt_py_graf: list[str]
+    alt_py_graf = list()  # split by ';' surfaces '; {setter} = ...'
+
+    for py_line in py_graf:
+        (py_left, _, _) = py_line.partition("#")
+        py_left_lines = py_left.split(";")
+        alt_py_graf.extend(_.strip() for _ in py_left_lines)
+
+    # Visit each Py Line
+
+    py_getters = list()
+    py_setters = list()
+
+    for py_line in alt_py_graf:
+
+        # Work only with Source Chars obviously not in a Py Comment
+
+        py_left = py_line.partition("#")[0]
+        py_left_words = py_split(py_left)
+
+        # Pick off each obvious Assignment to a Py Name
+
+        py_words = list()
+        for py_word in py_left_words:
+            if re.match(r"^([A-Za-z_][A-Za-z0-9_]*)$", string=py_word):
+                py_words.append(py_word)
+
+        m1 = re.match(r"^ *for *([A-Za-z_][A-Za-z0-9_]*) in *.*$", string=py_line)
+        m2 = re.match(r"^ *([A-Za-z_][A-Za-z0-9_]*) *= *.*$", string=py_line)
+        m = m1 or m2  # todo: more test of dented pulls
+
+        if m:
+            py_setter = m.group(1)
+            py_setters.append(py_setter)
+
+            if m1:
+                assert py_words[0] == "for", (py_words,)
+                py_words.pop(0)
+
+            assert py_words[0] == py_setter, (py_words,)
+            py_words.pop(0)
+
+        # Pick up each mention of a Py Name obviously not in a Py Comment
+
+        py_getters.extend(py_words)
+
+    ipulls = sorted(set(py_getters) - set(py_setters))
+    opushes = sorted(set(py_setters) - set(py_getters))
+
+    return (ipulls, opushes)
+
+
+def py_split(py_text) -> list[str]:
+    """Split a Py Text into Py Words to search up"""
+
+    py_words = list(
+        _.group(0)
+        for _ in re.finditer(r"[a-zA-Z][a-zA-Z0-9_]*|[-.+0-9Ee]|.", string=py_text)
+    )
+
+    return py_words
+
+    # todo: split more by the Py Rules, or even totally exactly like Py Rules
+    # except don't drop Comments
+
+
+def py_graf_insert_imports(py_graf) -> list[str]:
+    """Insert a paragraph of Py Imports up front"""
+
+    sys_modules_etc = list(sys.modules.keys())
+    sys_modules_etc.append("dt")
+    sys_modules_etc.append("json")
+    sys_modules_etc.append("socket")
+    sys_modules_etc.append("string")
+    sys_modules_etc.append("subprocess")
+    sys_modules_etc.append("urllib.parse")
+
+    div = list([""])
+
+    py_text = "\n".join(py_graf)
+    full_py_words = py_split(py_text)
+    py_modules = list(_ for _ in full_py_words if _ in sys_modules_etc)
+
+    import_graf = sorted(set(f"import {module}" for module in py_modules))
+    for i, p in enumerate(import_graf):
+        if p == "import dt":
+            import_graf[i] = "import datetime as dt"
+        elif p == "import urllib":
+            import_graf[i] = "import urllib.parse"
+
+    py_modules.sort()
+
+    fuller_py_graf = list(py_graf)
+    if py_modules:
+        fuller_py_graf = import_graf + div + py_graf
+
+    return fuller_py_graf
+
+
 #
-# Amp up Import Io
+# Amp up Import BuiltIns
 #
 
 
-@dataclasses.dataclass
-class ShPipeSponge:
-    """Read/ write the Sh Pipes, else the Os Clipboard Buffer, else our File"""
+def list_assert_eq(a, b, occasion=None) -> None:
+    """Assert A and B are equal when taken as List[Str]"""
 
-    stdin_isatty: bool
-    stdout_isatty: bool
+    o = occasion
 
-    def __init__(self) -> None:
-        self.stdin_isatty = sys.stdin.isatty()
-        self.stdout_isatty = sys.stdout.isatty()
+    list_a = list(a)  # narrow to List, not Tuple/ Iterator/ Dict Keys/ Dict Values/ etc
+    list_b = list(b)
 
-    def read_bytes(self) -> bytes:
-        """Pick an Input Source and read it"""
+    strs_a = list(str(_) for _ in list_a)  # default to Str, not Repr,
+    strs_b = list(str(_) for _ in list_b)  # although caller may send us Repr
 
-        stdin_isatty = self.stdin_isatty
+    diffs = list(
+        difflib.unified_diff(a=strs_a, b=strs_b, fromfile="a", tofile="b", lineterm="")
+    )
 
-        # Read the Sh Pipe In and done, if present
+    a_set = set(strs_a)
+    b_set = set(strs_b)
+    ao = sorted(a_set - b_set)
+    bo = sorted(b_set - a_set)
 
-        if not stdin_isatty:
-            ipath = pathlib.Path("/dev/stdin")
-            ibytes = ipath.read_bytes()
+    if list_a == list_b:
+        return
 
-            return ibytes
+    print("\n".join(diffs))
+    assert diffs, (strs_a, strs_b, list_a, list_b)
 
-        # Read the Os Copy-Paste Clipboard Buffer, if present
+    if len(repr(strs_a) + repr(strs_b)) > 500:
+        if o is not None:
+            assert not diffs, (o, len(a), len(b), len(ao), len(bo), ao, bo)
+        assert not diffs, (len(a), len(b), len(ao), len(bo), ao, bo)
 
-        pbpaste_else = shutil.which("pbpaste")
-        if pbpaste_else is not None:  # allows rare read Stdin
-            argv = [pbpaste_else]
+    if o is not None:
+        assert not diffs, (o, len(a), len(b), len(ao), len(bo), ao, bo, list_a, list_b)
+    assert not diffs, (len(a), len(b), len(ao), len(bo), ao, bo, list_a, list_b)
 
-            run = subprocess.run(argv, stdout=subprocess.PIPE, check=True)
-            ibytes = run.stdout
+    # todo: prints and raises too much of large Diffs
 
-            return ibytes
 
-        # Read our Copy-Paste Clipboard Buffer File
+#
+# Amp up Import PathLib
+#
 
-        dirpath = pathlib.Path.home() / ".ssh"
-        filepath = dirpath.joinpath("pbpaste.bin")
 
-        if not dirpath.is_dir():  # chmod u=rwx,go= ~/.ssh
-            dirpath.mkdir(stat.S_IRWXU, exist_ok=True)
-        if not filepath.exists():  # chmod u=rw,go= ~/.ssh/pbpaste.bin
-            filepath.touch(mode=(stat.S_IRUSR | stat.S_IWUSR), exist_ok=True)
+def pathlib_create_pbpaste_bin() -> None:
+    """Write an empty Copy-Paste Clipboard Buffer File in our usual place"""
 
-        ibytes = filepath.read_bytes()
+    dirpath = pathlib.Path.home() / ".ssh"
+    filepath = dirpath.joinpath("pbpaste.bin")
 
-        return ibytes
+    if not dirpath.is_dir():  # chmod u=rwx,go= ~/.ssh
+        dirpath.mkdir(stat.S_IRWXU, exist_ok=True)
 
-    def write_bytes(self, data: bytes) -> None:
-        """Pick an Output Sink and write it"""
+    if not filepath.exists():  # chmod u=rw,go= ~/.ssh/pbpaste.bin
+        filepath.touch(mode=(stat.S_IRUSR | stat.S_IWUSR), exist_ok=True)
 
-        stdout_isatty = self.stdout_isatty
 
-        # Write the Sh Pipe Out and done, if present
+#
+# Amp up Import TextWrap
+#
 
-        if not stdout_isatty:
-            opath = pathlib.Path("/dev/stdout")
-            try:  # allows buffers to delay flush
-                opath.write_bytes(data)
-            except BrokenPipeError as exc:  # todo: how much output written?
-                line = f"BrokenPipeError: {exc}"
-                sys.stderr.write(f"{line}\n")  # yep, do mention BrokenPipeError
-                # sys.exit(1)  # nope, don't re-raise BrokenPipeError as Nonzero Exit
 
-            return
+def text_to_grafs(text) -> list[list[str]]:
+    """Form a List of Paragraphs, each encoded as a List of Lines"""
 
-        # Write the Os Copy-Paste Clipboard Buffer, if present
+    dedent = textwrap.dedent(text)
+    splitlines = dedent.splitlines()
+    grafs = list(list(v) for k, v in itertools.groupby(splitlines, key=bool) if k)
 
-        pbcopy_else = shutil.which("pbcopy")
-        if pbcopy_else is not None:  # allows rare write Std/out/err
-            argv = [pbcopy_else]
+    list_assert_eq(grafs, b=list(graf_deframe(_) for _ in grafs))  # rstripped etc
 
-            subprocess.run(argv, input=data, check=True)
+    return grafs
 
-            return
 
-        # Write our Copy-Paste Clipboard Buffer File
+#
+# Amp up Import UnicodeData
+#
 
-        dirpath = pathlib.Path.home() / ".ssh"
-        filepath = dirpath.joinpath("pbpaste.bin")
 
-        if not dirpath.is_dir():  # chmod u=rwx,go= ~/.ssh
-            dirpath.mkdir(stat.S_IRWXU, exist_ok=True)
-        if not filepath.exists():  # chmod u=rw,go= ~/.ssh/pbpaste.bin
-            filepath.touch(mode=(stat.S_IRUSR | stat.S_IWUSR), exist_ok=True)
+def unicodedata_name_anyhow(char) -> str:
+    """Supply the Unicode Names that UnicodeData mystically omits"""
 
-        filepath.write_bytes(data)
+    assert unicodedata.name("\xA0").title() == "No-Break Space"
+    assert unicodedata.name("\xAD").title() == "Soft Hyphen"
+
+    try:
+        name = unicodedata.name(char)
+    except ValueError as exc:
+        assert str(exc) == "no such name"
+
+    name = UNICODEDATA_NAME_ANYHOW_BY_CHAR[char]
+
+    return name
+
+
+UNICODEDATA_NAME_ANYHOW_BY_CHAR = {
+    "\x00": "Null (NUL)",
+    "\x01": "Start Of Heading (SOH)",
+    "\x02": "Start Of Text (STX)",
+    "\x03": "End Of Text (ETX)",
+    "\x04": "End of Transmission (EOT)",
+    "\x05": "Enquiry (ENQ)",
+    "\x06": "Acknowledge (ACK)",
+    "\x07": "Bell (BEL)",
+    "\x08": "Backspace (BS)",
+    "\x09": "Character Tabulation (HT)",  # Horizontal Tabulation
+    "\x0A": "Line Feed (LF)",
+    "\x0B": "Line Tabulation (VT)",  # Vertical Tabulation
+    "\x0C": "Form Feed (FF)",
+    "\x0D": "Carriage Return (CR)",
+    "\x0E": "Shift Out (SO)",
+    "\x0F": "Shift In (SI)",
+    "\x10": "Data Link Escape (DLE)",
+    "\x11": "Device Control One (DC1)",
+    "\x12": "Device Control Two (DC2)",
+    "\x13": "Device Control Three (DC3)",
+    "\x14": "Device Control Four (DC4)",
+    "\x15": "Negative Acknowledge (NAK)",
+    "\x16": "Synchronous Idle (SYN)",
+    "\x17": "End Of Transmission Block (ETB)",
+    "\x18": "Cancel (CAN)",
+    "\x19": "End Of Medium (EM)",
+    "\x1A": "Substitute (SUB)",
+    "\x1B": "Escape (ESC)",
+    "\x1C": "Information Separator Four (FS)",  # File Separator
+    "\x1D": "Information Separator Three (GS)",  # Group Separator
+    "\x1E": "Information Separator Two (RS)",  # Record Separator
+    "\x1F": "Information Separator One (US)",  # Unit Separator
+    "\x7F": "Delete (DEL)",
+    "\x80": "",
+    "\x81": "",
+    "\x82": "",
+    "\x83": "",
+    "\x84": "",
+    "\x85": "",
+    "\x86": "",
+    "\x87": "",
+    "\x88": "",
+    "\x89": "",
+    "\x8A": "",
+    "\x8B": "",
+    "\x8C": "",
+    "\x8D": "",
+    "\x8E": "",
+    "\x8F": "",
+    "\x90": "",
+    "\x91": "",
+    "\x92": "",
+    "\x93": "",
+    "\x94": "",
+    "\x95": "",
+    "\x96": "",
+    "\x97": "",
+    "\x98": "",
+    "\x99": "",
+    "\x9A": "",
+    "\x9B": "",
+    "\x9C": "",
+    "\x9D": "",
+    "\x9E": "",
+    "\x9F": "",
+}
 
 
 #
@@ -1424,24 +1641,305 @@ def fetch_less_by_more_emoji_py_texts() -> dict[str, str]:
     for i in range(0x110000):
         char = chr(i)
 
-        try:
-            name = unicodedata.name(char)
-        except ValueError as exc:
-            assert str(exc) == "no such name"
-            continue
+        if (0x00 <= i <= 0x1F) or (0x7F <= i < 0xA0):
+            name = unicodedata_name_anyhow(char)
+        else:
+            try:
+                name = unicodedata.name(char)  # names found for \xA0 \xAD etc
+            except ValueError as exc:  # at \x0A unicodedata.lookup("Line Feed") etc
+                assert str(exc) == "no such name"
+                continue
 
         lit = black_repr(name.title())
         if i < 0x10000:
-            text = f"# U+{i:04X}  # {char}  # unicodedata.lookup({lit})"
+            assert len(f"{i:04X}") <= 4, (i,)
+            more_text = f"print('''assert unicodedata.lookup({lit}) == 0x{i:04X}  # {char} '''.rstrip())"
         else:
-            text = f"# U+{i:06X}  # {char}  # unicodedata.lookup({lit})"
+            more_text = f"print('''assert unicodedata.lookup({lit}) == 0x{i:06X}  # {char} '''.rstrip())"
 
-        less_text = "olines.append(" + repr(text) + ")"
-        more_text = less_text
+        less_text = more_text.partition("#")[0].rstrip()
 
         less_by_more[more_text] = less_text
 
     return less_by_more
+
+
+#
+# List Grafs of Awkish Py Code to Abbreviate Intensely
+#
+
+
+def graf_deframe(graf) -> list[str]:
+    """Drop the top, left, right, and bottom margins"""
+
+    text = "\n".join(graf)
+    text = textwrap.dedent(text)
+    text = text.strip()
+
+    lines = list(_.rstrip() for _ in text.splitlines())
+
+    return lines
+
+
+#
+# List Grafs of Awkish Py Code to Abbreviate Intensely
+#
+
+
+CUED_PY_LINES_TEXT = r"""
+
+
+    iolines.reverse()  # reverse  # reversed  # |tac  # |tail -r  # tail r
+
+    iolines.sort()  # sort  # sorted sorted  # s s s s s s s
+
+
+    obytes = ibytes  # sponged  # sponge
+
+
+    oline = (4 * " ") + iline  # dent  # dented  # textwrap.dented
+
+    oline = ascii(iline)  # ascii  # |cat -etv  # cat etv  # shows $'\xA0' Nbsp
+
+    oline = iline.lstrip()  # lstrip  # lstripped  # |sed 's,^ *,,'
+
+    oline = iline.removeprefix(4 * " ")  # undent  # undented  # textwrap.undent
+
+    oline = iline.rstrip()  # rstrip  # rstripped  # |sed 's, *$,,'
+
+    oline = iline.strip()  # strip  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
+
+    oline = re.sub(r" {8}", repl="\t", string=iline)  # unexpanded  # |unexpand
+
+    oline = repr(iline)  # repr  # undo 'ast.literal_eval'
+
+    oline = repr(iline)[1:0-1]  # |cat -tv  # cat tv  # '"' comes out as \'"\'
+
+    oline = str(ast.literal_eval(iline))  # eval  # undo 'ascii' or 'repr'
+
+
+    olines = ilines  # end  # ended  # ends every line with "\n"
+
+
+    oobject = len(ibytes)  # bytes len  # |wc -c  # wc c  # wcc
+
+    oobject = len(itext)  # text characters chars len  # |wc -m  # wc m  # wcm
+
+    oobject = len(itext.split())  # words len  # |wc -w  # wc w  # wcw
+
+    oobject = len(itext.splitlines())  # lines len  # |wc -l  # wc l  # wcl
+
+    oobject = math.e  # e e e e e e e
+
+    oobject = math.pi
+
+    oobject = math.tau
+
+
+    otext = "".join(dict((_, _) for _ in itext).keys())  # text set  # text set
+
+    otext = "".join(sorted(set(itext)))  # sorted text set
+
+    otext = itext.casefold()  # casefold  # casefolded  # folded
+
+    otext = itext.expandtabs(tabsize=8)  # |expand  # expand expand
+
+    otext = itext.lower()  # lower  # lowered  # lowercased  # |tr '[A-Z]' '[a-z]'
+
+    otext = itext.title()  # title  # titled
+
+    otext = itext.upper()  # upper  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
+
+    otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
+
+    otext = string.capwords(itext)  # capwords
+
+    otext = textwrap.dedent(itext) + "\n"  # dedent  # dedented  # textwrap.dedent
+
+
+    random.shuffle(iolines) # shuffle  # shuffled
+
+
+"""
+
+
+CUED_PY_GRAFS_TEXT = r"""
+
+    # awk  # |awk '{print $NF}'  # a a a
+    iwords = iline.split()
+    oline = iwords[-1] if iwords else ""
+
+    # cat n expand  # |cat -n |expand  # enum 1
+    olines = list(f"{n:6d}  {i}" for (n, i) in enumerate(ilines, start=1))
+
+    # closed # close  # ends last line with "\n"
+    otext = itext if itext.endswith("\n") else (itext + "\n")
+
+    # collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen
+    olines = list(dict((_, _) for _ in ilines).keys())  # unsort  # unsorted  # dedupe
+
+    # deframe  # deframed
+    dedent = textwrap.dedent(itext) + "\n"  # no left margin
+    dlines = dedent.splitlines()
+    olines = list(_.rstrip() for _ in dlines)  # no right margin
+    otext = "\n".join(olines).strip() + "\n"  # no top/bottom margins
+
+    # frame  # framed
+    olines = list()
+    olines.extend(2 * [""])  # top margin
+    for iline in ilines:
+        oline = (4 * " ") + iline  # left margin
+        olines.append(oline)
+    olines.extend(2 * [""])  # bottom margin
+    otext = "\n".join(olines) + "\n"
+
+    # join  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
+    otext = " ".join(ilines) + "\n"
+
+    # md5sum
+    md5 = hashlib.md5()
+    md5.update(ibytes)
+    otext = md5.hexdigest() + "\n"
+
+    # nl v0  # |nl -v0 |expand  # enum 0  # enum  # enumerate
+    olines = list(f"{n:6d}  {i}" for (n, i) in enumerate(ilines))
+
+    # sha256
+    sha256 = hashlib.sha256()
+    sha256.update(ibytes)
+    otext = sha256.hexdigest() + "\n"
+
+    # split split split  # |sed 's,  *,$,g' |tr '$' '\n'
+    # |xargs -n 1  # xargs n 1  # xn1
+    olines = itext.split()
+
+    # ts  # |ts
+    while True:
+        readline = stdin.readline()
+        if not readline:
+            break
+        iline = readline.splitlines()[0]
+        ts = dt.datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %z")
+        print(f"{ts}  {iline}", file=stdout)
+        stdout.flush()
+
+"""
+
+
+# The Whole Input File chooses which Python Graf:  the 1st that raises no Exception
+
+ITEXT_PY_GRAFS_TEXT = """
+
+    # crthin
+    assert re.match(r"http.*codereviews[./]", string=iline)
+    isplits = urllib.parse.urlsplit(iline)
+    m = re.match(r"^/r/([0-9]+)", string=isplits.path)  # discards end of path
+    r = int(m.group(1))
+    osplits = urllib.parse.SplitResult(
+        scheme="http",  # not "https"
+        netloc=isplits.netloc.split(".")[0],  # "codereviews"
+        path=f"/r/{r}/diff",
+        query="",
+        fragment="",
+    )
+    oline = osplits.geturl()
+
+    # glink
+    assert re.match(r"http.*[.]google.com/", string=iline)
+    isplits = urllib.parse.urlsplit(iline)
+    #
+    opath = isplits.path
+    opath = opath.removesuffix("/edit")
+    opath = opath.removesuffix("/view")
+    #
+    osplits = urllib.parse.SplitResult(
+        scheme=isplits.scheme,
+        netloc=isplits.netloc,
+        path=opath,
+        query="",
+        fragment="",
+    )
+    #
+    oline = osplits.geturl()
+
+    # jkthin
+    assert re.match(r"^http.*jenkins[0-9]*[.]", string=iline)
+    #
+    iosplits = urllib.parse.urlsplit(iline)
+    iosplits = iosplits._replace(scheme="http")
+    iosplits = iosplits._replace(path=iosplits.path.rstrip("/") + "/")
+    #
+    netloc = iosplits.netloc.split(".")[0]
+    netloc = string.capwords(netloc).replace("jenkins", "Jenkins")
+    iosplits = iosplits._replace(netloc=netloc)
+    #
+    oline = iosplits.geturl()
+
+    # jkwide
+    assert re.search(r"[jJ]enkins[0-9]*/", string=iline)
+    #
+    fqdn = socket.getfqdn()
+    dn = fqdn.partition(".")[-1]  # 'Domain Name of HostName'
+    dn = dn or "example.com"
+    #
+    iosplits = urllib.parse.urlsplit(iline)
+    iosplits = iosplits._replace(scheme="https")
+    iosplits = iosplits._replace(path=iosplits.path.rstrip("/"))
+    iosplits = iosplits._replace(netloc=f"{iosplits.netloc.casefold()}.dev.{dn}")
+    #
+    oline = iosplits.geturl()
+
+    # jkey
+    assert re.match(r"^http.*jira.*/browse/.*$", string=iline)
+    isplits = urllib.parse.urlsplit(iline)
+    oline = isplits.path.removeprefix("/browse/")
+
+    # jlink
+    assert re.match(r"^[A-Z]+[-][0-9]+$", string=iline)
+    #
+    fqdn = socket.getfqdn()
+    dn = fqdn.partition(".")[-1]  # 'Domain Name of HostName'
+    dn = dn or "example.com"
+    #
+    isplits = urllib.parse.urlsplit(iline)
+    osplits = urllib.parse.SplitResult(
+        scheme="https",
+        netloc=f"jira.{dn}",
+        path=f"/browse/{iline}",
+        query="",
+        fragment="",
+    )
+    oline = osplits.geturl()
+
+    # chill
+    assert iline.startswith("http")  # "https", "http", etc
+    assert " " not in iline
+    oline = iline.replace("://", " :// ").replace(".", " . ").rstrip()
+
+    # warm
+    assert iline.startswith("http")  # "https", "http", etc
+    assert " " in iline
+    oline = iline.replace(" ", "")
+
+"""
+
+#
+# crthin to:  http://codereviews/r/190588/diff
+# crthin from:  https://codereviews.example.com/r/190588/diff/8/#index_header
+#
+# glink to:  https://docs.google.com/document/d/$HASH
+# glink from:  https://docs.google.com/document/d/$HASH/edit?usp=sharing
+# glink from:  https://docs.google.com/document/d/$HASH/edit#gid=0'
+#
+# jkthin to:  http://63xJenkins
+# jkwide to:  https://63xjenkins.dev.example.com
+#
+# jkey to:  PROJ-12345
+# jlink to:  https://jira.example.com/browse/PROJ-12345
+#
+# chill to:  https :// twitter . com /pelavarre/status/1647691634329686016
+# warm to:  https://twitter.com/pelavarre/status/1647691634329686016
+#
 
 
 #
@@ -1453,9 +1951,16 @@ if __name__ == "__main__":
     main()
 
 
-# todo: lazily import every module name mentioned in the auto-completed Code
+# todo: toggle between "... ..." and fussy ["...", "...""]
+# todo: compress Py Tracebacks
 
-# todo: solve the 'noqa C901 complex'
+# todo: rpn
+
+# todo: ts abs, ts rel, ts z, & default to dedupe the ts rel
+
+# todo: why do the costs of s s s s and a a a keep rising?
+# todo: explicit weights on hits:  4X 2X 1X for str-split, py-split, str-in
+# todo: 8X for found in Comments vs not
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq.py

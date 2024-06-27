@@ -19,6 +19,10 @@ examples:
   python3.py --h  # show this help message and exit
   python3.py --  # run the examples below
 
+  python3 -c 'import this' |tail +3 |cat -n |expand
+    # ordered better than muddled
+    # copied better than aliased
+
   : Dec/2008 Python 3  # major release date
   : Jun/2009 Python 3.1  # minor release date
   : Feb/2011 Python 3.2  # minor release date
@@ -32,6 +36,7 @@ examples:
   : : Dec/2018 Python 3.6.8  # micro release date
   : : Jul/2019 Python 3.6.9  # micro release date
   : : Dec/2019 Python 3.6.10  # micro release date
+  : : Sep/2021 Python 3.6.15  # micro release date
   : Dec/2016 CPython 3.6  # minor release date  # Dict Keys ordered by Insertion
 
   : 2011 + Minor-Version = year of Python Minor-Version since 3.7

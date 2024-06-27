@@ -155,7 +155,8 @@ selftest:
 
 slow:
 	:
-	date && time demos/pq-make-txt.bash >demos/pq.txt 2>&1
+	: ./demos/pq-make-txt.bash ... >demos/pq.txt ...
+	date && time ./demos/pq-make-txt.bash </dev/null >demos/pq.txt 2>&1
 	git diff demos/pq.txt
 	:
 
