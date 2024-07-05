@@ -1035,7 +1035,9 @@ class PyExecQueryResult:
 
         # Read the Bytes, as if some of the completed Py Graf already ran
 
-        read_py_graf = self.form_read_bytes_py_graf()
+        core_py_graf = self.form_read_bytes_py_graf()
+        read_py_graf = py_graf_insert_imports(py_graf=core_py_graf)
+
         read_py_text = "\n".join(read_py_graf)
 
         alt_locals = dict(ibytes=b"")
@@ -1801,7 +1803,7 @@ CUED_PY_LINES_TEXT = r"""
 
 CUED_PY_GRAFS_TEXT = r"""
 
-    # awk  # |awk '{print $NF}'  # a a a
+    # awk  # |awk '{print $NF}'  # a a a a
     iwords = iline.split()
     oline = iwords[-1] if iwords else ""
 
@@ -1882,6 +1884,7 @@ ITEXT_PY_GRAFS_TEXT = """
 
     # glink
     assert re.match(r"http.*[.]google.com/", string=iline)
+    assert ("/edit" in iline) or ("/view" in iline)
     isplits = urllib.parse.urlsplit(iline)
     #
     opath = isplits.path

@@ -53,6 +53,7 @@ oline = osplits.geturl()
 
 # glink
 assert re.match(r"http.*[.]google.com/", string=iline)
+assert ("/edit" in iline) or ("/view" in iline)
 isplits = urllib.parse.urlsplit(iline)
 #
 opath = isplits.path
@@ -605,7 +606,7 @@ otext = " ".join(ilines) + "\n"
 + set -xe
 + bin/pq.py -q --py a
 
-# awk  # |awk '{print $NF}'  # a a a
+# awk  # |awk '{print $NF}'  # a a a a
 iwords = iline.split()
 oline = iwords[-1] if iwords else ""
 
