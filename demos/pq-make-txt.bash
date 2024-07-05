@@ -135,7 +135,11 @@ func iline.title
 func 'iline.title()'
 func math.inf
 
-(set -xe; bin/pq.py --py sort </dev/tty >/dev/tty)
+(set -xe; bin/pq.py --py sort </dev/tty >/dev/tty || echo + exit $?)
+:
+
+(set -xe; bin/pq.py -q --py supercalifragilistic || echo + exit $?)
+:
 
 # func jq  # nope, tested separately
 func tail -r

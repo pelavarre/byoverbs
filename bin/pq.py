@@ -400,10 +400,10 @@ class PyExecQueryResult:
         return py_graf_by_cues
 
     #
-    # Parse some Py Code and compose the rest
+    # Parse some Py Code and compose the rest       # todo: resolve the noqa C901
     #
 
-    def find_and_form_py_lines(self) -> tuple[list[str], list[str]]:
+    def find_and_form_py_lines(self) -> tuple[list[str], list[str]]:  # noqa C901
         """Parse some Py Code and compose the rest"""
 
         pq_words = self.pq_words
@@ -411,33 +411,39 @@ class PyExecQueryResult:
         py_graf: list[str]
         py_graf = list()
 
-        # Take whole Input File as Cues, if no match found
+        # Take whole Input File as Cues, if no Cues given as Sh Args
 
         if not pq_words:
-            py_graf = self.sponge_to_one_py_graf()
+            py_graf = self.read_ibytes_to_one_py_graf()
 
             # falls back to ending each Text Line, else ending each Byte Line
 
-        # Search for one or zero Py Grafs matching the Cues (but reject many if found)
+        # Search for one Py Graf matching the Cues (but reject many if found)
 
         if not py_graf:
             py_graf = self.cues_to_one_py_graf_if(cues=pq_words)  # often exits nonzero
 
-        # Take Cues with Spaces in them as fragments of Python, if no match found
+        # Take Cues as fragments of Python, if no match found
 
         if not py_graf:
             if any((" " in _) for _ in pq_words):
                 py_graf = list(pq_words)  # better copied than aliased
             elif len(pq_words) == 1:
                 pq_word = pq_words[-1]
-                if ("." in pq_word) and ("=" not in pq_word):
+
+                if "=" not in pq_word:
                     if "iline" in py_split(pq_word):
                         py_line = f"oline = {pq_word}"  # iline.title()
                         if ("(" not in py_line) and (")" not in py_line):
                             py_line = f"oline = {pq_word}()"  # iline.title
-                    else:
-                        py_line = f"oobject = {pq_word}"  # math.inf
-                    py_graf = [py_line]
+                        py_graf = [py_line]
+
+        # Take Cues as fragments of Rpn, if no match found
+
+        if not py_graf:
+            py_graf = self.cues_to_rpn_py_graf_if(cues=pq_words)
+
+        # Require 1 Py Graf found
 
         if not py_graf:
             print(f"pq.py: No Py Grafs found by {pq_words}", file=sys.stderr)
@@ -775,6 +781,9 @@ class PyExecQueryResult:
         if not py_grafs:
             return list()
 
+        for py_graf in py_grafs:
+            assert py_graf, (py_graf, cues)
+
         if len(py_grafs) != 1:
             print(
                 f"pq.py: {len(py_grafs)} Py Grafs found, not just 1, by {cues}",
@@ -817,7 +826,10 @@ class PyExecQueryResult:
         dict_py_grafs = self.dict_cues_to_py_grafs(less_by_more, cues=misses, few=False)
 
         py_graf = list(line for py_graf in dict_py_grafs for line in py_graf)
-        py_grafs = [py_graf]
+
+        py_grafs = list()
+        if py_graf:
+            py_grafs = [py_graf]
 
         return py_grafs
 
@@ -1018,7 +1030,7 @@ class PyExecQueryResult:
     # Take whole Input File as Cues, and fall back to ending each Line
     #
 
-    def sponge_to_one_py_graf(self) -> list[str]:
+    def read_ibytes_to_one_py_graf(self) -> list[str]:
         """Take the whole Input File as Cues"""
 
         # Read the Bytes, as if some of the completed Py Graf already ran
@@ -1086,6 +1098,18 @@ class PyExecQueryResult:
             return mgraf
 
         return list()  # empty Py Graf
+
+    #
+    # Take Cues as fragments of Rpn
+    #
+
+    def cues_to_rpn_py_graf_if(self, cues) -> list[str]:
+        """Take Cues as fragments of Rpn"""
+
+        if cues == ["math.inf"]:
+            return ["oobject = math.inf"]
+
+        return list()  # FIXME lots more Rpn
 
 
 #
@@ -1173,7 +1197,6 @@ VIM_SCRAPS = """  # todo: migrate/ delete
     # todo: print the input that fits, to screen - even to last column & row
     # todo: shadow the print, then edit it
     # todo: output the shadow, at quit
-
 
     # OSError: [Errno 19] Operation not supported by device
     # OSError: [Errno 25] Inappropriate ioctl for device
@@ -1552,80 +1575,82 @@ def unicodedata_name_anyhow(char) -> str:
 
     try:
         name = unicodedata.name(char)
+        assert False, (name, hex(ord(char)), ascii(char))
     except ValueError as exc:
         assert str(exc) == "no such name"
 
-    name = UNICODEDATA_NAME_ANYHOW_BY_CHAR[char]
+    names = UNICODEDATA_NAMES_ANYHOW_BY_CHAR[char]
+    for name in names:
+        assert unicodedata.lookup(name) == char, (name, hex(ord(char)), ascii(char))
 
-    return name
+    name_0 = names[0]
+
+    return name_0
 
 
-UNICODEDATA_NAME_ANYHOW_BY_CHAR = {
-    "\x00": "Null (NUL)",
-    "\x01": "Start Of Heading (SOH)",
-    "\x02": "Start Of Text (STX)",
-    "\x03": "End Of Text (ETX)",
-    "\x04": "End of Transmission (EOT)",
-    "\x05": "Enquiry (ENQ)",
-    "\x06": "Acknowledge (ACK)",
-    "\x07": "Bell (BEL)",
-    "\x08": "Backspace (BS)",
-    "\x09": "Character Tabulation (HT)",  # Horizontal Tabulation
-    "\x0A": "Line Feed (LF)",
-    "\x0B": "Line Tabulation (VT)",  # Vertical Tabulation
-    "\x0C": "Form Feed (FF)",
-    "\x0D": "Carriage Return (CR)",
-    "\x0E": "Shift Out (SO)",
-    "\x0F": "Shift In (SI)",
-    "\x10": "Data Link Escape (DLE)",
-    "\x11": "Device Control One (DC1)",
-    "\x12": "Device Control Two (DC2)",
-    "\x13": "Device Control Three (DC3)",
-    "\x14": "Device Control Four (DC4)",
-    "\x15": "Negative Acknowledge (NAK)",
-    "\x16": "Synchronous Idle (SYN)",
-    "\x17": "End Of Transmission Block (ETB)",
-    "\x18": "Cancel (CAN)",
-    "\x19": "End Of Medium (EM)",
-    "\x1A": "Substitute (SUB)",
-    "\x1B": "Escape (ESC)",
-    "\x1C": "Information Separator Four (FS)",  # File Separator
-    "\x1D": "Information Separator Three (GS)",  # Group Separator
-    "\x1E": "Information Separator Two (RS)",  # Record Separator
-    "\x1F": "Information Separator One (US)",  # Unit Separator
-    "\x7F": "Delete (DEL)",
-    "\x80": "",
-    "\x81": "",
-    "\x82": "",
-    "\x83": "",
-    "\x84": "",
-    "\x85": "",
-    "\x86": "",
-    "\x87": "",
-    "\x88": "",
-    "\x89": "",
-    "\x8A": "",
-    "\x8B": "",
-    "\x8C": "",
-    "\x8D": "",
-    "\x8E": "",
-    "\x8F": "",
-    "\x90": "",
-    "\x91": "",
-    "\x92": "",
-    "\x93": "",
-    "\x94": "",
-    "\x95": "",
-    "\x96": "",
-    "\x97": "",
-    "\x98": "",
-    "\x99": "",
-    "\x9A": "",
-    "\x9B": "",
-    "\x9C": "",
-    "\x9D": "",
-    "\x9E": "",
-    "\x9F": "",
+UNICODEDATA_NAMES_ANYHOW_BY_CHAR = {  # omitting x 80 81 99 A0 AD
+    "\x00": ("Null", "NUL"),
+    "\x01": ("Start Of Heading", "SOH"),
+    "\x02": ("Start Of Text", "STX"),
+    "\x03": ("End Of Text", "ETX"),
+    "\x04": ("End of Transmission", "EOT"),
+    "\x05": ("Enquiry", "ENQ"),
+    "\x06": ("Acknowledge", "ACK"),
+    "\x07": ("BEL",),  # Bell  # != unicode.lookup("Bell"), U+01F514
+    "\x08": ("Backspace", "BS"),
+    "\x09": ("Character Tabulation", "HT"),  # Horizontal Tabulation
+    "\x0A": ("Line Feed", "LF"),
+    "\x0B": ("Line Tabulation", "VT"),  # Vertical Tabulation
+    "\x0C": ("Form Feed", "FF"),
+    "\x0D": ("Carriage Return", "CR"),
+    "\x0E": ("Shift Out", "SO"),
+    "\x0F": ("Shift In", "SI"),
+    "\x10": ("Data Link Escape", "DLE"),
+    "\x11": ("Device Control One", "DC1"),
+    "\x12": ("Device Control Two", "DC2"),
+    "\x13": ("Device Control Three", "DC3"),
+    "\x14": ("Device Control Four", "DC4"),
+    "\x15": ("Negative Acknowledge", "NAK"),
+    "\x16": ("Synchronous Idle", "SYN"),
+    "\x17": ("End Of Transmission Block", "ETB"),
+    "\x18": ("Cancel", "CAN"),
+    "\x19": ("End Of Medium", "EM"),
+    "\x1A": ("Substitute", "SUB"),
+    "\x1B": ("Escape", "ESC"),
+    "\x1C": ("Information Separator Four", "FS"),  # File Separator
+    "\x1D": ("Information Separator Three", "GS"),  # Group Separator
+    "\x1E": ("Information Separator Two", "RS"),  # Record Separator
+    "\x1F": ("Information Separator One", "US"),  # Unit Separator
+    "\x7F": ("Delete", "DEL"),
+    "\x82": ("Break Permitted Here", "BPH"),  # ! = "Zero Width Space" U+200B ZWSP
+    "\x83": ("No Break Here", "NBH"),  # != "Word Joiner" U+2060 WJ
+    "\x84": ("Index", "IND"),
+    "\x85": ("Next Line", "NEL"),
+    "\x86": ("Start of Selected Area", "SSA"),
+    "\x87": ("End of Selected Area", "ESA"),
+    "\x88": ("Character Tabulation Set", "HTS"),
+    "\x89": ("Character Tabulation With Justification", "HTJ"),
+    "\x8A": ("Line Tabulation Set", "VTS"),
+    "\x8B": ("Partial Line Forward", "PLD"),
+    "\x8C": ("Partial Line Backward", "PLU"),
+    "\x8D": ("Reverse Line Feed", "RI"),
+    "\x8E": ("Single Shift Two", "SS2"),
+    "\x8F": ("Single Shift Three", "SS3"),
+    "\x90": ("Device Control String", "DCS"),
+    "\x91": ("Private Use One", "PU1"),
+    "\x92": ("Private Use Two", "PU2"),
+    "\x93": ("Set Transmit State", "STS"),
+    "\x94": ("Cancel Character", "CCH"),
+    "\x95": ("Message Waiting", "MW"),
+    "\x96": ("Start of Guarded Area", "SPA"),
+    "\x97": ("End of Guarded Area", "EPA"),
+    "\x98": ("Start of String", "SOS"),
+    "\x9A": ("Single Character Introducer", "SCI"),
+    "\x9B": ("Control Sequence Introducer", "CSI"),
+    "\x9C": ("String Terminator", "ST"),
+    "\x9D": ("Operating System Command", "OSC"),
+    "\x9E": ("Privacy Message", "PM"),
+    "\x9F": ("Application Program Command", "APC"),
 }
 
 
@@ -1642,6 +1667,8 @@ def fetch_less_by_more_emoji_py_texts() -> dict[str, str]:
         char = chr(i)
 
         if (0x00 <= i <= 0x1F) or (0x7F <= i < 0xA0):
+            if i in (0x80, 0x81, 0x99):  # unnamed by ISO/IEC 6429:1992 in U0080.pdf
+                continue
             name = unicodedata_name_anyhow(char)
         else:
             try:
@@ -1651,17 +1678,26 @@ def fetch_less_by_more_emoji_py_texts() -> dict[str, str]:
                 continue
 
         lit = black_repr(name.title())
-        if i < 0x10000:
+        tail = f"  # {char}" if char.isprintable() else ""
+
+        if i == ord("'"):
+            more_text = rf"""print('''assert hex(unicodedata.lookup({lit})) == 0x{i:04X}{tail} '''.rstrip())"""
+        elif i == ord("\\"):
+            more_text = rf"""print('''assert hex(unicodedata.lookup({lit})) == 0x{i:04X}{tail} '''.rstrip())"""
+        elif i < 0x10000:
             assert len(f"{i:04X}") <= 4, (i,)
-            more_text = f"print('''assert unicodedata.lookup({lit}) == 0x{i:04X}  # {char} '''.rstrip())"
+            more_text = rf"""print('''assert hex(unicodedata.lookup({lit})) == 0x{i:04X}{tail}''')"""
         else:
-            more_text = f"print('''assert unicodedata.lookup({lit}) == 0x{i:06X}  # {char} '''.rstrip())"
+            more_text = rf"""print('''assert hex(unicodedata.lookup({lit})) == 0x{i:06X}{tail}''')"""
 
         less_text = more_text.partition("#")[0].rstrip()
 
         less_by_more[more_text] = less_text
 
     return less_by_more
+
+    # FIXME: |cv default for:  pq emoji
+    # FIXME: add some form of 'pq emoji .' into 'make slow'
 
 
 #
@@ -1819,7 +1855,7 @@ CUED_PY_GRAFS_TEXT = r"""
         if not readline:
             break
         iline = readline.splitlines()[0]
-        ts = dt.datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %z")
+        ts = dt.datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S.%f %z")
         print(f"{ts}  {iline}", file=stdout)
         stdout.flush()
 
@@ -1949,18 +1985,6 @@ ITEXT_PY_GRAFS_TEXT = """
 
 if __name__ == "__main__":
     main()
-
-
-# todo: toggle between "... ..." and fussy ["...", "...""]
-# todo: compress Py Tracebacks
-
-# todo: rpn
-
-# todo: ts abs, ts rel, ts z, & default to dedupe the ts rel
-
-# todo: why do the costs of s s s s and a a a keep rising?
-# todo: explicit weights on hits:  4X 2X 1X for str-split, py-split, str-in
-# todo: 8X for found in Comments vs not
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq.py

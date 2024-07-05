@@ -544,6 +544,13 @@ subprocess.run(["pbcopy"], input=otext, text=True, check=True)
 
 '''
 
++ :
++ set -xe
++ bin/pq.py -q --py supercalifragilistic
+pq.py: No Py Grafs found by ['supercalifragilistic']
++ echo + exit 2
++ exit 2
++ :
 + func tail -r
 + set -xe
 + bin/pq.py -q --py tail -r

@@ -676,10 +676,11 @@ next Pq traunch
     import this # tail -n +3 cat -n
     future import braces
 
-
-    pq emo .
-
     pq .
+    mmm, pq --py . does pick a most favoured, mmm
+
+    debug pq emo .
+    vs 143107 check count of:  pq --py emoji . 2>&1 |grep unicodedata |wc -l
 
     pq y
 
@@ -687,6 +688,23 @@ next Pq traunch
     pq cat
 
     #! env pq.py
+
+pq
+
+    rpn
+        and how to rpn with Spaces in the Source vs
+            ls |pq 'olines = olines if olines else [""]' 'oline = iline + "\n"' |c
+            etc
+
+    toggle between "... ..." and fussy ["...", "...""]
+
+    compress Py Tracebacks
+
+    ts abs, ts rel, ts z, & default to dedupe the ts rel
+
+    why do the costs of s s s s and a a a keep rising?
+    explicit weights on hits:  4X 2X 1X for str-split, py-split, str-in
+    8X for found in Comments vs not
 
 
 ### 10 - Tenth traunch
