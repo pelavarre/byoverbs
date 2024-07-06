@@ -641,11 +641,9 @@ pq
 
 next Pq traunch
 
-    pq ht
     pq wc
     … lines, words, chars, bytes
-
-    pq info
+    with 'pq ht' or 'pq info' or not ...
 
 
 
@@ -701,10 +699,15 @@ pq
     compress Py Tracebacks
 
     ts abs, ts rel, ts z, & default to dedupe the ts rel
+        ts to file, without ts to screen
 
     why do the costs of s s s s and a a a keep rising?
     explicit weights on hits:  4X 2X 1X for str-split, py-split, str-in
     8X for found in Comments vs not
+
+pq vim tty
+
+    test printf '\e]8;;http://example.com\e\\This is a link\e]8;;\e\\\n'
 
 
 ### 10 - Tenth traunch

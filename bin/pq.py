@@ -407,6 +407,8 @@ class PyExecQueryResult:
         """Parse some Py Code and compose the rest"""
 
         pq_words = self.pq_words
+        stdin_isatty = self.stdin_isatty
+        stdout_isatty = self.stdout_isatty
 
         py_graf: list[str]
         py_graf = list()
@@ -414,9 +416,18 @@ class PyExecQueryResult:
         # Take whole Input File as Cues, if no Cues given as Sh Args
 
         if not pq_words:
-            py_graf = self.read_ibytes_to_one_py_graf()
+            if stdin_isatty and not stdout_isatty:  # 'pq| ...' means 'pbpaste| ...'
+                py_graf = ["obytes = ibytes"]
+            elif (not stdin_isatty) and stdout_isatty:  # '... |pq' means '... |pbcopy'
+                py_graf = ["obytes = ibytes"]
+            else:  # 'pq' or '... |pq |...' means step the Pipe Data forward
+                py_graf = self.read_ibytes_to_one_py_graf()
 
             # falls back to ending each Text Line, else ending each Byte Line
+
+        if not py_graf:
+            if pq_words == ["-"]:  # 'pq -' means 'pbpaste |pbcopy'
+                py_graf = ["obytes = ibytes"]
 
         # Search for one Py Graf matching the Cues (but reject many if found)
 
@@ -1773,6 +1784,10 @@ CUED_PY_LINES_TEXT = r"""
 
     oobject = math.tau
 
+    oobject = max(len(_) for _ in ilines)  # max len  # max
+
+    oobject = max(len(_.split()) for _ in ilines)  # max split
+
 
     otext = "".join(dict((_, _) for _ in itext).keys())  # text set  # text set
 
@@ -1831,6 +1846,16 @@ CUED_PY_GRAFS_TEXT = r"""
     olines.extend(2 * [""])  # bottom margin
     otext = "\n".join(olines) + "\n"
 
+    # head head  # h h h h
+    olines = ilines[:10]
+
+    # head tail  # h t h t h t  # ht ht
+    ipairs = list(enumerate(ilines, start=1))
+    plines = list(f"{_[0]:6}  {_[-1]}" for _ in ipairs[:3])
+    plines.append("...")
+    plines.extend(f"{_[0]:6}  {_[-1]}" for _ in ipairs[-3:])
+    olines = plines
+
     # join  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
     otext = " ".join(ilines) + "\n"
 
@@ -1850,6 +1875,9 @@ CUED_PY_GRAFS_TEXT = r"""
     # split split split  # |sed 's,  *,$,g' |tr '$' '\n'
     # |xargs -n 1  # xargs n 1  # xn1
     olines = itext.split()
+
+    # tail tail  # t t t t t t t t
+    olines = ilines[-10:]
 
     # ts  # |ts
     while True:

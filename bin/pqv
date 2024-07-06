@@ -2,7 +2,8 @@
 
 D=$(dirname "$0")
 if [[ $# == 0 ]]; then
-    python3 "$D"/pq.py --yolo |tee /dev/tty |pbcopy
+    python3 "$D"/pq.py --yolo
+    pbpaste >/dev/tty
 else
     python3 "$D"/pq.py "$@" |tee /dev/tty |pbcopy
 fi

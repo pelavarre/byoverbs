@@ -80,6 +80,8 @@ func len bytes
 func len text
 func len lines
 func len words
+func max len
+func max split
 func text set
 
 func ascii
@@ -138,10 +140,18 @@ func math.inf
 (set -xe; bin/pq.py --py sort </dev/tty >/dev/tty || echo + exit $?)
 :
 
+</dev/tty bin/pq.py -q --py -
+echo -n abc |bin/pq.py -q --py >/dev/tty
+</dev/tty bin/pq.py -q --py |hexdump -C
+:
+
 (set -xe; bin/pq.py -q --py supercalifragilistic || echo + exit $?)
 :
 
+func head
+func head tail
 # func jq  # nope, tested separately
+func tail
 func tail -r
 func tac
 # func tee  # |pq tee| could mean |tee /dev/tty |
@@ -158,12 +168,13 @@ func a  # |pq a ...| could mean not |awk '{print $NF}' |
 # func e  # bin/e did relate to:  emacs -nw --no-splash --eval '(menu-bar-mode -1)'
 # func f  # bin/f did relate to:  find .
 # func g  # bin/g did relate to:  grep -e -h -i -n
-# func h  # bin/h did relate to:  pbpaste, stty size, head
+func h  # to do: '|head' scaled with stty size
+func ht
 # func j  # nope, tested separately
 # func p  # bin/p did relate to:  python3 -m pdb
 # func q  # bin/q did relate to:  git
 func s
-# func t  # bin/t did relate to:  pbpaste, stty size, tail
+func t  # to do: '|tail' scaled with stty size
 func u
 func x
 

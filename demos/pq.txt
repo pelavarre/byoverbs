@@ -205,6 +205,18 @@ oobject = len(itext.splitlines())  # lines len  # |wc -l  # wc l  # wcl
 
 oobject = len(itext.split())  # words len  # |wc -w  # wc w  # wcw
 
++ func max len
++ set -xe
++ bin/pq.py -q --py max len
+
+oobject = max(len(_) for _ in ilines)  # max len  # max
+
++ func max split
++ set -xe
++ bin/pq.py -q --py max split
+
+oobject = max(len(_.split()) for _ in ilines)  # max split
+
 + func text set
 + set -xe
 + bin/pq.py -q --py text set
@@ -546,12 +558,52 @@ subprocess.run(["pbcopy"], input=otext, text=True, check=True)
 '''
 
 + :
++ bin/pq.py -q --py -
+
+obytes = ibytes
+
++ echo -n abc
++ bin/pq.py -q --py
+
+obytes = ibytes
+
++ bin/pq.py -q --py
++ hexdump -C
+
+obytes = ibytes
+
++ :
 + set -xe
 + bin/pq.py -q --py supercalifragilistic
 pq.py: No Py Grafs found by ['supercalifragilistic']
 + echo + exit 2
 + exit 2
 + :
++ func head
++ set -xe
++ bin/pq.py -q --py head
+
+# head head  # h h h h
+olines = ilines[:10]
+
++ func head tail
++ set -xe
++ bin/pq.py -q --py head tail
+
+# head tail  # h t h t h t  # ht ht
+ipairs = list(enumerate(ilines, start=1))
+plines = list(f"{_[0]:6}  {_[-1]}" for _ in ipairs[:3])
+plines.append("...")
+plines.extend(f"{_[0]:6}  {_[-1]}" for _ in ipairs[-3:])
+olines = plines
+
++ func tail
++ set -xe
++ bin/pq.py -q --py tail
+
+# tail tail  # t t t t t t t t
+olines = ilines[-10:]
+
 + func tail -r
 + set -xe
 + bin/pq.py -q --py tail -r
@@ -610,11 +662,36 @@ otext = " ".join(ilines) + "\n"
 iwords = iline.split()
 oline = iwords[-1] if iwords else ""
 
++ func h
++ set -xe
++ bin/pq.py -q --py h
+
+# head head  # h h h h
+olines = ilines[:10]
+
++ func ht
++ set -xe
++ bin/pq.py -q --py ht
+
+# head tail  # h t h t h t  # ht ht
+ipairs = list(enumerate(ilines, start=1))
+plines = list(f"{_[0]:6}  {_[-1]}" for _ in ipairs[:3])
+plines.append("...")
+plines.extend(f"{_[0]:6}  {_[-1]}" for _ in ipairs[-3:])
+olines = plines
+
 + func s
 + set -xe
 + bin/pq.py -q --py s
 
 iolines.sort()  # sort  # sorted sorted  # s s s s s s s
+
++ func t
++ set -xe
++ bin/pq.py -q --py t
+
+# tail tail  # t t t t t t t t
+olines = ilines[-10:]
 
 + func u
 + set -xe
