@@ -646,16 +646,12 @@ next Pq traunch
     with 'pq ht' or 'pq info' or not ...
 
 
-
-    pq ls
-    pq find
-    pq find dot
-
-    pathlib Path’s
-    stat not hidden
-
+    pq f
+        pathlib Path’s
+        stat not hidden
 
     pq ls -AhlF
+
 
 
 
@@ -701,9 +697,9 @@ pq
     ts abs, ts rel, ts z, & default to dedupe the ts rel
         ts to file, without ts to screen
 
-    why do the costs of s s s s and a a a keep rising?
-    explicit weights on hits:  4X 2X 1X for str-split, py-split, str-in
-    8X for found in Comments vs not
+    why do the costs of a a a, s s s, t t t, keep rising?
+    vs explicit weights on hits:  4X 2X 1X for str-split, py-split, str-in
+    vs 8X for found in Comments vs not
 
 pq vim tty
 

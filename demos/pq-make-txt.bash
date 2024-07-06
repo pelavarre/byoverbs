@@ -129,6 +129,10 @@ func titled
 func undented
 func uppered
 
+func decomment
+func despace
+func space
+
 func e
 func pi
 func tau
@@ -151,6 +155,11 @@ echo -n abc |bin/pq.py -q --py >/dev/tty
 func head
 func head tail
 # func jq  # nope, tested separately
+func find
+func find dirs
+func find dots
+func ls
+func ls dots
 func tail
 func tail -r
 func tac
@@ -166,7 +175,7 @@ func a  # |pq a ...| could mean not |awk '{print $NF}' |
 # func c  # bin/c did relate to:  pbpaste, cat -, cat - >/dev/null
 # func d  # bin/d did relate to:  diff -brpu a b
 # func e  # bin/e did relate to:  emacs -nw --no-splash --eval '(menu-bar-mode -1)'
-# func f  # bin/f did relate to:  find .
+func f
 # func g  # bin/g did relate to:  grep -e -h -i -n
 func h  # to do: '|head' scaled with stty size
 func ht

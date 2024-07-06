@@ -218,6 +218,8 @@ class PyExecQueryResult:
         alt_py_graf = list(line for cgraf in cgrafs for line in cgraf)
         py_text = "\n".join(alt_py_graf)
 
+        # alt_locals["dirpath"] = None  # todo: doesn't help
+        # globals()["dirpath"] = None  # todo: doesn't help
         exec(py_text, globals(), alt_locals)  # because "i'm feeling lucky"
 
         # sys.stdout.flush()  # todo: to flush the Stdout, or not
@@ -300,7 +302,7 @@ class PyExecQueryResult:
         """Fetch the Cued Multi-Line Paragraphs"""
 
         mgrafs0 = text_to_grafs(CUED_PY_GRAFS_TEXT)
-        list_assert_eq(mgrafs0, b=sorted(mgrafs0))
+        list_assert_eq(mgrafs0, b=sorted(mgrafs0))  # CUED_PY_GRAFS_TEXT sorted
 
         mgrafs1 = text_to_grafs(ITEXT_PY_GRAFS_TEXT)  # ordered, not sorted
 
@@ -312,7 +314,7 @@ class PyExecQueryResult:
         """Fetch the Cued Single-Line Paragraphs"""
 
         sgrafs = text_to_grafs(CUED_PY_LINES_TEXT)
-        list_assert_eq(sgrafs, b=sorted(sgrafs))
+        list_assert_eq(sgrafs, b=sorted(sgrafs))  # CUED_PY_LINES_TEXT sorted
 
         return sgrafs
 
@@ -346,6 +348,8 @@ class PyExecQueryResult:
         elif ipulls == ["print", "stdin", "stdout"]:  # pq ts
             assert not opushes, (ipulls, opushes)
 
+        elif (not ipulls) and (opushes == ["olines"]):  # pq ls
+            pass
         elif (not ipulls) and (opushes == ["oobject"]):  # pq pi
             pass
 
@@ -1789,6 +1793,8 @@ CUED_PY_LINES_TEXT = r"""
     oobject = max(len(_.split()) for _ in ilines)  # max split
 
 
+    otext = " ".join(itext)  # space
+
     otext = "".join(dict((_, _) for _ in itext).keys())  # text set  # text set
 
     otext = "".join(sorted(set(itext)))  # sorted text set
@@ -1799,11 +1805,15 @@ CUED_PY_LINES_TEXT = r"""
 
     otext = itext.lower()  # lower  # lowered  # lowercased  # |tr '[A-Z]' '[a-z]'
 
+    otext = itext.replace(" ", "")  # despace  # replace replace
+
     otext = itext.title()  # title  # titled
 
     otext = itext.upper()  # upper  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
 
     otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
+
+    otext = re.sub(r"(.)", repl=r"\1 ", string=itext).rstrip()  # sub  # repl
 
     otext = string.capwords(itext)  # capwords
 
@@ -1831,11 +1841,51 @@ CUED_PY_GRAFS_TEXT = r"""
     # collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen
     olines = list(dict((_, _) for _ in ilines).keys())  # unsort  # unsorted  # dedupe
 
+    # decomment  # |sed 's,#.*,,' |sed 's, *$,,'  # |grep .
+    dlines = list()
+    for iline in ilines:
+        dline = iline.partition("#")[0].rstrip()
+        if dline:
+            dlines.append(dline)
+    olines = dlines
+
     # deframe  # deframed
     dedent = textwrap.dedent(itext) + "\n"  # no left margin
     dlines = dedent.splitlines()
     olines = list(_.rstrip() for _ in dlines)  # no right margin
     otext = "\n".join(olines).strip() + "\n"  # no top/bottom margins
+
+    # find  # find  # find  # find  # f  # just the not-hidden files
+    flines = list()
+    # dirpath = None  # todo: doesn't help
+    for dirpath, dirnames, filenames in os.walk("."):
+        # locals()["dirpath"] = dirpath  # todo: doesn't help
+        globals()["dirpath"] = dirpath  # todo: does help
+        dirnames[::] = list(_ for _ in dirnames if not _.startswith("."))
+        dirfiles = list(
+            os.path.join(dirpath, _) for _ in filenames if not _.startswith(".")
+        )
+        flines.extend(sorted(_.removeprefix("./") for _ in dirfiles))
+    olines = flines
+
+    # find dirs  # find dirs  # find dirs  # just the not-hidden dirs
+    flines = list()
+    for dirpath, dirnames, filenames in os.walk("."):
+        globals()["dirpath"] = dirpath  # todo: does help
+        dirnames[::] = list(_ for _ in dirnames if not _.startswith("."))
+        if dirpath != ".":
+            flines.append(dirpath.removeprefix("./"))
+    olines = flines
+
+    # find dots too  # the dirs and the files, but not the top ".." nor top "."
+    flines = list()
+    for dirpath, dirnames, filenames in os.walk("."):
+        globals()["dirpath"] = dirpath  # todo: does help
+        dirfiles = list(os.path.join(dirpath, _) for _ in filenames)
+        if dirpath != ".":
+            flines.append(dirpath.removeprefix("./"))
+        flines.extend(sorted(_.removeprefix("./") for _ in dirfiles))
+    olines = flines
 
     # frame  # framed
     olines = list()
@@ -1859,6 +1909,12 @@ CUED_PY_GRAFS_TEXT = r"""
     # join  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
     otext = " ".join(ilines) + "\n"
 
+    # ls dots
+    olines = sorted(os.listdir())  # still no [os.curdir, os.pardir]
+
+    # ls ls
+    olines = sorted(_ for _ in os.listdir() if not _.startswith("."))
+
     # md5sum
     md5 = hashlib.md5()
     md5.update(ibytes)
@@ -1876,7 +1932,7 @@ CUED_PY_GRAFS_TEXT = r"""
     # |xargs -n 1  # xargs n 1  # xn1
     olines = itext.split()
 
-    # tail tail  # t t t t t t t t
+    # tail tail  # t t t t t t t t t
     olines = ilines[-10:]
 
     # ts  # |ts

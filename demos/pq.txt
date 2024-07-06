@@ -503,6 +503,30 @@ oline = iline.removeprefix(4 * " ")  # undent  # undented  # textwrap.undent
 
 otext = itext.upper()  # upper  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
 
++ func decomment
++ set -xe
++ bin/pq.py -q --py decomment
+
+# decomment  # |sed 's,#.*,,' |sed 's, *$,,'  # |grep .
+dlines = list()
+for iline in ilines:
+    dline = iline.partition("#")[0].rstrip()
+    if dline:
+        dlines.append(dline)
+olines = dlines
+
++ func despace
++ set -xe
++ bin/pq.py -q --py despace
+
+otext = itext.replace(" ", "")  # despace  # replace replace
+
++ func space
++ set -xe
++ bin/pq.py -q --py space
+
+otext = " ".join(itext)  # space
+
 + func e
 + set -xe
 + bin/pq.py -q --py e
@@ -597,11 +621,69 @@ plines.append("...")
 plines.extend(f"{_[0]:6}  {_[-1]}" for _ in ipairs[-3:])
 olines = plines
 
++ func find
++ set -xe
++ bin/pq.py -q --py find
+
+# find  # find  # find  # find  # f  # just the not-hidden files
+flines = list()
+# dirpath = None  # todo: doesn't help
+for dirpath, dirnames, filenames in os.walk("."):
+    # locals()["dirpath"] = dirpath  # todo: doesn't help
+    globals()["dirpath"] = dirpath  # todo: does help
+    dirnames[::] = list(_ for _ in dirnames if not _.startswith("."))
+    dirfiles = list(
+        os.path.join(dirpath, _) for _ in filenames if not _.startswith(".")
+    )
+    flines.extend(sorted(_.removeprefix("./") for _ in dirfiles))
+olines = flines
+
++ func find dirs
++ set -xe
++ bin/pq.py -q --py find dirs
+
+# find dirs  # find dirs  # find dirs  # just the not-hidden dirs
+flines = list()
+for dirpath, dirnames, filenames in os.walk("."):
+    globals()["dirpath"] = dirpath  # todo: does help
+    dirnames[::] = list(_ for _ in dirnames if not _.startswith("."))
+    if dirpath != ".":
+        flines.append(dirpath.removeprefix("./"))
+olines = flines
+
++ func find dots
++ set -xe
++ bin/pq.py -q --py find dots
+
+# find dots too  # the dirs and the files, but not the top ".." nor top "."
+flines = list()
+for dirpath, dirnames, filenames in os.walk("."):
+    globals()["dirpath"] = dirpath  # todo: does help
+    dirfiles = list(os.path.join(dirpath, _) for _ in filenames)
+    if dirpath != ".":
+        flines.append(dirpath.removeprefix("./"))
+    flines.extend(sorted(_.removeprefix("./") for _ in dirfiles))
+olines = flines
+
++ func ls
++ set -xe
++ bin/pq.py -q --py ls
+
+# ls ls
+olines = sorted(_ for _ in os.listdir() if not _.startswith("."))
+
++ func ls dots
++ set -xe
++ bin/pq.py -q --py ls dots
+
+# ls dots
+olines = sorted(os.listdir())  # still no [os.curdir, os.pardir]
+
 + func tail
 + set -xe
 + bin/pq.py -q --py tail
 
-# tail tail  # t t t t t t t t
+# tail tail  # t t t t t t t t t
 olines = ilines[-10:]
 
 + func tail -r
@@ -662,6 +744,23 @@ otext = " ".join(ilines) + "\n"
 iwords = iline.split()
 oline = iwords[-1] if iwords else ""
 
++ func f
++ set -xe
++ bin/pq.py -q --py f
+
+# find  # find  # find  # find  # f  # just the not-hidden files
+flines = list()
+# dirpath = None  # todo: doesn't help
+for dirpath, dirnames, filenames in os.walk("."):
+    # locals()["dirpath"] = dirpath  # todo: doesn't help
+    globals()["dirpath"] = dirpath  # todo: does help
+    dirnames[::] = list(_ for _ in dirnames if not _.startswith("."))
+    dirfiles = list(
+        os.path.join(dirpath, _) for _ in filenames if not _.startswith(".")
+    )
+    flines.extend(sorted(_.removeprefix("./") for _ in dirfiles))
+olines = flines
+
 + func h
 + set -xe
 + bin/pq.py -q --py h
@@ -690,7 +789,7 @@ iolines.sort()  # sort  # sorted sorted  # s s s s s s s
 + set -xe
 + bin/pq.py -q --py t
 
-# tail tail  # t t t t t t t t
+# tail tail  # t t t t t t t t t
 olines = ilines[-10:]
 
 + func u
