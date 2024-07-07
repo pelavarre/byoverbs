@@ -653,8 +653,6 @@ next Pq traunch
     pq ls -AhlF
 
 
-
-
     nonnegative ints as iwords[n]
     negative ints as iwords[-n]
     x.y for y split() inside of x split("\t")
@@ -670,11 +668,13 @@ next Pq traunch
     import this # tail -n +3 cat -n
     future import braces
 
+
     pq .
     mmm, pq --py . does pick a most favoured, mmm
 
     debug pq emo .
     vs 143107 check count of:  pq --py emoji . 2>&1 |grep unicodedata |wc -l
+
 
     pq y
 
@@ -682,6 +682,7 @@ next Pq traunch
     pq cat
 
     #! env pq.py
+
 
 pq
 
