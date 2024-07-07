@@ -150,7 +150,8 @@ shellcheck:
 
 selftest:
 	:
-	python3 demos/byoverbs.py --
+	bin/pq.py >/dev/null
+	python3 demos/byoverbs.py -- >/dev/null
 	:
 
 slow:

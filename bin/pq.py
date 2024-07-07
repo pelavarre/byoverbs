@@ -1282,13 +1282,6 @@ class ArgumentParser(argparse.ArgumentParser):
     def parse_args_else(self, args=None) -> argparse.Namespace:
         """Parse the Sh Args, even when no Sh Args coded as the one Sh Arg '--'"""
 
-        # Drop the "--" Sh Args Separator, if present,
-        # because 'ArgumentParser.parse_args()' without Pos Args wrongly rejects it
-
-        shargs = sys.argv[1:] if (args is None) else args
-        if sys.argv[1:] == ["--"]:  # ArgParse chokes if Sep present without Pos Args
-            shargs = list()
-
         # Print Diffs & exit nonzero, when Arg Doc wrong
 
         diffs = self.diff_doc_vs_format_help()
@@ -1306,6 +1299,13 @@ class ArgumentParser(argparse.ArgumentParser):
             print()
 
             sys.exit(0)  # exit 0 after printing examples, as if after printing help
+
+        # Drop the "--" Sh Args Separator, if present,
+        # because 'ArgumentParser.parse_args()' without Pos Args wrongly rejects it
+
+        shargs = sys.argv[1:] if (args is None) else args
+        if sys.argv[1:] == ["--"]:  # ArgParse chokes if Sep present without Pos Args
+            shargs = list()
 
         # Print help lines & exit zero, else return Parsed Args
 
@@ -1896,10 +1896,10 @@ CUED_PY_GRAFS_TEXT = r"""
     olines.extend(2 * [""])  # bottom margin
     otext = "\n".join(olines) + "\n"
 
-    # head head  # h h h h
+    # head head  # h h h h h h
     olines = ilines[:10]
 
-    # head tail  # h t h t h t  # ht ht
+    # head tail  # h t  # h t  # h t  # h t  # h t  # ht ht
     ipairs = list(enumerate(ilines, start=1))
     plines = list(f"{_[0]:6}  {_[-1]}" for _ in ipairs[:3])
     plines.append("...")

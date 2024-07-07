@@ -1,3 +1,4 @@
++ bin/pq.py
 + :
 ++ echo http://example.com
 ++ bin/pq.py -q --py
@@ -607,14 +608,14 @@ pq.py: No Py Grafs found by ['supercalifragilistic']
 + set -xe
 + bin/pq.py -q --py head
 
-# head head  # h h h h
+# head head  # h h h h h h
 olines = ilines[:10]
 
 + func head tail
 + set -xe
 + bin/pq.py -q --py head tail
 
-# head tail  # h t h t h t  # ht ht
+# head tail  # h t  # h t  # h t  # h t  # h t  # ht ht
 ipairs = list(enumerate(ilines, start=1))
 plines = list(f"{_[0]:6}  {_[-1]}" for _ in ipairs[:3])
 plines.append("...")
@@ -765,14 +766,14 @@ olines = flines
 + set -xe
 + bin/pq.py -q --py h
 
-# head head  # h h h h
+# head head  # h h h h h h
 olines = ilines[:10]
 
 + func ht
 + set -xe
 + bin/pq.py -q --py ht
 
-# head tail  # h t h t h t  # ht ht
+# head tail  # h t  # h t  # h t  # h t  # h t  # ht ht
 ipairs = list(enumerate(ilines, start=1))
 plines = list(f"{_[0]:6}  {_[-1]}" for _ in ipairs[:3])
 plines.append("...")

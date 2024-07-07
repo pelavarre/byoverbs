@@ -134,12 +134,6 @@ class ArgumentParser(argparse.ArgumentParser):
     def parse_args_else(self, args=None) -> argparse.Namespace:
         """Parse the Sh Args, even when no Sh Args coded as the one Sh Arg '--'"""
 
-        # Accept the "--" Sh Args Separator when present with or without Positional Args
-
-        sh_args = sys.argv[1:] if (args is None) else args
-        if sh_args == ["--"]:  # ArgParse chokes if Sep present without Pos Args
-            sh_args = ""
-
         # Print Diffs & exit nonzero, when Arg Doc wrong
 
         diffs = self.diff_doc_vs_format_help()
@@ -158,9 +152,15 @@ class ArgumentParser(argparse.ArgumentParser):
 
             sys.exit(0)
 
+        # Accept the "--" Sh Args Separator when present with or without Positional Args
+
+        shargs = sys.argv[1:] if (args is None) else args
+        if shargs == ["--"]:  # ArgParse chokes if Sep present without Pos Args
+            shargs = list()
+
         # Print help lines & exit zero, else return Parsed Args
 
-        argspace = self.parse_args(sh_args)
+        argspace = self.parse_args(shargs)
 
         return argspace
 

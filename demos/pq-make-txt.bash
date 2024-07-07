@@ -4,6 +4,13 @@ set -x
 
 
 #
+# Run the Self-Test's of Pq
+#
+
+bin/pq.py >/dev/null
+
+
+#
 # Try Auto-Completion's of revisions of the Os Copy-Paste Clipboard Buffer
 #
 # todo: Bash Filters race to reach 'set -x' inside a Sh Pipe
