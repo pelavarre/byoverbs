@@ -25,6 +25,7 @@ import argparse
 import builtins
 import importlib
 import os
+import random
 import sys
 import urllib.parse
 from decimal import Decimal as D
@@ -32,14 +33,18 @@ from decimal import Decimal as D
 
 ... == D  # todo: lazy-import X.Y as Z, not just lazy-import X as Z
 ... == builtins  # so that CPython:  builtins is __builtins__
+... == random  # else lazy-import spammed Stdout w 459 Lines
 ... == urllib.parse  # todo: lazy-import X.Y, not just lazy-import X
 
 
 parser = argparse.ArgumentParser()
 
 
-_ = "argparse, builtins, importlib, os, sys, urllib.parse, ... Decimal as D"
-print(">>> import", _, file=sys.stderr)
+print(
+    ">>> import argparse, builtins, importlib, os, random, sys, urllib.parse",
+    file=sys.stderr,
+)
+print(">>> import decimal as D", file=sys.stderr)
 print(">>> import ...", file=sys.stderr)
 print(">>> ", file=sys.stderr)
 
@@ -198,6 +203,9 @@ def discover_more_lazy_imports() -> None:
 # discover_more_lazy_imports()  # ~500 ms
 
 def_some_lazy_imports()  # ~0.75 ms
+
+
+# todo: up line, insert line, print Import, restore cursor - when Import happens
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/lazy_import.py

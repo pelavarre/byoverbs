@@ -158,6 +158,8 @@ slow:
 	:
 	: ./demos/pq-make-txt.bash ... >demos/pq.txt ...
 	date && time ./demos/pq-make-txt.bash </dev/null >demos/pq.txt 2>&1
+	: consider accept 'make slow' via:  git add -p
+	: consider undo 'make slow' via:  git checkout HEAD demos/pq.txt
 	git diff demos/pq.txt
 	:
 

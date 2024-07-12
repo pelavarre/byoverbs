@@ -253,7 +253,7 @@ otext = " ".join(ilines) + "\n"
 + set -xe
 + bin/pq.py -q --py repr
 
-oline = repr(iline)  # repr  # undo 'ast.literal_eval'
+oline = repr(iline)  # repr  # undo 'ast.literal_eval'  # |sed "s,.*,'&',"
 
 + func set
 + set -xe

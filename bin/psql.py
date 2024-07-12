@@ -1,27 +1,31 @@
 #!/usr/bin/env python3
 
-"""
+r"""
 usage: psql.py [--h]  ...
 
 take commands spoke in the PostgreSQL languages
 
 options:
   --help  show this help message and exit
-  --yolo  do whatever's popular now
+  --yolo  do what's popular now
 
 examples:
 
   psql.py  # show these examples and exit
   psql.py --h  # show this help message and exit
-  psql.py --yolo  # do whatever's popular now
+  psql.py --yolo  # do what's popular now
 
   sudo -u postgres psql  # launch Psql with default 'peer' Auth
   psql --username=postgres  # launch Psql with 'trust' Auth
+    \! date  -- to say when you did what
+    \timing on  -- to report elapsed time per query
+    \x on  -- to transpose Tables to show each Row as multiple Lines
 
   cd /etc/postgresql/*/main/  # /etc/postgresql/14/main
+  sudo cat pg_hba.conf |grep peer   # local all postgres peer  # <= sudo su - postgres
+  sudo cat pg_hba.conf |grep trust  # local all postgres trust  # : no sudo needed :
+
   F=pg_hba.conf && echo cp -ip $F{,~$(date -r $F +%m%djqd%H%M)~} |tee /dev/tty |bash
-  cat pg_hba.conf |grep peer
-  cat pg_hba.conf |grep trust
 
   : Oct/2019 PostgreSQL 12 # major release date  # Ubuntu 2020?
   : Sep/2020 PostgreSQL 13 # major release date

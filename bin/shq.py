@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 r"""
-usage: pq [-h] [-q] [--py] [--yolo] [WORD ...]
+usage: shq [-h] [-q] [--py] [--yolo] [WORD ...]
 
 edit the Os Copy/Paste Clipboard Buffer and the Dev Tty Screen
 
@@ -12,7 +12,7 @@ options:
   -h, --help   show this help message and exit
   -q, --quiet  say less and less, when called with -q or -qq or -qqq
   --py         test and show the Python Code, but don't write the Paste Buffer
-  --yolo       do whatever's popular now
+  --yolo       do what's popular now
 
 words and phrases of the Pq Programming Language:
   ascii, casefold, eval, lower, lstrip, repr, rstrip, strip, title, upper,
@@ -37,19 +37,19 @@ quirks:
   works well with:  ⌘C pbcopy, ⌘V pbpaste, less -FIRX
 
 examples:
-  pq  # show these examples, run self-tests, and exit
-  pq --help  # show this help message and exit
-  pq --yolo  # parse the Paste to guess what to do to it
-  pq dent  # insert 4 Spaces at the left of each Line
-  pq dedent  # remove the leading Blank Columns from the Lines
-  pq len lines  # count Lines
-  pq --py len lines  # show how to count Lines
-  echo '[0, 11, 22]' |pq json |cat -  # format Json consistently
-  pq 'oline = "<< " + iline + " >>"'  # add Prefix and Suffix to each Line
-  pq 'olines = ilines[:3] + ["..."] + ilines[-3:]'  # show Head and Tail
+  shq  # show these examples, run self-tests, and exit
+  shq --help  # show this help message and exit
+  shq --yolo  # parse the Paste to guess what to do to it
+  shq dent  # insert 4 Spaces at the left of each Line
+  shq dedent  # remove the leading Blank Columns from the Lines
+  shq len lines  # count Lines
+  shq --py len lines  # show how to count Lines
+  echo '[0, 11, 22]' |shq json |cat -  # format Json consistently
+  shq 'oline = "<< " + iline + " >>"'  # add Prefix and Suffix to each Line
+  shq 'olines = ilines[:3] + ["..."] + ilines[-3:]'  # show Head and Tail
 """
 
-# quirks to come when we add 'pq vi':
+# quirks to come when we add 'shq vi':
 #   respects color and ignores case
 #   doesn't clear screen at launch, nor at quit either
 
@@ -234,7 +234,7 @@ class PyExecQueryResult:
         words_help = "word of the Pq Programming Language:  dedented, dented, ..."
         quiet_help = "say less and less, when called with -q or -qq or -qqq"
         py_help = "test and show the Python Code, but don't write the Paste Buffer"
-        yolo_help = "do whatever's popular now"
+        yolo_help = "do what's popular now"
 
         assert argparse.ZERO_OR_MORE == "*"
         parser.add_argument("words", metavar="WORD", nargs="*", help=words_help)
@@ -341,16 +341,16 @@ class PyExecQueryResult:
 
         (ipulls, opushes) = self.py_graf_to_i_pulls_o_pushes(py_graf)
 
-        if ipulls == ["iolines"]:  # pq reverse  # pq sort
+        if ipulls == ["iolines"]:  # shq reverse  # shq sort
             assert not opushes, (ipulls, opushes)
-        elif ipulls == ["print"]:  # pq reverse  # pq sort
+        elif ipulls == ["print"]:  # shq reverse  # shq sort
             assert not opushes, (ipulls, opushes)
-        elif ipulls == ["print", "stdin", "stdout"]:  # pq ts
+        elif ipulls == ["print", "stdin", "stdout"]:  # shq ts
             assert not opushes, (ipulls, opushes)
 
-        elif (not ipulls) and (opushes == ["olines"]):  # pq ls
+        elif (not ipulls) and (opushes == ["olines"]):  # shq ls
             pass
-        elif (not ipulls) and (opushes == ["oobject"]):  # pq pi
+        elif (not ipulls) and (opushes == ["oobject"]):  # shq pi
             pass
 
         else:
@@ -420,17 +420,17 @@ class PyExecQueryResult:
         # Take whole Input File as Cues, if no Cues given as Sh Args
 
         if not pq_words:
-            if stdin_isatty and not stdout_isatty:  # 'pq| ...' means 'pbpaste| ...'
+            if stdin_isatty and not stdout_isatty:  # 'shq| ...' means 'pbpaste| ...'
                 py_graf = ["obytes = ibytes"]
-            elif (not stdin_isatty) and stdout_isatty:  # '... |pq' means '... |pbcopy'
+            elif (not stdin_isatty) and stdout_isatty:  # '... |shq' means '... |pbcopy'
                 py_graf = ["obytes = ibytes"]
-            else:  # 'pq' or '... |pq |...' means step the Pipe Data forward
+            else:  # 'shq' or '... |shq |...' means step the Pipe Data forward
                 py_graf = self.read_ibytes_to_one_py_graf()
 
             # falls back to ending each Text Line, else ending each Byte Line
 
         if not py_graf:
-            if pq_words == ["-"]:  # 'pq -' means 'pbpaste |pbcopy'
+            if pq_words == ["-"]:  # 'shq -' means 'pbpaste |pbcopy'
                 py_graf = ["obytes = ibytes"]
 
         # Search for one Py Graf matching the Cues (but reject many if found)
@@ -461,7 +461,7 @@ class PyExecQueryResult:
         # Require 1 Py Graf found
 
         if not py_graf:
-            print(f"pq.py: No Py Grafs found by {pq_words}", file=sys.stderr)
+            print(f"shq.py: No Py Grafs found by {pq_words}", file=sys.stderr)
 
             sys.exit(2)  # exit 2 for wrong args at No Py Graphs found
 
@@ -801,7 +801,7 @@ class PyExecQueryResult:
 
         if len(py_grafs) != 1:
             print(
-                f"pq.py: {len(py_grafs)} Py Grafs found, not just 1, by {cues}",
+                f"shq.py: {len(py_grafs)} Py Grafs found, not just 1, by {cues}",
                 file=sys.stderr,
             )
 
@@ -1713,8 +1713,8 @@ def fetch_less_by_more_emoji_py_texts() -> dict[str, str]:
 
     return less_by_more
 
-    # FIXME: |cv default for:  pq emoji
-    # FIXME: add some form of 'pq emoji .' into 'make slow'
+    # FIXME: |cv default for:  shq emoji
+    # FIXME: add some form of 'shq emoji .' into 'make slow'
 
 
 #
@@ -2072,10 +2072,6 @@ ITEXT_PY_GRAFS_TEXT = """
 
 if __name__ == "__main__":
     main()
-
-
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq.py
-# copied from:  git clone https://github.com/pelavarre/byoverbs.git
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/shq.py

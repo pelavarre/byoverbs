@@ -63,6 +63,7 @@ examples:
   : : Apr/2023 Python 3.11.3  # micro release date
   : : Oct/2023 Python 3.11.6  # micro release date
   : Oct/2023 Python 3.12  # minor release date
+  : : Apr/2024 Python 3.12.3  # micro release date  # <- Ubuntu 2024
 
 """
 
@@ -70,6 +71,10 @@ examples:
 # https://packages.ubuntu.com/bionic/python/ Ubuntu Apr/2018  => Jul/2019 Python 3.6.9
 # https://packages.ubuntu.com/focal/python/ Ubuntu Apr/2020  => May/2021 Python 3.8.10
 # https://packages.ubuntu.com/jammy/python/ Ubuntu Apr/2022  => Mar/2022 Python 3.10.4
+
+# Ubuntu 2024 as logged by
+#   https://utcc.utoronto.ca/~cks/space/blog/python/Ubuntu2404PythonState
+# not yet seen by me (Pat LaVarre)
 
 
 import sys

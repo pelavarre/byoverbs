@@ -12,7 +12,7 @@ options:
   -h, --help   show this help message and exit
   -q, --quiet  say less and less, when called with -q or -qq or -qqq
   --py         test and show the Python Code, but don't write the Paste Buffer
-  --yolo       do whatever's popular now
+  --yolo       do what's popular now
 
 words and phrases of the Pq Programming Language:
   ascii, casefold, eval, lower, lstrip, repr, rstrip, strip, title, upper,
@@ -234,7 +234,7 @@ class PyExecQueryResult:
         words_help = "word of the Pq Programming Language:  dedented, dented, ..."
         quiet_help = "say less and less, when called with -q or -qq or -qqq"
         py_help = "test and show the Python Code, but don't write the Paste Buffer"
-        yolo_help = "do whatever's popular now"
+        yolo_help = "do what's popular now"
 
         assert argparse.ZERO_OR_MORE == "*"
         parser.add_argument("words", metavar="WORD", nargs="*", help=words_help)
@@ -1605,7 +1605,7 @@ def unicodedata_name_anyhow(char) -> str:
     return name_0
 
 
-UNICODEDATA_NAMES_ANYHOW_BY_CHAR = {  # omitting x 80 81 99 A0 AD
+UNICODEDATA_NAMES_ANYHOW_BY_CHAR = {  # omitting x 80 81 99 and x A0 AD
     "\x00": ("Null", "NUL"),
     "\x01": ("Start Of Heading", "SOH"),
     "\x02": ("Start Of Text", "STX"),
@@ -1688,8 +1688,8 @@ def fetch_less_by_more_emoji_py_texts() -> dict[str, str]:
                 continue
             name = unicodedata_name_anyhow(char)
         else:
-            try:
-                name = unicodedata.name(char)  # names found for \xA0 \xAD etc
+            try:  # names found for \xA0 \xAD etc
+                name = unicodedata.name(char)
             except ValueError as exc:  # at \x0A unicodedata.lookup("Line Feed") etc
                 assert str(exc) == "no such name"
                 continue
@@ -1764,7 +1764,7 @@ CUED_PY_LINES_TEXT = r"""
 
     oline = re.sub(r" {8}", repl="\t", string=iline)  # unexpanded  # |unexpand
 
-    oline = repr(iline)  # repr  # undo 'ast.literal_eval'
+    oline = repr(iline)  # repr  # undo 'ast.literal_eval'  # |sed "s,.*,'&',"
 
     oline = repr(iline)[1:0-1]  # |cat -tv  # cat tv  # '"' comes out as \'"\'
 
@@ -1832,7 +1832,7 @@ CUED_PY_GRAFS_TEXT = r"""
     iwords = iline.split()
     oline = iwords[-1] if iwords else ""
 
-    # cat n expand  # |cat -n |expand  # enum 1
+    # cat n expand  # |cat -n |expand  # enum 1  # n n n n
     olines = list(f"{n:6d}  {i}" for (n, i) in enumerate(ilines, start=1))
 
     # closed # close  # ends last line with "\n"
@@ -1854,6 +1854,11 @@ CUED_PY_GRAFS_TEXT = r"""
     dlines = dedent.splitlines()
     olines = list(_.rstrip() for _ in dlines)  # no right margin
     otext = "\n".join(olines).strip() + "\n"  # no top/bottom margins
+
+    # emo  # emoji  # emojis
+    sys.stderr.write("did you mean:  pq emojis u" "nicodedata\n")
+    sys.exit(2)  # todo: solve this more elegantly
+    oobject = "did you mean:  pq emojis u" "nicodedata"
 
     # find  # find  # find  # find  # f  # just the not-hidden files
     flines = list()

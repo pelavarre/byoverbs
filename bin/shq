@@ -2,7 +2,7 @@
 
 D=$(dirname "$0")
 if [[ $# == 0 ]]; then
-    python3 "$D"/pq.py --yolo
+    python3 "$D"/shq.py --yolo
 else
-    python3 "$D"/pq.py "$@"
+    python3 "$D"/shq.py "$@"
 fi

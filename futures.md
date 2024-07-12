@@ -706,6 +706,25 @@ pq vim tty
 
     test printf '\e]8;;http://example.com\e\\This is a link\e]8;;\e\\\n'
 
+pq
+
+    crash in
+        echo abcdef |pq 'oobject = abs(hex(hash(iline)))'
+
+pq emo crashed
+
+pq should drop # comments before choosing imports
+    and before counting out i/o variables
+
+|pq 1, sum
+    should sum the first column
+
+|pq repr
+    should work, across all 75
+
+pqv info
+    or some such to wc sum the whole pbuffer
+
 
 ### 10 - Tenth traunch
 
@@ -775,6 +794,15 @@ with a more complete workaround of
 histogram of McCabe Complexity - weirdly piled up against 11 - 1, maybe?
 
 cal.py option to call for more than two months, such as three!
+
+column: line too long
+
+    % pq |column -t |grep abcdefgh_jk_mnopqrs$ |cat -
+
+p
+    help(random)
+    # spams Terminal with 459 Lines saying:  '>>> import random  # viva lazy automagic'
+
 
 
 ## Copied from

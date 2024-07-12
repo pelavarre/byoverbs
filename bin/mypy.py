@@ -7,13 +7,13 @@ say if we believe some Py Type Declarations match the Code
 
 options:
   --help  show this help message and exit
-  --yolo  do whatever's popular now
+  --yolo  do what's popular now
 
 examples:
 
   mypy.py  # show these examples and exit
   mypy.py --h  # show this help message and exit
-  mypy.py --yolo  # do whatever's popular now
+  mypy.py --yolo  # do what's popular now
 
   : Feb/2023 MyPy 1.0
   : Mar/2023 MyPy 1.1

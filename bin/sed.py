@@ -19,6 +19,7 @@ examples:
   sed.py --  # prefix each line with "-- " and suffix each line with " --"
 
   sed -i.bak 's,old,new,g' FILE  # Sed '-i' edits Files in place
+  sed "s,.*,'&',"  # Sed Repl '&' means the Chars matched
   sed 's,^.*$,& = self.&,'  # Sed Repl '&' means the Chars matched
 
   pbpaste |awk '{print $NF}' |sed 's,^,-- ,' |sed 's,$, --,' |pbcopy
