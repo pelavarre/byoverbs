@@ -15,11 +15,7 @@ options:
   --yolo       do what's popular now
 
 words and phrases of the Pq Programming Language:
-  ascii, casefold, eval, lower, lstrip, repr, rstrip, strip, title, upper,
-  close, dedent, dent, end, reverse, shuffle, sort, spong, undent,
-  deframe, dumps, frame, json, join, loads, split,
-  expand, md5sum, sha256, tail -r, tac, unexpand,
-  a, jq ., s, u, wc c, wc m, wc w, wc l,  wc c, wc m, wc w, wc l, x, xn1,
+  a, s, u, wc c, wc m, wc w, wc l,  wc c, wc m, wc w, wc l, x, xn1,
   len bytes, len text, len words, len lines, text set,
   ...
 
@@ -1742,55 +1738,49 @@ def graf_deframe(graf) -> list[str]:
 CUED_PY_LINES_TEXT = r"""
 
 
-    iolines.reverse()  # reverse  # reversed  # |tac  # |tail -r  # tail r
+    ([ $(uname) == Linux ] && tac) || tail -r  # reverse  # reversed
 
-    iolines.sort()  # sort  # sorted sorted  # s s s s s s s
-
-
-    obytes = ibytes  # sponged  # sponge
+    sort  # sort  # sorted sorted  # s s s s s s s
 
 
-    oline = (4 * " ") + iline  # dent  # dented  # textwrap.dented
-
-    oline = ascii(iline)  # ascii  # |cat -etv  # cat etv  # shows $'\xA0' Nbsp
-
-    oline = iline.lstrip()  # lstrip  # lstripped  # |sed 's,^ *,,'
-
-    oline = iline.removeprefix(4 * " ")  # undent  # undented  # textwrap.undent
-
-    oline = iline.rstrip()  # rstrip  # rstripped  # |sed 's, *$,,'
-
-    oline = iline.strip()  # strip  # stripped  # |sed 's,^ *,,' |sed 's, *$,,'
-
-    oline = re.sub(r" {8}", repl="\t", string=iline)  # unexpanded  # |unexpand
-
-    oline = repr(iline)  # repr  # undo 'ast.literal_eval'
-
-    oline = repr(iline)[1:0-1]  # |cat -tv  # cat tv  # '"' comes out as \'"\'
-
-    oline = str(ast.literal_eval(iline))  # eval  # undo 'ascii' or 'repr'
+    (pbcopy; pbpaste)  # sponged  # sponge
 
 
-    olines = ilines  # end  # ended  # ends every line with "\n"
+    sed 's,^,    ,'  # dent  # dented  # textwrap.dented
+
+    sed $'s,\xC2\xA0,\\\\xA0,g' |cat -etv  # ascii
+
+    awk '{sub(/^ */, "", $0); print}'  # lstrip  # lstripped
+
+    sed 's,^    ,,'  # undent  # undented  # textwrap.undent
+
+    awk '{sub(/ *$/, "", $0); print}'  # rstrip  # rstripped
+
+    awk '{sub(/^ */, "", $0); sub(/ *$/, "", $0); print}'  # strip  # stripped
+
+    unexpand  # unexpanded
+
+    sed "s,^,'," |sed "s,$,',"  # repr  # undo 'ast.literal_eval'
+
+    cat -tv  # cat tv
+
+    sed "s,^',," |sed $'s,\xC2\xA0,\\\\xA0,g' |sed "s,'$,,"  # eval  # undo 'repr'
 
 
-    oobject = len(ibytes)  # bytes len  # |wc -c  # wc c  # wcc
 
-    oobject = len(itext)  # text characters chars len  # |wc -m  # wc m  # wcm
 
-    oobject = len(itext.split())  # words len  # |wc -w  # wc w  # wcw
+    # todo  # end  # ended  # ends every line with "\n"
 
-    oobject = len(itext.splitlines())  # lines len  # |wc -l  # wc l  # wcl
 
-    oobject = math.e  # e e e e e e e
+    wc -c  # bytes len  # wc c  # wcc
 
-    oobject = math.pi
+    wc -m  # text characters chars len  ## wc m  # wcm
 
-    oobject = math.tau
+    wc -w   # words len  # wc w  # wcw
 
-    oobject = max(len(_) for _ in ilines)  # max len  # max
+    wc -l  # lines len  # wc l  # wcl
 
-    oobject = max(len(_.split()) for _ in ilines)  # max split
+    awk '{many = length($0); if (many > most) most = many} END{print most}'  # max len  # max
 
 
     otext = " ".join(itext)  # space
@@ -1799,28 +1789,28 @@ CUED_PY_LINES_TEXT = r"""
 
     otext = "".join(sorted(set(itext)))  # sorted text set
 
-    otext = itext.casefold()  # casefold  # casefolded  # folded
+    tr '[A-Z]' '[a-z]'  # casefold  # casefolded  # folded  # todo: more than Ascii
 
-    otext = itext.expandtabs(tabsize=8)  # |expand  # expand expand
+    expand  # expand expand
 
-    otext = itext.lower()  # lower  # lowered  # lowercased  # |tr '[A-Z]' '[a-z]'
+    tr '[A-Z]' '[a-z]'   # lower  # lowered  # lowercased  # |tr '[A-Z]' '[a-z]'
 
-    otext = itext.replace(" ", "")  # despace  # replace replace
+    tr -d ' '  # despace  # replace replace
 
     otext = itext.title()  # title  # titled
 
-    otext = itext.upper()  # upper  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
+    tr '[a-z]' '[A-Z]'   # upper  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
 
-    otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
+    # todo  # |jq .  # jq
 
     otext = re.sub(r"(.)", repl=r"\1 ", string=itext).rstrip()  # sub  # repl
 
-    otext = string.capwords(itext)  # capwords
+    # todo  # capwords
 
-    otext = textwrap.dedent(itext) + "\n"  # dedent  # dedented  # textwrap.dedent
+    # todo  # dedent  # dedented  # textwrap.dedent
 
 
-    random.shuffle(iolines) # shuffle  # shuffled
+    # todo  # shuffle  # shuffled
 
 
 """
@@ -1828,26 +1818,20 @@ CUED_PY_LINES_TEXT = r"""
 
 CUED_PY_GRAFS_TEXT = r"""
 
-    # awk  # |awk '{print $NF}'  # a a a a
-    iwords = iline.split()
-    oline = iwords[-1] if iwords else ""
+    # awk  #  # a a a a
+    awk '{print $NF}'
 
-    # cat n expand  # |cat -n |expand  # enum 1
-    olines = list(f"{n:6d}  {i}" for (n, i) in enumerate(ilines, start=1))
+    # cat n expand  # enum 1
+    cat -n |expand
 
     # closed # close  # ends last line with "\n"
-    otext = itext if itext.endswith("\n") else (itext + "\n")
+    awk '{print}'
 
     # collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen
-    olines = list(dict((_, _) for _ in ilines).keys())  # unsort  # unsorted  # dedupe
+    awk '{if (!lines[$0]) print $0; lines[$0] += 1}'  # unsort  # unsorted  # dedupe
 
-    # decomment  # |sed 's,#.*,,' |sed 's, *$,,'  # |grep .
-    dlines = list()
-    for iline in ilines:
-        dline = iline.partition("#")[0].rstrip()
-        if dline:
-            dlines.append(dline)
-    olines = dlines
+    # decomment
+    sed 's,#.*,,' |sed 's, *$,,'  # |grep .
 
     # deframe  # deframed
     dedent = textwrap.dedent(itext) + "\n"  # no left margin
@@ -1897,43 +1881,46 @@ CUED_PY_GRAFS_TEXT = r"""
     otext = "\n".join(olines) + "\n"
 
     # head head  # h h h h
-    olines = ilines[:10]
+    head
 
     # head tail  # h t h t h t  # ht ht
-    ipairs = list(enumerate(ilines, start=1))
-    plines = list(f"{_[0]:6}  {_[-1]}" for _ in ipairs[:3])
-    plines.append("...")
-    plines.extend(f"{_[0]:6}  {_[-1]}" for _ in ipairs[-3:])
-    olines = plines
+    awk '''
+        { lines[NR % 3] = $0 }
+        (NR <= 3) { printf("%6d  %s\n", NR - 1, $0) }
+        END {
+            print "..."
+            printf("%6d  %s\n", NR - 3, lines[(NR + 2) % 3])
+            printf("%6d  %s\n", NR - 2, lines[(NR + 1) % 3])
+            printf("%6d  %s\n", NR - 1, lines[(NR + 0) % 3])
+        }
+    '''
 
-    # join  # joined  # |tr '\n' ' '  # |xargs  # xargs xargs  # x x
-    otext = " ".join(ilines) + "\n"
+    # join  # joined  # |xargs  # xargs xargs  # x x
+    tr '\n' ' '
 
     # ls dots
-    olines = sorted(os.listdir())  # still no [os.curdir, os.pardir]
+    ls -A .*
 
     # ls ls
-    olines = sorted(_ for _ in os.listdir() if not _.startswith("."))
+    ls
+
+    # max len split  # max split
+    awk '{many = NF; if (many > most) most = many} END{print most}'
 
     # md5sum
-    md5 = hashlib.md5()
-    md5.update(ibytes)
-    otext = md5.hexdigest() + "\n"
+    openssl dgst -md5 |tr '()=' ' ' |awk '{print $3}'
 
     # nl v0  # |nl -v0 |expand  # enum 0  # enum  # enumerate
     olines = list(f"{n:6d}  {i}" for (n, i) in enumerate(ilines))
 
     # sha256
-    sha256 = hashlib.sha256()
-    sha256.update(ibytes)
-    otext = sha256.hexdigest() + "\n"
+    openssl dgst -sha256 |tr '()=' ' ' |awk '{print $3}'
 
     # split split split  # |sed 's,  *,$,g' |tr '$' '\n'
-    # |xargs -n 1  # xargs n 1  # xn1
-    olines = itext.split()
+    xargs -n 1  # xargs n 1  # xn1
 
     # tail tail  # t t t t t t t t t
-    olines = ilines[-10:]
+    tail
 
     # ts  # |ts
     while True:

@@ -26,6 +26,7 @@ import string
 import subprocess
 import sys
 import textwrap
+import zoneinfo
 
 
 assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
@@ -48,18 +49,27 @@ assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 ... == shlex.join  # new since Oct/2019 Python 3.8  # type: ignore
 # ... == pprint.pp  # new since Oct/2019 Python 3.8  # type: ignore
 
-... == str.removeprefix, str.removesuffix  # new since Oct/2020 Python 3.9  # type: ignore
-... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
-
 # Ubuntu 2022
 
-# ... == dict[str, int] | None  # new since Oct/2021 Python 3.10
+... == str.removeprefix, str.removesuffix  # new since Oct/2020 Python 3.9  # type: ignore
+... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
+... == zoneinfo  # new since Oct/2020 Python 3.9
+
+... == dict[str, int] | None  # new since Oct/2021 Python 3.10
 # ... == int.bit_count  # new since Oct/2021 Python 3.10
 # ... == list(zip([], [], strict=True))  # new since Oct/2021 Python 3.10
+
+# Ubuntu 2024
 
 # ... == tomllib  # new since Oct/2022 Python 3.11
 # ... == termios.tcgetwinsize(sys.stderr.fileno())  # new since Oct/2022 Python 3.11
 # ... == typing.Self  # new since Oct/2022 Python 3.11
+
+# ... # new since Oct/2023 Python 3.12
+
+# Ubuntu 2026
+
+# "abba".replace("b", "B", count=1)  # kwarg ok since Oct/2024 Python 3.13
 
 
 #

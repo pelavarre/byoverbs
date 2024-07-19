@@ -24,6 +24,11 @@ examples:
   cd /etc/postgresql/*/main/  # /etc/postgresql/14/main
   sudo cat pg_hba.conf |grep peer   # local all postgres peer  # <= sudo su - postgres
   sudo cat pg_hba.conf |grep trust  # local all postgres trust  # : no sudo needed :
+  : + host all all all trust  # psql -h example.com --username=postgres
+  sudo cat postgresql.conf
+  : + listen_addresses='*'  # psql -h example.com --username=postgres
+  sudo systemctl status postgresql
+  sudo systemctl restart postgresql
 
   F=pg_hba.conf && echo cp -ip $F{,~$(date -r $F +%m%djqd%H%M)~} |tee /dev/tty |bash
 

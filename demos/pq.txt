@@ -2,6 +2,7 @@
 + :
 ++ echo http://example.com
 ++ bin/pq.py -q --py
++ pq chill
 
 # chill
 assert iline.startswith("http")  # "https", "http", etc
@@ -11,9 +12,11 @@ oline = iline.replace("://", " :// ").replace(".", " . ").rstrip()
 + T=
 ++ echo http://example.com
 ++ bin/pq.py --yolo
++ pq chill
 + T='http :// example . com'
 ++ echo http :// example . com
 ++ bin/pq.py -q --py
++ pq warm
 
 # warm
 assert iline.startswith("http")  # "https", "http", etc
@@ -23,11 +26,13 @@ oline = iline.replace(" ", "")
 + T=
 ++ echo http :// example . com
 ++ bin/pq.py --yolo
++ pq warm
 + T=http://example.com
 + :
 + A=https://codereviews.example.com/r/123456
 ++ echo https://codereviews.example.com/r/123456/
 ++ bin/pq.py -q --py
++ pq crthin
 
 # crthin
 assert re.match(r"http.*codereviews[./]", string=iline)
@@ -46,11 +51,13 @@ oline = osplits.geturl()
 + T=
 ++ echo https://codereviews.example.com/r/123456/
 ++ bin/pq.py --yolo
++ pq crthin
 + T=http://codereviews/r/123456/diff
 + :
 + A=https://docs.google.com/document/d/1YfkPxiJjVJXvf4G1-Ql6-IgxE7J22eEG2JzueNjl2T4
 ++ echo https://docs.google.com/document/d/1YfkPxiJjVJXvf4G1-Ql6-IgxE7J22eEG2JzueNjl2T4/edit#heading=h.xedwnjmaewr
 ++ bin/pq.py -q --py
++ pq glink
 
 # glink
 assert re.match(r"http.*[.]google.com/", string=iline)
@@ -74,11 +81,13 @@ oline = osplits.geturl()
 + T=
 ++ echo https://docs.google.com/document/d/1YfkPxiJjVJXvf4G1-Ql6-IgxE7J22eEG2JzueNjl2T4/edit#heading=h.xedwnjmaewr
 ++ bin/pq.py --yolo
++ pq glink
 + T=https://docs.google.com/document/d/1YfkPxiJjVJXvf4G1-Ql6-IgxE7J22eEG2JzueNjl2T4
 + :
 + A=https://ourjenkins.dev.example.com
 ++ echo https://ourjenkins.dev.example.com/
 ++ bin/pq.py -q --py
++ pq jkthin
 
 # jkthin
 assert re.match(r"^http.*jenkins[0-9]*[.]", string=iline)
@@ -96,10 +105,12 @@ oline = iosplits.geturl()
 + T=
 ++ echo https://ourjenkins.dev.example.com/
 ++ bin/pq.py --yolo
++ pq jkthin
 + T=http://OurJenkins/
 + A=http://ourJenkins/
 ++ echo http://ourJenkins//
 ++ bin/pq.py -q --py
++ pq jkwide
 
 # jkwide
 assert re.search(r"[jJ]enkins[0-9]*/", string=iline)
@@ -118,11 +129,13 @@ oline = iosplits.geturl()
 + T=
 ++ echo http://ourJenkins//
 ++ bin/pq.py --yolo
++ pq jkwide
 + T=https://ourjenkins.dev.example.com
 + :
 + A=https://jira.example.com/browse/PROJ-123456
 ++ echo https://jira.example.com/browse/PROJ-123456
 ++ bin/pq.py -q --py
++ pq jkey
 
 # jkey
 assert re.match(r"^http.*jira.*/browse/.*$", string=iline)
@@ -132,10 +145,12 @@ oline = isplits.path.removeprefix("/browse/")
 + T=
 ++ echo https://jira.example.com/browse/PROJ-123456
 ++ bin/pq.py --yolo
++ pq jkey
 + T=PROJ-123456
 + A=PROJ-123456
 ++ echo PROJ-123456
 ++ bin/pq.py -q --py
++ pq jlink
 
 # jlink
 assert re.match(r"^[A-Z]+[-][0-9]+$", string=iline)
@@ -157,6 +172,7 @@ oline = osplits.geturl()
 + T=
 ++ echo PROJ-123456
 ++ bin/pq.py --yolo
++ pq jlink
 + T=https://jira.example.com/browse/PROJ-123456
 + :
 ++ echo '{"//":[""]}'
@@ -210,13 +226,13 @@ oobject = len(itext.split())  # words len  # |wc -w  # wc w  # wcw
 + set -xe
 + bin/pq.py -q --py max len
 
-oobject = max(len(_) for _ in ilines)  # max len  # max
+oobject = max(len(_) for _ in ilines)  # max len  # max len  # max
 
 + func max split
 + set -xe
 + bin/pq.py -q --py max split
 
-oobject = max(len(_.split()) for _ in ilines)  # max split
+oobject = max(len(_.split()) for _ in ilines)  # max len split  # max split
 
 + func text set
 + set -xe
@@ -322,7 +338,7 @@ otext = "\n".join(olines) + "\n"
 + set -xe
 + bin/pq.py -q --py end
 
-olines = ilines  # end  # ended  # ends every line with "\n"
+olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
 
 + func lower
 + set -xe
@@ -423,7 +439,7 @@ oline = (4 * " ") + iline  # dent  # dented  # textwrap.dented
 + set -xe
 + bin/pq.py -q --py ended
 
-olines = ilines  # end  # ended  # ends every line with "\n"
+olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
 
 + func framed
 + set -xe
@@ -520,7 +536,7 @@ olines = dlines
 + set -xe
 + bin/pq.py -q --py despace
 
-otext = itext.replace(" ", "")  # despace  # replace replace
+otext = itext.replace(" ", "")  # despace  # replace replace  # |tr -d ' '
 
 + func space
 + set -xe
@@ -538,13 +554,13 @@ oobject = math.e  # e e e e e e e
 + set -xe
 + bin/pq.py -q --py pi
 
-oobject = math.pi
+oobject = math.pi  # pi
 
 + func tau
 + set -xe
 + bin/pq.py -q --py tau
 
-oobject = math.tau
+oobject = math.tau  # tau
 
 + func iline.title
 + set -xe
@@ -589,11 +605,13 @@ obytes = ibytes
 
 + echo -n abc
 + bin/pq.py -q --py
++ pbcopy
 
 obytes = ibytes
 
 + bin/pq.py -q --py
 + hexdump -C
++ pbpaste
 
 obytes = ibytes
 

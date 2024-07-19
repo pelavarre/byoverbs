@@ -62,8 +62,9 @@ examples:
   : Oct/2022 Python 3.11  # minor release date
   : : Apr/2023 Python 3.11.3  # micro release date
   : : Oct/2023 Python 3.11.6  # micro release date
-  : Oct/2023 Python 3.12  # minor release date
-  : : Apr/2024 Python 3.12.3  # micro release date  # <- Ubuntu 2024
+  : Oct/2023 Python 3.12  # minor release date  # <- Ubuntu 2024
+  : : Apr/2024 Python 3.12.3  # micro release date
+  : : Jun/2024 Python 3.12.4  # micro release date
 
 """
 

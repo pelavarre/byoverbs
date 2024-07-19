@@ -422,10 +422,12 @@ class PyExecQueryResult:
         if not pq_words:
             if stdin_isatty and not stdout_isatty:  # 'pq| ...' means 'pbpaste| ...'
                 py_graf = ["obytes = ibytes"]
+                print("+ pbpaste", file=sys.stderr)
             elif (not stdin_isatty) and stdout_isatty:  # '... |pq' means '... |pbcopy'
                 py_graf = ["obytes = ibytes"]
+                print("+ pbcopy", file=sys.stderr)
             else:  # 'pq' or '... |pq |...' means step the Pipe Data forward
-                py_graf = self.read_ibytes_to_one_py_graf()
+                py_graf = self.read_ibytes_to_one_py_graf(verbose=True)
 
             # falls back to ending each Text Line, else ending each Byte Line
 
@@ -1045,7 +1047,7 @@ class PyExecQueryResult:
     # Take whole Input File as Cues, and fall back to ending each Line
     #
 
-    def read_ibytes_to_one_py_graf(self) -> list[str]:
+    def read_ibytes_to_one_py_graf(self, verbose) -> list[str]:
         """Take the whole Input File as Cues"""
 
         # Read the Bytes, as if some of the completed Py Graf already ran
@@ -1067,6 +1069,10 @@ class PyExecQueryResult:
             itext = ibytes.decode()
         except UnicodeDecodeError:
             py_graf = ['obytes = b"\n".join(ibytes.splitlines()) + b"\n"']
+
+            assert verbose, (verbose,)
+            print("+ pq ended", file=sys.stderr)
+
             return py_graf
 
         self.itext_else = itext
@@ -1075,6 +1081,15 @@ class PyExecQueryResult:
 
         py_graf_if = self.itext_to_one_pygraf_if(itext)
         if py_graf_if:
+
+            by_cues = self.py_grafs_to_graf_by_cues([py_graf_if])
+            assert by_cues, (by_cues,)
+            cues_list = list(by_cues.keys())
+            cues = cues_list[0]  # first wins
+
+            assert verbose, (verbose,)
+            print("+ pq " + " ".join(cues), file=sys.stderr)
+
             return py_graf_if
 
         # Else steal some time to run the Self-Tests more often
@@ -1085,9 +1100,12 @@ class PyExecQueryResult:
 
         default_py_graf = [
             r"""
-            olines = ilines  # end  # ended  # ends every line with "\n"
-        """.strip()
+                olines = ilines  # end  # ended  # ends every line with "\n"
+            """.strip()
         ]
+
+        assert verbose, (verbose,)
+        print("+ pq ended", file=sys.stderr)
 
         return default_py_graf
 
@@ -1739,6 +1757,9 @@ def graf_deframe(graf) -> list[str]:
 #
 
 
+# todo: reject multiline snippets from the CUED_PY_LINES_TEXT
+# todo: reject single-line snippets that don't have comments to name them
+
 CUED_PY_LINES_TEXT = r"""
 
 
@@ -1747,8 +1768,9 @@ CUED_PY_LINES_TEXT = r"""
     iolines.sort()  # sort  # sorted sorted  # s s s s s s s
 
 
-    obytes = ibytes  # sponged  # sponge
+    obytes = b"\n".join(ibytes.splitlines()) + b"\n"  # bytes ended
 
+    obytes = ibytes  # sponged  # sponge
 
     oline = (4 * " ") + iline  # dent  # dented  # textwrap.dented
 
@@ -1771,8 +1793,9 @@ CUED_PY_LINES_TEXT = r"""
     oline = str(ast.literal_eval(iline))  # eval  # undo 'ascii' or 'repr'
 
 
-    olines = ilines  # end  # ended  # ends every line with "\n"
+    olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
 
+    oobject = "".join(chr(_) for _ in range(0x100))  # chr range
 
     oobject = len(ibytes)  # bytes len  # |wc -c  # wc c  # wcc
 
@@ -1784,14 +1807,13 @@ CUED_PY_LINES_TEXT = r"""
 
     oobject = math.e  # e e e e e e e
 
-    oobject = math.pi
+    oobject = math.pi  # pi
 
-    oobject = math.tau
+    oobject = math.tau  # tau
 
-    oobject = max(len(_) for _ in ilines)  # max len  # max
+    oobject = max(len(_) for _ in ilines)  # max len  # max len  # max
 
-    oobject = max(len(_.split()) for _ in ilines)  # max split
-
+    oobject = max(len(_.split()) for _ in ilines)  # max len split  # max split
 
     otext = " ".join(itext)  # space
 
@@ -1805,7 +1827,7 @@ CUED_PY_LINES_TEXT = r"""
 
     otext = itext.lower()  # lower  # lowered  # lowercased  # |tr '[A-Z]' '[a-z]'
 
-    otext = itext.replace(" ", "")  # despace  # replace replace
+    otext = itext.replace(" ", "")  # despace  # replace replace  # |tr -d ' '
 
     otext = itext.title()  # title  # titled
 
@@ -1826,11 +1848,17 @@ CUED_PY_LINES_TEXT = r"""
 """
 
 
+# todo: reject single-line snippets that don't have comments to name them
+
 CUED_PY_GRAFS_TEXT = r"""
 
     # awk  # |awk '{print $NF}'  # a a a a
     iwords = iline.split()
     oline = iwords[-1] if iwords else ""
+
+    # bytes range
+    obytes = ibytes  # todo: say this without ibytes
+    obytes = b"".join(bytes([_]) for _ in range(0x100))
 
     # cat n expand  # |cat -n |expand  # enum 1  # n n n n
     olines = list(f"{n:6d}  {i}" for (n, i) in enumerate(ilines, start=1))
@@ -1856,9 +1884,9 @@ CUED_PY_GRAFS_TEXT = r"""
     otext = "\n".join(olines).strip() + "\n"  # no top/bottom margins
 
     # emo  # emoji  # emojis
-    sys.stderr.write("did you mean:  pq emojis u" "nicodedata\n")
+    sys.stderr.write("did you mean the huge:  pq emojis u" "nicodedata\n")
     sys.exit(2)  # todo: solve this more elegantly
-    oobject = "did you mean:  pq emojis u" "nicodedata"
+    oobject = "did you mean the huge:  pq emojis u" "nicodedata"
 
     # find  # find  # find  # find  # f  # just the not-hidden files
     flines = list()

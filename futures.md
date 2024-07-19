@@ -621,9 +621,11 @@ pq
 
     pq 'dict(enumerate(words))' is close to # grep -n .
 
-    pq emoji lock
+    pq emo lock
+    pq emo lock |grep Lock
         runs as if emoji.py
         looks up "lock" inside UnicodeData Names
+        when should the '|grep Lock' tail be implied?
 
     pq --yolo chill of cv = jqdoe@example.com
 
