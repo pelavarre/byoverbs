@@ -33,8 +33,7 @@ stty -ixon  # let Sh ⌃S mean undo ⌃R  # don't take ⌃Q and ⌃S as XOn/ XOf
 
 function ZSH_CHDIR () {
     if [[ $# != 2 ]]; then
-        'cd' "$@"
-        return $?
+        'cd' "$@" || return $?  # ShellCheck SC2164 forces 1 SourceLine, not 2
     else
         if ! pwd |grep "$1" >/dev/null; then
             echo "cd: string not in pwd: $1"
