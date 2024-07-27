@@ -1,16 +1,16 @@
 # ~/.zprofile
 
 # shellcheck disable=SC1090  # Can't follow non-constant source
+# shellcheck disable=SC1091  # Not following, Does not exist, No such file
 
 
-# Give up on searching for Zsh Defaults that cost less than Bash
+# Revert enough Zsh back to the Classic Bash Design
 
-bind 'set enable-bracketed-paste off' 2>/dev/null  # Bash Syntax for this Zsh idea
-unset zle_bracketed_paste
-setopt InteractiveComments 2>/dev/null
+# bind 'set enable-bracketed-paste off'
+# unset zle_bracketed_paste
+setopt InteractiveComments
 
 setopt NO_nomatch
-
 
 
 # Grow Sh Path

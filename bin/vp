@@ -10,7 +10,7 @@ if [ -e $F ]; then
 fi
 
 if [[ "$STY" ]]; then
-    if "$(uname)" == "Darwin"; then
+    if [ "$(uname)" = Darwin ]; then
         echo + unset TERM >&2
         unset TERM
     fi

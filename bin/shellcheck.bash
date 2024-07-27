@@ -33,7 +33,7 @@ fi
 
 
 #
-# SC2230: 'which' is non-standard ...  # the actual Tool doesn't quote the Which
+# SC2230: 'which' is non-standard ...
 #   Use builtin 'command -v' instead
 #
 # SC2244: Prefer explicit -n to check non-empty string
@@ -44,6 +44,10 @@ fi
 #
 # SC2250: Prefer putting braces around variable references
 #   even when not strictly required
+#
+
+#
+# -x, --external-sources  Allow 'source' outside of FILES
 #
 
 
@@ -78,7 +82,7 @@ fi
 echo "calling ShellCheck on $(echo bin/shellcheck.bash bin/* |wc -w) + 4 files"
 
 
-shellcheck --norc bin/shellcheck.bash "$@"
+(set -xe; shellcheck --norc bin/shellcheck.bash "$@")
 
 
 cd bin/ || exit 1
@@ -86,10 +90,14 @@ cd bin/ || exit 1
 for SHFILE in *; do
     if [[ -d "$SHFILE" ]]; then  # skips, if dir
         :
+    elif [[ "$SHFILE" == bash_profile ]]; then
+       (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
+    elif [[ "$SHFILE" == zprofile ]]; then
+       (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
     elif [[ "$SHFILE" =~ ^[^.]*$ ]]; then  # checks, if not hidden and no file ext
-        shellcheck --norc --shell=bash "$@" -- "$SHFILE"
+        (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
     elif [[ "$SHFILE" =~ [.]bash$ ]]; then  # checks, if explicitly Bash
-        shellcheck --norc --shell=bash "$@" -- "$SHFILE"
+        (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
     else
         :
     fi
@@ -100,8 +108,8 @@ cd ../ || exit 1
 
 cd dotfiles/ || exit 1
 
-shellcheck --norc --shell=bash dot.bash_profile dot.bashrc "$@"
+(set -xe; shellcheck --norc --shell=bash dot.bash_profile dot.bashrc "$@")
 # calls for Bash on Bash
 
-shellcheck --norc --shell=bash dot.zprofile dot.zshrc "$@"
+(set -xe; shellcheck --norc --shell=bash dot.zprofile dot.zshrc "$@")
 # calls for Bash while Zsh unknown

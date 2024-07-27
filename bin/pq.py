@@ -37,9 +37,12 @@ quirks:
   works well with:  ⌘C pbcopy, ⌘V pbpaste, less -FIRX
 
 examples:
-  pq  # show these examples, run self-tests, and exit
+  pq.py  # show these examples, run self-tests, and exit
   pq --help  # show this help message and exit
   pq --yolo  # parse the Paste to guess what to do to it
+  pq  # end every Line of the Os/Copy Paste Clipboard Buffer
+  pq |cat -  # show the Os/Copy Paste Clipboard Buffer
+  cat - |pq  # type into the Os/Copy Paste Clipboard Buffer
   pq dent  # insert 4 Spaces at the left of each Line
   pq dedent  # remove the leading Blank Columns from the Lines
   pq len lines  # count Lines

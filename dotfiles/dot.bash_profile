@@ -1,6 +1,13 @@
 # ~/.bash_profile
 
 # shellcheck disable=SC1090  # Can't follow non-constant source
+# shellcheck disable=SC1091  # Not following, Does not exist, No such file
+
+
+# Revert enough Bash back to the Classic Bash Design
+
+# bind 'set enable-bracketed-paste off'
+# unset zle_bracketed_paste
 
 
 # Grow Sh Path
@@ -23,6 +30,23 @@ alias ~='echo + cd "~" >&2 && cd ~ && (dirs -p |head -1)'
 shopt -s histverify  # Preview ! History Expansion  # a la Zsh:  setopt histverify
 
 stty -ixon  # let Sh ⌃S mean undo ⌃R  # don't take ⌃Q and ⌃S as XOn/ XOff
+
+function ZSH_CHDIR () {
+    if [[ $# != 2 ]]; then
+        'cd' "$@"
+    else
+        if ! pwd |grep "$1"; then
+            echo "cd: string not in pwd: $1"
+            return 1
+        fi
+        echo + sed "s'$1'$2'"
+        DIR=$(pwd |sed "s'$1'$2'")
+        echo + cd "$DIR" >&2
+        'cd' "$DIR" && (dirs -p |head -1)
+    fi
+}
+
+alias cd=ZSH_CHDIR
 
 
 # Eagerly autocorrect some inputs
@@ -106,6 +130,38 @@ if dircolors >/dev/null 2>&1; then  # for Linux
 fi
 
 
+# Bind the commonly unbound F Keys
+
+if ! bind 2>/dev/null; then
+    :
+elif bind 2>&1 |grep 'bind: warning: line editing not enabled' >/dev/null; then
+    :
+else
+
+    bind '"\eOP": "\C-aecho F1 \C-j"'
+    bind '"\eOQ": "\C-aecho F2 \C-j"'
+    bind '"\eOR": "\C-aecho F3 \C-j"'
+    bind '"\eOS": "\C-aecho F4 \C-j"'
+    bind '"\e[15~": "\C-aecho F5 \C-j"'
+    bind '"\e[17~": "\C-aecho F6 \C-j"'
+    bind '"\e[18~": "\C-aecho F7 \C-j"'
+    bind '"\e[19~": "\C-aecho F8 \C-j"'
+    bind '"\e[20~": "\C-aecho F9 \C-j"'
+    bind '"\e[21~": "\C-aecho F10 \C-j"'
+    bind '"\e[23~": "\C-aecho F11 chorded as ⌥F6 \C-j"'
+    bind '"\e[24~": "\C-aecho F12 \C-j"'
+    bind '"\e[25~": "\C-aecho ⇧F5 \C-j"'
+    bind '"\e[26~": "\C-aecho ⇧F6 \C-j"'
+    bind '"\e[28~": "\C-aecho ⇧F7 \C-j"'
+    bind '"\e[29~": "\C-aecho ⇧F8 \C-j"'
+    bind '"\e[31~": "\C-aecho ⇧F9 \C-j"'
+    bind '"\e[32~": "\C-aecho ⇧F10 \C-j"'
+    bind '"\e[33~": "\C-aecho ⇧F11 \C-j"'
+    bind '"\e[34~": "\C-aecho ⇧F12 \C-j"'
+
+fi
+
+
 # Mix in LocalHost Bash_Profile for Sh Path, PushD, AltPwdS, Ssh Aliases, Bash Bind, etc
 
 if [[ -e ~/.ssh/bash_profile ]]; then source ~/.ssh/bash_profile; fi
@@ -114,6 +170,7 @@ if [[ -e ~/.ssh/bash_profile ]]; then source ~/.ssh/bash_profile; fi
 : # pushd ~/Desktop >/dev/null
 : # if ! ssh-add -l >/dev/null; then ...
 : # function ... () { set -x; date; caffeinate -s ssh -A ...; echo "+ exit $?"; ...
+: # if ... bind ...; then ... bind '"\eOP": "\C-abind -s \C-j"' ...
 
 : # bind '"\eOP": "\C-abind -s \C-j"'
 

@@ -194,7 +194,7 @@ class LazyImport:
         else:
             print(">>> import", self.import_, "as", self.as_, auto, file=sys.stderr)
 
-        # todo: sad when 'beep_' runs in the middle of a Row
+        # todo: sad when "beep_" runs in the middle of a Row
 
 
 def def_some_lazy_imports() -> None:
