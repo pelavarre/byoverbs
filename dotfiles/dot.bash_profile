@@ -34,15 +34,15 @@ stty -ixon  # let Sh ⌃S mean undo ⌃R  # don't take ⌃Q and ⌃S as XOn/ XOf
 function ZSH_CHDIR () {
     if [[ $# != 2 ]]; then
         'cd' "$@"
+        return $?
     else
-        if ! pwd |grep "$1"; then
+        if ! pwd |grep "$1" >/dev/null; then
             echo "cd: string not in pwd: $1"
             return 1
         fi
-        echo + sed "s'$1'$2'"
         DIR=$(pwd |sed "s'$1'$2'")
-        echo + cd "$DIR" >&2
         'cd' "$DIR" && (dirs -p |head -1)
+        return $?
     fi
 }
 

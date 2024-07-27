@@ -11,6 +11,9 @@ set -e
 # quirks:
 #   works from knowledge of 'man shellcheck' and 'shellcheck --norc'
 #
+# see also:
+#   bin/shellcheck.py
+#
 # examples:
 #   make shellcheck
 #   bin/shellcheck.bash
@@ -31,7 +34,8 @@ if [[ "$*" == "-o all --exclude=..." ]]; then
     exit
 fi
 
-
+#
+# SC2nnn: General shell script warnings and suggestions
 #
 # SC2230: 'which' is non-standard ...
 #   Use builtin 'command -v' instead
@@ -113,3 +117,7 @@ cd dotfiles/ || exit 1
 
 (set -xe; shellcheck --norc --shell=bash dot.zprofile dot.zshrc "$@")
 # calls for Bash while Zsh unknown
+
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/shellcheck.bash
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

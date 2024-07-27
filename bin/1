@@ -12,7 +12,7 @@
 #   echo xyz |1 |tr '[a-z]' '[A-Z]'  # replaces 1'th and forwards it
 
 
-# shellcheck disable=SC2002  # explicit Cat
+# shellcheck disable=SC2002  # Explicit Cat
 
 
 set -e
