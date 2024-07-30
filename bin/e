@@ -8,7 +8,7 @@ if [[ $# != 0 ]]; then
     $emacs -nw --no-splash --eval '(menu-bar-mode -1)' "$@"
 else
     set -xe
-    pbpaste >pbpaste~$$~
-    $emacs -nw --no-splash --eval '(menu-bar-mode -1)' pbpaste~$$~
-    pbcopy <pbpaste~$$~
+    pbpaste >$$.pbpaste
+    $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $$.pbpaste
+    pbcopy <$$.pbpaste
 fi

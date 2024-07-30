@@ -806,6 +806,15 @@ p
     # spams Terminal with 459 Lines saying:  '>>> import random  # viva lazy automagic'
 
 
+### 11 - Eleventh Traunch
+
+vi.py
+    as a bookmark of editor features to show off
+    show every char distinctly inside of selection of Space, Tab, Line-Feed etc
+    persist cursor position, selection
+    flash reverse-video of selection back to ⌃O covered by a movement
+        D, I to ⌃O ⌃I
+
 
 ## Copied from
 

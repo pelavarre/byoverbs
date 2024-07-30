@@ -14,7 +14,7 @@ if [[ $# != 0 ]]; then
     vim "$@"
 else
     set -xe
-    pbpaste >pbpaste~$$~
-    vim pbpaste~$$~
-    pbcopy <pbpaste~$$~
+    pbpaste >$$.pbpaste
+    vim $$.pbpaste
+    pbcopy <$$.pbpaste
 fi

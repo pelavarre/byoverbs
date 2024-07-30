@@ -50,6 +50,7 @@ examples:
   echo '[0, 11, 22]' |pq json |cat -  # format Json consistently
   pq 'oline = "<< " + iline + " >>"'  # add Prefix and Suffix to each Line
   pq 'olines = ilines[:3] + ["..."] + ilines[-3:]'  # show Head and Tail
+  pq vi  # edit the Os/Copy Paste Clipboard Buffer
 """
 
 # quirks to come when we add 'pq vi':
@@ -74,8 +75,10 @@ import shlex
 import shutil
 import stat
 import sys
+import termios
 import textwrap
 import traceback
+import tty
 import unicodedata
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
@@ -1492,19 +1495,26 @@ def py_split(py_text) -> list[str]:
 def py_graf_insert_imports(py_graf) -> list[str]:
     """Insert a paragraph of Py Imports up front"""
 
-    sys_modules_etc = list(sys.modules.keys())
-    sys_modules_etc.append("dt")
-    sys_modules_etc.append("json")
-    sys_modules_etc.append("socket")
-    sys_modules_etc.append("string")
-    sys_modules_etc.append("subprocess")
-    sys_modules_etc.append("urllib.parse")
+    #
+
+    importables = list(sys.modules.keys())
+
+    importables.append("dt")
+    importables.append("json")
+    importables.append("socket")
+    importables.append("string")
+    importables.append("subprocess")
+    importables.append("urllib.parse")
+
+    importables.append("pq")
+
+    #
 
     div = list([""])
 
     py_text = "\n".join(py_graf)
     full_py_words = py_split(py_text)
-    py_modules = list(_ for _ in full_py_words if _ in sys_modules_etc)
+    py_modules = list(_ for _ in full_py_words if _ in importables)
 
     import_graf = sorted(set(f"import {module}" for module in py_modules))
     for i, p in enumerate(import_graf):
@@ -1581,6 +1591,226 @@ def pathlib_create_pbpaste_bin() -> None:
 
     if not filepath.exists():  # chmod u=rw,go= ~/.ssh/pbpaste.bin
         filepath.touch(mode=(stat.S_IRUSR | stat.S_IWUSR), exist_ok=True)
+
+
+#
+# Amp up Import TermIOs, Tty
+#
+
+
+def ex_macros(ilines) -> list[str]:
+    """Edit in the way of Emacs"""
+
+    lw = LineWrangler()
+    olines = lw.wrangle(ilines, keymap="Emacs")
+
+    return olines
+
+
+def visual_ex(ilines) -> list[str]:
+    """Edit in the way of Ex Vi"""
+
+    lw = LineWrangler()
+    olines = lw.wrangle(ilines, keymap="Vi")
+
+    return olines
+
+
+class BytesTerminal:
+    r"""Read/ Write the Bytes at Keyboard/ Screen of a Terminal"""
+
+    tcgetattr_else: list[int | list[bytes | int]] | None
+
+    def __init__(self) -> None:
+        stdio = sys.stderr
+        fd = stdio.fileno()
+
+        self.stdio = stdio
+        self.fd = fd
+        self.tcgetattr_else = None
+
+    def __enter__(self) -> "BytesTerminal":  # -> typing.Self:
+        r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
+
+        fd = self.fd
+        tcgetattr_else = self.tcgetattr_else
+
+        if tcgetattr_else is None:
+            tcgetattr = termios.tcgetattr(fd)
+            assert tcgetattr is not None
+
+            self.tcgetattr_else = tcgetattr
+
+            # choose to enter through
+            #   TCSAFLUSH - Flush destroys Input, flushes Output, then changes
+            #   TCSADRAIN - Drain flushes Output, then changes
+
+            if False:  # jitter Sat 19/Aug
+                tty.setcbreak(fd, when=termios.TCSAFLUSH)  # ⌃C prints Py Traceback
+            else:
+                tty.setraw(fd, when=termios.TCSADRAIN)  # SetRaw defaults to TcsaFlush
+
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+        r"""Start line-buffering Input, start replacing \n Output with \r\n, etc"""
+
+        fd = self.fd
+
+        tcgetattr_else = self.tcgetattr_else
+        if tcgetattr_else is not None:
+            tcgetattr = tcgetattr_else
+
+            self.tcgetattr_else = None
+
+            # choose to exit through
+            #   TCSAFLUSH - Flush destroys Input, flushes Output, then changes
+            #   TCSADRAIN - Drain flushes Output, then changes
+
+            when = termios.TCSADRAIN
+            termios.tcsetattr(fd, when, tcgetattr)
+
+        return None
+
+    def readline(self) -> bytes:
+        r"""Read Bytes from the Terminal Keyboard"""
+
+        fd = self.fd
+        stdio = self.stdio
+        assert self.tcgetattr_else
+
+        stdio.flush()
+
+        os_read_1 = os.read(fd, 1)
+        assert len(os_read_1) == 1, (os_read_1,)
+
+        return os_read_1
+
+    def print(self, *args, end=b"\r\n") -> None:
+        r"""Write Bytes to the Terminal Screen"""
+
+        fd = self.fd
+        assert self.tcgetattr_else
+
+        sep = b""
+        encode = sep.join(args)
+        os.write(fd, encode + end)
+
+
+class StrTerminal:
+    r"""Read/ Write Str Characters at Keyboard/ Screen of a Terminal"""
+
+    bt: BytesTerminal
+
+    def __init__(self, bt) -> None:
+        self.bt = bt
+
+    def readline(self) -> str:
+        r"""Read a Keyboard Chord Sequence from the Terminal Keyboard"""
+
+        bt = self.bt
+
+        kchord_0 = self.readkchord()
+        bt.print(kchord_0.encode(), end=b"")
+
+        line = kchord_0
+        if line in ("⌃X", "⇧Z"):
+            kchord_1 = self.readkchord()
+            bt.print(kchord_1.encode(), end=b"")
+            line += kchord_1
+
+        bt.print()
+
+        return line
+
+    def readkchord(self) -> str:
+        r"""Read 1 Keyboard Chord from the Terminal Keyboard"""
+
+        bt = self.bt
+
+        os_read_1 = bt.readline()
+        assert len(os_read_1) == 1, (os_read_1,)
+
+        xx = os_read_1[-1]
+        assert 0 <= xx <= 0x7F, (xx,)
+
+        if (xx < 0x20) or (xx > 0x7E):
+            sys_read_1 = "⌃" + chr(xx ^ 0x40)
+        elif "A" <= chr(xx) <= "Z":
+            sys_read_1 = "⇧" + chr(xx)
+        elif "a" <= chr(xx) <= "z":
+            sys_read_1 = "⇧" + chr(xx ^ 0x20)
+        else:
+            sys_read_1 = chr(xx)
+
+        return sys_read_1
+
+    def print(self, *args, **kwargs) -> None:
+        r"""Write Bytes to the Terminal Screen"""
+
+        bt = self.bt
+
+        sep = " "
+        line = sep.join(str(_) for _ in args)
+        assert not kwargs, (kwargs,)
+
+        encode = line.encode()
+        bt.print(encode)
+
+
+class LineWrangler:
+
+    olines: list[str]
+    keymap: str  # 'Emacs'  # 'Vi'  # ''
+    st: StrTerminal
+
+    def __init__(self) -> None:
+        self.olines = list()
+        self.keymap = ""
+
+        bt = BytesTerminal()
+        self.st = StrTerminal(bt)
+
+    def wrangle(self, ilines, keymap) -> list[str]:
+
+        olines = self.olines
+
+        olines.extend(ilines)
+        self.keymap = keymap
+
+        with BytesTerminal() as bt:
+            st = StrTerminal(bt)
+            self.st = st
+
+            olines = self.olines
+            for oline in olines:
+                st.print(oline)
+
+            while True:
+                try:
+                    self.print_read_eval()
+                except SystemExit as exc:
+                    assert exc.code == 0, (exc.code,)  # todo: nonzero Exit Codes
+                    return olines
+
+    def print_read_eval(self) -> None:
+        self.print_screen()
+        verb = self.read_verb()
+        self.verb_eval(verb)
+
+    def print_screen(self) -> None:
+        pass
+
+    def read_verb(self) -> str:
+        st = self.st
+        verb = st.readline()
+        return verb
+
+    def verb_eval(self, verb) -> None:
+        if verb in ("⌃X⌃C", "⌃X⌃S"):
+            sys.exit(0)
+        if verb in ("⇧Z⇧Q", "⇧Z⇧Z"):
+            sys.exit(0)
 
 
 #
@@ -1797,6 +2027,11 @@ CUED_PY_LINES_TEXT = r"""
 
 
     olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
+
+    olines = pq.ex_macros(ilines)  # em em  # ema  # emac  # emacs
+
+    olines = pq.visual_ex(ilines)  # vi  # vim
+
 
     oobject = "".join(chr(_) for _ in range(0x100))  # chr range
 
