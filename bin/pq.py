@@ -1150,7 +1150,7 @@ class PyExecQueryResult:
         if cues == ["math.inf"]:
             return ["oobject = math.inf"]
 
-        return list()  # FIXME lots more Rpn
+        return list()  # todo: lots more Rpn
 
 
 #
@@ -1616,6 +1616,9 @@ def visual_ex(ilines) -> list[str]:
     return olines
 
 
+ESC = b"\x1B"
+
+
 class BytesTerminal:
     r"""Read/ Write the Bytes at Keyboard/ Screen of a Terminal"""
 
@@ -1672,7 +1675,7 @@ class BytesTerminal:
 
         return None
 
-    def readline(self) -> bytes:
+    def read_bytes(self) -> bytes:
         r"""Read Bytes from the Terminal Keyboard"""
 
         fd = self.fd
@@ -1681,10 +1684,29 @@ class BytesTerminal:
 
         stdio.flush()
 
-        os_read_1 = os.read(fd, 1)
-        assert len(os_read_1) == 1, (os_read_1,)
+        os_read_0 = os.read(fd, 1)
+        assert len(os_read_0) == 1, (os_read_0,)
 
-        return os_read_1
+        assert ESC == b"\x1B"
+
+        os_read = os_read_0
+        if os_read_0 == b"\x1B":
+            os_read_1 = os.read(fd, 1)
+            assert len(os_read_1) == 1, (os_read_1,)
+            os_read += os_read_1
+
+            if os_read_1 == b"[":
+                while True:
+                    os_read_2 = os.read(fd, 1)
+                    assert len(os_read_2) == 1, (os_read_2,)
+                    os_read += os_read_2
+                    if 0x20 <= ord(os_read_2) < 0x40:  # FIXME: what to accept here
+                        continue
+                    break
+
+        # self.print(str(os_read).encode(), end=b"\r\n")
+
+        return os_read
 
     def print(self, *args, end=b"\r\n") -> None:
         r"""Write Bytes to the Terminal Screen"""
@@ -1705,17 +1727,17 @@ class StrTerminal:
     def __init__(self, bt) -> None:
         self.bt = bt
 
-    def readline(self) -> str:
+    def read_str(self) -> str:
         r"""Read a Keyboard Chord Sequence from the Terminal Keyboard"""
 
         bt = self.bt
 
-        kchord_0 = self.readkchord()
+        kchord_0 = self.read_kchord()
         bt.print(kchord_0.encode(), end=b"")
 
         line = kchord_0
         if line in ("⌃X", "⇧Z"):
-            kchord_1 = self.readkchord()
+            kchord_1 = self.read_kchord()
             bt.print(kchord_1.encode(), end=b"")
             line += kchord_1
 
@@ -1723,27 +1745,56 @@ class StrTerminal:
 
         return line
 
-    def readkchord(self) -> str:
+    def read_kchord(self) -> str:
         r"""Read 1 Keyboard Chord from the Terminal Keyboard"""
 
         bt = self.bt
 
-        os_read_1 = bt.readline()
-        assert len(os_read_1) == 1, (os_read_1,)
+        read_bytes = bt.read_bytes()
 
-        xx = os_read_1[-1]
-        assert 0 <= xx <= 0x7F, (xx,)
+        #
 
-        if (xx < 0x20) or (xx > 0x7E):
-            sys_read_1 = "⌃" + chr(xx ^ 0x40)
-        elif "A" <= chr(xx) <= "Z":
-            sys_read_1 = "⇧" + chr(xx)
-        elif "a" <= chr(xx) <= "z":
-            sys_read_1 = "⇧" + chr(xx ^ 0x20)
-        else:
-            sys_read_1 = chr(xx)
+        kchord_by_readbytes = {
+            b"\x09": "Tab",  # '\t' ⇥
+            b"\x0D": "Return",  # '\r' ⏎
+            b"\x1B\x5B\x31\x3B\x32\x43": "⇧→",  # '\e[1;2C'
+            b"\x1B\x5B\x31\x3B\x32\x44": "⇧←",  # '\e[1;2D'
+            b"\x1B\x5B\x41": "↑",  # '\e[A'
+            b"\x1B\x5B\x42": "↓",  # '\e[B'
+            b"\x1B\x5B\x43": "→",  # '\e[C'
+            b"\x1B\x5B\x44": "←",  # '\e[D'
+            b"\x1B\x5B\x5A": "⇧Tab",  # '\e[Z' ⇤
+            b"\x1B\x62": "⌥←",  # '\eb'
+            b"\x1B\x66": "⌥→",  # '\ef'
+            b"\x20": "Space",  # ' ' ␠ ␣ ␢
+            b"\x7F": "Delete",  # ␡ ⌫ ⌦
+        }
 
-        return sys_read_1
+        if read_bytes in kchord_by_readbytes.keys():
+            kchord = kchord_by_readbytes[read_bytes]
+
+            return kchord
+
+        #
+
+        kchord = ""
+        for xx in read_bytes:
+            assert 0 <= xx <= 0x7F, (xx,)
+
+            if (xx < 0x20) or (xx > 0x7E):
+                chr_xx = "⌃" + chr(xx ^ 0x40)  # ⌃@
+            elif chr(xx) == " ":
+                chr_xx = "Space"
+            elif "A" <= chr(xx) <= "Z":
+                chr_xx = "⇧" + chr(xx)  # ⇧A
+            elif "a" <= chr(xx) <= "z":
+                chr_xx = chr(xx ^ 0x20)  # A
+            else:
+                chr_xx = chr(xx)  # !
+
+            kchord += chr_xx
+
+        return kchord
 
     def print(self, *args, **kwargs) -> None:
         r"""Write Bytes to the Terminal Screen"""
@@ -1786,6 +1837,9 @@ class LineWrangler:
             for oline in olines:
                 st.print(oline)
 
+            st.print()  # FIXME: ⌃L ⌃C : Q ! Return
+            st.print("Press ⇧Z⇧Q or ⇧Z⇧Z or ⌃X⌃C or ⌃X⌃S to quit")
+
             while True:
                 try:
                     self.print_read_eval()
@@ -1803,7 +1857,7 @@ class LineWrangler:
 
     def read_verb(self) -> str:
         st = self.st
-        verb = st.readline()
+        verb = st.read_str()
         return verb
 
     def verb_eval(self, verb) -> None:
@@ -1964,8 +2018,8 @@ def fetch_less_by_more_emoji_py_texts() -> dict[str, str]:
 
     return less_by_more
 
-    # FIXME: |cv default for:  pq emoji
-    # FIXME: add some form of 'pq emoji .' into 'make slow'
+    # todo: |cv default for:  pq emoji
+    # todo: add some form of 'pq emoji .' into 'make slow'
 
 
 #
