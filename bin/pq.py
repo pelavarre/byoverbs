@@ -50,7 +50,8 @@ examples:
   echo '[0, 11, 22]' |pq json |cat -  # format Json consistently
   pq 'oline = "<< " + iline + " >>"'  # add Prefix and Suffix to each Line
   pq 'olines = ilines[:3] + ["..."] + ilines[-3:]'  # show Head and Tail
-  pq vi  # edit the Os/Copy Paste Clipboard Buffer
+  pq em  # edit the Os/Copy Paste Clipboard Buffer, in the way of Emacs
+  pq vi  # edit the Os/Copy Paste Clipboard Buffer, in the way of Vi
 """
 
 # quirks to come when we add 'pq vi':
@@ -1675,8 +1676,36 @@ class BytesTerminal:
 
         return None
 
-    def read_bytes(self) -> bytes:
-        r"""Read Bytes from the Terminal Keyboard"""
+    def read_some_encodes_if(self) -> bytes:
+        r"""Read the Bytes of a single Keyboard Chord from the Terminal Keyboard"""
+
+        assert ESC == b"\x1B"
+
+        encode_0 = self.read_one_encode_if()
+        os_read = encode_0
+        if encode_0 == b"\x1B":
+            encode_1 = self.read_one_encode_if()
+            os_read += encode_1
+
+            if encode_1 in (b"O", b"["):
+                while True:
+                    encode_2 = self.read_one_encode_if()
+                    os_read += encode_2
+
+                    decode_2 = encode_2.decode()  # may raise UnicodeDecodeError
+                    if 0x20 <= ord(decode_2) < 0x40:  # FIXME: what to accept here
+                        continue
+
+                    break
+
+        # self.print(str(os_read).encode(), end=b"\r\n")
+
+        return os_read
+
+        # often .encode()'able, sometimes not
+
+    def read_one_encode_if(self) -> bytes:
+        r"""Read the Bytes of 1 Unicode Char from the Terminal Keyboard"""
 
         fd = self.fd
         stdio = self.stdio
@@ -1684,29 +1713,31 @@ class BytesTerminal:
 
         stdio.flush()
 
-        os_read_0 = os.read(fd, 1)
-        assert len(os_read_0) == 1, (os_read_0,)
+        def decodable(os_read: bytes) -> bool:
+            try:
+                os_read.decode()
+                return True
+            except UnicodeDecodeError:
+                return False
 
-        assert ESC == b"\x1B"
+        os_read = b""
+        while True:
+            next_os_read = os.read(fd, 1)
+            assert next_os_read, (next_os_read,)
+            os_read += next_os_read
 
-        os_read = os_read_0
-        if os_read_0 == b"\x1B":
-            os_read_1 = os.read(fd, 1)
-            assert len(os_read_1) == 1, (os_read_1,)
-            os_read += os_read_1
+            if not decodable(os_read):
+                suffixes = (b"\x80", b"\x80\x80", b"\x80\x80\x80")
+                if any(decodable(os_read + _) for _ in suffixes):
+                    continue
 
-            if os_read_1 == b"[":
-                while True:
-                    os_read_2 = os.read(fd, 1)
-                    assert len(os_read_2) == 1, (os_read_2,)
-                    os_read += os_read_2
-                    if 0x20 <= ord(os_read_2) < 0x40:  # FIXME: what to accept here
-                        continue
-                    break
-
-        # self.print(str(os_read).encode(), end=b"\r\n")
+            break
 
         return os_read
+
+        # often .encode()'able, sometimes not
+
+        # todo: cope with Unicode Ord >= 0x110000
 
     def print(self, *args, end=b"\r\n") -> None:
         r"""Write Bytes to the Terminal Screen"""
@@ -1717,6 +1748,51 @@ class BytesTerminal:
         sep = b""
         encode = sep.join(args)
         os.write(fd, encode + end)
+
+
+KCHORD_BY_DECODES = {
+    "\x00": "⌃Spacebar",  # ⌃@  # ⌃⇧2
+    "\x09": "Tab",  # '\t' ⇥
+    "\x0D": "Return",  # '\r' ⏎
+    "\x1B" "OP": "F1",  # ESC 04/15 Single-Shift Three (SS3)  # SS3 ⇧P
+    "\x1B" "OQ": "F2",  # SS3 ⇧Q
+    "\x1B" "OR": "F3",  # SS3 ⇧R
+    "\x1B" "OS": "F4",  # SS3 ⇧S
+    "\x1B" "[" "15~": "F5",  # CSI 07/14 Locking-Shift One Right (LS1R)
+    "\x1B" "[" "17~": "F6",  # F6  # ⌥F1  # LS1R
+    "\x1B" "[" "18~": "F7",  # F7  # ⌥F2  # LS1R
+    "\x1B" "[" "19~": "F8",  # F8  # ⌥F3  # LS1R
+    "\x1B" "[" "1;2C": "⇧→",  # CSI 04/03 Cursor Forward (CUF) Y=1 X=2
+    "\x1B" "[" "1;2D": "⇧←",  # CSI 04/04 Cursor Backward (CUB) Y=1 X=2
+    "\x1B" "[" "20~": "F9",  # F9  # ⌥F4  # LS1R
+    "\x1B" "[" "21~": "F10",  # F10  # ⌥F5  # LS1R
+    "\x1B" "[" "23~": "F11",  # F11  # ⌥F6  # LS1R  # macOS takes F11
+    "\x1B" "[" "24~": "F12",  # F12  # ⌥F7  # LS1R
+    "\x1B" "[" "25~": "⇧F5",  # ⇧F5  # ⌥F8  # LS1R
+    "\x1B" "[" "26~": "⇧F6",  # ⇧F6  # ⌥F9  # LS1R
+    "\x1B" "[" "28~": "⇧F7",  # ⇧F7  # ⌥F10  # LS1R
+    "\x1B" "[" "29~": "⇧F8",  # ⇧F8  # ⌥F11  # LS1R
+    "\x1B" "[" "31~": "⇧F9",  # ⇧F9  # ⌥F12  # LS1R
+    "\x1B" "[" "32~": "⇧F10",  # LS1R
+    "\x1B" "[" "33~": "⇧F11",  # LS1R
+    "\x1B" "[" "34~": "⇧F12",  # LS1R
+    "\x1B" "[" "5~": "Fn⇧↑",
+    "\x1B" "[" "6~": "Fn⇧↓",
+    "\x1B" "[" "A": "↑",  # CSI 04/01 Cursor Up (CUU)
+    "\x1B" "[" "B": "↓",  # CSI 04/02 Cursor Down (CUD)
+    "\x1B" "[" "C": "→",  # CSI 04/03 Cursor Forward (CUF)
+    "\x1B" "[" "D": "←",  # CSI 04/04 Cursor Backward (CUB)
+    "\x1B" "[" "F": "Fn⇧→",  # CSI 04/06 Cursor Preceding Line (CPL)
+    "\x1B" "[" "H": "Fn⇧←",  # CSI 04/08 Cursor Position (CUP)
+    "\x1B" "[" "Z": "⇧Tab",  # ⇤  # CSI 05/10 Cursor Backward Tabulation (CBT)
+    "\x1B" "b": "⌥←",  # Emacs M-b Backword-Word
+    "\x1B" "f": "⌥→",  # Emacs M-f Forward-Word
+    "\x20": "Spacebar",  # ' ' ␠ ␣ ␢
+    "\x7F": "Delete",  # ␡ ⌫ ⌦
+    "\xA0": "⌥Spacebar",  # '\N{No-Break Space}'
+}
+
+assert list(KCHORD_BY_DECODES.keys()) == sorted(KCHORD_BY_DECODES.keys())
 
 
 class StrTerminal:
@@ -1732,14 +1808,14 @@ class StrTerminal:
 
         bt = self.bt
 
-        kchord_0 = self.read_kchord()
-        bt.print(kchord_0.encode(), end=b"")
+        kchord0 = self.read_kchord()
+        bt.print(kchord0.encode(), end=b"")
 
-        line = kchord_0
+        line = kchord0
         if line in ("⌃X", "⇧Z"):
-            kchord_1 = self.read_kchord()
-            bt.print(kchord_1.encode(), end=b"")
-            line += kchord_1
+            kchord1 = self.read_kchord()
+            bt.print(kchord1.encode(), end=b"")
+            line += kchord1
 
         bt.print()
 
@@ -1749,50 +1825,49 @@ class StrTerminal:
         r"""Read 1 Keyboard Chord from the Terminal Keyboard"""
 
         bt = self.bt
+        kchord_by_decodes = KCHORD_BY_DECODES
 
-        read_bytes = bt.read_bytes()
+        # Read the Bytes of the 1 Keyboard Chord
 
-        #
+        encodes = bt.read_some_encodes_if()
+        decodes = encodes.decode()  # may raise UnicodeDecodeError
 
-        kchord_by_readbytes = {
-            b"\x09": "Tab",  # '\t' ⇥
-            b"\x0D": "Return",  # '\r' ⏎
-            b"\x1B\x5B\x31\x3B\x32\x43": "⇧→",  # '\e[1;2C'
-            b"\x1B\x5B\x31\x3B\x32\x44": "⇧←",  # '\e[1;2D'
-            b"\x1B\x5B\x41": "↑",  # '\e[A'
-            b"\x1B\x5B\x42": "↓",  # '\e[B'
-            b"\x1B\x5B\x43": "→",  # '\e[C'
-            b"\x1B\x5B\x44": "←",  # '\e[D'
-            b"\x1B\x5B\x5A": "⇧Tab",  # '\e[Z' ⇤
-            b"\x1B\x62": "⌥←",  # '\eb'
-            b"\x1B\x66": "⌥→",  # '\ef'
-            b"\x20": "Space",  # ' ' ␠ ␣ ␢
-            b"\x7F": "Delete",  # ␡ ⌫ ⌦
-        }
+        # Match some Key Caps of an ordinary macOS US-English Keyboard
 
-        if read_bytes in kchord_by_readbytes.keys():
-            kchord = kchord_by_readbytes[read_bytes]
+        if decodes in kchord_by_decodes.keys():
+            kchord = kchord_by_decodes[decodes]
 
             return kchord
 
-        #
+        # String together the Chords struck in sequence as 1 Chord
 
         kchord = ""
-        for xx in read_bytes:
-            assert 0 <= xx <= 0x7F, (xx,)
+        for decode in decodes:
+            o = ord(decode)
 
-            if (xx < 0x20) or (xx > 0x7E):
-                chr_xx = "⌃" + chr(xx ^ 0x40)  # ⌃@
-            elif chr(xx) == " ":
-                chr_xx = "Space"
-            elif "A" <= chr(xx) <= "Z":
-                chr_xx = "⇧" + chr(xx)  # ⇧A
-            elif "a" <= chr(xx) <= "z":
-                chr_xx = chr(xx ^ 0x20)  # A
+            if (o < 0x20) or (o == 0x7F):
+                s = "⌃" + chr(o ^ 0x40)  # '⌃@'
+            elif chr(o) == " ":
+                s = "Spacebar"  # ' ' ␠ ␣ ␢
+                assert False, (o, decode)  # unreached because 'kchord_by_decodes'
+            elif "A" <= chr(o) <= "Z":
+                s = "⇧" + chr(o)  # '⇧A'
+            elif "a" <= chr(o) <= "z":
+                s = chr(o ^ 0x20)  # 'A'
+            elif (o in (0x80, 0xA0)) or (o == 0xAD):  # C1 Controls
+                assert False, (o, decode)
+            elif o == 0xA0:
+                s = "⌥Spacebar"  # '\N{No-Break Space}'
+                assert False, (o, decode)  # unreached because 'kchord_by_decodes'
             else:
-                chr_xx = chr(xx)  # !
+                assert o < 0x11_0000, (o, decode)
+                s = chr(o)  # '!', '¡', etc
 
-            kchord += chr_xx
+            assert " " not in s, (s, o, decode)
+
+            kchord += s
+
+        # Succeed
 
         return kchord
 

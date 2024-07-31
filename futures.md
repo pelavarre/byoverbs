@@ -805,8 +805,14 @@ p
     help(random)
     # spams Terminal with 459 Lines saying:  '>>> import random  # viva lazy automagic'
 
+pq
+    echo Abc Def Xyz |pq 'owords = [iwords[-1]]' |cat -
+
 
 ### 11 - Eleventh Traunch
+
+detect new or old Source Lines
+    that have "{..}" without F
 
 vi.py
     as a bookmark of editor features to show off
