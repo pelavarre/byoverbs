@@ -35,6 +35,7 @@ import select
 import sys
 import termios  # unhappy at Windows
 import tty  # unhappy at Windows
+import typing
 
 import byo
 from byo import byoargparse
@@ -143,7 +144,10 @@ MouseSixByteEndPattern = b"\x1B\\[" rb"M..."  # MPR X Y
 class BytesTerminal:
     r"""Read the Raw Bytes from a Terminal"""
 
+    stdio: typing.TextIO  # sys.stderr
+    fd: int  # 2
     tcgetattr_else: list[int | list[bytes | int]] | None
+    holds: bytearray  # b"" till lookahead reads too fast, like into b'⎋⎋[A' of '⎋↑'
 
     def __init__(self, stdio) -> None:
         fd = stdio.fileno()
@@ -303,7 +307,7 @@ class BytesTerminal:
 
         stdio = self.stdio
 
-        rlist: list[int] = [stdio]
+        rlist: list[int] = [stdio.fileno()]
         wlist: list[int] = list()
         xlist: list[int] = list()
 
