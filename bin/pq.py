@@ -72,14 +72,16 @@ import os
 import pathlib
 import pdb
 import re
+import select
 import shlex
 import shutil
 import stat
 import sys
-import termios
+import termios  # unhappy at Windows
 import textwrap
 import traceback
-import tty
+import tty  # unhappy at Windows
+import typing
 import unicodedata
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
@@ -1623,20 +1625,45 @@ ESC = b"\x1B"
 class BytesTerminal:
     r"""Read/ Write the Bytes at Keyboard/ Screen of a Terminal"""
 
-    tcgetattr_else: list[int | list[bytes | int]] | None
+    #
+    # lots of docs:
+    #
+    #   https://unicode.org/charts/PDF/U0000.pdf
+    #   https://unicode.org/charts/PDF/U0080.pdf
+    #   https://en.wikipedia.org/wiki/ANSI_escape_code
+    #   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+    #
+    #   https://www.ecma-international.org/publications-and-standards/standards/ecma-48
+    #     /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+    #
 
-    def __init__(self) -> None:
+    stdio: typing.TextIO  # sys.stderr
+    fd: int  # 2
+    holds: bytearray  # b"" till lookahead reads too fast
+
+    before: int  # termios.TCSADRAIN  # termios.TCSAFLUSH
+    tcgetattr_else: list[int | list[bytes | int]] | None
+    after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH
+
+    def __init__(self, before=termios.TCSADRAIN, after=termios.TCSADRAIN) -> None:
         stdio = sys.stderr
         fd = stdio.fileno()
 
         self.stdio = stdio
         self.fd = fd
+        self.holds = bytearray()  # todo: write it sometimes
+
+        self.before = before
         self.tcgetattr_else = None
+        self.after = after
+
+        # termios.TCSAFLUSH destroys Input, like for when Paste crashes Code
 
     def __enter__(self) -> "BytesTerminal":  # -> typing.Self:
         r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
 
         fd = self.fd
+        before = self.before
         tcgetattr_else = self.tcgetattr_else
 
         if tcgetattr_else is None:
@@ -1645,14 +1672,11 @@ class BytesTerminal:
 
             self.tcgetattr_else = tcgetattr
 
-            # choose to enter through
-            #   TCSAFLUSH - Flush destroys Input, flushes Output, then changes
-            #   TCSADRAIN - Drain flushes Output, then changes
-
+            assert before in (termios.TCSADRAIN, termios.TCSAFLUSH), (before,)
             if False:  # jitter Sat 19/Aug
                 tty.setcbreak(fd, when=termios.TCSAFLUSH)  # ⌃C prints Py Traceback
             else:
-                tty.setraw(fd, when=termios.TCSADRAIN)  # SetRaw defaults to TcsaFlush
+                tty.setraw(fd, when=before)  # SetRaw defaults to TcsaFlush
 
         return self
 
@@ -1660,37 +1684,57 @@ class BytesTerminal:
         r"""Start line-buffering Input, start replacing \n Output with \r\n, etc"""
 
         fd = self.fd
-
         tcgetattr_else = self.tcgetattr_else
+        after = self.after
+
         if tcgetattr_else is not None:
             tcgetattr = tcgetattr_else
-
             self.tcgetattr_else = None
 
-            # choose to exit through
-            #   TCSAFLUSH - Flush destroys Input, flushes Output, then changes
-            #   TCSADRAIN - Drain flushes Output, then changes
-
-            when = termios.TCSADRAIN
+            assert after in (termios.TCSADRAIN, termios.TCSAFLUSH), (after,)
+            when = after
             termios.tcsetattr(fd, when, tcgetattr)
 
         return None
 
-    def read_some_encodes_if(self) -> bytes:
+    def print_some_sbytes(self, *args, end=b"\r\n") -> None:
+        r"""Write Bytes to the Terminal Screen"""
+
+        fd = self.fd
+        assert self.tcgetattr_else
+
+        sep = b""
+        encodes = sep.join(args)
+        os.write(fd, encodes + end)
+
+    def read_some_kbytes(self) -> bytes:
         r"""Read the Bytes of a single Keyboard Chord from the Terminal Keyboard"""
 
         assert ESC == b"\x1B"
 
-        encode_0 = self.read_one_encode_if()
-        os_read = encode_0
+        # Block to fetch at least 1 Byte
+
+        encode_0 = self.read_one_encode_if()  # often empties the .holds
+        kbytes = encode_0
         if encode_0 == b"\x1B":
-            encode_1 = self.read_one_encode_if()
-            os_read += encode_1
+
+            # Accept 1 or more ESC Bytes
+
+            while True:  # without Timeout would rudely block at ⎋⎋ Meta Esc
+                if not self.kbhit(timeout=0):
+                    return kbytes
+
+                encode_1 = self.read_one_encode_if()
+                kbytes += encode_1  # the \x1B \x1B Key Chords such as ⌥Fn⌃Delete
+                if encode_1 != b"\x1B":
+                    break
+
+            # Block or don't, to fetch the rest of the Esc Sequence
 
             if encode_1 in (b"O", b"["):
                 while True:
                     encode_2 = self.read_one_encode_if()
-                    os_read += encode_2
+                    kbytes += encode_2
 
                     decode_2 = encode_2.decode()  # may raise UnicodeDecodeError
                     if 0x20 <= ord(decode_2) < 0x40:  # FIXME: what to accept here
@@ -1698,84 +1742,125 @@ class BytesTerminal:
 
                     break
 
-        # self.print(str(os_read).encode(), end=b"\r\n")
+                    # "\x1B" "O" Sequences often then stop short, 3 Bytes in total
 
-        return os_read
+        # self.print_some_sbytes(str(kbytes).encode(), end=b"\r\n")  # todo: logging
+
+        return kbytes
 
         # often .encode()'able, sometimes not
 
     def read_one_encode_if(self) -> bytes:
         r"""Read the Bytes of 1 Unicode Char from the Terminal Keyboard"""
 
-        fd = self.fd
-        stdio = self.stdio
-        assert self.tcgetattr_else
-
-        stdio.flush()
-
-        def decodable(os_read: bytes) -> bool:
+        def decodable(kbytes: bytes) -> bool:
             try:
-                os_read.decode()
+                kbytes.decode()
                 return True
             except UnicodeDecodeError:
                 return False
 
-        os_read = b""
+        kbytes = b""
         while True:
-            next_os_read = os.read(fd, 1)
-            assert next_os_read, (next_os_read,)
-            os_read += next_os_read
+            more = self.read_one_kbyte()
+            assert more, (more,)
+            kbytes += more
 
-            if not decodable(os_read):
+            if not decodable(kbytes):
                 suffixes = (b"\x80", b"\x80\x80", b"\x80\x80\x80")
-                if any(decodable(os_read + _) for _ in suffixes):
+                if any(decodable(kbytes + _) for _ in suffixes):
                     continue
 
             break
 
-        return os_read
+        return kbytes
 
         # often .encode()'able, sometimes not
-
         # todo: cope with Unicode Ord >= 0x110000
 
-    def print(self, *args, end=b"\r\n") -> None:
-        r"""Write Bytes to the Terminal Screen"""
+    def read_one_kbyte(self) -> bytes:
+        r"""Read 1 Byte from the Terminal Keyboard"""
 
         fd = self.fd
+        stdio = self.stdio
         assert self.tcgetattr_else
 
-        sep = b""
-        encode = sep.join(args)
-        os.write(fd, encode + end)
+        holds = self.holds
+        if not holds:
+            stdio.flush()
+            kbytes = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
+        else:
+            kbytes = holds[:1]
+            holds.pop()
+
+        return kbytes
+
+    def kbhit(self, timeout) -> list[int]:  # 'timeout' in seconds, None for forever
+        """Wait till next Input Byte, else till Timeout, else till forever"""
+
+        stdio = self.stdio
+
+        rlist: list[int] = [stdio.fileno()]
+        wlist: list[int] = list()
+        xlist: list[int] = list()
+
+        (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout)
+
+        return alt_rlist
+
+
+# Shifting Keys other than the Fn Key
+# Meta hides inside macOS Terminal > Settings > Keyboard > Use Option as Meta Key
+
+Meta = "\N{Broken Circle With Northwest Arrow}"  # ⎋
+Control = "\N{Up Arrowhead}"  # ⌃
+Option = "\N{Option Key}"  # ⌥
+Shift = "\N{Upwards White Arrow}"  # ⇧
+Command = "\N{Place of Interest Sign}"  # ⌘
 
 
 KCHORD_BY_DECODES = {
     "\x00": "⌃Spacebar",  # ⌃@  # ⌃⇧2
     "\x09": "Tab",  # '\t' ⇥
     "\x0D": "Return",  # '\r' ⏎
+    "\x1B": "⎋",  # Esc  # Meta  # includes ⎋Spacebar ⎋Tab ⎋Return ⎋Delete without ⌥
+    "\x1B" "\x01": "⎋Fn⇧←",  # ⌥Fn⇧←   # coded with ⌃A
+    "\x1B" "\x03": "⎋FnReturn",  # coded with ⌃C  # not ⌥FnReturn
+    "\x1B" "\x04": "⎋Fn⇧→",  # ⌥Fn⇧→   # coded with ⌃D
+    "\x1B" "\x0B": "⎋Fn⇧↑",  # ⌥Fn⇧↑   # coded with ⌃K
+    "\x1B" "\x0C": "⎋Fn⇧↓",  # ⌥Fn⇧↓  # coded with ⌃L
+    "\x1B" "\x10": "⎋⇧Fn",  # ⎋ Meta and ⇧ Shift with any of F1..F12  # coded with ⌃P
+    "\x1B" "\x1B": "⎋⎋",  # Meta Esc  # not ⌥⎋
+    "\x1B" "\x1B" "[" "3;5~": "⎋Fn⌃Delete",  # ⌥Fn⌃Delete  # LS1R
+    "\x1B" "\x1B" "[" "A": "⎋↑",  # CSI 04/01 Cursor Up (CUU)  # not ⌥↑
+    "\x1B" "\x1B" "[" "B": "⎋↓",  # CSI 04/02 Cursor Down (CUD)  # not ⌥↓
+    "\x1B" "\x1B" "[" "Z": "⎋⇧Tab",  # ⇤  # CSI 05/10 CBT  # not ⌥⇧Tab
+    "\x1B" "\x28": "⎋FnDelete",  # not ⌥⎋FnDelete
     "\x1B" "OP": "F1",  # ESC 04/15 Single-Shift Three (SS3)  # SS3 ⇧P
     "\x1B" "OQ": "F2",  # SS3 ⇧Q
     "\x1B" "OR": "F3",  # SS3 ⇧R
     "\x1B" "OS": "F4",  # SS3 ⇧S
     "\x1B" "[" "15~": "F5",  # CSI 07/14 Locking-Shift One Right (LS1R)
-    "\x1B" "[" "17~": "F6",  # F6  # ⌥F1  # LS1R
-    "\x1B" "[" "18~": "F7",  # F7  # ⌥F2  # LS1R
-    "\x1B" "[" "19~": "F8",  # F8  # ⌥F3  # LS1R
+    "\x1B" "[" "17~": "F6",  # ⌥F1  # ⎋F1  # LS1R
+    "\x1B" "[" "18~": "F7",  # ⌥F2  # ⎋F2  # LS1R
+    "\x1B" "[" "19~": "F8",  # ⌥F3  # ⎋F3  # LS1R
     "\x1B" "[" "1;2C": "⇧→",  # CSI 04/03 Cursor Forward (CUF) Y=1 X=2
     "\x1B" "[" "1;2D": "⇧←",  # CSI 04/04 Cursor Backward (CUB) Y=1 X=2
-    "\x1B" "[" "20~": "F9",  # F9  # ⌥F4  # LS1R
-    "\x1B" "[" "21~": "F10",  # F10  # ⌥F5  # LS1R
-    "\x1B" "[" "23~": "F11",  # F11  # ⌥F6  # LS1R  # macOS takes F11
-    "\x1B" "[" "24~": "F12",  # F12  # ⌥F7  # LS1R
-    "\x1B" "[" "25~": "⇧F5",  # ⇧F5  # ⌥F8  # LS1R
-    "\x1B" "[" "26~": "⇧F6",  # ⇧F6  # ⌥F9  # LS1R
-    "\x1B" "[" "28~": "⇧F7",  # ⇧F7  # ⌥F10  # LS1R
-    "\x1B" "[" "29~": "⇧F8",  # ⇧F8  # ⌥F11  # LS1R
-    "\x1B" "[" "31~": "⇧F9",  # ⇧F9  # ⌥F12  # LS1R
+    "\x1B" "[" "20~": "F9",  # ⌥F4  # ⎋F4  # LS1R
+    "\x1B" "[" "21~": "F10",  # ⌥F5  # ⎋F5  # LS1R
+    "\x1B" "[" "23~": "F11",  # ⌥F6  # ⎋F6  # LS1R  # macOS takes F11
+    "\x1B" "[" "24~": "F12",  # ⌥F7  # ⎋F7  # LS1R
+    "\x1B" "[" "25~": "⇧F5",  # ⌥F8  # ⎋F8  # LS1R
+    "\x1B" "[" "26~": "⇧F6",  # ⌥F9  # ⎋F9  # LS1R
+    "\x1B" "[" "28~": "⇧F7",  # ⌥F10  # ⎋F10  # LS1R
+    "\x1B" "[" "29~": "⇧F8",  # ⌥F11  # ⎋F11  # LS1R
+    "\x1B" "[" "31~": "⇧F9",  # ⌥F12  # ⎋F12  # LS1R
     "\x1B" "[" "32~": "⇧F10",  # LS1R
     "\x1B" "[" "33~": "⇧F11",  # LS1R
     "\x1B" "[" "34~": "⇧F12",  # LS1R
+    "\x1B" "[" "3;2~": "Fn⇧Delete",  # LS1R
+    "\x1B" "[" "3;5~": "Fn⌃Delete",  # LS1R
+    "\x1B" "[" "3~": "FnDelete",  # LS1R
     "\x1B" "[" "5~": "Fn⇧↑",
     "\x1B" "[" "6~": "Fn⇧↓",
     "\x1B" "[" "A": "↑",  # CSI 04/01 Cursor Up (CUU)
@@ -1785,8 +1870,8 @@ KCHORD_BY_DECODES = {
     "\x1B" "[" "F": "Fn⇧→",  # CSI 04/06 Cursor Preceding Line (CPL)
     "\x1B" "[" "H": "Fn⇧←",  # CSI 04/08 Cursor Position (CUP)
     "\x1B" "[" "Z": "⇧Tab",  # ⇤  # CSI 05/10 Cursor Backward Tabulation (CBT)
-    "\x1B" "b": "⌥←",  # Emacs M-b Backword-Word
-    "\x1B" "f": "⌥→",  # Emacs M-f Forward-Word
+    "\x1B" "b": "⎋←",  # ⌥← ⎋B  # ⎋←  # Emacs M-b Backword-Word
+    "\x1B" "f": "⎋→",  # ⌥→ ⎋F  # ⎋→  # Emacs M-f Forward-Word
     "\x20": "Spacebar",  # ' ' ␠ ␣ ␢
     "\x7F": "Delete",  # ␡ ⌫ ⌦
     "\xA0": "⌥Spacebar",  # '\N{No-Break Space}'
@@ -1809,15 +1894,15 @@ class StrTerminal:
         bt = self.bt
 
         kchord0 = self.read_kchord()
-        bt.print(kchord0.encode(), end=b"")
+        bt.print_some_sbytes(kchord0.encode(), end=b"")
 
         line = kchord0
         if line in ("⌃X", "⇧Z"):
             kchord1 = self.read_kchord()
-            bt.print(kchord1.encode(), end=b"")
+            bt.print_some_sbytes(kchord1.encode(), end=b"")
             line += kchord1
 
-        bt.print()
+        bt.print_some_sbytes()
 
         return line
 
@@ -1829,7 +1914,7 @@ class StrTerminal:
 
         # Read the Bytes of the 1 Keyboard Chord
 
-        encodes = bt.read_some_encodes_if()
+        encodes = bt.read_some_kbytes()
         decodes = encodes.decode()  # may raise UnicodeDecodeError
 
         # Match some Key Caps of an ordinary macOS US-English Keyboard
@@ -1845,14 +1930,13 @@ class StrTerminal:
         for decode in decodes:
             o = ord(decode)
 
-            if (o < 0x20) or (o == 0x7F):
+            if decode in kchord_by_decodes.keys():
+                s = kchord_by_decodes[decode]
+            elif (o < 0x20) or (o == 0x7F):
                 s = "⌃" + chr(o ^ 0x40)  # '⌃@'
-            elif chr(o) == " ":
-                s = "Spacebar"  # ' ' ␠ ␣ ␢
-                assert False, (o, decode)  # unreached because 'kchord_by_decodes'
-            elif "A" <= chr(o) <= "Z":
+            elif "A" <= decode <= "Z":
                 s = "⇧" + chr(o)  # '⇧A'
-            elif "a" <= chr(o) <= "z":
+            elif "a" <= decode <= "z":
                 s = chr(o ^ 0x20)  # 'A'
             elif (o in (0x80, 0xA0)) or (o == 0xAD):  # C1 Controls
                 assert False, (o, decode)
@@ -1871,7 +1955,7 @@ class StrTerminal:
 
         return kchord
 
-    def print(self, *args, **kwargs) -> None:
+    def print_some_schars(self, *args, **kwargs) -> None:
         r"""Write Bytes to the Terminal Screen"""
 
         bt = self.bt
@@ -1880,8 +1964,8 @@ class StrTerminal:
         line = sep.join(str(_) for _ in args)
         assert not kwargs, (kwargs,)
 
-        encode = line.encode()
-        bt.print(encode)
+        encodes = line.encode()
+        bt.print_some_sbytes(encodes)
 
 
 class LineWrangler:
@@ -1910,10 +1994,10 @@ class LineWrangler:
 
             olines = self.olines
             for oline in olines:
-                st.print(oline)
+                st.print_some_schars(oline)
 
-            st.print()  # FIXME: ⌃L ⌃C : Q ! Return
-            st.print("Press ⇧Z⇧Q or ⇧Z⇧Z or ⌃X⌃C or ⌃X⌃S to quit")
+            st.print_some_schars()  # FIXME: ⌃L ⌃C : Q ! Return
+            st.print_some_schars("Press ⇧Z⇧Q or ⇧Z⇧Z or ⌃X⌃C or ⌃X⌃S to quit")
 
             while True:
                 try:
