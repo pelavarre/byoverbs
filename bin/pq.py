@@ -66,6 +66,7 @@ import argparse
 import bdb
 import collections
 import dataclasses
+import datetime as dt
 import difflib
 import itertools
 import os
@@ -1417,7 +1418,7 @@ def black_repr(obj) -> str:
 
     s = repr(obj)
 
-    if s.startswith("'") and s.endswith("'"):
+    if (s.startswith("'") or s.startswith("b'")) and s.endswith("'"):
         if '"' not in s:
             s = s.replace("'", '"')
 
@@ -1604,8 +1605,8 @@ def pathlib_create_pbpaste_bin() -> None:
 def ex_macros(ilines) -> list[str]:
     """Edit in the way of Emacs"""
 
-    lw = LineWrangler()
-    olines = lw.wrangle(ilines, keymap="Emacs")
+    lt = LineTerminal()
+    olines = lt.wrangle(ilines, keymap="Emacs")
 
     return olines
 
@@ -1613,8 +1614,8 @@ def ex_macros(ilines) -> list[str]:
 def visual_ex(ilines) -> list[str]:
     """Edit in the way of Ex Vi"""
 
-    lw = LineWrangler()
-    olines = lw.wrangle(ilines, keymap="Vi")
+    lt = LineTerminal()
+    olines = lt.wrangle(ilines, keymap="Vi")
 
     return olines
 
@@ -1623,7 +1624,7 @@ ESC = b"\x1B"
 
 
 class BytesTerminal:
-    r"""Read/ Write the Bytes at Keyboard/ Screen of a Terminal"""
+    """Read/ Write the Bytes at Keyboard/ Screen of a Terminal"""
 
     #
     # lots of docs:
@@ -1645,19 +1646,60 @@ class BytesTerminal:
     tcgetattr_else: list[int | list[bytes | int]] | None
     after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH
 
+    logfile: typing.TextIO  # '.pqinfo/keylog.py'
+    logged: dt.datetime  # when 'def log_kbytes' last ran
+
     def __init__(self, before=termios.TCSADRAIN, after=termios.TCSADRAIN) -> None:
+
         stdio = sys.stderr
         fd = stdio.fileno()
+        logfile = self.init_logfile()
+        logged = dt.datetime.now()
 
         self.stdio = stdio
         self.fd = fd
         self.holds = bytearray()  # todo: write it sometimes
 
-        self.before = before
+        self.before = before  # todo: test Tcsa Flush, not only Tcsa Drain
         self.tcgetattr_else = None
         self.after = after
 
+        self.logfile = logfile
+        self.logged = logged
+
         # termios.TCSAFLUSH destroys Input, like for when Paste crashes Code
+
+    def init_logfile(self) -> typing.TextIO:
+        """Start logging Keyboard Input Bytes"""
+
+        py = """
+            import time
+            import typing
+
+
+            #
+            # python3 -i .pqinfo/keylog.py
+            #     for kbytes in walk_kbytes():
+            #         print(kbytes)
+            #
+
+
+            def kbytes_walk() -> typing.Generator[bytes, None, None]:
+        """
+
+        py = textwrap.dedent(py).strip()
+
+        dirpath = pathlib.Path(".pqinfo")
+        dirpath.mkdir(parents=True, exist_ok=True)  # 'parents=' unneeded at './'
+
+        path = dirpath / "keylog.py"  # '.pqinfo/keylog.py'
+        exists = path.exists()
+
+        logfile = path.open("a")
+        if not exists:
+            print(py, file=logfile)
+
+        return logfile
 
     def __enter__(self) -> "BytesTerminal":  # -> typing.Self:
         r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
@@ -1697,61 +1739,65 @@ class BytesTerminal:
 
         return None
 
-    def print_some_sbytes(self, *args, end=b"\r\n") -> None:
-        r"""Write Bytes to the Terminal Screen"""
+    def print_sbytes(self, *args, end=b"\r\n") -> None:
+        """Write Bytes to the Screen as one or more Ended Lines"""
 
         fd = self.fd
         assert self.tcgetattr_else
 
-        sep = b""
-        encodes = sep.join(args)
-        os.write(fd, encodes + end)
+        sep = b" "
+        join = sep.join(args)
+        os.write(fd, join + end)
 
-    def read_some_kbytes(self) -> bytes:
-        r"""Read the Bytes of a single Keyboard Chord from the Terminal Keyboard"""
+        # doesn't raise UnicodeEncodeError
+
+    def read_kchord_bytes(self) -> bytes:
+        """Read the Bytes of a single Keyboard Chord from the Keyboard"""
 
         assert ESC == b"\x1B"
 
         # Block to fetch at least 1 Byte
 
-        encode_0 = self.read_one_encode_if()  # often empties the .holds
-        kbytes = encode_0
-        if encode_0 == b"\x1B":
+        read_0 = self.read_kchar_bytes_if()  # often empties the .holds
+        kchord_bytes = read_0
+        if read_0 == b"\x1B":
 
-            # Accept 1 or more ESC Bytes
+            # Accept 1 or more ESC Bytes, such as x 1B 1B in ⌥Fn⌃Delete
 
             while True:  # without Timeout would rudely block at ⎋⎋ Meta Esc
                 if not self.kbhit(timeout=0):
-                    return kbytes
+                    return kchord_bytes
 
-                encode_1 = self.read_one_encode_if()
-                kbytes += encode_1  # the \x1B \x1B Key Chords such as ⌥Fn⌃Delete
-                if encode_1 != b"\x1B":
+                read_1 = self.read_kchar_bytes_if()
+                kchord_bytes += read_1
+                if read_1 != b"\x1B":
                     break
 
             # Block or don't, to fetch the rest of the Esc Sequence
 
-            if encode_1 in (b"O", b"["):
-                while True:
-                    encode_2 = self.read_one_encode_if()
-                    kbytes += encode_2
+            if read_1 in (b"O", b"["):
+                while True:  # todo: what ends an Esc [ or Esc O Sequence?
+                    read_2 = self.read_kchar_bytes_if()
+                    kchord_bytes += read_2
 
-                    decode_2 = encode_2.decode()  # may raise UnicodeDecodeError
-                    if 0x20 <= ord(decode_2) < 0x40:  # FIXME: what to accept here
-                        continue
+                    if len(read_2) == 1:
+                        ord_2 = read_2[-1]
+                        if 0x20 <= ord_2 < 0x40:
+                            continue
 
                     break
 
                     # "\x1B" "O" Sequences often then stop short, 3 Bytes in total
 
-        # self.print_some_sbytes(str(kbytes).encode(), end=b"\r\n")  # todo: logging
+        # self.print_sbytes(str(kchord_bytes).encode(), end=b"\r\n")  # todo: logging
 
-        return kbytes
+        return kchord_bytes
 
-        # often .encode()'able, sometimes not
+        # cut short by end-of-input, or by undecodable Bytes
+        # doesn't raise UnicodeDecodeError
 
-    def read_one_encode_if(self) -> bytes:
-        r"""Read the Bytes of 1 Unicode Char from the Terminal Keyboard"""
+    def read_kchar_bytes_if(self) -> bytes:
+        """Read the Bytes of 1 Unicode Char from the Keyboard, if not cut short"""
 
         def decodable(kbytes: bytes) -> bool:
             try:
@@ -1761,12 +1807,12 @@ class BytesTerminal:
                 return False
 
         kbytes = b""
-        while True:
-            more = self.read_one_kbyte()
+        while True:  # blocks till KChar Bytes complete
+            more = self.readkbyte()
             assert more, (more,)
             kbytes += more
 
-            if not decodable(kbytes):
+            if not decodable(kbytes):  # todo: invent Unicode Ord > 0x110000
                 suffixes = (b"\x80", b"\x80\x80", b"\x80\x80\x80")
                 if any(decodable(kbytes + _) for _ in suffixes):
                     continue
@@ -1775,11 +1821,11 @@ class BytesTerminal:
 
         return kbytes
 
-        # often .encode()'able, sometimes not
-        # todo: cope with Unicode Ord >= 0x110000
+        # cut short by end-of-input, or by undecodable Bytes
+        # doesn't raise UnicodeDecodeError
 
-    def read_one_kbyte(self) -> bytes:
-        r"""Read 1 Byte from the Terminal Keyboard"""
+    def readkbyte(self) -> bytes:
+        """Read 1 Byte from the Keyboard"""
 
         fd = self.fd
         stdio = self.stdio
@@ -1789,11 +1835,27 @@ class BytesTerminal:
         if not holds:
             stdio.flush()
             kbytes = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
+            self.log_kbytes(kbytes)
         else:
             kbytes = holds[:1]
             holds.pop()
 
         return kbytes
+
+    def log_kbytes(self, kbytes) -> None:
+        """Log some Keyboard Bytes"""
+
+        logfile = self.logfile
+        logged = self.logged
+
+        now = dt.datetime.now()
+        total_seconds = (now - logged).total_seconds()
+        self.logged = now
+
+        krep = black_repr(kbytes)
+
+        print(f"    time.sleep({total_seconds})", file=logfile)
+        print(f"    yield {krep}", file=logfile)
 
     def kbhit(self, timeout) -> list[int]:  # 'timeout' in seconds, None for forever
         """Wait till next Input Byte, else till Timeout, else till forever"""
@@ -1880,42 +1942,70 @@ KCHORD_BY_DECODES = {
 assert list(KCHORD_BY_DECODES.keys()) == sorted(KCHORD_BY_DECODES.keys())
 
 
+QUIT_KSTRS = (
+    "⌃L⌃C:Q!Return",
+    "⌃X⌃C",
+    "⌃X⌃S",
+    "⇧Z⇧Q",
+    "⇧Z⇧Z",
+)
+
+# hand-sorted by Fn ⌃ ⌥ ⇧ ⌘ order
+
+
+KSTRS = tuple(QUIT_KSTRS)
+
+
 class StrTerminal:
-    r"""Read/ Write Str Characters at Keyboard/ Screen of a Terminal"""
+    """Read/ Write Str Characters at Keyboard/ Screen of a Terminal"""
 
     bt: BytesTerminal
 
     def __init__(self, bt) -> None:
         self.bt = bt
 
-    def read_str(self) -> str:
-        r"""Read a Keyboard Chord Sequence from the Terminal Keyboard"""
+    def print_schars(self, *args, **kwargs) -> None:
+        """Write Chars to the Screen as one or more Ended Lines"""
 
         bt = self.bt
 
-        kchord0 = self.read_kchord()
-        bt.print_some_sbytes(kchord0.encode(), end=b"")
+        sep = " "
+        join = sep.join(str(_) for _ in args)
+        sbytes = join.encode()
+
+        assert "end" not in kwargs.keys(), (kwargs,)
+        assert not kwargs, (kwargs,)
+
+        bt.print_sbytes(sbytes)
+
+    def read_kstr(self) -> str:
+        """Read one Keyboard Chord Sequence from the Keyboard"""
+
+        bt = self.bt
+
+        kchord0 = self.read_kchord_str()
+        bt.print_sbytes(kchord0.encode(), end=b"")
 
         line = kchord0
-        if line in ("⌃X", "⇧Z"):
-            kchord1 = self.read_kchord()
-            bt.print_some_sbytes(kchord1.encode(), end=b"")
-            line += kchord1
+        while any((_.startswith(line) and _ != line) for _ in KSTRS):
+            kchord = self.read_kchord_str()
+            bt.print_sbytes(kchord.encode(), end=b"")
+            line += kchord
 
-        bt.print_some_sbytes()
+        bt.print_sbytes()
 
         return line
 
-    def read_kchord(self) -> str:
-        r"""Read 1 Keyboard Chord from the Terminal Keyboard"""
+    def read_kchord_str(self) -> str:
+        """Read 1 Keyboard Chord from the Keyboard"""
 
         bt = self.bt
         kchord_by_decodes = KCHORD_BY_DECODES
 
         # Read the Bytes of the 1 Keyboard Chord
 
-        encodes = bt.read_some_kbytes()
-        decodes = encodes.decode()  # may raise UnicodeDecodeError
+        kchord_bytes = bt.read_kchord_bytes()
+        decodes = kchord_bytes.decode()  # may raise UnicodeDecodeError
 
         # Match some Key Caps of an ordinary macOS US-English Keyboard
 
@@ -1924,7 +2014,7 @@ class StrTerminal:
 
             return kchord
 
-        # String together the Chords struck in sequence as 1 Chord
+        # String together the Key Caps struck all at once
 
         kchord = ""
         for decode in decodes:
@@ -1955,20 +2045,8 @@ class StrTerminal:
 
         return kchord
 
-    def print_some_schars(self, *args, **kwargs) -> None:
-        r"""Write Bytes to the Terminal Screen"""
 
-        bt = self.bt
-
-        sep = " "
-        line = sep.join(str(_) for _ in args)
-        assert not kwargs, (kwargs,)
-
-        encodes = line.encode()
-        bt.print_some_sbytes(encodes)
-
-
-class LineWrangler:
+class LineTerminal:
 
     olines: list[str]
     keymap: str  # 'Emacs'  # 'Vi'  # ''
@@ -1994,10 +2072,14 @@ class LineWrangler:
 
             olines = self.olines
             for oline in olines:
-                st.print_some_schars(oline)
+                st.print_schars(oline)
 
-            st.print_some_schars()  # FIXME: ⌃L ⌃C : Q ! Return
-            st.print_some_schars("Press ⇧Z⇧Q or ⇧Z⇧Z or ⌃X⌃C or ⌃X⌃S to quit")
+            st.print_schars()
+            st.print_schars("Logging Keyboard Chord Bytes intto:  cat", bt.logfile.name)
+
+            st.print_schars()
+            quits = " or ".join(QUIT_KSTRS)
+            st.print_schars(f"Press {quits} to quit")
 
             while True:
                 try:
@@ -2016,13 +2098,11 @@ class LineWrangler:
 
     def read_verb(self) -> str:
         st = self.st
-        verb = st.read_str()
+        verb = st.read_kstr()
         return verb
 
     def verb_eval(self, verb) -> None:
-        if verb in ("⌃X⌃C", "⌃X⌃S"):
-            sys.exit(0)
-        if verb in ("⇧Z⇧Q", "⇧Z⇧Z"):
+        if verb in QUIT_KSTRS:
             sys.exit(0)
 
 
