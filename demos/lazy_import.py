@@ -25,7 +25,6 @@ import argparse
 import builtins
 import importlib
 import os
-import random
 import sys
 import urllib.parse
 from decimal import Decimal as D
@@ -33,7 +32,6 @@ from decimal import Decimal as D
 
 ... == D  # todo: lazy-import X.Y as Z, not just lazy-import X as Z
 ... == builtins  # so that CPython:  builtins is __builtins__
-... == random  # else lazy-import spammed Stdout w 459 Lines
 ... == urllib.parse  # todo: lazy-import X.Y, not just lazy-import X
 
 
@@ -41,7 +39,7 @@ parser = argparse.ArgumentParser()
 
 
 print(
-    ">>> import argparse, builtins, importlib, os, random, sys, urllib.parse",
+    ">>> import argparse, builtins, importlib, os, sys, urllib.parse",
     file=sys.stderr,
 )
 print(">>> import decimal as D", file=sys.stderr)

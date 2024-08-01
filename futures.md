@@ -803,6 +803,7 @@ column: line too long
 
 p
     help(random)
+    help(re)
     # spams Terminal with 459 Lines saying:  '>>> import random  # viva lazy automagic'
 
 pq
