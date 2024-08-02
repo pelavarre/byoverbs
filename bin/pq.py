@@ -1605,7 +1605,7 @@ def ex_macros(ilines) -> list[str]:
     """Edit in the way of Emacs"""
 
     lt = LineTerminal()
-    olines = lt.wrangle(ilines, keymap="Emacs")
+    olines = lt.wrangle(ilines, kmap="Emacs")
 
     return olines
 
@@ -1614,7 +1614,7 @@ def visual_ex(ilines) -> list[str]:
     """Edit in the way of Ex Vi"""
 
     lt = LineTerminal()
-    olines = lt.wrangle(ilines, keymap="Vi")
+    olines = lt.wrangle(ilines, kmap="Vi")
 
     return olines
 
@@ -1626,6 +1626,7 @@ class BytesLogger:
     """Log Bytes arriving over time, for a time-accurate replay or analysis later"""
 
     tag: str  # 'k'  # 's'
+    exists: bool  # True if the Log File already existed
     logfile: typing.TextIO  # '.pqinfo/keylog.py'
     logged: dt.datetime  # when 'def log_bytes_io' last ran
 
@@ -1641,6 +1642,7 @@ class BytesLogger:
 
         path = dirpath / name  # '.pqinfo/screenlog.py'
         exists = path.exists()
+        self.exists = exists
 
         logfile = path.open("a")
         self.logfile = logfile
@@ -1801,7 +1803,7 @@ class BytesTerminal:
 
         return None
 
-    def print_sbytes(self, *args, end=b"\r\n") -> None:
+    def btprint(self, *args, end=b"\r\n") -> None:
         """Write Bytes to the Screen as one or more Ended Lines"""
 
         fd = self.fd
@@ -1856,7 +1858,7 @@ class BytesTerminal:
                     # "\x1B" "O" Sequences often then stop short, 3 Bytes in total
 
         if False:  # jitter 1/Aug
-            self.print_sbytes(str(kchord_bytes).encode(), end=b"\r\n")  # todo: logging
+            self.btprint(str(kchord_bytes).encode(), end=b"\r\n")  # todo: logging
 
         return kchord_bytes
 
@@ -1942,12 +1944,12 @@ KCHORD_STR_BY_DECODES = {
     "\x09": "Tab",  # '\t' ⇥
     "\x0D": "Return",  # '\r' ⏎
     "\x1B": "⎋",  # Esc  # Meta  # includes ⎋Spacebar ⎋Tab ⎋Return ⎋Delete without ⌥
-    "\x1B" "\x01": "⎋⇧Fn←",  # ⌥Fn⇧←   # coded with ⌃A
+    "\x1B" "\x01": "⎋⇧Fn←",  # ⌥⇧Fn←   # coded with ⌃A
     "\x1B" "\x03": "⎋FnReturn",  # coded with ⌃C  # not ⌥FnReturn
-    "\x1B" "\x04": "⎋⇧Fn→",  # ⌥Fn⇧→   # coded with ⌃D
-    "\x1B" "\x0B": "⎋⇧Fn↑",  # ⌥Fn⇧↑   # coded with ⌃K
-    "\x1B" "\x0C": "⎋⇧Fn↓",  # ⌥Fn⇧↓  # coded with ⌃L
-    "\x1B" "\x10": "⎋⇧Fn",  # ⎋ Meta and ⇧ Shift with any of F1..F12  # coded with ⌃P
+    "\x1B" "\x04": "⎋⇧Fn→",  # ⌥⇧Fn→   # coded with ⌃D
+    "\x1B" "\x0B": "⎋⇧Fn↑",  # ⌥⇧Fn↑   # coded with ⌃K
+    "\x1B" "\x0C": "⎋⇧Fn↓",  # ⌥⇧Fn↓  # coded with ⌃L
+    "\x1B" "\x10": "⎋⇧Fn",  # ⎋ Meta ⇧ Shift of of F1..F12  # not ⌥⇧Fn  # coded with ⌃P
     "\x1B" "\x1B": "⎋⎋",  # Meta Esc  # not ⌥⎋
     "\x1B" "\x1B" "[" "3;5~": "⎋⌃FnDelete",  # ⌥⌃FnDelete  # LS1R
     "\x1B" "\x1B" "[" "A": "⎋↑",  # CSI 04/01 Cursor Up (CUU)  # not ⌥↑
@@ -2056,28 +2058,25 @@ KCHORD_STR_BY_KCHAR = {
 }
 
 
-QUIT_KSTRS = (
-    "⌃L⌃C:Q!Return",
-    "⌃X⌃C",
-    "⌃X⌃S",
-    "⇧Z⇧Q",
-    "⇧Z⇧Z",
-)
-
-# hand-sorted by ⎋ ⌃ ⌥ ⇧ ⌘ Fn order
-
-LONG_KSTRS = tuple(QUIT_KSTRS)
-
-
 class StrTerminal:
     """Read/ Write Str Characters at Keyboard/ Screen of a Terminal"""
 
     bt: BytesTerminal
+    celebrated_kstrs: list[str]  # '⌃X⌃C'  # '⇧Z⇧Q'  # '⌃L⌃C:Q!Return'
 
     def __init__(self, bt) -> None:
         self.bt = bt
+        self.celebrated_kstrs = list()
 
-    def print_schars(self, *args, **kwargs) -> None:
+    def add_celebrated_kstr(self, kstr) -> None:
+        """Plan to take a whole K Chord Sequence as 1 K Str, later or never"""
+
+        celebrated_kstrs = self.celebrated_kstrs
+        celebrated_kstrs.append(kstr)
+
+        # doesn't work hard enough to drop out single K Chords, such as ⎋⇧Fn
+
+    def stprint(self, *args, **kwargs) -> None:
         """Write Chars to the Screen as one or more Ended Lines"""
 
         bt = self.bt
@@ -2089,24 +2088,25 @@ class StrTerminal:
         assert "end" not in kwargs.keys(), (kwargs,)
         assert not kwargs, (kwargs,)
 
-        bt.print_sbytes(sbytes)
+        bt.btprint(sbytes)
 
     def read_kbytes_kstr(self) -> tuple[bytes, str]:
         """Read one Keyboard Chord Sequence from the Keyboard"""
 
         bt = self.bt
+        celebrated_kstrs = self.celebrated_kstrs
 
         (kbytes, kstr) = self.read_chord_kbytes_kstr()
 
-        bt.print_sbytes(kstr.encode(), end=b"")
-        while any((_.startswith(kstr) and (_ != kstr)) for _ in LONG_KSTRS):
+        bt.btprint(kstr.encode(), end=b"")
+        while any((_.startswith(kstr) and (_ != kstr)) for _ in celebrated_kstrs):
             (kchord_bytes, kchord_str) = self.read_chord_kbytes_kstr()
-            bt.print_sbytes(kchord_str.encode(), end=b"")
+            bt.btprint(kchord_str.encode(), end=b"")
 
             kbytes += kchord_bytes
             kstr += kchord_str
 
-        bt.print_sbytes()
+        bt.btprint()
 
         return (kbytes, kstr)
 
@@ -2188,48 +2188,63 @@ class StrTerminal:
 class LineTerminal:
 
     olines: list[str]
-    keymap: str  # 'Emacs'  # 'Vi'  # ''
+    kmap: str  # 'Emacs'  # 'Vi'  # ''
     st: StrTerminal
 
     def __init__(self) -> None:
         self.olines = list()
-        self.keymap = ""
+        self.kmap = ""
 
         bt = BytesTerminal()
         self.st = StrTerminal(bt)
 
-    def wrangle(self, ilines, keymap) -> list[str]:
+    def wrangle(self, ilines, kmap) -> list[str]:
 
         olines = self.olines
-
         olines.extend(ilines)
-        self.keymap = keymap
+
+        self.kmap = kmap
+
+        #
+
+        klog_exists = self.st.bt.kbyteslogger.exists
+        slog_exists = self.st.bt.sbyteslogger.exists
 
         with BytesTerminal() as bt:
             st = StrTerminal(bt)
             self.st = st
 
+            #
+
+            for kstr, func in FUNC_BY_KSTR.items():
+                st.add_celebrated_kstr(kstr)  # asks to take these as whole K-Str's
+
             olines = self.olines
             for oline in olines:
-                st.print_schars(oline)
+                st.stprint(oline)
 
-            st.print_schars()
-            st.print_schars(
-                "Logging Keyboard Chord Bytes into:  cat", bt.kbyteslogger.logfile.name
-            )
-            st.print_schars(
-                "Logging Screen Bytes into:  cat", bt.sbyteslogger.logfile.name
-            )
+            if (not klog_exists) or (not slog_exists):
+                st.stprint()
+                if not klog_exists:
+                    st.stprint(
+                        "Logging Keyboard Chord Bytes into:  cat",
+                        bt.kbyteslogger.logfile.name,
+                    )
+                if not slog_exists:
+                    st.stprint(
+                        "Logging Screen Bytes into:  cat", bt.sbyteslogger.logfile.name
+                    )
 
-            st.print_schars()
-            quits = " or ".join(QUIT_KSTRS)
-            st.print_schars(f"Press {quits} to quit")
+            #
+
+            self.mention_quitting()
 
             while True:
                 try:
                     self.print_read_eval()
                 except SystemExit as exc:
-                    assert exc.code == 0, (exc.code,)  # todo: nonzero Exit Codes
+                    assert not exc.code, (exc.code,)  # todo: nonzero Exit Codes
+                    olines.clear()
                     return olines
 
     def print_read_eval(self) -> None:
@@ -2247,8 +2262,40 @@ class LineTerminal:
 
     def verb_eval(self, verb) -> None:
         (kbytes, kstr) = verb
-        if kstr in QUIT_KSTRS:
-            sys.exit(0)
+        if kstr in FUNC_BY_KSTR:
+            func = FUNC_BY_KSTR[kstr]
+            func(self)
+
+    def mention_quitting(self) -> None:
+
+        st = self.st
+
+        quit_kstrs = list()
+        for kstr, func in FUNC_BY_KSTR.items():
+            if func is LineTerminal.quit_wrangling:
+                quit_kstrs.append(kstr)
+
+        st.stprint()
+
+        quits = " or ".join(quit_kstrs)
+        st.stprint(f"Press {quits} to quit")
+
+    def quit_wrangling(self) -> None:
+
+        sys.exit()
+
+
+FUNC_BY_KSTR = {
+    "⎋⎋": LineTerminal.mention_quitting,
+    "⌃C⌃C": LineTerminal.mention_quitting,
+    "⌃L⌃C:Q!Return": LineTerminal.quit_wrangling,
+    "⌃X⌃C": LineTerminal.quit_wrangling,
+    "⌃X⌃S": LineTerminal.quit_wrangling,
+    "⇧Z⇧Q": LineTerminal.quit_wrangling,
+    "⇧Z⇧Z": LineTerminal.quit_wrangling,
+}
+
+# hand-sorted by ⎋ ⌃ ⌥ ⇧ ⌘ Fn order
 
 
 #
