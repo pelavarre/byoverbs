@@ -2091,28 +2091,28 @@ class StrTerminal:
 
         bt.print_sbytes(sbytes)
 
-    def read_kstr(self) -> str:
+    def read_kbytes_kstr(self) -> tuple[bytes, str]:
         """Read one Keyboard Chord Sequence from the Keyboard"""
 
         bt = self.bt
 
-        kchord_str_0 = self.read_kchord_str()
+        (kbytes, kstr) = self.read_chord_kbytes_kstr()
 
-        kstr = kchord_str_0
-        bt.print_sbytes(kchord_str_0.encode(), end=b"")
+        bt.print_sbytes(kstr.encode(), end=b"")
         while any((_.startswith(kstr) and (_ != kstr)) for _ in LONG_KSTRS):
-            kchord_str = self.read_kchord_str()
-
+            (kchord_bytes, kchord_str) = self.read_chord_kbytes_kstr()
             bt.print_sbytes(kchord_str.encode(), end=b"")
+
+            kbytes += kchord_bytes
             kstr += kchord_str
 
         bt.print_sbytes()
 
-        return kstr
+        return (kbytes, kstr)
 
         # '⌃L'  # '⇧Z⇧Z'
 
-    def read_kchord_str(self) -> str:
+    def read_chord_kbytes_kstr(self) -> tuple[bytes, str]:
         """Read 1 Keyboard Chord from the Keyboard"""
 
         bt = self.bt
@@ -2129,7 +2129,7 @@ class StrTerminal:
         if decodes in kchord_str_by_decodes.keys():
             kchord_str = kchord_str_by_decodes[decodes]
 
-            return kchord_str
+            return (kchord_bytes, kchord_str)
 
         # String together the Key Caps struck all at once
 
@@ -2140,7 +2140,7 @@ class StrTerminal:
 
         # Succeed
 
-        return kchord_str
+        return (kchord_bytes, kchord_str)
 
         # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
 
@@ -2240,13 +2240,14 @@ class LineTerminal:
     def print_screen(self) -> None:
         pass
 
-    def read_verb(self) -> str:
+    def read_verb(self) -> tuple[bytes, str]:
         st = self.st
-        verb = st.read_kstr()
+        verb = st.read_kbytes_kstr()
         return verb
 
     def verb_eval(self, verb) -> None:
-        if verb in QUIT_KSTRS:
+        (kbytes, kstr) = verb
+        if kstr in QUIT_KSTRS:
             sys.exit(0)
 
 
