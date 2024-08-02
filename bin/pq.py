@@ -1857,8 +1857,7 @@ class BytesTerminal:
 
                     # "\x1B" "O" Sequences often then stop short, 3 Bytes in total
 
-        if False:  # jitter 1/Aug
-            self.btprint(str(kchord_bytes).encode(), end=b"\r\n")  # todo: logging
+        # self.btprint(str(kchord_bytes).encode(), end=b"\r\n")  # todo: logging
 
         return kchord_bytes
 
@@ -2016,7 +2015,7 @@ OPTION_KTEXT = """
      å∫ç∂ ƒ©˙ ∆˚¬µ øπœ®ß† √∑≈¥Ω”»’`
 """
 
-# ⌥⇧K is  is \uF8FF is in the U+E000..U+F8FF Private Use Area (PUA)
+# ⌥⇧K is Apple Icon  is \uF8FF is in the U+E000..U+F8FF Private Use Area (PUA)
 
 OPTION_KCHARS = " " + textwrap.dedent(OPTION_KTEXT).strip()
 OPTION_KCHARS = OPTION_KCHARS.replace("\n", "")
@@ -2076,19 +2075,18 @@ class StrTerminal:
 
         # doesn't work hard enough to drop out single K Chords, such as ⎋⇧Fn
 
-    def stprint(self, *args, **kwargs) -> None:
+    def stprint(self, *args, end="\r\n") -> None:
         """Write Chars to the Screen as one or more Ended Lines"""
 
         bt = self.bt
 
         sep = " "
         join = sep.join(str(_) for _ in args)
+
         sbytes = join.encode()
+        ebytes = end.encode()
 
-        assert "end" not in kwargs.keys(), (kwargs,)
-        assert not kwargs, (kwargs,)
-
-        bt.btprint(sbytes)
+        bt.btprint(sbytes, end=ebytes)
 
     def read_kbytes_kstr(self) -> tuple[bytes, str]:
         """Read one Keyboard Chord Sequence from the Keyboard"""
@@ -2098,15 +2096,15 @@ class StrTerminal:
 
         (kbytes, kstr) = self.read_chord_kbytes_kstr()
 
-        bt.btprint(kstr.encode(), end=b"")
+        # self.stprint(kstr, end="")
         while any((_.startswith(kstr) and (_ != kstr)) for _ in celebrated_kstrs):
             (kchord_bytes, kchord_str) = self.read_chord_kbytes_kstr()
-            bt.btprint(kchord_str.encode(), end=b"")
+            # self.stprint(kchord_str, end="")  # todo: logging
 
             kbytes += kchord_bytes
             kstr += kchord_str
 
-        bt.btprint()
+        # self.stprint()
 
         return (kbytes, kstr)
 
@@ -2192,6 +2190,7 @@ class LineTerminal:
     st: StrTerminal
 
     def __init__(self) -> None:
+
         self.olines = list()
         self.kmap = ""
 
@@ -2237,7 +2236,7 @@ class LineTerminal:
 
             #
 
-            self.mention_quitting()
+            self.kdo_mention_quitting()
 
             while True:
                 try:
@@ -2248,31 +2247,55 @@ class LineTerminal:
                     return olines
 
     def print_read_eval(self) -> None:
+
         self.print_screen()
-        verb = self.read_verb()
-        self.verb_eval(verb)
+        self.read_verb()
+        self.verb_eval()
 
     def print_screen(self) -> None:
+
         pass
 
-    def read_verb(self) -> tuple[bytes, str]:
+    def read_verb(self):
+
         st = self.st
         verb = st.read_kbytes_kstr()
-        return verb
+        self.verb = verb
 
-    def verb_eval(self, verb) -> None:
-        (kbytes, kstr) = verb
-        if kstr in FUNC_BY_KSTR:
+    def verb_eval(self) -> None:
+
+        bt = self.st.bt
+        (kbytes, kstr) = self.verb
+
+        if kstr not in FUNC_BY_KSTR:
+            bt.btprint(kbytes, end=b"")
+        else:
             func = FUNC_BY_KSTR[kstr]
             func(self)
 
-    def mention_quitting(self) -> None:
+    #
+    # React to Keyboard Chord Sequences
+    #
+
+    def kdo_quote_kstr(self) -> None:
+
+        st = self.st
+
+        verb = st.read_chord_kbytes_kstr()  # not st.read_kbytes_kstr()
+        (kbytes, kstr) = verb
+
+        st.stprint(kstr, end="")
+
+        # Emacs ⌃Q quoted-insert/ replace
+        # Vim ⌃V
+
+    def kdo_mention_quitting(self) -> None:
 
         st = self.st
 
         quit_kstrs = list()
         for kstr, func in FUNC_BY_KSTR.items():
-            if func is LineTerminal.quit_wrangling:
+            if func is LineTerminal.kdo_quit_wrangling:
                 quit_kstrs.append(kstr)
 
         st.stprint()
@@ -2280,19 +2303,28 @@ class LineTerminal:
         quits = " or ".join(quit_kstrs)
         st.stprint(f"Press {quits} to quit")
 
-    def quit_wrangling(self) -> None:
+    def kdo_quit_wrangling(self) -> None:
 
         sys.exit()
 
+        # Emacs ⌃X⌃S⌃X⌃C save-buffer save-buffers-kill-terminal
+
+        # Vim ⌃L⌃C:Q!Return quit-no-save
+        # Vim ⇧Z⇧Q quit-no-save
+        # Vim ⇧Z⇧Z save-quit
+
 
 FUNC_BY_KSTR = {
-    "⎋⎋": LineTerminal.mention_quitting,
-    "⌃C⌃C": LineTerminal.mention_quitting,
-    "⌃L⌃C:Q!Return": LineTerminal.quit_wrangling,
-    "⌃X⌃C": LineTerminal.quit_wrangling,
-    "⌃X⌃S": LineTerminal.quit_wrangling,
-    "⇧Z⇧Q": LineTerminal.quit_wrangling,
-    "⇧Z⇧Z": LineTerminal.quit_wrangling,
+    "⎋⎋": LineTerminal.kdo_mention_quitting,
+    "⌃C⌃C": LineTerminal.kdo_mention_quitting,
+    "⌃L⌃C:Q!Return": LineTerminal.kdo_quit_wrangling,
+    # "⌃X8Return": LineTerminal.unicodedata_lookup,  # Emacs insert-char
+    "⌃Q": LineTerminal.kdo_quote_kstr,
+    "⌃V": LineTerminal.kdo_quote_kstr,
+    "⌃X⌃C": LineTerminal.kdo_quit_wrangling,
+    "⌃X⌃S⌃X⌃C": LineTerminal.kdo_quit_wrangling,
+    "⇧Z⇧Q": LineTerminal.kdo_quit_wrangling,
+    "⇧Z⇧Z": LineTerminal.kdo_quit_wrangling,
 }
 
 # hand-sorted by ⎋ ⌃ ⌥ ⇧ ⌘ Fn order
