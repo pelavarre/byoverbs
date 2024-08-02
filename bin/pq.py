@@ -1629,7 +1629,7 @@ class BytesLogger:
     logfile: typing.TextIO  # '.pqinfo/keylog.py'
     logged: dt.datetime  # when 'def log_bytes_io' last ran
 
-    def __init__(self, name, tag):
+    def __init__(self, name, tag) -> None:
         """Write the Code before the Log"""
 
         assert tag in ("k", "s"), (tag,)  # todo: accept more tags?
@@ -1658,24 +1658,45 @@ class BytesLogger:
 
         assert tag in ("k", "s"), (tag,)  # todo: accept more tags?
 
-        py = f'''
+        k_py = f'''
             #!/usr/bin/env python3
 
-
-            import os
-            import sys
             import time
             import typing
+
+            if __name__ == "__main__":
+                import keylog
+
+                for kbytes in keylog.kbytes_walk():
+                    print(repr(kbytes))
 
 
             def {tag}bytes_walk() -> typing.Generator[bytes, None, None]:
                 """Yield Bytes slowly over Time, as a replay of this Log"""
         '''
 
+        s_py = f'''
+            #!/usr/bin/env python3
+
+            import os
+            import sys
+            import time
+            import typing
+
+            if __name__ == "__main__":
+                import screenlog
+
+                fd = sys.stdout.fileno()
+                for sbytes in screenlog.sbytes_walk():
+                    os.write(fd, sbytes)
+
+
+            def {tag}bytes_walk() -> typing.Generator[bytes, None, None]:
+                """Yield Bytes slowly over Time, as a replay of this Log"""
+        '''
+
+        py = k_py if tag == "k" else s_py
         py = textwrap.dedent(py).strip()
-        if tag == "k":
-            py = py.replace("\nimport os\n", "\n")
-            py = py.replace("\nimport sys\n", "\n")
 
         logfile.write(py + "\n" "\n")
 
@@ -1693,32 +1714,6 @@ class BytesLogger:
 
         print(f"    time.sleep({total_seconds})", file=logfile)
         print(f"    yield {rep}", file=logfile)
-
-    def write_epilog(self) -> None:
-        """Write the Code after the Log"""
-
-        logfile = self.logfile
-        tag = self.tag
-
-        assert tag in ("k", "s"), (tag,)  # todo: accept more tags?
-
-        k_py = """
-            if __name__ == "__main__":
-                for kbytes in kbytes_walk():
-                    print(repr(kbytes))
-        """
-
-        s_py = """
-            if __name__ == "__main__":
-                fd = sys.stdout.fileno()
-                for sbytes in sbytes_walk():
-                    os.write(fd, sbytes)
-        """
-
-        py = k_py if tag == "k" else s_py
-        py = textwrap.dedent(py).strip()
-
-        logfile.write("\n" + "\n" + py + "\n")
 
 
 class BytesTerminal:
@@ -1796,9 +1791,6 @@ class BytesTerminal:
         tcgetattr_else = self.tcgetattr_else
         after = self.after
 
-        sbyteslogger = self.sbyteslogger
-        kbyteslogger = self.kbyteslogger
-
         if tcgetattr_else is not None:
             tcgetattr = tcgetattr_else
             self.tcgetattr_else = None
@@ -1806,9 +1798,6 @@ class BytesTerminal:
             assert after in (termios.TCSADRAIN, termios.TCSAFLUSH), (after,)
             when = after
             termios.tcsetattr(fd, when, tcgetattr)
-
-            sbyteslogger.write_epilog()
-            kbyteslogger.write_epilog()
 
         return None
 
@@ -1839,7 +1828,7 @@ class BytesTerminal:
         kchord_bytes = read_0
         if read_0 == b"\x1B":
 
-            # Accept 1 or more ESC Bytes, such as x 1B 1B in ⌥Fn⌃Delete
+            # Accept 1 or more ESC Bytes, such as x 1B 1B in ⌥⌃FnDelete
 
             while True:  # without Timeout would rudely block at ⎋⎋ Meta Esc
                 if not self.kbhit(timeout=0):
@@ -1866,7 +1855,8 @@ class BytesTerminal:
 
                     # "\x1B" "O" Sequences often then stop short, 3 Bytes in total
 
-        # self.print_sbytes(str(kchord_bytes).encode(), end=b"\r\n")  # todo: logging
+        if False:  # jitter 1/Aug
+            self.print_sbytes(str(kchord_bytes).encode(), end=b"\r\n")  # todo: logging
 
         return kchord_bytes
 
@@ -1920,6 +1910,8 @@ class BytesTerminal:
 
         return kbytes
 
+        # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
+
     def kbhit(self, timeout) -> list[int]:  # 'timeout' in seconds, None for forever
         """Wait till next Input Byte, else till Timeout, else till forever"""
 
@@ -1937,6 +1929,7 @@ class BytesTerminal:
 # Shifting Keys other than the Fn Key
 # Meta hides inside macOS Terminal > Settings > Keyboard > Use Option as Meta Key
 
+# 'Fn'
 Meta = "\N{Broken Circle With Northwest Arrow}"  # ⎋
 Control = "\N{Up Arrowhead}"  # ⌃
 Option = "\N{Option Key}"  # ⌥
@@ -1949,14 +1942,14 @@ KCHORD_BY_DECODES = {
     "\x09": "Tab",  # '\t' ⇥
     "\x0D": "Return",  # '\r' ⏎
     "\x1B": "⎋",  # Esc  # Meta  # includes ⎋Spacebar ⎋Tab ⎋Return ⎋Delete without ⌥
-    "\x1B" "\x01": "⎋Fn⇧←",  # ⌥Fn⇧←   # coded with ⌃A
+    "\x1B" "\x01": "⎋⇧Fn←",  # ⌥Fn⇧←   # coded with ⌃A
     "\x1B" "\x03": "⎋FnReturn",  # coded with ⌃C  # not ⌥FnReturn
-    "\x1B" "\x04": "⎋Fn⇧→",  # ⌥Fn⇧→   # coded with ⌃D
-    "\x1B" "\x0B": "⎋Fn⇧↑",  # ⌥Fn⇧↑   # coded with ⌃K
-    "\x1B" "\x0C": "⎋Fn⇧↓",  # ⌥Fn⇧↓  # coded with ⌃L
+    "\x1B" "\x04": "⎋⇧Fn→",  # ⌥Fn⇧→   # coded with ⌃D
+    "\x1B" "\x0B": "⎋⇧Fn↑",  # ⌥Fn⇧↑   # coded with ⌃K
+    "\x1B" "\x0C": "⎋⇧Fn↓",  # ⌥Fn⇧↓  # coded with ⌃L
     "\x1B" "\x10": "⎋⇧Fn",  # ⎋ Meta and ⇧ Shift with any of F1..F12  # coded with ⌃P
     "\x1B" "\x1B": "⎋⎋",  # Meta Esc  # not ⌥⎋
-    "\x1B" "\x1B" "[" "3;5~": "⎋Fn⌃Delete",  # ⌥Fn⌃Delete  # LS1R
+    "\x1B" "\x1B" "[" "3;5~": "⎋⌃FnDelete",  # ⌥⌃FnDelete  # LS1R
     "\x1B" "\x1B" "[" "A": "⎋↑",  # CSI 04/01 Cursor Up (CUU)  # not ⌥↑
     "\x1B" "\x1B" "[" "B": "⎋↓",  # CSI 04/02 Cursor Down (CUD)  # not ⌥↓
     "\x1B" "\x1B" "[" "Z": "⎋⇧Tab",  # ⇤  # CSI 05/10 CBT  # not ⌥⇧Tab
@@ -1983,17 +1976,17 @@ KCHORD_BY_DECODES = {
     "\x1B" "[" "32~": "⇧F10",  # LS1R
     "\x1B" "[" "33~": "⇧F11",  # LS1R
     "\x1B" "[" "34~": "⇧F12",  # LS1R
-    "\x1B" "[" "3;2~": "Fn⇧Delete",  # LS1R
-    "\x1B" "[" "3;5~": "Fn⌃Delete",  # LS1R
+    "\x1B" "[" "3;2~": "⇧FnDelete",  # LS1R
+    "\x1B" "[" "3;5~": "⌃FnDelete",  # LS1R
     "\x1B" "[" "3~": "FnDelete",  # LS1R
-    "\x1B" "[" "5~": "Fn⇧↑",
-    "\x1B" "[" "6~": "Fn⇧↓",
+    "\x1B" "[" "5~": "⇧Fn↑",
+    "\x1B" "[" "6~": "⇧Fn↓",
     "\x1B" "[" "A": "↑",  # CSI 04/01 Cursor Up (CUU)
     "\x1B" "[" "B": "↓",  # CSI 04/02 Cursor Down (CUD)
     "\x1B" "[" "C": "→",  # CSI 04/03 Cursor Forward (CUF)
     "\x1B" "[" "D": "←",  # CSI 04/04 Cursor Backward (CUB)
-    "\x1B" "[" "F": "Fn⇧→",  # CSI 04/06 Cursor Preceding Line (CPL)
-    "\x1B" "[" "H": "Fn⇧←",  # CSI 04/08 Cursor Position (CUP)
+    "\x1B" "[" "F": "⇧Fn→",  # CSI 04/06 Cursor Preceding Line (CPL)
+    "\x1B" "[" "H": "⇧Fn←",  # CSI 04/08 Cursor Position (CUP)
     "\x1B" "[" "Z": "⇧Tab",  # ⇤  # CSI 05/10 Cursor Backward Tabulation (CBT)
     "\x1B" "b": "⎋←",  # ⌥← ⎋B  # ⎋←  # Emacs M-b Backword-Word
     "\x1B" "f": "⎋→",  # ⌥→ ⎋F  # ⎋→  # Emacs M-f Forward-Word
@@ -2005,6 +1998,63 @@ KCHORD_BY_DECODES = {
 assert list(KCHORD_BY_DECODES.keys()) == sorted(KCHORD_BY_DECODES.keys())
 
 
+#
+# the Mac US English Terminal Keyboard choice of Option + Printable-US-Ascii
+#
+
+#
+#  !"#$%&'()*+,-./0123456789:;<=>?
+# @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+# `abcdefghijklmnopqrstuvwxyz{|}~
+#
+
+OPTION_KTEXT = """
+     ⁄Æ‹›ﬁ‡æ·‚°±≤–≥÷º¡™£¢∞§¶•ªÚ…¯≠˘¿
+    €ÅıÇÎ Ï˝Ó Ô\uF8FFÒÂ Ø∏Œ‰Íˇ¨◊„˛Á¸“«‘ﬂ—
+     å∫ç∂ ƒ©˙ ∆˚¬µ øπœ®ß† √∑≈¥Ω”»’`
+"""
+
+# ⌥⇧K is  is \uF8FF is in the U+E000..U+F8FF Private Use Area (PUA)
+
+OPTION_KCHARS = " " + textwrap.dedent(OPTION_KTEXT).strip()
+OPTION_KCHARS = OPTION_KCHARS.replace("\n", "")
+
+assert len(OPTION_KCHARS) == (0x7E - 0x20) + 1
+
+
+KCHORD_STR_BY_KCHAR = {
+    "á": "⌥EA",  # E
+    "é": "⌥EE",
+    "í": "⌥EI",  # without the "j́" here (because Combining Accent comes after)
+    "ó": "⌥EO",
+    "ú": "⌥EU",
+    "´": "⌥ESpacebar",
+    "é": "⌥EE",
+    "â": "⌥IA",  # I
+    "ê": "⌥IE",
+    "î": "⌥II",
+    "ô": "⌥IO",
+    "û": "⌥IU",
+    "ˆ": "⌥ISpacebar",
+    "ã": "⌥NA",  # N
+    "ñ": "⌥NN",
+    "õ": "⌥NO",
+    "˜": "⌥NSpacebar",
+    "ä": "⌥UA",  # U
+    "ë": "⌥UE",
+    "ï": "⌥UI",
+    "ö": "⌥UO",
+    "ü": "⌥UU",
+    "ÿ": "⌥UY",
+    "¨": "⌥USpacebar",
+    "à": "⌥`A",  # `
+    "è": "⌥`E",
+    "ì": "⌥`I",
+    "ò": "⌥`O",
+    "ù": "⌥`U",
+    "`": "⌥`Spacebar",  # comes out as ⌥~
+}
+
 QUIT_KSTRS = (
     "⌃L⌃C:Q!Return",
     "⌃X⌃C",
@@ -2013,7 +2063,8 @@ QUIT_KSTRS = (
     "⇧Z⇧Z",
 )
 
-# hand-sorted by Fn ⌃ ⌥ ⇧ ⌘ order
+
+# hand-sorted by ⎋ ⌃ ⌥ ⇧ ⌘ Fn order
 
 
 KSTRS = tuple(QUIT_KSTRS)
@@ -2063,6 +2114,7 @@ class StrTerminal:
         """Read 1 Keyboard Chord from the Keyboard"""
 
         bt = self.bt
+
         kchord_by_decodes = KCHORD_BY_DECODES
 
         # Read the Bytes of the 1 Keyboard Chord
@@ -2081,32 +2133,52 @@ class StrTerminal:
 
         kchord = ""
         for decode in decodes:
-            o = ord(decode)
-
-            if decode in kchord_by_decodes.keys():
-                s = kchord_by_decodes[decode]
-            elif (o < 0x20) or (o == 0x7F):
-                s = "⌃" + chr(o ^ 0x40)  # '⌃@'
-            elif "A" <= decode <= "Z":
-                s = "⇧" + chr(o)  # '⇧A'
-            elif "a" <= decode <= "z":
-                s = chr(o ^ 0x20)  # 'A'
-            elif (o in (0x80, 0xA0)) or (o == 0xAD):  # C1 Controls
-                assert False, (o, decode)
-            elif o == 0xA0:
-                s = "⌥Spacebar"  # '\N{No-Break Space}'
-                assert False, (o, decode)  # unreached because 'kchord_by_decodes'
-            else:
-                assert o < 0x11_0000, (o, decode)
-                s = chr(o)  # '!', '¡', etc
-
-            assert " " not in s, (s, o, decode)
-
+            s = self.ch_to_keycap(decode)
             kchord += s
 
         # Succeed
 
         return kchord
+
+        # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
+
+    def ch_to_keycap(self, ch) -> str:  # noqa C901
+        """Choose a Key Cap to speak of a single Keyboard Char"""
+
+        o = ord(ch)
+
+        kchord_by_decodes = KCHORD_BY_DECODES
+
+        if ch in kchord_by_decodes.keys():
+            s = kchord_by_decodes[ch]
+        elif (o < 0x20) or (o == 0x7F):
+            s = "⌃" + chr(o ^ 0x40)  # '⌃@'
+        elif "A" <= ch <= "Z":
+            s = "⇧" + chr(o)  # '⇧A'
+        elif "a" <= ch <= "z":
+            s = chr(o ^ 0x20)  # 'A'
+        elif (o in (0x80, 0xA0)) or (o == 0xAD):  # C1 Controls
+            assert False, (o, ch)
+        elif o == 0xA0:
+            s = "⌥Spacebar"  # '\N{No-Break Space}'
+            assert False, (o, ch)  # unreached because 'kchord_by_decodes'
+        elif ch in OPTION_KCHARS:
+            index = OPTION_KCHARS.index(ch)
+            asc = chr(0x20 + index)
+            if "A" <= asc <= "Z":
+                asc = "⇧" + asc  # '⇧A'
+            if "a" <= asc <= "z":
+                asc = chr(ord(asc) ^ 0x20)  # 'A'
+            s = "⌥" + asc
+        elif ch in KCHORD_STR_BY_KCHAR.keys():
+            s = KCHORD_STR_BY_KCHAR[ch]
+        else:
+            assert o < 0x11_0000, (o, ch)
+            s = chr(o)  # '!', '¡', etc
+
+        assert " " not in s, (s, o, ch)
+
+        return s
 
 
 class LineTerminal:
