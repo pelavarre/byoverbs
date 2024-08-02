@@ -822,6 +822,9 @@ vi.py
     flash reverse-video of selection back to ⌃O covered by a movement
         D, I to ⌃O ⌃I
 
+pqv from itext of naive or aware date/time
+    print it out in every longitude from earliest to latest
+
 
 ## Copied from
 

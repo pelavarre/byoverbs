@@ -1937,7 +1937,7 @@ Shift = "\N{Upwards White Arrow}"  # ⇧
 Command = "\N{Place of Interest Sign}"  # ⌘
 
 
-KCHORD_BY_DECODES = {
+KCHORD_STR_BY_DECODES = {
     "\x00": "⌃Spacebar",  # ⌃@  # ⌃⇧2
     "\x09": "Tab",  # '\t' ⇥
     "\x0D": "Return",  # '\r' ⏎
@@ -1995,7 +1995,7 @@ KCHORD_BY_DECODES = {
     "\xA0": "⌥Spacebar",  # '\N{No-Break Space}'
 }
 
-assert list(KCHORD_BY_DECODES.keys()) == sorted(KCHORD_BY_DECODES.keys())
+assert list(KCHORD_STR_BY_DECODES.keys()) == sorted(KCHORD_STR_BY_DECODES.keys())
 
 
 #
@@ -2055,6 +2055,7 @@ KCHORD_STR_BY_KCHAR = {
     "`": "⌥`Spacebar",  # comes out as ⌥~
 }
 
+
 QUIT_KSTRS = (
     "⌃L⌃C:Q!Return",
     "⌃X⌃C",
@@ -2063,11 +2064,9 @@ QUIT_KSTRS = (
     "⇧Z⇧Z",
 )
 
-
 # hand-sorted by ⎋ ⌃ ⌥ ⇧ ⌘ Fn order
 
-
-KSTRS = tuple(QUIT_KSTRS)
+LONG_KSTRS = tuple(QUIT_KSTRS)
 
 
 class StrTerminal:
@@ -2097,25 +2096,28 @@ class StrTerminal:
 
         bt = self.bt
 
-        kchord0 = self.read_kchord_str()
-        bt.print_sbytes(kchord0.encode(), end=b"")
+        kchord_str_0 = self.read_kchord_str()
 
-        line = kchord0
-        while any((_.startswith(line) and _ != line) for _ in KSTRS):
-            kchord = self.read_kchord_str()
-            bt.print_sbytes(kchord.encode(), end=b"")
-            line += kchord
+        kstr = kchord_str_0
+        bt.print_sbytes(kchord_str_0.encode(), end=b"")
+        while any((_.startswith(kstr) and (_ != kstr)) for _ in LONG_KSTRS):
+            kchord_str = self.read_kchord_str()
+
+            bt.print_sbytes(kchord_str.encode(), end=b"")
+            kstr += kchord_str
 
         bt.print_sbytes()
 
-        return line
+        return kstr
+
+        # '⌃L'  # '⇧Z⇧Z'
 
     def read_kchord_str(self) -> str:
         """Read 1 Keyboard Chord from the Keyboard"""
 
         bt = self.bt
 
-        kchord_by_decodes = KCHORD_BY_DECODES
+        kchord_str_by_decodes = KCHORD_STR_BY_DECODES  # '\e\e[A' for ⎋↑
 
         # Read the Bytes of the 1 Keyboard Chord
 
@@ -2124,21 +2126,21 @@ class StrTerminal:
 
         # Match some Key Caps of an ordinary macOS US-English Keyboard
 
-        if decodes in kchord_by_decodes.keys():
-            kchord = kchord_by_decodes[decodes]
+        if decodes in kchord_str_by_decodes.keys():
+            kchord_str = kchord_str_by_decodes[decodes]
 
-            return kchord
+            return kchord_str
 
         # String together the Key Caps struck all at once
 
-        kchord = ""
+        kchord_str = ""
         for decode in decodes:
             s = self.ch_to_keycap(decode)
-            kchord += s
+            kchord_str += s
 
         # Succeed
 
-        return kchord
+        return kchord_str
 
         # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
 
@@ -2147,10 +2149,12 @@ class StrTerminal:
 
         o = ord(ch)
 
-        kchord_by_decodes = KCHORD_BY_DECODES
+        option_kchars = OPTION_KCHARS  # '∂' for ⌥D
+        kchord_str_by_decodes = KCHORD_STR_BY_DECODES  # '\x7F' for 'Delete'
+        kchord_str_by_kchar = KCHORD_STR_BY_KCHAR  # 'é' for ⌥EE
 
-        if ch in kchord_by_decodes.keys():
-            s = kchord_by_decodes[ch]
+        if ch in kchord_str_by_decodes.keys():
+            s = kchord_str_by_decodes[ch]
         elif (o < 0x20) or (o == 0x7F):
             s = "⌃" + chr(o ^ 0x40)  # '⌃@'
         elif "A" <= ch <= "Z":
@@ -2162,16 +2166,16 @@ class StrTerminal:
         elif o == 0xA0:
             s = "⌥Spacebar"  # '\N{No-Break Space}'
             assert False, (o, ch)  # unreached because 'kchord_by_decodes'
-        elif ch in OPTION_KCHARS:
-            index = OPTION_KCHARS.index(ch)
+        elif ch in option_kchars:
+            index = option_kchars.index(ch)
             asc = chr(0x20 + index)
             if "A" <= asc <= "Z":
                 asc = "⇧" + asc  # '⇧A'
             if "a" <= asc <= "z":
                 asc = chr(ord(asc) ^ 0x20)  # 'A'
             s = "⌥" + asc
-        elif ch in KCHORD_STR_BY_KCHAR.keys():
-            s = KCHORD_STR_BY_KCHAR[ch]
+        elif ch in kchord_str_by_kchar.keys():
+            s = kchord_str_by_kchar[ch]
         else:
             assert o < 0x11_0000, (o, ch)
             s = chr(o)  # '!', '¡', etc
