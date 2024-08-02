@@ -19,7 +19,7 @@ words and phrases of the Pq Programming Language:
   close, dedent, dent, end, reverse, shuffle, sort, spong, undent,
   deframe, dumps, frame, json, join, loads, split,
   expand, md5sum, sha256, tail -r, tac, unexpand,
-  a, jq ., s, u, wc c, wc m, wc w, wc l,  wc c, wc m, wc w, wc l, x, xn1,
+  a, em, jq ., s, u, wc c, wc m, wc w, wc l,  wc c, wc m, wc w, wc l, vi, x, xn1
   len bytes, len text, len words, len lines, text set,
   ...
 
@@ -50,8 +50,7 @@ examples:
   echo '[0, 11, 22]' |pq json |cat -  # format Json consistently
   pq 'oline = "<< " + iline + " >>"'  # add Prefix and Suffix to each Line
   pq 'olines = ilines[:3] + ["..."] + ilines[-3:]'  # show Head and Tail
-  pq em  # edit the Os/Copy Paste Clipboard Buffer, in the way of Emacs
-  pq vi  # edit the Os/Copy Paste Clipboard Buffer, in the way of Vi
+  pq vi  # edit the Os/Copy Paste Clipboard Buffer, in the way of Vi or Emacs
 """
 
 # quirks to come when we add 'pq vi':
@@ -1623,6 +1622,105 @@ def visual_ex(ilines) -> list[str]:
 ESC = b"\x1B"
 
 
+class BytesLogger:
+    """Log Bytes arriving over time, for a time-accurate replay or analysis later"""
+
+    tag: str  # 'k'  # 's'
+    logfile: typing.TextIO  # '.pqinfo/keylog.py'
+    logged: dt.datetime  # when 'def log_bytes_io' last ran
+
+    def __init__(self, name, tag):
+        """Write the Code before the Log"""
+
+        assert tag in ("k", "s"), (tag,)  # todo: accept more tags?
+
+        self.tag = tag
+
+        dirpath = pathlib.Path(".pqinfo")
+        dirpath.mkdir(parents=True, exist_ok=True)  # 'parents=' unneeded at './'
+
+        path = dirpath / name  # '.pqinfo/screenlog.py'
+        exists = path.exists()
+
+        logfile = path.open("a")
+        self.logfile = logfile
+
+        if not exists:
+            self.write_prolog()
+
+        self.logged = dt.datetime.now()
+
+    def write_prolog(self) -> None:
+        """Write the Code before the Log"""
+
+        logfile = self.logfile
+        tag = self.tag
+
+        assert tag in ("k", "s"), (tag,)  # todo: accept more tags?
+
+        py = f'''
+            #!/usr/bin/env python3
+
+
+            import os
+            import sys
+            import time
+            import typing
+
+
+            def {tag}bytes_walk() -> typing.Generator[bytes, None, None]:
+                """Yield Bytes slowly over Time, as a replay of this Log"""
+        '''
+
+        py = textwrap.dedent(py).strip()
+        if tag == "k":
+            py = py.replace("\nimport os\n", "\n")
+            py = py.replace("\nimport sys\n", "\n")
+
+        logfile.write(py + "\n" "\n")
+
+    def log_bytes_io(self, sbytes) -> None:
+        """Log some Keyboard Input Bytes, Screen Output Bytes, etc"""
+
+        logfile = self.logfile
+        logged = self.logged
+
+        now = dt.datetime.now()
+        total_seconds = (now - logged).total_seconds()
+        self.logged = now
+
+        rep = black_repr(sbytes)
+
+        print(f"    time.sleep({total_seconds})", file=logfile)
+        print(f"    yield {rep}", file=logfile)
+
+    def write_epilog(self) -> None:
+        """Write the Code after the Log"""
+
+        logfile = self.logfile
+        tag = self.tag
+
+        assert tag in ("k", "s"), (tag,)  # todo: accept more tags?
+
+        k_py = """
+            if __name__ == "__main__":
+                for kbytes in kbytes_walk():
+                    print(repr(kbytes))
+        """
+
+        s_py = """
+            if __name__ == "__main__":
+                fd = sys.stdout.fileno()
+                for sbytes in sbytes_walk():
+                    os.write(fd, sbytes)
+        """
+
+        py = k_py if tag == "k" else s_py
+        py = textwrap.dedent(py).strip()
+
+        logfile.write("\n" + "\n" + py + "\n")
+
+
 class BytesTerminal:
     """Read/ Write the Bytes at Keyboard/ Screen of a Terminal"""
 
@@ -1646,15 +1744,16 @@ class BytesTerminal:
     tcgetattr_else: list[int | list[bytes | int]] | None
     after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH
 
-    logfile: typing.TextIO  # '.pqinfo/keylog.py'
-    logged: dt.datetime  # when 'def log_kbytes' last ran
+    kbyteslogger: BytesLogger  # logs Keyboard Bytes In
+    sbyteslogger: BytesLogger  # logs Screen Bytes Out
 
     def __init__(self, before=termios.TCSADRAIN, after=termios.TCSADRAIN) -> None:
 
         stdio = sys.stderr
         fd = stdio.fileno()
-        logfile = self.init_logfile()
-        logged = dt.datetime.now()
+
+        kbyteslogger = BytesLogger("keylog.py", tag="k")
+        sbyteslogger = BytesLogger("screenlog.py", tag="s")
 
         self.stdio = stdio
         self.fd = fd
@@ -1664,42 +1763,10 @@ class BytesTerminal:
         self.tcgetattr_else = None
         self.after = after
 
-        self.logfile = logfile
-        self.logged = logged
+        self.kbyteslogger = kbyteslogger
+        self.sbyteslogger = sbyteslogger
 
         # termios.TCSAFLUSH destroys Input, like for when Paste crashes Code
-
-    def init_logfile(self) -> typing.TextIO:
-        """Start logging Keyboard Input Bytes"""
-
-        py = """
-            import time
-            import typing
-
-
-            #
-            # python3 -i .pqinfo/keylog.py
-            #     for kbytes in walk_kbytes():
-            #         print(kbytes)
-            #
-
-
-            def kbytes_walk() -> typing.Generator[bytes, None, None]:
-        """
-
-        py = textwrap.dedent(py).strip()
-
-        dirpath = pathlib.Path(".pqinfo")
-        dirpath.mkdir(parents=True, exist_ok=True)  # 'parents=' unneeded at './'
-
-        path = dirpath / "keylog.py"  # '.pqinfo/keylog.py'
-        exists = path.exists()
-
-        logfile = path.open("a")
-        if not exists:
-            print(py, file=logfile)
-
-        return logfile
 
     def __enter__(self) -> "BytesTerminal":  # -> typing.Self:
         r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
@@ -1729,6 +1796,9 @@ class BytesTerminal:
         tcgetattr_else = self.tcgetattr_else
         after = self.after
 
+        sbyteslogger = self.sbyteslogger
+        kbyteslogger = self.kbyteslogger
+
         if tcgetattr_else is not None:
             tcgetattr = tcgetattr_else
             self.tcgetattr_else = None
@@ -1737,6 +1807,9 @@ class BytesTerminal:
             when = after
             termios.tcsetattr(fd, when, tcgetattr)
 
+            sbyteslogger.write_epilog()
+            kbyteslogger.write_epilog()
+
         return None
 
     def print_sbytes(self, *args, end=b"\r\n") -> None:
@@ -1744,10 +1817,14 @@ class BytesTerminal:
 
         fd = self.fd
         assert self.tcgetattr_else
+        sbyteslogger = self.sbyteslogger
 
         sep = b" "
         join = sep.join(args)
-        os.write(fd, join + end)
+        sbytes = join + end
+
+        sbyteslogger.log_bytes_io(sbytes)  # logs Out before Write
+        os.write(fd, sbytes)
 
         # doesn't raise UnicodeEncodeError
 
@@ -1830,32 +1907,18 @@ class BytesTerminal:
         fd = self.fd
         stdio = self.stdio
         assert self.tcgetattr_else
+        kbyteslogger = self.kbyteslogger
 
         holds = self.holds
         if not holds:
             stdio.flush()
             kbytes = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
-            self.log_kbytes(kbytes)
+            kbyteslogger.log_bytes_io(kbytes)  # logs In after Read
         else:
             kbytes = holds[:1]
             holds.pop()
 
         return kbytes
-
-    def log_kbytes(self, kbytes) -> None:
-        """Log some Keyboard Bytes"""
-
-        logfile = self.logfile
-        logged = self.logged
-
-        now = dt.datetime.now()
-        total_seconds = (now - logged).total_seconds()
-        self.logged = now
-
-        krep = black_repr(kbytes)
-
-        print(f"    time.sleep({total_seconds})", file=logfile)
-        print(f"    yield {krep}", file=logfile)
 
     def kbhit(self, timeout) -> list[int]:  # 'timeout' in seconds, None for forever
         """Wait till next Input Byte, else till Timeout, else till forever"""
@@ -2075,7 +2138,12 @@ class LineTerminal:
                 st.print_schars(oline)
 
             st.print_schars()
-            st.print_schars("Logging Keyboard Chord Bytes intto:  cat", bt.logfile.name)
+            st.print_schars(
+                "Logging Keyboard Chord Bytes into:  cat", bt.kbyteslogger.logfile.name
+            )
+            st.print_schars(
+                "Logging Screen Bytes into:  cat", bt.sbyteslogger.logfile.name
+            )
 
             st.print_schars()
             quits = " or ".join(QUIT_KSTRS)
