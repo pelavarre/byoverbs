@@ -1944,7 +1944,7 @@ Meta = "\N{Broken Circle With Northwest Arrow}"  # ⎋
 Control = "\N{Up Arrowhead}"  # ⌃
 Option = "\N{Option Key}"  # ⌥
 Shift = "\N{Upwards White Arrow}"  # ⇧
-Command = "\N{Place of Interest Sign}"  # ⌘
+Command = "\N{Place of Interest Sign}"  # ⌘  # Super  # Windows
 
 
 KCHORD_STR_BY_KCHARS = {
@@ -2249,6 +2249,25 @@ class LineTerminal:
         self.kdigits = list()
         self.kmap = ""
 
+    def write_form(self, form) -> None:
+
+        kint = self.pull_kdigits(default=1)
+        self.write_form_kint(form, kint=kint)
+
+    def write_form_kint(self, form, kint) -> None:
+
+        assert "{}" in form, (form,)
+        assert kint >= 1, (kint,)
+
+        st = self.st
+
+        if kint == 1:
+            schars = form.format("")
+        else:
+            schars = form.format(kint)
+
+        st.stwrite(schars)
+
     def pull_kdigits(self, default) -> int:
 
         kdigits = self.kdigits
@@ -2344,7 +2363,11 @@ class LineTerminal:
 
             func(self)
 
-            if func is not LineTerminal.kdo_hold_kdigit:
+            if func is LineTerminal.kdo_column_1_if:
+                pass
+            elif func is LineTerminal.kdo_hold_kdigit:
+                pass
+            else:
                 self.pull_kdigits(default=1)  # todo: silently discards unused arg
 
             return
@@ -2352,9 +2375,9 @@ class LineTerminal:
         # Else pass Bytes through, looped back, into Screen from Keyboard
 
         kchars = kbytes.decode()
-        n = self.pull_kdigits(default=1)
+        kint = self.pull_kdigits(default=1)
         if not KDEBUG:
-            st.stwrite(n * kchars)
+            st.stwrite(kint * kchars)
 
         # Return, Spacebar, Tab, and printable US-Ascii and Unicode
 
@@ -2395,8 +2418,8 @@ class LineTerminal:
         verb = st.read_chord_kbytes_kstr()  # not st.read_kbytes_kstr()
         (kbytes, kstr) = verb
 
-        n = self.pull_kdigits(default=1)
-        st.stwrite(n * kstr)
+        kint = self.pull_kdigits(default=1)
+        st.stwrite(kint * kstr)
 
         # Emacs ⌃Q quoted-insert/ replace
         # Vi ⌃V
@@ -2430,7 +2453,7 @@ class LineTerminal:
         # Vi 1 2 3 4 5 6 7 8 9, and Vi 0 thereafter
 
     #
-    # Move the Cursor to a Column or Row, relatively or absolutely
+    # Move the Cursor to a Column, relatively or absolutely
     #
 
     def kdo_char_minus_n(self) -> None:
@@ -2448,17 +2471,10 @@ class LineTerminal:
         # Emacs → right-char
         # Vi Spacebar
 
-    def kdo_column_past_dent(self) -> None:
-
-        self.pull_kdigits(default=1)
-        self.kdo_column_1()  # Classic Vi never moves into the Dent
-
-        # Vi ^
-
     def kdo_column_1(self) -> None:
 
         st = self.st
-        st.stwrite("\x0D")
+        st.stwrite("\x0D")  # "\x1B[G"  # "\x1B[1G"
 
         # 00/13 Carriage Return (CR) \r ⌃M
 
@@ -2467,13 +2483,7 @@ class LineTerminal:
 
     def kdo_column_minus_n(self) -> None:
 
-        st = self.st
-
-        n = self.pull_kdigits(default=1)
-        if n == 1:
-            st.stwrite("\x08")  # translate from \x7F DEL for Mac Terminal
-        else:
-            st.stwrite("\x1B" "[" f"{n}" "D")
+        self.write_form("\x1B[{}D")
 
         # 00/08 Backspace (BS) \b ⌃H
         # 07/15 Delete (DEL) \x7F ⌃? 'Eliminated Control Function'
@@ -2485,34 +2495,147 @@ class LineTerminal:
 
     def kdo_column_n(self) -> None:
 
-        st = self.st
-
-        n = self.pull_kdigits(default=1)
-        if n == 1:
-            st.stwrite("\x1B" "[" "G")  # could be:  self.kdo_column_1()
-        else:
-            st.stwrite("\x1B" "[" f"{n}" "G")
+        self.write_form("\x1B[{}G")
 
         # CSI 04/07 Cursor Character Absolute (CHA)
+        # "\r" and "\x1B[G" and "\x1B[1G" all go to Column 1
 
-        # Emacs ⎋G move-to-column
+        # Emacs ⎋GTab move-to-column  # FIXME: zero-based
         # Vi |
         # VsCode ⌃G {line}:{column}
 
+    def kdo_column_past_dent(self) -> None:
+
+        self.pull_kdigits(default=1)
+        self.kdo_column_1()  # Classic Vi lands past the Dent
+
+        # Vi ^
+
     def kdo_column_plus_n(self) -> None:
 
-        st = self.st
-
-        n = self.pull_kdigits(default=1)
-        if n == 1:
-            st.stwrite("\x1B" "[" "C")
-        else:
-            st.stwrite("\x1B" "[" f"{n}" "C")
+        self.write_form("\x1B[{}C")
 
         # CSI 04/03 Cursor Forward (CUF)
 
         # Vi →
         # Vi L
+
+    #
+    # Move the Cursor to a Row, relatively or absolutely
+    #
+
+    def kdo_dent_minus_n(self) -> None:
+
+        self.kdo_line_minus_n()  # Classic Vi lands past the Dent
+
+        # Vi -
+
+    def kdo_dent_plus_n(self) -> None:
+
+        self.kdo_line_plus_n()  # Classic Vi lands past the Dent
+
+        # Vi +
+
+    def kdo_dent_plus_n1(self) -> None:
+
+        kint = self.pull_kdigits(default=1)
+        if kint > 1:
+            kint_minus = kint - 1
+            self.write_form_kint("\x1B[{}B", kint=kint_minus)
+
+        self.kdo_column_1()  # Classic Vi lands past the Dent
+
+        # CSI 04/02 Cursor Down (CUD)
+
+        # Vi _
+
+    def kdo_end_plus_n1(self) -> None:
+
+        kint = self.pull_kdigits(default=1)
+        if kint > 1:
+            kint_minus = kint - 1
+            self.write_form_kint("\x1B[{}B", kint=kint_minus)
+
+        self.write_form_kint("\x1B[{}C", kint=32100)  # todo: Screens of more Columns
+
+        # CSI 04/02 Cursor Down (CUD)
+        # CSI 04/03 Cursor Forward (CUF)
+
+        # Emacs ⌃E move-end-of-line
+        # Vi $
+
+    def kdo_home_minus_n1(self) -> None:
+
+        kint = self.pull_kdigits(default=1)
+        if kint > 1:
+            kint_minus = kint - 1
+            self.write_form_kint("\x1B[{}A", kint=kint_minus)
+
+        self.kdo_column_1()
+
+        # CSI 04/01 Cursor Up (CUU)
+
+        # Emacs ⌃A move-beginning-of-line
+
+    def kdo_line_n(self) -> None:
+
+        kint = self.pull_kdigits(default=-1)
+        if kint < 0:
+            kint = 32100  # todo: Screens of more Rows
+
+        self.write_form_kint("\x1B[{}d", kint=kint)
+
+        # CSI 06/04 Line Position Absolute (VPA)
+
+        # Emacs ⎋GG ⎋G⎋G goto-line
+        # Vi G
+
+    def kdo_line_minus_n(self) -> None:
+
+        self.write_form("\x1B[{}A")
+
+        # CSI 04/01 Cursor Up (CUU)
+
+        # Emacs ⌃P previous-line
+        # Vi K
+
+    def kdo_line_plus_n(self) -> None:
+
+        self.write_form("\x1B[{}B")
+
+        # CSI 04/02 Cursor Down (CUD)
+
+        # Emacs ⌃N next-line
+        # Vi ⌃J
+        # Vi J
+
+    def kdo_row_n_down(self) -> None:
+
+        kint = self.pull_kdigits(default=1)
+        self.write_form_kint("\x1B[{}d", kint=1)
+        if kint > 1:
+            kint_minus = kint - 1
+            self.write_form_kint("\x1B[{}B", kint=kint_minus)
+
+        # CSI 06/04 Line Position Absolute (VPA)
+        # CSI 04/02 Cursor Down (CUD)
+
+        # Emacs ⎋R move-to-window-line-top-bottom, with Zero-Based Positive K-Int
+        # Vi ⇧H
+
+    def kdo_row_n_up(self) -> None:
+
+        kint = self.pull_kdigits(default=1)
+        self.write_form_kint("\x1B[{}d", kint=32100)  # todo: Screens of more Rows
+        if kint > 1:
+            kint_minus = kint - 1
+            self.write_form_kint("\x1B[{}A", kint=kint_minus)
+
+        # CSI 06/04 Line Position Absolute (VPA)
+        # CSI 04/01 Cursor Up (CUU)
+
+        # Emacs ⎋R move-to-window-line-top-bottom, with Negative K-Int
+        # Vi ⇧L
 
     #
     #
@@ -2527,23 +2650,45 @@ class LineTerminal:
 #   ⌃C ⌃D ⌃G ⌃H ⌃J ⌃L Return ⌃N ⌃P ⌃\ ↑ ↓ → ←
 #   Space $ + - 0 1 2 3 4 5 6 7 8 9 ⇧H ⇧M ⇧L H J K L |
 #   ⇧C ⇧D ⇧G ⇧I ⇧O ⇧R ⇧S ⇧X ^ _ C$ CC D$ DD A I O R S X
+#   > <
+#
+
+#
+# presently not:
+#
+#   ⌃G ⌃L ⌃U
+#   ⇧M
+#   ⇧C ⇧D ⇧G ⇧I ⇧O ⇧R ⇧S ⇧X C$ CC D$ DD A I O R S X
+#   > <
 #
 
 #
 # presently:
 #
-#   ⌃H Tab ⌃J Return ⎋ → ←
-#   Spacebar 0 1 2 3 4 5 6 7 8 9 H L |
-#   ^ Delete
+#   ⎋GG ⎋G⎋G
+#   ⌃A ⌃C ⌃D ⌃E ⌃H Tab ⌃J ⌃N ⌃P ⌃Q ⌃V Return ← ↑ → ↓
+#   Spacebar $ + - 0 1 2 3 4 5 6 7 8 9 ⇧G ^ _ H J K L | Delete
+#   ⌥GG ⌥G⌥G
+#
+#   ⎋ ⌃C ⌃D ⌃\ ⇧QVIReturn
+#   ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧Z⇧Q ⇧Z⇧Z
 #
 
 FUNC_BY_KSTR = {
     "⎋⎋": LineTerminal.kdo_help_quit,
-    "⎋G": LineTerminal.kdo_column_n,
+    "⎋GG": LineTerminal.kdo_line_n,
+    "⎋G⎋G": LineTerminal.kdo_line_n,
+    "⎋GTab": LineTerminal.kdo_column_n,  # FIXME: distinguish from "⎋ G T"
+    # "⎋R": LineTerminal.kdo_row_middle_up_down,  # todo: ⌃U for non-positive K-Int
     #
-    "⌃C⌃C": LineTerminal.kdo_help_quit,
+    "⌃A": LineTerminal.kdo_home_minus_n1,
+    "⌃C": LineTerminal.kdo_help_quit,
+    "⌃D": LineTerminal.kdo_help_quit,
+    "⌃E": LineTerminal.kdo_end_plus_n1,
     "⌃L⌃C:Q!Return": LineTerminal.kdo_force_quit,
     # "⌃X8Return": LineTerminal.unicodedata_lookup,  # Emacs insert-char
+    "⌃P": LineTerminal.kdo_line_minus_n,
+    "⌃N": LineTerminal.kdo_line_plus_n,
     "⌃Q": LineTerminal.kdo_quote_kstr,
     "⌃V": LineTerminal.kdo_quote_kstr,
     "⌃X⌃C": LineTerminal.kdo_force_quit,
@@ -2551,6 +2696,9 @@ FUNC_BY_KSTR = {
     "⌃\\": LineTerminal.kdo_help_quit,  # ⌃\  # b'\x1C'
     #
     "Spacebar": LineTerminal.kdo_char_plus_n,  # b' '
+    "$": LineTerminal.kdo_end_plus_n1,
+    "+": LineTerminal.kdo_dent_plus_n,
+    "-": LineTerminal.kdo_dent_minus_n,
     "0": LineTerminal.kdo_column_1_if,  # b'0'
     "1": LineTerminal.kdo_hold_kdigit,
     "2": LineTerminal.kdo_hold_kdigit,
@@ -2562,19 +2710,35 @@ FUNC_BY_KSTR = {
     "8": LineTerminal.kdo_hold_kdigit,
     "9": LineTerminal.kdo_hold_kdigit,
     #
+    "⇧G": LineTerminal.kdo_line_n,  # b'G'
+    "⇧H": LineTerminal.kdo_row_n_down,  # b'H'
+    "⇧L": LineTerminal.kdo_row_n_up,  # b'L'
+    "⇧QVIReturn": LineTerminal.kdo_help_quit,  # b'Qvi\r'
     "⇧Z⇧Q": LineTerminal.kdo_force_quit,  # b'ZQ'
     "⇧Z⇧Z": LineTerminal.kdo_force_quit,  # b'ZZ'
     "^": LineTerminal.kdo_column_past_dent,  # b'^'
+    "_": LineTerminal.kdo_dent_plus_n1,
     #
     "H": LineTerminal.kdo_column_minus_n,  # b'h'
+    "J": LineTerminal.kdo_line_plus_n,  # b'j'
+    "K": LineTerminal.kdo_line_minus_n,  # b'k'
     "L": LineTerminal.kdo_column_plus_n,  # b'l'
     "|": LineTerminal.kdo_column_n,  # b'|'
     "Delete": LineTerminal.kdo_char_minus_n,  # b'\x7F'
     #
-    "⌥G": LineTerminal.kdo_column_n,
+    "⌥GG": LineTerminal.kdo_line_n,
+    "⌥G⌥G": LineTerminal.kdo_line_n,
+    "⌥GTab": LineTerminal.kdo_column_n,
+    # "⌥R": LineTerminal.kdo_row_middle_up_down,  # todo: ⌃U for non-positive K-Int
 }
 
 # hand-sorted by ⎋ ⌃ ⌥ ⇧ ⌘ Fn order
+
+# todo: Emacs ⌃U - for non-positive K-Int
+
+# todo: assert Keys of FUNC_BY_KSTR reachable by StrTerminal
+#   such as "⎋" isn't reachable while "⎋GTab" defined
+#       because 'celebrated_kstrs'
 
 
 #

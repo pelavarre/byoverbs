@@ -825,6 +825,9 @@ vi.py
 pqv from itext of naive or aware date/time
     print it out in every longitude from earliest to latest
 
+pq em/vi
+    frame and deframe
+
 
 ## Copied from
 
