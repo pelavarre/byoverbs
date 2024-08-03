@@ -88,11 +88,12 @@ import unicodedata
 
 
 #
-# Configure
+# Configure  # todo: less compile-time choices of modes
 #
 
 
-KDEBUG = False  # todo: less compile-time choices of modes
+KDEBUG = False  # Debug 'os.read'
+KCDEBUG = False  # Debug 'FUNC_BY_KCAP_STR'
 
 
 #
@@ -1711,6 +1712,8 @@ class BytesLogger:
 
         logfile.write(py + "\n" "\n")
 
+        # todo: duck away from PyPi·Org Black 'E501 line too long (... > 999 characters'
+
     def log_bytes_io(self, sbytes) -> None:
         """Log some Keyboard Input Bytes, Screen Output Bytes, etc"""
 
@@ -1745,7 +1748,7 @@ class BytesTerminal:
 
     stdio: typing.TextIO  # sys.stderr
     fd: int  # 2
-    holds: bytearray  # b"" till lookahead reads too fast
+    kholds: bytearray  # b"" till lookahead reads too fast
 
     before: int  # termios.TCSADRAIN  # termios.TCSAFLUSH
     tcgetattr_else: list[int | list[bytes | int]] | None
@@ -1765,7 +1768,7 @@ class BytesTerminal:
 
         self.stdio = stdio
         self.fd = fd
-        self.holds = bytearray()  # todo: write it sometimes
+        self.kholds = bytearray()  # todo: write it sometimes
 
         self.before = before  # todo: test Tcsa Flush, not only Tcsa Drain
         self.tcgetattr_else = None
@@ -1831,14 +1834,14 @@ class BytesTerminal:
 
         # doesn't raise UnicodeEncodeError
 
-    def read_kchord_bytes(self) -> bytes:
+    def read_kchord_bytes_if(self) -> bytes:
         """Read the Bytes of a single Keyboard Chord from the Keyboard"""
 
         assert ESC == b"\x1B"
 
         # Block to fetch at least 1 Byte
 
-        read_0 = self.read_kchar_bytes_if()  # often empties the .holds
+        read_0 = self.read_kchar_bytes_if()  # often empties the .kholds
         kchord_bytes = read_0
         if read_0 == b"\x1B":
 
@@ -1915,10 +1918,10 @@ class BytesTerminal:
 
         # Read 1 Byte from Held Bytes
 
-        holds = self.holds
-        if holds:
-            kbytes = bytes(holds[:1])
-            holds.pop()
+        kholds = self.kholds
+        if kholds:
+            kbytes = bytes(kholds[:1])
+            kholds.pop()
             return kbytes
 
         # Else block to read 1 Byte from Keyboard
@@ -2148,12 +2151,16 @@ class StrTerminal:
 
         deffed_kcap_strs = self.deffed_kcap_strs
 
-        (kbytes, kcs) = self.read_chord_kbytes_kstr()
+        # Read the first Keyboard Chord
+
+        (kbytes, kcs) = self.read_one_chord_kbytes_kstr()
         if KDEBUG:
             self.stprint(kbytes, kcs)
 
+        # Read enough more Keyboard Chords to make a whole Sequence
+
         while any(_.startswith(kcs + " ") for _ in deffed_kcap_strs):
-            (kchord_bytes, kchord_str) = self.read_chord_kbytes_kstr()
+            (kchord_bytes, kchord_str) = self.read_one_chord_kbytes_kstr()
 
             kbytes += kchord_bytes
 
@@ -2165,6 +2172,8 @@ class StrTerminal:
 
             # 'D' is a complete Key Chord Sequence, because 'D ' doesn't start 'Delete'
 
+        # Succeed
+
         return (kbytes, kcs)  # abbreviates 'return (kbytes, kcap_str)'
 
         # '⌃L'  # '⇧Z ⇧Z'
@@ -2172,13 +2181,13 @@ class StrTerminal:
     def read_one_chord_kstr(self) -> str:
         """Read 1 Keyboard Chord from the Keyboard, as Str"""
 
-        (kbytes, kcap_str) = self.read_chord_kbytes_kstr()
+        (kbytes, kcap_str) = self.read_one_chord_kbytes_kstr()
 
         return kcap_str
 
         # '⌃L'  # '⇧Z'
 
-    def read_chord_kbytes_kstr(self) -> tuple[bytes, str]:
+    def read_one_chord_kbytes_kstr(self) -> tuple[bytes, str]:
         """Read 1 Keyboard Chord from the Keyboard, as Bytes and Str"""
 
         bt = self.bt
@@ -2187,7 +2196,7 @@ class StrTerminal:
 
         # Read the Bytes of the 1 Keyboard Chord
 
-        kchord_bytes = bt.read_kchord_bytes()
+        kchord_bytes = bt.read_kchord_bytes_if()
         kchord = kchord_bytes.decode()  # may raise UnicodeDecodeError
 
         # Match some Key Caps of an ordinary macOS US-English Keyboard
@@ -2277,9 +2286,9 @@ class LineTerminal:
 
     olines: list[str]  # the Lines to sketch
 
+    kstr_holds: list[str]  # list("")  # list("-45")  # list("⎋", "[")
     kbytes: bytes  # the Bytes of the last Keyboard Chord
     kcap_str: str  # the Str of the KeyCap Words of the last Keyboard Chord
-    kdigits: list[str]  # list("")  # list("123")  # list("-45")  # list("0")
     kmap: str  # ''  # 'Emacs'  # 'Vi'
 
     def __init__(self) -> None:
@@ -2291,10 +2300,12 @@ class LineTerminal:
 
         self.olines = list()
 
-        self.kbytes = b""  # only empty till first Keyboard Input
-        self.kcap_str = ""  # same: only empty till first Keyboard Input
-        self.kdigits = list("")  # positive int digits when from Vi
-        self.kmap = ""  # only empty till 'def wrangle'c alled
+        self.kstr_holds = list("")
+        self.kbytes = b""
+        self.kcap_str = ""
+        self.kmap = ""
+
+        # lots of empty happens only until first Keyboard Input
 
     def wrangle(self, ilines, kmap) -> list[str]:
         """Launch, and run till SystemExit"""
@@ -2336,7 +2347,7 @@ class LineTerminal:
                         "Logging Screen Bytes into:  cat", bt.sbyteslogger.logfile.name
                     )
 
-            self.kdo_help_quit()
+            self.help_quit()
 
             # Read & Eval & Print in a loop till SystemExit
 
@@ -2373,58 +2384,71 @@ class LineTerminal:
         """Take 1 Keyboard Chord Sequence as a Command to execute"""
 
         st = self.st
+
+        kstr_holds = self.kstr_holds
         kbytes = self.kbytes
         kcap_str = self.kcap_str
 
-        # Take the Str of 1 Keyboard Chord Sequence as a call of 1 Python Def
+        # Take the Bytes of 1 Keyboard Chord Sequence as K Bytes to write to Screen
 
-        verbose = False
-        # verbose = True  # jitter 3/Aug
-
-        if kcap_str in FUNC_BY_KCAP_STR:
-            func = FUNC_BY_KCAP_STR[kcap_str]
-            if verbose:
-                st.stprint(self.kdigits, kbytes, func.__name__)
-                sys.stderr.flush()
-
-            if KDEBUG:
-                if func is not LineTerminal.kdo_force_quit:
-                    self.pull_kint(default=1)
-                    return
-
-            func(self)
-
-            if func is LineTerminal.kdo_hold_kdigit:  # Vi 1 2 3 4 5 6 7 8 9
-                pass
-            elif func is LineTerminal.kdo_column_1_if:  # Vi 0
-                pass
-            else:
-                _ = self.pull_kint(default=1)
+        if kcap_str not in FUNC_BY_KCAP_STR:
+            self.verb_default_eval()
 
             return
 
-        # Take the Bytes of 1 Keyboard Chord Sequence as K Bytes to write to Screen
+        # Take the Str of 1 Keyboard Chord Sequence as a call of 1 Python Def
 
-        if verbose:
-            st.stprint(self.kdigits, kbytes, None)
+        kstr_holds_before = list(kstr_holds)
+
+        func = FUNC_BY_KCAP_STR[kcap_str]
+
+        if KDEBUG:
+            if func is not LineTerminal.kdo_force_quit:
+                self.kstr_holds.clear()
+                return
+
+        if KCDEBUG:
+            st.stprint(kstr_holds, kbytes, func.__name__)
+            sys.stderr.flush()
+
+        func(self)
+
+        if kstr_holds == kstr_holds_before:
+            self.kstr_holds.clear()  # for when Func is not .kdo_hold_kstr, etc
+
+    def verb_default_eval(self) -> None:
+        """Take the Bytes of 1 Keyboard Chord Sequence as K Bytes to write to Screen"""
+
+        st = self.st
+
+        kbytes = self.kbytes
+
+        if KCDEBUG:
+            st.stprint(self.kstr_holds, kbytes, None)
 
         kchars = kbytes.decode()  # the Str of the Bytes, not the Str Key Cap
 
         kint = self.pull_kint(default=1)
-        if not KDEBUG:
-            st.stwrite(kint * kchars)
+        if self.alarm_if(kint < 0):
+            return
+
+        if kint:
+            if not KDEBUG:
+                st.stwrite(kint * kchars)
 
         # Return, Spacebar, Tab, and printable US-Ascii and Unicode
+
+    def alarm_if(self, alarming) -> bool:
+        """Ring the Bell, else don't"""
+
+        if alarming:
+            self.st.stprint("\a")
+
+        return alarming
 
     #
     # Wrap around the Screen and Keyboard of our StrTerminal
     #
-
-    def write_form(self, form) -> None:
-        """Write a CSI Form to the Screen, but accept the K Digits as the Arg for it"""
-
-        kint = self.pull_kint(default=1)  # Vi defaults to 1
-        self.write_form_kint(form, kint=kint)
 
     def write_form_kint(self, form, kint) -> None:
         """Write a CSI Form to the Screen filled out by the Digits of the K Int"""
@@ -2441,18 +2465,6 @@ class LineTerminal:
 
         st.stwrite(schars)
 
-    def pull_kint(self, default) -> int:
-        """Fetch & clear the K Digits"""
-
-        kdigits = self.kdigits
-
-        kint = default
-        if kdigits:
-            kint = int("".join(kdigits))
-            kdigits.clear()
-
-        return kint
-
     #
     # Quit & Quote & Repeat
     #
@@ -2460,9 +2472,9 @@ class LineTerminal:
     def kdo_force_quit(self) -> None:
         """Revert changes to the O Lines, and quit this Linux Process"""
 
-        _ = self.pull_kint(default=1)
+        _ = self.pull_kint(default=0)  # todo: 'returncode = ' here
 
-        sys.exit()
+        sys.exit()  # ignore the K Int
 
         # Emacs ⌃X ⌃S ⌃X ⌃C save-buffer save-buffers-kill-terminal
 
@@ -2470,11 +2482,161 @@ class LineTerminal:
         # Vim ⇧Z ⇧Q quit-no-save
         # Vim ⇧Z ⇧Z save-quit
 
+    def kdo_quote_kstr(self) -> None:
+        """Block till the next K Chord, but then take it as Text, not as Command"""
+
+        st = self.st
+
+        kint = self.pull_kint(default=1)
+        if self.alarm_if(kint < 0):
+            return
+
+        kcap_str = st.read_one_chord_kstr()  # not st.read_some_chords_kbytes_kstr()
+        st.stwrite(kint * kcap_str)  # '⌃L'  # '⇧Z'
+
+        # Emacs ⌃Q quoted-insert/ replace
+        # Vi ⌃V
+
+    def kdo_quote_csi_kstrs(self) -> None:
+        """Block till CSI Sequence complete, then take it as Text"""
+
+        st = self.st
+        kcap_str_holds = self.kstr_holds
+        # no .pull_int here
+
+        # Run only after ⎋, else take the .kcap_str as Text
+
+        if kcap_str_holds and (kcap_str_holds[-1] == "⎋"):
+            kcap_str_holds.clear()  # todo: Digits Prefix to repeat a CSI Sequence?
+        else:
+            self.verb_default_eval()
+            return
+
+        # Block till CSI Sequence complete
+
+        kbytes = b"\x1B" b"["
+        kcap_str = "⎋ ["
+
+        while True:  # todo: what ends an Esc [ or Esc O Sequence?
+            (kchord_bytes, kchord_str) = st.read_one_chord_kbytes_kstr()
+
+            kbytes += kchord_bytes
+
+            sep = " "  # '⇧Tab'  # '⇧T a b'  # '⎋⇧Fn X'  # '⎋⇧FnX'
+            kcap_str += sep + kchord_str
+
+            if KDEBUG or KCDEBUG:
+                st.stprint(kbytes, kcap_str)
+
+            read_2 = kchord_bytes
+            if len(read_2) == 1:
+                ord_2 = read_2[-1]
+                if 0x20 <= ord_2 < 0x40:
+                    continue
+
+            break
+
+        # Take it as Text
+
+        self.kbytes = kbytes
+        self.kcap_str = kcap_str
+        self.verb_default_eval()  # ⎋[m, ⎋[1m, ⎋[31m, ...
+
+        # Pq [ quote.csi.kstrs
+        # missing from Emacs, Vi, VsCode
+        # unlike Vi [ Key Map
+
+    def kdo_kminus(self) -> None:
+        """Jump back by one or more Lines, but land past the Dent"""
+
+        kstr_holds = self.kstr_holds
+        # no .pull_int here
+
+        if kstr_holds and (kstr_holds == ["⌃U"]):
+
+            if kstr_holds == ["⌃U", "-"]:
+                self.kstr_holds = ["⌃U"]
+                return
+
+            self.kdo_hold_kstr()  # kdo_ calls kdo_
+            return
+
+        self.kdo_dent_minus_n()  # kdo_ calls kdo_  # K Int live
+
+        # Emacs ⌃U - universal-argument negative
+
+    def kdo_kzero(self) -> None:
+        """Hold another Digit, else jump to First Column"""
+
+        kstr_holds = self.kstr_holds
+        # no .pull_int here
+
+        # Help quit Vi, or just drop some Extras out of the Key-Cap Str Holds
+
+        self.help_quit_if()
+
+        # Hold 0 as another Digit, if after 1 2 3 4 5 6 7 8 9, or if after Emacs ⌃U
+
+        if kstr_holds and (kstr_holds[0] in "0123456789"):  # never '0' here
+            self.kdo_hold_kstr()  # kdo_ calls kdo_
+            return
+
+        if kstr_holds and (kstr_holds[0] == "⌃U"):
+            self.kdo_hold_kstr()  # kdo_ calls kdo_
+            return
+
+        # Else jump to First Column
+
+        self.kdo_column_1()  # kdo_ calls kdo_
+
+        # Emacs ⌃U 0 digit
+        # Vi 0 after 1 2 3 4 5 6 7 8 9
+        # Vi 0 otherwise
+
+    def kdo_hold_kstr(self) -> None:
+        """Hold Key-Cap Str's till Line-Terminal Key-Cap Sequence complete"""
+
+        kstr_holds = self.kstr_holds
+        kcap_str = self.kcap_str
+
+        # Help quit Vi, or just drop some Extras out of the Key-Cap Str Holds
+
+        self.help_quit_if()
+
+        # Hold this Key-Cap for now
+
+        kstr_holds.append(kcap_str)
+
+        # Emacs '-', and Emacs 0 1 1 2 3 4 5 6 7 8 9, after Emacs ⌃U
+        # Pq Em/Vi Csi Sequences:  ⎋[m, ⎋[1m, ⎋[31m, ...
+        # Vi 1 2 3 4 5 6 7 8 9, and Vi 0 thereafter
+
+    def help_quit_if(self) -> None:
+        """Help quit Vi, or just drop some Extras out of the Key-Cap Str Holds"""
+
+        kstr_holds = self.kstr_holds
+        kcap_str = self.kcap_str
+
+        assert DONT_QUIT_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
+        dont_quit_kcap_strs = DONT_QUIT_KCAP_STRS
+
+        for quitting_kcap_str in dont_quit_kcap_strs:
+            if kstr_holds[-1:] == [quitting_kcap_str]:
+                kstr_holds.clear()
+
+                if kcap_str == quitting_kcap_str:
+                    self.help_quit()
+                    return
+
     def kdo_help_quit(self) -> None:
+
+        self.help_quit()  # no .pull_kint here
+
+    def help_quit(self) -> None:
         """Say how to quit Vi"""
 
         st = self.st
-        _ = self.pull_kint(default=1)
+        # no .pull_int here
 
         quit_kcap_strs = list()
         for kcap_str, func in FUNC_BY_KCAP_STR.items():
@@ -2487,52 +2649,58 @@ class LineTerminal:
         st.stprint(f"Press {quits} to quit")
 
         # 'Press ⌃L⌃C:Q!Return or ⌃X⌃C or ⌃X⌃S⌃X⌃C or ⇧Z⇧Q or ⇧Z⇧Z to quit'
+        # todo: many Emacs don't bind '⌃C R' to (revert-buffer 'ignoreAuto 'noConfirm)
+        # todo: and Emacs still freaks if you delete the ⌃X⌃S File before calling ⌃X⌃S
 
         # Emacs/ Vi famously leave how-to-quit too often unmentioned
 
-    def kdo_quote_kstr(self) -> None:
-        """Block till the next K Chord, but then take it as Text, not as Command"""
+    def push_kint(self, kint) -> None:
+        """Fill the cleared Key-Cap Str Holds, as if Emacs ⌃U ..."""
 
-        st = self.st
-        kint = self.pull_kint(default=1)
+        kstr_holds = self.kstr_holds
+        assert not kstr_holds, (kstr_holds,)
 
-        kcap_str = st.read_one_chord_kstr()  # not st.read_some_chords_kbytes_kstr()
-        st.stwrite(kint * kcap_str)  # '⌃L'  # '⇧Z'
+        kstr_holds.extend(["⌃U"] + list(str(kint)))
 
-        # Emacs ⌃Q quoted-insert/ replace
-        # Vi ⌃V
+    def pull_kint(self, default) -> int:
+        """Fetch & clear the Key-Cap Str Holds"""
 
-    def kdo_column_1_if(self) -> None:
-        """Hold another Digit, else jump to First Column"""
+        kstr_holds = self.kstr_holds
 
-        # _ = self.pull_kint(default=1)  # nope, not yet
+        # Drop some Extras out of the Key-Cap Str Holds
 
-        kdigits = self.kdigits
-        if not kdigits:
-            self.kdo_column_1()  # kdo_ calls kdo_
-            return
+        assert DONT_QUIT_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
+        dont_quit_kcap_strs = DONT_QUIT_KCAP_STRS
 
-        self.kdo_hold_kdigit()  # kdo_ calls kdo_
+        for quitting_kcap_str in dont_quit_kcap_strs:
+            if kstr_holds[-1:] == [quitting_kcap_str]:
+                kstr_holds.clear()
 
-        # Emacs ⌃U universal-argument
-        # Vi 0
+        # Make sense of Emacs corners of ⌃U ⌃U, ⌃U - -, ⌃U without digits
 
-    def kdo_hold_kdigit(self) -> None:
-        """Hold Digits till Digits complete"""
+        if kstr_holds and (kstr_holds[0] == "⌃U"):
+            kstr_holds.pop(0)
+            if kstr_holds == ["-"]:  # todo: Emacs says ⌃U !- = ⌃U 0 ?
+                kstr_holds.pop(0)
+            if not kstr_holds:  # todo: Emacs says ⌃U != ⌃U 0 ?
+                kstr_holds.append("0")
+                assert kstr_holds == ["0"], (kstr_holds,)
 
-        kdigits = self.kdigits
-        kcap_str = self.kcap_str
-        # _ = self.pull_kint(default=1)  # nope, not yet
+        # Take Int Literal, else Default
 
-        assert kcap_str and (kcap_str in "0123456789"), (kcap_str,)
+        kint = default
+        if kstr_holds:
+            kint = int("".join(kstr_holds))  # may raise ValueError
+            kstr_holds.clear()
 
-        kdigits.append(kcap_str)
+        # Succeed
 
-        # Emacs '-', and Emacs 0 1 1 2 3 4 5 6 7 8 9, after Emacs ⌃U
-        # Vi 1 2 3 4 5 6 7 8 9, and Vi 0 thereafter
+        return kint  # positive kint for the Vi .kmap
+
+        # raises ValueError if ever '.kstr_holds' not an Int Literal
 
     #
-    # Move the Cursor to a Column, relatively or absolutely
+    # Move the Screen Cursor to a Column, relatively or absolutely
     #
 
     def kdo_char_minus_n(self) -> None:
@@ -2556,7 +2724,11 @@ class LineTerminal:
         """Jump to a zero-based numbered Column for Pedantic Emacs"""
 
         kint = self.pull_kint(default=0)
+        if self.alarm_if(kint < 0):  # todo: negative Column Numbers for Emacs
+            return
+
         kint_plus = kint + 1
+
         self.write_form_kint("\x1B[{}G", kint=kint_plus)
 
         # CSI 04/07 Cursor Character Absolute (CHA)
@@ -2580,7 +2752,17 @@ class LineTerminal:
     def kdo_column_minus_n(self) -> None:
         """Jump back by one or more Columns"""
 
-        self.write_form("\x1B[{}D")
+        kint = self.pull_kint(default=1)
+
+        if not kint:
+            return
+
+        if kint < 0:
+            self.push_kint(-kint)
+            self.kdo_column_plus_n()
+            return
+
+        self.write_form_kint("\x1B[{}D", kint=kint)
 
         # 00/08 Backspace (BS) \b ⌃H
         # 07/15 Delete (DEL) \x7F ⌃? 'Eliminated Control Function'
@@ -2593,9 +2775,13 @@ class LineTerminal:
     def kdo_column_n(self) -> None:
         """Jump to a numbered Column"""
 
-        kint = self.pull_kint(default=0)
-        kint_plus = kint + 1
-        self.write_form_kint("\x1B[{}G", kint=kint_plus)
+        kint = self.pull_kint(default=1)
+        if self.alarm_if(kint == 0):  # todo: zero Column Numbers for Vi  # middle?
+            return
+        if self.alarm_if(kint < 0):  # todo: negative Column Numbers for Vi
+            return
+
+        self.write_form_kint("\x1B[{}G", kint=kint)
 
         # CSI 04/07 Cursor Character Absolute (CHA)
         # "\r" and "\x1B[G" and "\x1B[1G" all go to Column 1
@@ -2606,7 +2792,8 @@ class LineTerminal:
     def kdo_column_past_dent(self) -> None:
         """Jump to the first Column past the Dent"""
 
-        self.pull_kint(default=1)
+        # no .pull_int here
+
         self.kdo_column_1()  # Classic Vi lands past the Dent
 
         # Vi ^
@@ -2614,7 +2801,17 @@ class LineTerminal:
     def kdo_column_plus_n(self) -> None:
         """Jump ahead by one or more Columns"""
 
-        self.write_form("\x1B[{}C")
+        kint = self.pull_kint(default=1)
+
+        if not kint:
+            return
+
+        if kint < 0:
+            self.push_kint(-kint)
+            self.kdo_column_minus_n()
+            return
+
+        self.write_form_kint("\x1B[{}C", kint=kint)
 
         # CSI 04/03 Cursor Forward (CUF)
 
@@ -2622,7 +2819,7 @@ class LineTerminal:
         # Vi L
 
     #
-    # Move the Cursor to a Row, relatively or absolutely
+    # Move the Screen Cursor to a Row, relatively or absolutely
     #
 
     def kdo_dent_line_n(self) -> None:
@@ -2631,6 +2828,11 @@ class LineTerminal:
         st = self.st
 
         kint = self.pull_kint(default=32100)  # todo: more Rows on Screen
+        if self.alarm_if(kint == 0):  # todo: zero Line Numbers
+            return
+        if self.alarm_if(kint < 0):  # todo: negative Line Numbers
+            return
+
         self.write_form_kint("\x1B[{}d", kint=kint)
 
         st.stwrite("\x0D")  # "\x1B[G"  # "\x1B[1G"  # Classic Vi lands past the Dent
@@ -2647,6 +2849,7 @@ class LineTerminal:
         """Jump back by one or more Lines, but land past the Dent"""
 
         self.kdo_line_minus_n()  # Classic Vi lands past the Dent
+        self.kdo_column_1()  # Classic Vi lands past the Dent
 
         # Vi -
 
@@ -2654,6 +2857,7 @@ class LineTerminal:
         """Jump ahead by one or more Lines, but land past the Dent"""
 
         self.kdo_line_plus_n()  # Classic Vi lands past the Dent
+        self.kdo_column_1()  # Classic Vi lands past the Dent
 
         # Vi +
 
@@ -2661,6 +2865,12 @@ class LineTerminal:
         """Jump ahead by zero or more Lines, but land past the Dent"""
 
         kint = self.pull_kint(default=1)
+
+        if self.alarm_if(kint == 0):  # todo: zero Vi _
+            return
+        if self.alarm_if(kint < 0):  # todo: negative Vi _ could be Vi -
+            return
+
         if kint > 1:
             kint_minus = kint - 1
             self.write_form_kint("\x1B[{}B", kint=kint_minus)
@@ -2675,6 +2885,12 @@ class LineTerminal:
         """Jump ahead by zero or more Lines, and land at End of Line"""
 
         kint = self.pull_kint(default=1)
+
+        if self.alarm_if(kint == 0):  # todo: zero Vi $
+            return
+        if self.alarm_if(kint < 0):  # todo: negative Vi $ could be Vi ⌃E
+            return
+
         if kint > 1:
             kint_minus = kint - 1
             self.write_form_kint("\x1B[{}B", kint=kint_minus)
@@ -2693,6 +2909,12 @@ class LineTerminal:
         st = self.st
 
         kint = self.pull_kint(default=32100)  # todo: more Rows on Screen
+
+        if self.alarm_if(kint == 0):  # todo: zero Row Number  # middle?
+            return
+        if self.alarm_if(kint < 0):  # todo: negative Row Numbers
+            return
+
         self.write_form_kint("\x1B[{}d", kint=kint)  # Classic Vi lands past the Dent
         st.stwrite("\x0D")  # "\x1B[G"  # "\x1B[1G"
 
@@ -2705,24 +2927,40 @@ class LineTerminal:
         # Emacs ⎋G G goto-line
         # Emacs ⎋G ⎋G goto-line
 
-    def kdo_home_minus_n1(self) -> None:
-        """Jump back by zero or more Lines, and land at Left of Line"""
+    def kdo_home_plus_n1(self) -> None:
+        """Jump ahead by zero or more Lines, and land at Left of Line"""
 
         kint = self.pull_kint(default=1)
+
+        if self.alarm_if(kint == 0):  # todo: zero Emacs ⌃A
+            return
+        if self.alarm_if(kint < 0):  # todo: negative Emacs ⌃A
+            return
+
         if kint > 1:
             kint_minus = kint - 1
-            self.write_form_kint("\x1B[{}A", kint=kint_minus)
+            self.write_form_kint("\x1B[{}B", kint=kint_minus)
 
-        self.kdo_column_1()
+        self.kdo_column_1()  # kdo_ calls kdo_
 
-        # CSI 04/01 Cursor Up (CUU)
+        # CSI 04/02 Cursor Down (CUD)
 
         # Emacs ⌃A move-beginning-of-line
 
     def kdo_line_minus_n(self) -> None:
         """Jump back by one or more Lines"""
 
-        self.write_form("\x1B[{}A")
+        kint = self.pull_kint(default=1)
+
+        if not kint:
+            return
+
+        if kint < 0:
+            self.push_kint(-kint)
+            self.kdo_line_plus_n()
+            return
+
+        self.write_form_kint("\x1B[{}A", kint=kint)
 
         # CSI 04/01 Cursor Up (CUU)
 
@@ -2732,7 +2970,17 @@ class LineTerminal:
     def kdo_line_plus_n(self) -> None:
         """Jump ahead by one or more Lines"""
 
-        self.write_form("\x1B[{}B")
+        kint = self.pull_kint(default=1)
+
+        if not kint:
+            return
+
+        if kint < 0:
+            self.push_kint(-kint)
+            self.kdo_line_minus_n()
+            return
+
+        self.write_form_kint("\x1B[{}B", kint=kint)
 
         # CSI 04/02 Cursor Down (CUD)
 
@@ -2744,6 +2992,12 @@ class LineTerminal:
         """Jump to Top of Screen, but ahead by zero or more Lines"""
 
         kint = self.pull_kint(default=1)
+
+        if self.alarm_if(kint == 0):  # todo: zero Emacs ⎋ R
+            return
+        if self.alarm_if(kint < 0):  # todo: negative Emacs ⎋ R
+            return
+
         self.write_form_kint("\x1B[{}d", kint=1)
         if kint > 1:
             kint_minus = kint - 1
@@ -2759,6 +3013,12 @@ class LineTerminal:
         """Jump to Bottom of Screen, but back behind by zero or more Lines"""
 
         kint = self.pull_kint(default=1)
+
+        if self.alarm_if(kint == 0):  # todo: zero Emacs ⎋ R
+            return
+        if self.alarm_if(kint < 0):  # todo: negative Emacs ⎋ R
+            return
+
         self.write_form_kint("\x1B[{}d", kint=32100)  # todo: more Rows on Screen
         if kint > 1:
             kint_minus = kint - 1
@@ -2774,32 +3034,24 @@ class LineTerminal:
     #
     #
 
+    def kdo_dedent_n_lines(self) -> None:
+        """Remove Blank Space from the Left of one or more Lines"""
+
+    def kdo_dent_n_lines(self) -> None:
+        """Insert 1 Dent of Blank Space into the Left of one or more Lines"""
+
+    #
+    #
+    #
+
     # Emacs Delete delete-backward-char
 
 
 #
-# todo: more and more of
-#
-#   ⌃C ⌃D ⌃G ⌃H ⌃J ⌃L Return ⌃N ⌃P ⌃\ ↑ ↓ → ←
-#   Space $ + - 0 1 2 3 4 5 6 7 8 9 ⇧H ⇧M ⇧L H J K L |
-#   ⇧C ⇧D ⇧G ⇧I ⇧O ⇧R ⇧S ⇧X ^ _ C$ CC D$ DD A I O R S X
-#   > <
-#
-
-#
-# presently not:
-#
-#   ⌃G ⌃L ⌃U
-#   ⇧M
-#   ⇧C ⇧D ⇧G ⇧I ⇧O ⇧R ⇧S ⇧X C$ CC D$ DD A I O R S X
-#   > <
-#
-
-#
 # presently:
 #
-#   ⎋GG ⎋G⎋G
-#   ⌃A ⌃C ⌃D ⌃E ⌃H Tab ⌃J ⌃N ⌃P ⌃Q ⌃V Return ← ↑ → ↓
+#   ⎋GG ⎋G⎋G ⎋[
+#   ⌃A ⌃C ⌃D ⌃E ⌃G ⌃H Tab ⌃J ⌃N ⌃P ⌃Q ⌃U ⌃V Return ← ↑ → ↓
 #   Spacebar $ + - 0 1 2 3 4 5 6 7 8 9 ⇧G ^ _ H J K L | Delete
 #   ⌥GG ⌥G⌥G
 #
@@ -2807,41 +3059,71 @@ class LineTerminal:
 #   ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧Z⇧Q ⇧Z⇧Z
 #
 
+#
+# todo:
+#
+#   >> <<
+#   I ⎋
+#   DD
+#
+#   ⇧C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X C$ CC D$ DD A I O R S X
+#
+#   [ Scroller CSI Sequences ]
+#   [ < > C D to movement ]
+#   ⇧M
+#
+#   ⌃L [ of Shadow Screen, of File larger than Screen ]
+#
+#   Emacs ⌃U 0 vs the other Key-Cap Sequences
+#   Emacs ⌃U - vs the other Key-Cap Sequences
+#
+#   ⌃H⌃A ⌃H⌃K
+#
+#   Mouse Cursor Moves
+#
+
+DONT_QUIT_KCAP_STRS = ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
+
 FUNC_BY_KCAP_STR = {
+    "⎋": LineTerminal.kdo_hold_kstr,
     "⎋⎋": LineTerminal.kdo_help_quit,  # Meta Esc
     "⎋G G": LineTerminal.kdo_home_line_n,
     "⎋G ⎋G": LineTerminal.kdo_home_line_n,
     "⎋G Tab": LineTerminal.kdo_column_0n,
     # "⎋ R": LineTerminal.kdo_row_middle_up_down,
     #
-    "⌃A": LineTerminal.kdo_home_minus_n1,
-    "⌃C": LineTerminal.kdo_help_quit,
-    "⌃D": LineTerminal.kdo_help_quit,
-    "⌃E": LineTerminal.kdo_end_plus_n1,
-    "⌃L ⌃C : Q ! Return": LineTerminal.kdo_force_quit,
+    "⌃A": LineTerminal.kdo_home_plus_n1,  # b'\x01'
+    "⌃C": LineTerminal.kdo_hold_kstr,  # b'\x03'
+    "⌃D": LineTerminal.kdo_hold_kstr,  # b'\x04'
+    "⌃E": LineTerminal.kdo_end_plus_n1,  # b'\x05'
+    "⌃L ⌃C : Q ! Return": LineTerminal.kdo_force_quit,  # b'\x0C...
+    "Return": LineTerminal.kdo_dent_plus_n,  # b'\x0D'
+    "⌃N": LineTerminal.kdo_line_plus_n,  # b'\x0E'
+    "⌃P": LineTerminal.kdo_line_minus_n,  # b'\x10'
+    "⌃Q": LineTerminal.kdo_quote_kstr,  # b'\x11'
+    "⌃U": LineTerminal.kdo_hold_kstr,  # b'\x15'
+    "⌃V": LineTerminal.kdo_quote_kstr,  # b'\x16'
+    "⌃X ⌃C": LineTerminal.kdo_force_quit,  # b'\x18...
+    "⌃X ⌃S ⌃X ⌃C": LineTerminal.kdo_force_quit,  # b'\x18...
     # "⌃X 8 Return": LineTerminal.unicodedata_lookup,  # Emacs insert-char
-    "⌃P": LineTerminal.kdo_line_minus_n,
-    "⌃N": LineTerminal.kdo_line_plus_n,
-    "⌃Q": LineTerminal.kdo_quote_kstr,
-    "⌃V": LineTerminal.kdo_quote_kstr,
-    "⌃X ⌃C": LineTerminal.kdo_force_quit,
-    "⌃X ⌃S ⌃X ⌃C": LineTerminal.kdo_force_quit,
-    "⌃\\": LineTerminal.kdo_help_quit,  # ⌃\  # b'\x1C'
+    "⌃\\": LineTerminal.kdo_hold_kstr,  # ⌃\  # b'\x1C'
     #
-    "Spacebar": LineTerminal.kdo_char_plus_n,  # b' '
-    "$": LineTerminal.kdo_end_plus_n1,
-    "+": LineTerminal.kdo_dent_plus_n,
-    "-": LineTerminal.kdo_dent_minus_n,
-    "0": LineTerminal.kdo_column_1_if,  # b'0'
-    "1": LineTerminal.kdo_hold_kdigit,
-    "2": LineTerminal.kdo_hold_kdigit,
-    "3": LineTerminal.kdo_hold_kdigit,
-    "4": LineTerminal.kdo_hold_kdigit,
-    "5": LineTerminal.kdo_hold_kdigit,
-    "6": LineTerminal.kdo_hold_kdigit,
-    "7": LineTerminal.kdo_hold_kdigit,
-    "8": LineTerminal.kdo_hold_kdigit,
-    "9": LineTerminal.kdo_hold_kdigit,
+    "Spacebar": LineTerminal.kdo_char_plus_n,  # b'\x20'
+    "$": LineTerminal.kdo_end_plus_n1,  # b'\x24'
+    "+": LineTerminal.kdo_dent_plus_n,  # b'\x2B'
+    "-": LineTerminal.kdo_kminus,  # b'\x2D'
+    "0": LineTerminal.kdo_kzero,  # b'0'
+    "1": LineTerminal.kdo_hold_kstr,
+    "2": LineTerminal.kdo_hold_kstr,
+    "3": LineTerminal.kdo_hold_kstr,
+    "4": LineTerminal.kdo_hold_kstr,
+    "5": LineTerminal.kdo_hold_kstr,
+    "6": LineTerminal.kdo_hold_kstr,
+    "7": LineTerminal.kdo_hold_kstr,
+    "8": LineTerminal.kdo_hold_kstr,
+    "9": LineTerminal.kdo_hold_kstr,
+    # "<": LineTerminal.kdo_dedent_n_lines,
+    # ">": LineTerminal.kdo_dent_n_lines,
     #
     "⇧G": LineTerminal.kdo_dent_line_n,  # b'G'
     "⇧H": LineTerminal.kdo_row_n_down,  # b'H'
@@ -2849,16 +3131,18 @@ FUNC_BY_KCAP_STR = {
     "⇧Q V I Return": LineTerminal.kdo_help_quit,  # b'Qvi\r'
     "⇧Z ⇧Q": LineTerminal.kdo_force_quit,  # b'ZQ'
     "⇧Z ⇧Z": LineTerminal.kdo_force_quit,  # b'ZZ'
-    "^": LineTerminal.kdo_column_past_dent,  # b'^'
-    "_": LineTerminal.kdo_dent_plus_n1,
+    "[": LineTerminal.kdo_quote_csi_kstrs,  # b'\x5B'
+    "^": LineTerminal.kdo_column_past_dent,  # b'\x5E'
+    "_": LineTerminal.kdo_dent_plus_n1,  # b'\x5F'
     #
     "H": LineTerminal.kdo_column_minus_n,  # b'h'
     "J": LineTerminal.kdo_line_plus_n,  # b'j'
     "K": LineTerminal.kdo_line_minus_n,  # b'k'
     "L": LineTerminal.kdo_column_plus_n,  # b'l'
-    "|": LineTerminal.kdo_column_n,  # b'|'
+    "|": LineTerminal.kdo_column_n,  # b'\x7C'
     "Delete": LineTerminal.kdo_char_minus_n,  # b'\x7F'
     #
+    "⌥⎋": LineTerminal.kdo_help_quit,  # Option Esc
     "⌥G G": LineTerminal.kdo_home_line_n,
     "⌥G ⌥G": LineTerminal.kdo_home_line_n,
     "⌥G Tab": LineTerminal.kdo_column_0n,
