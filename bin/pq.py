@@ -1938,7 +1938,7 @@ Shift = "\N{Upwards White Arrow}"  # ⇧
 Command = "\N{Place of Interest Sign}"  # ⌘
 
 
-KCHORD_STR_BY_DECODES = {
+KCHORD_STR_BY_KCHARS = {
     "\x00": "⌃Spacebar",  # ⌃@  # ⌃⇧2
     "\x09": "Tab",  # '\t' ⇥
     "\x0D": "Return",  # '\r' ⏎
@@ -1996,34 +1996,10 @@ KCHORD_STR_BY_DECODES = {
     "\xA0": "⌥Spacebar",  # '\N{No-Break Space}'
 }
 
-assert list(KCHORD_STR_BY_DECODES.keys()) == sorted(KCHORD_STR_BY_DECODES.keys())
+assert list(KCHORD_STR_BY_KCHARS.keys()) == sorted(KCHORD_STR_BY_KCHARS.keys())
 
 
-#
-# the Mac US English Terminal Keyboard choice of Option + Printable-US-Ascii
-#
-
-#
-#  !"#$%&'()*+,-./0123456789:;<=>?
-# @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
-# `abcdefghijklmnopqrstuvwxyz{|}~
-#
-
-OPTION_KTEXT = """
-     ⁄Æ‹›ﬁ‡æ·‚°±≤–≥÷º¡™£¢∞§¶•ªÚ…¯≠˘¿
-    €ÅıÇÎ Ï˝Ó Ô\uF8FFÒÂ Ø∏Œ‰Íˇ¨◊„˛Á¸“«‘ﬂ—
-     å∫ç∂ ƒ©˙ ∆˚¬µ øπœ®ß† √∑≈¥Ω”»’`
-"""
-
-# ⌥⇧K is Apple Icon  is \uF8FF is in the U+E000..U+F8FF Private Use Area (PUA)
-
-OPTION_KCHARS = " " + textwrap.dedent(OPTION_KTEXT).strip()
-OPTION_KCHARS = OPTION_KCHARS.replace("\n", "")
-
-assert len(OPTION_KCHARS) == (0x7E - 0x20) + 1
-
-
-KCHORD_STR_BY_KCHAR = {
+OPTION_KCHORD_STR_BY_1_KCHAR = {
     "á": "⌥EA",  # E
     "é": "⌥EE",
     "í": "⌥EI",  # without the "j́" here (because Combining Accent comes after)
@@ -2056,6 +2032,45 @@ KCHORD_STR_BY_KCHAR = {
     "`": "⌥`Spacebar",  # comes out as ⌥~
 }
 
+# hand-sorted by ⌥E ⌥I ⌥N ⌥U ⌥` order
+
+
+#
+# the Mac US English Terminal Keyboard choice of Option + Printable-US-Ascii
+#
+
+#
+#  !"#$%&'()*+,-./0123456789:;<=>?
+# @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+# `abcdefghijklmnopqrstuvwxyz{|}~
+#
+
+OPTION_KTEXT = """
+     ⁄Æ‹›ﬁ‡æ·‚°±≤–≥÷º¡™£¢∞§¶•ªÚ…¯≠˘¿
+    €ÅıÇÎ Ï˝Ó Ô\uF8FFÒÂ Ø∏Œ‰Íˇ ◊„˛Á¸“«‘ﬂ—
+     å∫ç∂ ƒ©˙ ∆˚¬µ øπœ®ß† √∑≈¥Ω”»’
+"""
+
+# ⌥⇧K is Apple Icon  is \uF8FF is in the U+E000..U+F8FF Private Use Area (PUA)
+
+OPTION_KCHARS = " " + textwrap.dedent(OPTION_KTEXT).strip() + " "
+OPTION_KCHARS = OPTION_KCHARS.replace("\n", "")
+
+assert len(OPTION_KCHARS) == (0x7E - 0x20) + 1
+
+OPTION_KCHARS_SPACELESS = OPTION_KCHARS.replace(" ", "")
+
+
+_KCHARS_LISTS = [
+    list(KCHORD_STR_BY_KCHARS.keys()),
+    list(OPTION_KCHORD_STR_BY_1_KCHAR.keys()),
+    list(OPTION_KCHARS_SPACELESS),
+]
+
+_KCHARS_LIST = list(_KCHARS for _KL in _KCHARS_LISTS for _KCHARS in _KL)
+for _KCHARS, _COUNT in collections.Counter(_KCHARS_LIST).items():
+    assert _COUNT == 1, (_COUNT, _KCHARS)
+
 
 class StrTerminal:
     """Read/ Write Str Characters at Keyboard/ Screen of a Terminal"""
@@ -2075,6 +2090,11 @@ class StrTerminal:
 
         # doesn't work hard enough to drop out single K Chords, such as ⎋⇧Fn
 
+    def stwrite(self, schars) -> None:
+        """Write Chars to the Screen, but without implicitly also writing a Line-End"""
+
+        self.stprint(schars, end="")
+
     def stprint(self, *args, end="\r\n") -> None:
         """Write Chars to the Screen as one or more Ended Lines"""
 
@@ -2091,7 +2111,6 @@ class StrTerminal:
     def read_kbytes_kstr(self) -> tuple[bytes, str]:
         """Read one Keyboard Chord Sequence from the Keyboard"""
 
-        bt = self.bt
         celebrated_kstrs = self.celebrated_kstrs
 
         (kbytes, kstr) = self.read_chord_kbytes_kstr()
@@ -2115,25 +2134,25 @@ class StrTerminal:
 
         bt = self.bt
 
-        kchord_str_by_decodes = KCHORD_STR_BY_DECODES  # '\e\e[A' for ⎋↑
+        kchord_str_by_kchars = KCHORD_STR_BY_KCHARS  # '\e\e[A' for ⎋↑
 
         # Read the Bytes of the 1 Keyboard Chord
 
         kchord_bytes = bt.read_kchord_bytes()
-        decodes = kchord_bytes.decode()  # may raise UnicodeDecodeError
+        kchord = kchord_bytes.decode()  # may raise UnicodeDecodeError
 
         # Match some Key Caps of an ordinary macOS US-English Keyboard
 
-        if decodes in kchord_str_by_decodes.keys():
-            kchord_str = kchord_str_by_decodes[decodes]
+        if kchord in kchord_str_by_kchars.keys():
+            kchord_str = kchord_str_by_kchars[kchord]
 
             return (kchord_bytes, kchord_str)
 
         # String together the Key Caps struck all at once
 
         kchord_str = ""
-        for decode in decodes:
-            s = self.ch_to_keycap(decode)
+        for kch in kchord:
+            s = self.kch_to_keycap(kch)
             kchord_str += s
 
         # Succeed
@@ -2142,41 +2161,56 @@ class StrTerminal:
 
         # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
 
-    def ch_to_keycap(self, ch) -> str:  # noqa C901
+    def kch_to_keycap(self, ch) -> str:  # noqa C901
         """Choose a Key Cap to speak of a single Keyboard Char"""
 
         o = ord(ch)
 
-        option_kchars = OPTION_KCHARS  # '∂' for ⌥D
-        kchord_str_by_decodes = KCHORD_STR_BY_DECODES  # '\x7F' for 'Delete'
-        kchord_str_by_kchar = KCHORD_STR_BY_KCHAR  # 'é' for ⌥EE
+        option_kchars_spaceless = OPTION_KCHARS_SPACELESS  # '∂' for ⌥D
+        option_kchord_str_by_1_kchar = OPTION_KCHORD_STR_BY_1_KCHAR  # 'é' for ⌥EE
+        kchord_str_by_kchars = KCHORD_STR_BY_KCHARS  # '\x7F' for 'Delete'
 
-        if ch in kchord_str_by_decodes.keys():
-            s = kchord_str_by_decodes[ch]
-        elif (o < 0x20) or (o == 0x7F):
-            s = "⌃" + chr(o ^ 0x40)  # '⌃@'
-        elif "A" <= ch <= "Z":
-            s = "⇧" + chr(o)  # '⇧A'
-        elif "a" <= ch <= "z":
-            s = chr(o ^ 0x20)  # 'A'
-        elif (o in (0x80, 0xA0)) or (o == 0xAD):  # C1 Controls
-            assert False, (o, ch)
-        elif o == 0xA0:
-            s = "⌥Spacebar"  # '\N{No-Break Space}'
-            assert False, (o, ch)  # unreached because 'kchord_by_decodes'
-        elif ch in option_kchars:
-            index = option_kchars.index(ch)
+        # Show more Key Caps than US-Ascii mentions
+
+        if ch in kchord_str_by_kchars.keys():  # Mac US Key Caps for Spacebar, F12, etc
+            s = kchord_str_by_kchars[ch]
+
+        elif ch in option_kchord_str_by_1_kchar.keys():  # Mac US Option Accents
+            s = option_kchord_str_by_1_kchar[ch]
+
+        elif ch in option_kchars_spaceless:  # Mac US Option Key Caps
+            index = option_kchars_spaceless.index(ch)
             asc = chr(0x20 + index)
             if "A" <= asc <= "Z":
                 asc = "⇧" + asc  # '⇧A'
             if "a" <= asc <= "z":
                 asc = chr(ord(asc) ^ 0x20)  # 'A'
             s = "⌥" + asc
-        elif ch in kchord_str_by_kchar.keys():
-            s = kchord_str_by_kchar[ch]
+
+        # Show the Key Caps of US-Ascii, plus the ⌃ ⇧ Control/ Shift Key Caps
+
+        elif (o < 0x20) or (o == 0x7F):
+            s = "⌃" + chr(o ^ 0x40)  # '⌃@'
+        elif "A" <= ch <= "Z":
+            s = "⇧" + chr(o)  # '⇧A'
+        elif "a" <= ch <= "z":
+            s = chr(o ^ 0x20)  # 'A'
+
+        # Test that no Keyboard sends the C1 Control Bytes, nor the No-Break Space
+
+        elif (o in (0x80, 0xA0)) or (o == 0xAD):  # C1 Control Bytes
+            assert False, (o, ch)
+        elif o == 0xA0:
+            s = "⌥Spacebar"  # '\N{No-Break Space}'
+            assert False, (o, ch)  # unreached because 'kchord_str_by_kchars'
+
+        # Show the US-Ascii or Unicode Char as if its own Key Cap
+
         else:
             assert o < 0x11_0000, (o, ch)
             s = chr(o)  # '!', '¡', etc
+
+        # Succeed, but insist that Blank Space is never a Key Cap
 
         assert " " not in s, (s, o, ch)
 
@@ -2264,30 +2298,38 @@ class LineTerminal:
 
     def verb_eval(self) -> None:
 
-        bt = self.st.bt
+        st = self.st
         (kbytes, kstr) = self.verb
 
-        if kstr not in FUNC_BY_KSTR:
-            bt.btprint(kbytes, end=b"")
-        else:
+        # Take any of many Keyboard Chord Sequences as calls of Python Def's
+
+        if kstr in FUNC_BY_KSTR:
             func = FUNC_BY_KSTR[kstr]
+
             func(self)
 
+            return
+
+        # Else pass Bytes through, looped back, into Screen from Keyboard
+
+        kchars = kbytes.decode()
+        st.stwrite(kchars)
+
+        # Return, Spacebar, Tab, and printable US-Ascii and Unicode
+
     #
-    # React to Keyboard Chord Sequences
+    # Quit & Quote
     #
 
-    def kdo_quote_kstr(self) -> None:
+    def kdo_quit_wrangling(self) -> None:
 
-        st = self.st
+        sys.exit()
 
-        verb = st.read_chord_kbytes_kstr()  # not st.read_kbytes_kstr()
-        (kbytes, kstr) = verb
+        # Emacs ⌃X⌃S⌃X⌃C save-buffer save-buffers-kill-terminal
 
-        st.stprint(kstr, end="")
-
-        # Emacs ⌃Q quoted-insert/ replace
-        # Vim ⌃V
+        # Vim ⌃L⌃C:Q!Return quit-no-save
+        # Vim ⇧Z⇧Q quit-no-save
+        # Vim ⇧Z⇧Z save-quit
 
     def kdo_mention_quitting(self) -> None:
 
@@ -2303,15 +2345,65 @@ class LineTerminal:
         quits = " or ".join(quit_kstrs)
         st.stprint(f"Press {quits} to quit")
 
-    def kdo_quit_wrangling(self) -> None:
+        # Emacs/ Vi famously leave how-to-quit too often unmentioned
 
-        sys.exit()
+    def kdo_quote_kstr(self) -> None:
 
-        # Emacs ⌃X⌃S⌃X⌃C save-buffer save-buffers-kill-terminal
+        st = self.st
 
-        # Vim ⌃L⌃C:Q!Return quit-no-save
-        # Vim ⇧Z⇧Q quit-no-save
-        # Vim ⇧Z⇧Z save-quit
+        verb = st.read_chord_kbytes_kstr()  # not st.read_kbytes_kstr()
+        (kbytes, kstr) = verb
+
+        st.stwrite(kstr)
+
+        # Emacs ⌃Q quoted-insert/ replace
+        # Vi ⌃V
+
+    #
+    # Move the Cursor to a Column or Row, relatively or absolutely
+    #
+
+    def kdo_char_minus_n(self) -> None:
+
+        self.kdo_column_minus_n()
+
+        # Emacs ← left-char
+        # Vi Delete
+        # Vi ^H
+
+    def kdo_column_minus_n(self) -> None:
+
+        st = self.st
+        st.stwrite("\x08")  # translate from \x7F DEL for Mac Terminal
+
+        # 00/08 Backspace (BS) \b ⌃H
+        # 07/15 Delete (DEL) \x7F ⌃? 'Eliminated Control Function'
+
+        # Vi ←
+        # Vi H
+
+    def kdo_char_plus_n(self) -> None:
+
+        self.kdo_column_plus_n()
+
+        # Emacs → right-char
+        # Vi Spacebar
+
+    def kdo_column_plus_n(self) -> None:
+
+        st = self.st
+        st.stwrite("\x1B" "[" "C")
+
+        # CSI 04/03 Cursor Forward (CUF)
+
+        # Vi →
+        # Vi L
+
+    #
+    #
+    #
+
+    # Emacs Delete delete-backward-char
 
 
 FUNC_BY_KSTR = {
@@ -2323,8 +2415,12 @@ FUNC_BY_KSTR = {
     "⌃V": LineTerminal.kdo_quote_kstr,
     "⌃X⌃C": LineTerminal.kdo_quit_wrangling,
     "⌃X⌃S⌃X⌃C": LineTerminal.kdo_quit_wrangling,
+    "Spacebar": LineTerminal.kdo_char_plus_n,
+    "H": LineTerminal.kdo_column_minus_n,
+    "L": LineTerminal.kdo_column_plus_n,
     "⇧Z⇧Q": LineTerminal.kdo_quit_wrangling,
     "⇧Z⇧Z": LineTerminal.kdo_quit_wrangling,
+    "Delete": LineTerminal.kdo_char_minus_n,
 }
 
 # hand-sorted by ⎋ ⌃ ⌥ ⇧ ⌘ Fn order
