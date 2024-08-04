@@ -1809,6 +1809,13 @@ class BytesTerminal:
         after = self.after
 
         if tcgetattr_else is not None:
+
+            # Revert Screen Settings to Defaults  # todo: when are our Defaults wrong?
+
+            self.btwrite(b"\x1B[4l")  # CSI 06/12
+
+            #
+
             tcgetattr = tcgetattr_else
             self.tcgetattr_else = None
 
@@ -1817,6 +1824,13 @@ class BytesTerminal:
             termios.tcsetattr(fd, when, tcgetattr)
 
         return None
+
+        # CSI 06/12 Reset Mode (RM)  # 4 Insertion Replacement Mode (IRM)
+
+    def btwrite(self, sbytes) -> None:
+        """Write Bytes to the Screen, but without implicitly also writing a Line-End"""
+
+        self.btprint(sbytes, end=b"")
 
     def btprint(self, *args, end=b"\r\n") -> None:
         """Write Bytes to the Screen as one or more Ended Lines"""
@@ -2359,8 +2373,9 @@ class LineTerminal:
                     self.verb_eval()
 
                 except SystemExit as exc:
+                    if exc.code:
+                        raise
 
-                    assert not exc.code, (exc.code,)  # todo: nonzero Exit Codes
                     olines.clear()
 
                     return olines
@@ -2723,16 +2738,20 @@ class LineTerminal:
     def kdo_column_0n(self) -> None:
         """Jump to a zero-based numbered Column for Pedantic Emacs"""
 
+        #
+
         kint = self.pull_kint(default=0)
         if self.alarm_if(kint < 0):  # todo: negative Column Numbers for Emacs
             return
 
         kint_plus = kint + 1
 
+        #
+
         self.write_form_kint("\x1B[{}G", kint=kint_plus)
 
         # CSI 04/07 Cursor Character Absolute (CHA)
-        # "\r" and "\x1B[G" and "\x1B[1G" all go to Column 1
+        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
 
         # Emacs ⎋ G Tab move-to-column
 
@@ -2740,17 +2759,19 @@ class LineTerminal:
         """Jump to Left of Line"""
 
         st = self.st
-        st.stwrite("\x0D")  # "\x1B[G"  # "\x1B[1G"
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B[G"  # "\x1B[1G"
 
         # 00/13 Carriage Return (CR) \r ⌃M
         # CSI 04/07 Cursor Character Absolute (CHA)
-        # "\r" and "\x1B[G" and "\x1B[1G" all go to Column 1
+        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
 
         # part of Vi 0
-        # much like Vi ^ kdo_column_past_dent
+        # much like Vi ^ kdo_dent_here
 
     def kdo_column_minus_n(self) -> None:
         """Jump back by one or more Columns"""
+
+        #
 
         kint = self.pull_kint(default=1)
 
@@ -2761,6 +2782,8 @@ class LineTerminal:
             self.push_kint(-kint)
             self.kdo_column_plus_n()
             return
+
+        #
 
         self.write_form_kint("\x1B[{}D", kint=kint)
 
@@ -2775,31 +2798,37 @@ class LineTerminal:
     def kdo_column_n(self) -> None:
         """Jump to a numbered Column"""
 
+        #
+
         kint = self.pull_kint(default=1)
         if self.alarm_if(kint == 0):  # todo: zero Column Numbers for Vi  # middle?
             return
         if self.alarm_if(kint < 0):  # todo: negative Column Numbers for Vi
             return
 
+        #
+
         self.write_form_kint("\x1B[{}G", kint=kint)
 
         # CSI 04/07 Cursor Character Absolute (CHA)
-        # "\r" and "\x1B[G" and "\x1B[1G" all go to Column 1
+        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
 
         # Vi |
         # VsCode ⌃G {line}:{column}
 
-    def kdo_column_past_dent(self) -> None:
+    def kdo_dent_here(self) -> None:
         """Jump to the first Column past the Dent"""
 
         # no .pull_int here
 
-        self.kdo_column_1()  # Classic Vi lands past the Dent
+        self.kdo_column_1()  # Classic Vi past Dent
 
         # Vi ^
 
     def kdo_column_plus_n(self) -> None:
         """Jump ahead by one or more Columns"""
+
+        #
 
         kint = self.pull_kint(default=1)
 
@@ -2810,6 +2839,8 @@ class LineTerminal:
             self.push_kint(-kint)
             self.kdo_column_minus_n()
             return
+
+        #
 
         self.write_form_kint("\x1B[{}C", kint=kint)
 
@@ -2827,42 +2858,48 @@ class LineTerminal:
 
         st = self.st
 
+        #
+
         kint = self.pull_kint(default=32100)  # todo: more Rows on Screen
         if self.alarm_if(kint == 0):  # todo: zero Line Numbers
             return
         if self.alarm_if(kint < 0):  # todo: negative Line Numbers
             return
 
+        #
+
         self.write_form_kint("\x1B[{}d", kint=kint)
 
-        st.stwrite("\x0D")  # "\x1B[G"  # "\x1B[1G"  # Classic Vi lands past the Dent
+        st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"  # Classic Vi past Dent
 
         # CSI 06/04 Line Position Absolute (VPA)
 
         # 00/13 Carriage Return (CR) \r ⌃M
         # CSI 04/07 Cursor Character Absolute (CHA)
-        # "\r" and "\x1B[G" and "\x1B[1G" all go to Column 1
+        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
 
         # Vi G
 
     def kdo_dent_minus_n(self) -> None:
         """Jump back by one or more Lines, but land past the Dent"""
 
-        self.kdo_line_minus_n()  # Classic Vi lands past the Dent
-        self.kdo_column_1()  # Classic Vi lands past the Dent
+        self.kdo_line_minus_n()  # Classic Vi past Dent
+        self.kdo_column_1()  # Classic Vi past Dent
 
         # Vi -
 
     def kdo_dent_plus_n(self) -> None:
         """Jump ahead by one or more Lines, but land past the Dent"""
 
-        self.kdo_line_plus_n()  # Classic Vi lands past the Dent
-        self.kdo_column_1()  # Classic Vi lands past the Dent
+        self.kdo_line_plus_n()  # Classic Vi past Dent
+        self.kdo_column_1()  # Classic Vi past Dent
 
         # Vi +
 
     def kdo_dent_plus_n1(self) -> None:
         """Jump ahead by zero or more Lines, but land past the Dent"""
+
+        #
 
         kint = self.pull_kint(default=1)
 
@@ -2871,11 +2908,13 @@ class LineTerminal:
         if self.alarm_if(kint < 0):  # todo: negative Vi _ could be Vi -
             return
 
+        #
+
         if kint > 1:
             kint_minus = kint - 1
             self.write_form_kint("\x1B[{}B", kint=kint_minus)
 
-        self.kdo_column_1()  # Classic Vi lands past the Dent
+        self.kdo_column_1()  # Classic Vi past Dent
 
         # CSI 04/02 Cursor Down (CUD)
 
@@ -2884,12 +2923,16 @@ class LineTerminal:
     def kdo_end_plus_n1(self) -> None:
         """Jump ahead by zero or more Lines, and land at End of Line"""
 
+        #
+
         kint = self.pull_kint(default=1)
 
         if self.alarm_if(kint == 0):  # todo: zero Vi $
             return
         if self.alarm_if(kint < 0):  # todo: negative Vi $ could be Vi ⌃E
             return
+
+        #
 
         if kint > 1:
             kint_minus = kint - 1
@@ -2903,10 +2946,12 @@ class LineTerminal:
         # Emacs ⌃E move-end-of-line
         # Vi $
 
-    def kdo_home_line_n(self) -> None:
+    def kdo_dent_n(self) -> None:
         """Jump to a numbered Line, but land past the Dent"""
 
         st = self.st
+
+        #
 
         kint = self.pull_kint(default=32100)  # todo: more Rows on Screen
 
@@ -2915,14 +2960,16 @@ class LineTerminal:
         if self.alarm_if(kint < 0):  # todo: negative Row Numbers
             return
 
-        self.write_form_kint("\x1B[{}d", kint=kint)  # Classic Vi lands past the Dent
-        st.stwrite("\x0D")  # "\x1B[G"  # "\x1B[1G"
+        #
+
+        self.write_form_kint("\x1B[{}d", kint=kint)  # Classic Vi past Dent
+        st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
 
         # CSI 06/04 Line Position Absolute (VPA)
 
         # 00/13 Carriage Return (CR) \r ⌃M
         # CSI 04/07 Cursor Character Absolute (CHA)
-        # "\r" and "\x1B[G" and "\x1B[1G" all go to Column 1
+        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
 
         # Emacs ⎋G G goto-line
         # Emacs ⎋G ⎋G goto-line
@@ -2930,12 +2977,16 @@ class LineTerminal:
     def kdo_home_plus_n1(self) -> None:
         """Jump ahead by zero or more Lines, and land at Left of Line"""
 
+        #
+
         kint = self.pull_kint(default=1)
 
         if self.alarm_if(kint == 0):  # todo: zero Emacs ⌃A
             return
         if self.alarm_if(kint < 0):  # todo: negative Emacs ⌃A
             return
+
+        #
 
         if kint > 1:
             kint_minus = kint - 1
@@ -2950,6 +3001,8 @@ class LineTerminal:
     def kdo_line_minus_n(self) -> None:
         """Jump back by one or more Lines"""
 
+        #
+
         kint = self.pull_kint(default=1)
 
         if not kint:
@@ -2959,6 +3012,8 @@ class LineTerminal:
             self.push_kint(-kint)
             self.kdo_line_plus_n()
             return
+
+        #
 
         self.write_form_kint("\x1B[{}A", kint=kint)
 
@@ -2970,6 +3025,8 @@ class LineTerminal:
     def kdo_line_plus_n(self) -> None:
         """Jump ahead by one or more Lines"""
 
+        #
+
         kint = self.pull_kint(default=1)
 
         if not kint:
@@ -2979,6 +3036,8 @@ class LineTerminal:
             self.push_kint(-kint)
             self.kdo_line_minus_n()
             return
+
+        #
 
         self.write_form_kint("\x1B[{}B", kint=kint)
 
@@ -2991,12 +3050,16 @@ class LineTerminal:
     def kdo_row_n_down(self) -> None:
         """Jump to Top of Screen, but ahead by zero or more Lines"""
 
+        #
+
         kint = self.pull_kint(default=1)
 
         if self.alarm_if(kint == 0):  # todo: zero Emacs ⎋ R
             return
         if self.alarm_if(kint < 0):  # todo: negative Emacs ⎋ R
             return
+
+        #
 
         self.write_form_kint("\x1B[{}d", kint=1)
         if kint > 1:
@@ -3012,12 +3075,16 @@ class LineTerminal:
     def kdo_row_n_up(self) -> None:
         """Jump to Bottom of Screen, but back behind by zero or more Lines"""
 
+        #
+
         kint = self.pull_kint(default=1)
 
         if self.alarm_if(kint == 0):  # todo: zero Emacs ⎋ R
             return
         if self.alarm_if(kint < 0):  # todo: negative Emacs ⎋ R
             return
+
+        #
 
         self.write_form_kint("\x1B[{}d", kint=32100)  # todo: more Rows on Screen
         if kint > 1:
@@ -3031,14 +3098,111 @@ class LineTerminal:
         # Vi ⇧L
 
     #
-    #
+    # Dedent or Dent the Lines at and below the Screen Cursor
     #
 
-    def kdo_dedent_n_lines(self) -> None:
+    def kdo_lines_dedent_n(self) -> None:
         """Remove Blank Space from the Left of one or more Lines"""
 
-    def kdo_dent_n_lines(self) -> None:
+        st = self.st
+
+        #
+
+        kint = self.pull_kint(default=1)
+
+        if not kint:
+            return
+
+        if kint < 0:
+            self.push_kint(-kint)
+            self.kdo_lines_dent_n()
+            return
+
+        #
+
+        self.read_verb()
+        kcap_str = self.kcap_str
+        if self.alarm_if(kcap_str != "<"):
+            return
+
+        #
+
+        for i in range(kint):
+            st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
+            st.stwrite("\x1B" "[" "4" "P")  # CSI 05/00
+            if i < (kint - 1):
+                # st.stwrite("\x1B" "[" "B")  # CSI 04/02
+                st.stwrite("\n")  # 00/10  # "\x1B[E"  # "\x1B[1E"
+
+        for i in range(kint - 1):
+            st.stwrite("\x1B" "[" "A")  # CSI 04/01
+
+        # CSI 05/00 Delete Character (DCH)
+
+        # 00/10 Line Feed (LF) \n ^J
+        # 00/13 Carriage Return (CR) \r ⌃M
+        # ESC 04/05 Next Line (NEL)
+        # CSI 04/02 Cursor Down (CUD)
+        # CSI 04/05 Cursor Next Line (CNL)
+        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
+
+        # CSU 04/01 Cursor Up (CUU)
+
+        # FIXME: << to land past Dent
+
+    def kdo_lines_dent_n(self) -> None:
         """Insert 1 Dent of Blank Space into the Left of one or more Lines"""
+
+        st = self.st
+
+        #
+
+        kint = self.pull_kint(default=1)
+
+        if not kint:
+            return
+
+        if kint < 0:
+            self.push_kint(-kint)
+            self.kdo_lines_dedent_n()
+            return
+
+        #
+
+        self.read_verb()
+        kcap_str = self.kcap_str
+        if self.alarm_if(kcap_str != ">"):
+            return
+
+        #
+
+        st.stwrite("\x1B[4h")  # CSI 06/08
+
+        for i in range(kint):
+            st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
+            st.stwrite(4 * " ")
+            if i < (kint - 1):
+                # st.stwrite("\x1B" "[" "B")  # CSI 04/02
+                st.stwrite("\n")  # 00/10  # "\x1B[E"  # "\x1B[1E"
+
+        for i in range(kint - 1):
+            st.stwrite("\x1B" "[" "A")  # CSI 04/01
+
+        st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
+
+        st.stwrite("\x1B[4l")  # CSI 06/12
+
+        # FIXME: >> to land past Dent
+
+        # CSI 06/08 Set Mode (SM)  # 4 Insertion Replacement Mode (IRM)
+        # CSI 06/12 Reset Mode (RM)  # 4 Insertion Replacement Mode (IRM)
+
+        # 00/10 Line Feed (LF) \n ^J
+        # 00/13 Carriage Return (CR) \r ⌃M
+        # ESC 04/05 Next Line (NEL)
+        # CSI 04/02 Cursor Down (CUD)
+        # CSI 04/05 Cursor Next Line (CNL)
+        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
 
     #
     #
@@ -3052,7 +3216,7 @@ class LineTerminal:
 #
 #   ⎋GG ⎋G⎋G ⎋[
 #   ⌃A ⌃C ⌃D ⌃E ⌃G ⌃H Tab ⌃J ⌃N ⌃P ⌃Q ⌃U ⌃V Return ← ↑ → ↓
-#   Spacebar $ + - 0 1 2 3 4 5 6 7 8 9 ⇧G ^ _ H J K L | Delete
+#   Spacebar $ + - 0 1 2 3 4 5 6 7 8 9 << >> ⇧G ^ _ H J K L | Delete
 #   ⌥GG ⌥G⌥G
 #
 #   ⎋ ⌃C ⌃D ⌃\ ⇧QVIReturn
@@ -3062,14 +3226,13 @@ class LineTerminal:
 #
 # todo:
 #
-#   >> <<
 #   I ⎋
 #   DD
 #
 #   ⇧C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X C$ CC D$ DD A I O R S X
 #
 #   [ Scroller CSI Sequences ]
-#   [ < > C D to movement ]
+#   [ < > C D to movement ⇧G etc ]
 #   ⇧M
 #
 #   ⌃L [ of Shadow Screen, of File larger than Screen ]
@@ -3087,8 +3250,8 @@ DONT_QUIT_KCAP_STRS = ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b
 FUNC_BY_KCAP_STR = {
     "⎋": LineTerminal.kdo_hold_kstr,
     "⎋⎋": LineTerminal.kdo_help_quit,  # Meta Esc
-    "⎋G G": LineTerminal.kdo_home_line_n,
-    "⎋G ⎋G": LineTerminal.kdo_home_line_n,
+    "⎋G G": LineTerminal.kdo_dent_n,
+    "⎋G ⎋G": LineTerminal.kdo_dent_n,
     "⎋G Tab": LineTerminal.kdo_column_0n,
     # "⎋ R": LineTerminal.kdo_row_middle_up_down,
     #
@@ -3122,8 +3285,8 @@ FUNC_BY_KCAP_STR = {
     "7": LineTerminal.kdo_hold_kstr,
     "8": LineTerminal.kdo_hold_kstr,
     "9": LineTerminal.kdo_hold_kstr,
-    # "<": LineTerminal.kdo_dedent_n_lines,
-    # ">": LineTerminal.kdo_dent_n_lines,
+    "<": LineTerminal.kdo_lines_dedent_n,
+    ">": LineTerminal.kdo_lines_dent_n,
     #
     "⇧G": LineTerminal.kdo_dent_line_n,  # b'G'
     "⇧H": LineTerminal.kdo_row_n_down,  # b'H'
@@ -3132,7 +3295,7 @@ FUNC_BY_KCAP_STR = {
     "⇧Z ⇧Q": LineTerminal.kdo_force_quit,  # b'ZQ'
     "⇧Z ⇧Z": LineTerminal.kdo_force_quit,  # b'ZZ'
     "[": LineTerminal.kdo_quote_csi_kstrs,  # b'\x5B'
-    "^": LineTerminal.kdo_column_past_dent,  # b'\x5E'
+    "^": LineTerminal.kdo_dent_here,  # b'\x5E'
     "_": LineTerminal.kdo_dent_plus_n1,  # b'\x5F'
     #
     "H": LineTerminal.kdo_column_minus_n,  # b'h'
@@ -3143,8 +3306,8 @@ FUNC_BY_KCAP_STR = {
     "Delete": LineTerminal.kdo_char_minus_n,  # b'\x7F'
     #
     "⌥⎋": LineTerminal.kdo_help_quit,  # Option Esc
-    "⌥G G": LineTerminal.kdo_home_line_n,
-    "⌥G ⌥G": LineTerminal.kdo_home_line_n,
+    "⌥G G": LineTerminal.kdo_dent_n,
+    "⌥G ⌥G": LineTerminal.kdo_dent_n,
     "⌥G Tab": LineTerminal.kdo_column_0n,
     # "⌥ R": LineTerminal.kdo_row_middle_up_down,
 }
