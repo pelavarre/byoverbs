@@ -3444,6 +3444,14 @@ class LineTerminal:
 #
 # todo:
 #
+#   Experiment with defaulting a la vim +:startreplace
+#       +:stopinsert +:startinsert
+#
+#   Return while Inserting - as if inserting an empty row above 1st column
+#   Return while Replacing - don't
+#
+#   Emacs ^A ^E while editing, vs Vi ^E ^Y to fine scroll
+#
 #   ⌃K ⇧A C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X A C$ CC D$ DD I O R S X ⌃C ⎋
 #   Emacs ⌃O vs Vim ⌃O ⌃I
 #
@@ -3458,6 +3466,8 @@ class LineTerminal:
 #   ⌃L [ of Shadow Screen, of File larger than Screen ]
 #   Emacs ⌃T
 #   Emacs ⌃W ⌃Y
+#   Vi :set ruler
+#   Snap Cursor over Text while Replacing - don't
 #
 #   Emacs ⌃R ⌃S
 #
