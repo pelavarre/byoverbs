@@ -2444,7 +2444,8 @@ class LineTerminal:
         kchars = kbytes.decode()  # the Str of the Bytes, not the Str Key Cap
 
         kint = self.pull_kint(default=1)
-        if self.alarm_if(kint < 0):
+        if kint < 0:
+            self.alarm_ring()
             return
 
         if kint:
@@ -2453,13 +2454,12 @@ class LineTerminal:
 
         # Return, Spacebar, Tab, and printable US-Ascii and Unicode
 
-    def alarm_if(self, alarming) -> bool:
-        """Ring the Bell, else don't"""
+    def alarm_ring(self) -> None:
+        """Ring the Bell"""
 
-        if alarming:
-            self.st.stprint("\a")
+        self.st.stprint("\a")
 
-        return alarming
+        # 00/07 Bell (BEL)
 
     #
     # Wrap around the Screen and Keyboard of our StrTerminal
@@ -2503,11 +2503,17 @@ class LineTerminal:
         st = self.st
 
         kint = self.pull_kint(default=1)
-        if self.alarm_if(kint < 0):
+        if kint < 0:
+            self.alarm_ring()
             return
 
         kcap_str = st.read_one_chord_kstr()  # not st.read_some_chords_kbytes_kstr()
-        st.stwrite(kint * kcap_str)  # '⌃L'  # '⇧Z'
+
+        schars = kcap_str
+        if kcap_str == "Spacebar":
+            schars = " "
+
+        st.stwrite(kint * schars)  # '⌃L'  # '⇧Z'
 
         # Emacs ⌃Q quoted-insert/ replace
         # Vi ⌃V
@@ -2741,7 +2747,8 @@ class LineTerminal:
         #
 
         kint = self.pull_kint(default=0)
-        if self.alarm_if(kint < 0):  # todo: negative Column Numbers for Emacs
+        if kint < 0:  # todo: negative Column Numbers for Emacs
+            self.alarm_ring()
             return
 
         kint_plus = kint + 1
@@ -2801,9 +2808,11 @@ class LineTerminal:
         #
 
         kint = self.pull_kint(default=1)
-        if self.alarm_if(kint == 0):  # todo: zero Column Numbers for Vi  # middle?
+        if not kint:  # todo: zero Column Numbers for Vi  # middle?
+            self.alarm_ring()
             return
-        if self.alarm_if(kint < 0):  # todo: negative Column Numbers for Vi
+        if kint < 0:  # todo: negative Column Numbers for Vi
+            self.alarm_ring()
             return
 
         #
@@ -2861,9 +2870,11 @@ class LineTerminal:
         #
 
         kint = self.pull_kint(default=32100)  # todo: more Rows on Screen
-        if self.alarm_if(kint == 0):  # todo: zero Line Numbers
+        if not kint:  # todo: zero Line Numbers
+            self.alarm_ring()
             return
-        if self.alarm_if(kint < 0):  # todo: negative Line Numbers
+        if kint < 0:  # todo: negative Line Numbers
+            self.alarm_ring()
             return
 
         #
@@ -2903,9 +2914,11 @@ class LineTerminal:
 
         kint = self.pull_kint(default=1)
 
-        if self.alarm_if(kint == 0):  # todo: zero Vi _
+        if not kint:  # todo: zero Vi _
+            self.alarm_ring()
             return
-        if self.alarm_if(kint < 0):  # todo: negative Vi _ could be Vi -
+        if kint < 0:  # todo: negative Vi _ could be Vi -
+            self.alarm_ring()
             return
 
         #
@@ -2927,9 +2940,11 @@ class LineTerminal:
 
         kint = self.pull_kint(default=1)
 
-        if self.alarm_if(kint == 0):  # todo: zero Vi $
+        if not kint:  # todo: zero Vi $
+            self.alarm_ring()
             return
-        if self.alarm_if(kint < 0):  # todo: negative Vi $ could be Vi ⌃E
+        if kint < 0:  # todo: negative Vi $ could be Vi ⌃E
+            self.alarm_ring()
             return
 
         #
@@ -2955,9 +2970,11 @@ class LineTerminal:
 
         kint = self.pull_kint(default=32100)  # todo: more Rows on Screen
 
-        if self.alarm_if(kint == 0):  # todo: zero Row Number  # middle?
+        if not kint:  # todo: zero Row Number  # middle?
+            self.alarm_ring()
             return
-        if self.alarm_if(kint < 0):  # todo: negative Row Numbers
+        if kint < 0:  # todo: negative Row Numbers
+            self.alarm_ring()
             return
 
         #
@@ -2981,9 +2998,11 @@ class LineTerminal:
 
         kint = self.pull_kint(default=1)
 
-        if self.alarm_if(kint == 0):  # todo: zero Emacs ⌃A
+        if not kint:  # todo: zero Emacs ⌃A
+            self.alarm_ring()
             return
-        if self.alarm_if(kint < 0):  # todo: negative Emacs ⌃A
+        if kint < 0:  # todo: negative Emacs ⌃A
+            self.alarm_ring()
             return
 
         #
@@ -3054,9 +3073,11 @@ class LineTerminal:
 
         kint = self.pull_kint(default=1)
 
-        if self.alarm_if(kint == 0):  # todo: zero Emacs ⎋ R
+        if not kint:  # todo: zero Emacs ⎋ R
+            self.alarm_ring()
             return
-        if self.alarm_if(kint < 0):  # todo: negative Emacs ⎋ R
+        if kint < 0:  # todo: negative Emacs ⎋ R
+            self.alarm_ring()
             return
 
         #
@@ -3079,9 +3100,11 @@ class LineTerminal:
 
         kint = self.pull_kint(default=1)
 
-        if self.alarm_if(kint == 0):  # todo: zero Emacs ⎋ R
+        if not kint:  # todo: zero Emacs ⎋ R
+            self.alarm_ring()
             return
-        if self.alarm_if(kint < 0):  # todo: negative Emacs ⎋ R
+        if kint < 0:  # todo: negative Emacs ⎋ R
+            self.alarm_ring()
             return
 
         #
@@ -3122,13 +3145,15 @@ class LineTerminal:
 
         self.read_verb()
         kcap_str = self.kcap_str
-        if self.alarm_if(kcap_str != "<"):
+        if kcap_str != "<":
+            self.alarm_ring()
             return
 
         #
 
+        st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
+
         for i in range(kint):
-            st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
             st.stwrite("\x1B" "[" "4" "P")  # CSI 05/00
             if i < (kint - 1):
                 # st.stwrite("\x1B" "[" "B")  # CSI 04/02
@@ -3171,7 +3196,8 @@ class LineTerminal:
 
         self.read_verb()
         kcap_str = self.kcap_str
-        if self.alarm_if(kcap_str != ">"):
+        if kcap_str != ">":
+            self.alarm_ring()
             return
 
         #
@@ -3205,6 +3231,43 @@ class LineTerminal:
         # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
 
     #
+    # Delete the Lines at and below the Screen Cursor
+    #
+
+    def kdo_dents_cut_n(self) -> None:
+        """Cut N Lines here and below, and land past Dent"""
+
+        st = self.st
+
+        #
+
+        kint = self.pull_kint(default=1)
+
+        if not kint:
+            return
+
+        if kint < 0:  # todo: negative Emacs ⎋ R
+            self.alarm_ring()
+            return
+
+        #
+
+        self.read_verb()
+        kcap_str = self.kcap_str
+        if kcap_str != "D":
+            self.alarm_ring()
+            return
+
+        #
+
+        st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
+        st.stwrite(("\x1B" "[" "{}" "M").format(kint))  # CSI 04/13
+
+        # CSI 04/13 Delete Line (DL)
+
+        # Vi D D
+
+    #
     #
     #
 
@@ -3216,7 +3279,8 @@ class LineTerminal:
 #
 #   ⎋GG ⎋G⎋G ⎋[
 #   ⌃A ⌃C ⌃D ⌃E ⌃G ⌃H Tab ⌃J ⌃N ⌃P ⌃Q ⌃U ⌃V Return ← ↑ → ↓
-#   Spacebar $ + - 0 1 2 3 4 5 6 7 8 9 << >> ⇧G ^ _ H J K L | Delete
+#   Spacebar $ + - 0 1 2 3 4 5 6 7 8 9 ⇧G ^ _ H J K L | Delete
+#   << >> DD
 #   ⌥GG ⌥G⌥G
 #
 #   ⎋ ⌃C ⌃D ⌃\ ⇧QVIReturn
@@ -3227,7 +3291,6 @@ class LineTerminal:
 # todo:
 #
 #   I ⎋
-#   DD
 #
 #   ⇧C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X C$ CC D$ DD A I O R S X
 #
@@ -3298,6 +3361,7 @@ FUNC_BY_KCAP_STR = {
     "^": LineTerminal.kdo_dent_here,  # b'\x5E'
     "_": LineTerminal.kdo_dent_plus_n1,  # b'\x5F'
     #
+    "D": LineTerminal.kdo_dents_cut_n,  # b'd'
     "H": LineTerminal.kdo_column_minus_n,  # b'h'
     "J": LineTerminal.kdo_line_plus_n,  # b'j'
     "K": LineTerminal.kdo_line_minus_n,  # b'k'
