@@ -1730,6 +1730,37 @@ class BytesLogger:
         print(f"    yield {rep}", file=logfile)
 
 
+Y_32100 = 32100  # larger than all Screen Row Heights tested
+X_32100 = 32100  # larger than all Screen Column Widths tested
+
+LF = "\n"  # 00/10 Line Feed (LF) ⌃J
+CR = "\r"  # 00/13 Carriage Return (CR) ⌃M
+
+CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+CUD_Y = "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+CUF_X = "\x1B" "[" "{}C"  # CSI 04/03 Cursor Forward
+CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor Backward
+CHA = "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
+CHA_Y = "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
+DL_Y = "\x1B" "[" "{}M"  # CSI 04/13 Delete Line (DL)
+DCH_X = "\x1B" "[" "{}P"  # CSI 05/00 Delete Character (DCH)
+CBT = "\x1B" "[" "Z"  # CSI 05/10 Cursor Backward Tabulation (CBT)
+VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+
+# ESC 04/05 Next Line (NEL)
+# CSI 04/05 Cursor Next Line (CNL)
+
+RM_IRM = "\x1B" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
+SM_IRM = "\x1B" "[" "4h"  # CSI 06/08 4 Set Mode Insert/ Replace
+
+DECSCUSR = "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
+DECSCUSR_SKID = "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
+DECSCUSR_BAR = "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
+
+# quoted Str sorted by the CSI Final Byte:  A, B, C, D, G, Z, d, etc
+# the 02/00 ' ' of the CSI ' q' is its only 'Intermediate Byte'
+
+
 @dataclasses.dataclass
 class BytesTerminal:
     """Read/ Write the Bytes at Keyboard/ Screen of a Terminal"""
@@ -1812,9 +1843,12 @@ class BytesTerminal:
 
             # Revert Screen Settings to Defaults  # todo: when are our Defaults wrong?
 
-            s0 = "\x1B" "[" "4l"  # CSI 06/12 Replace
-            s1 = "\x1B" "[" " q"  # CSI 02/00 07/01  # No-Style Cursor
+            s0 = "\x1B" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
+            s1 = "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
             self.btwrite((s0 + s1).encode())
+
+            assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
+            assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
 
             #
 
@@ -1826,10 +1860,6 @@ class BytesTerminal:
             termios.tcsetattr(fd, when, tcgetattr)
 
         return None
-
-        # CSI 02/00 07/01  # 4 Skid Cursor  # 6 Bar Cursor  # No-Style Cursor
-        # CSI 06/08 Set Mode (SM)  # 4 Insertion Replacement Mode (IRM)
-        # CSI 06/12 Reset Mode (RM)  # 4 Insertion Replacement Mode (IRM)
 
     def btwrite(self, sbytes) -> None:
         """Write Bytes to the Screen, but without implicitly also writing a Line-End"""
@@ -2314,17 +2344,19 @@ class LineTerminal:
             st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
             st.stwrite("\x1B" "[" " q")  # CSI 02/00 07/01  # No-Style Cursor
         elif vmode in "Insert":
-            st.stwrite("\x1B" "[" "4h")  # CSI 06/08 Insert
+            st.stwrite("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
             st.stwrite("\x1B" "[" "6 q")  # CSI 02/00 07/01  # 6 Bar Cursor
         else:
             assert vmode == "Replace", (vmode,)
             st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
             st.stwrite("\x1B" "[" "4 q")  # CSI 02/00 07/01  # 4 Skid Cursor
 
-        # CSI 06/08 Set Mode (SM)  # 4 Insertion Replacement Mode (IRM)
-        # CSI 06/12 Reset Mode (RM)  # 4 Insertion Replacement Mode (IRM)
+        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
+        assert SM_IRM == "\x1B" "[" "4h"  # CSI 06/08 Set Mode Insert/ Replace
 
-        # CSI 02/00 07/01  # 4 Skid Cursor  # 6 Bar Cursor  # No-Style Cursor
+        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
+        assert DECSCUSR_SKID == "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
+        assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
 
     def vmode_exit(self) -> None:
         """Undo 'def vmode_enter'"""
@@ -2622,8 +2654,7 @@ class LineTerminal:
         kchars = kbytes.decode()  # may raise UnicodeDecodeError
         st.stwrite(kint * kchars)
 
-        # Pq [ quote.csi.kstrs
-        # missing from Emacs, Vi, VsCode
+        # Pq [ quote.csi.kstrs  # missing from Emacs, Vi, VsCode
         # unlike Vi [ Key Map
 
     def kdo_kminus(self) -> None:
@@ -2814,10 +2845,9 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B[{}G", kint=kint_plus)
+        self.write_form_kint("\x1B" "[" "{}G", kint=kint_plus)
 
-        # CSI 04/07 Cursor Character Absolute (CHA)
-        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
+        assert CHA_Y == "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
 
         # Emacs ⎋ G Tab move-to-column
 
@@ -2825,11 +2855,10 @@ class LineTerminal:
         """Jump to Left of Line"""
 
         st = self.st
-        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B[G"  # "\x1B[1G"
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
 
-        # 00/13 Carriage Return (CR) \r ⌃M
-        # CSI 04/07 Cursor Character Absolute (CHA)
-        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
+        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
+        assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
 
         # part of Vi 0
         # much like Vi ^ kdo_column_dent_beyond
@@ -2851,12 +2880,12 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B[{}D", kint=kint)
+        self.write_form_kint("\x1B" "[" "{}D", kint=kint)
 
         # 00/08 Backspace (BS) \b ⌃H
         # 07/15 Delete (DEL) \x7F ⌃? 'Eliminated Control Function'
 
-        # CSI 04/04 Cursor Backward (CUB)
+        assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor Backward
 
         # Vi ←
         # Vi H
@@ -2885,10 +2914,9 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B[{}G", kint=kint)
+        self.write_form_kint("\x1B" "[" "{}G", kint=kint)
 
-        # CSI 04/07 Cursor Character Absolute (CHA)
-        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
+        assert CHA_Y == "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
 
         # Vi |
         # VsCode ⌃G {line}:{column}
@@ -2910,9 +2938,9 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B[{}C", kint=kint)
+        self.write_form_kint("\x1B" "[" "{}C", kint=kint)
 
-        # CSI 04/03 Cursor Forward (CUF)
+        assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor Forward
 
         # Vi →
         # Vi L
@@ -2935,13 +2963,12 @@ class LineTerminal:
         #
 
         kint_8x = 8 * kint
-        self.write_form_kint("\x1B[{}D", kint=kint_8x)
+        self.write_form_kint("\x1B" "[" "{}D", kint=kint_8x)
 
-        # CSI 05/10 Cursor Backward Tabulation (CBT)
-        # CSI 04/04 Cursor Backward (CUB)
+        assert CBT == "\x1B" "[" "Z"  # CSI 05/10 Cursor Backward Tabulation (CBT)
+        assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor Backward
 
-        # Pq ⇧Tab tab.minus.n
-        # missing from Emacs, Vi, VsCode
+        # Pq ⇧Tab tab.minus.n  # missing from Emacs, Vi, VsCode
 
     def kdo_tab_plus_n(self) -> None:
         """Jump ahead by one or more Column Tabs"""
@@ -2966,8 +2993,7 @@ class LineTerminal:
 
         # 00/08 Character Tabulation (HT)  # \t Tab
 
-        # Pq Tab tab.plus.n
-        # missing from Emacs, Vi, VsCode
+        # Pq Tab tab.plus.n  # missing from Emacs, Vi, VsCode
 
     #
     # Move the Screen Cursor to a Row, relatively or absolutely
@@ -2980,7 +3006,9 @@ class LineTerminal:
 
         #
 
-        kint = self.pull_kint(default=32100)  # todo: more Rows on Screen
+        assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
+
+        kint = self.pull_kint(default=32100)  # todo: more Rows
         if not kint:  # todo: zero Line Numbers
             self.alarm_ring()
             return
@@ -2990,15 +3018,14 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B[{}d", kint=kint)
+        self.write_form_kint("\x1B" "[" "{}d", kint=kint)
 
-        st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"  # Classic Vi past Dent
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"  # Classic Vi past Dent
 
-        # CSI 06/04 Line Position Absolute (VPA)
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-        # 00/13 Carriage Return (CR) \r ⌃M
-        # CSI 04/07 Cursor Character Absolute (CHA)
-        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
+        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
+        assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
 
         # Vi G
 
@@ -3036,11 +3063,11 @@ class LineTerminal:
 
         if kint > 1:
             kint_minus = kint - 1
-            self.write_form_kint("\x1B[{}B", kint=kint_minus)
+            self.write_form_kint("\x1B" "[" "{}B", kint=kint_minus)
 
         self.kdo_column_1()  # Classic Vi past Dent
 
-        # CSI 04/02 Cursor Down (CUD)
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
         # Vi _
 
@@ -3060,26 +3087,30 @@ class LineTerminal:
 
         #
 
+        assert X_32100 == 32100  # vs CUF_X "\x1B" "[" "{}C"
+
         if kint > 1:
             kint_minus = kint - 1
-            self.write_form_kint("\x1B[{}B", kint=kint_minus)
+            self.write_form_kint("\x1B" "[" "{}B", kint=kint_minus)
 
-        self.write_form_kint("\x1B[{}C", kint=32100)  # todo: more Columns on Screen
+        self.write_form_kint("\x1B" "[" "{}C", kint=32100)  # todo: more Columns
 
-        # CSI 04/02 Cursor Down (CUD)
-        # CSI 04/03 Cursor Forward (CUF)
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+        assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor Forward
 
         # Emacs ⌃E move-end-of-line
         # Vi $
 
-    def kdo_dent_n(self) -> None:
-        """Jump to a numbered Line, but land past the Dent"""
+    def kdo_home_n(self) -> None:
+        """Jump to a numbered Line, and land at Left of Line"""
 
         st = self.st
 
         #
 
-        kint = self.pull_kint(default=32100)  # todo: more Rows on Screen
+        assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
+
+        kint = self.pull_kint(default=32100)  # todo: more Rows
 
         if not kint:  # todo: zero Row Number  # middle?
             self.alarm_ring()
@@ -3090,14 +3121,13 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B[{}d", kint=kint)  # Classic Vi past Dent
-        st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
+        self.write_form_kint("\x1B" "[" "{}d", kint=kint)  # Classic Vi past Dent
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
 
-        # CSI 06/04 Line Position Absolute (VPA)
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-        # 00/13 Carriage Return (CR) \r ⌃M
-        # CSI 04/07 Cursor Character Absolute (CHA)
-        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
+        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
+        assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
 
         # Emacs ⎋G G goto-line
         # Emacs ⎋G ⎋G goto-line
@@ -3120,11 +3150,11 @@ class LineTerminal:
 
         if kint > 1:
             kint_minus = kint - 1
-            self.write_form_kint("\x1B[{}B", kint=kint_minus)
+            self.write_form_kint("\x1B" "[" "{}B", kint=kint_minus)
 
         self.kdo_column_1()  # kdo_ calls kdo_
 
-        # CSI 04/02 Cursor Down (CUD)
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
         # Emacs ⌃A move-beginning-of-line
 
@@ -3145,9 +3175,9 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B[{}A", kint=kint)
+        self.write_form_kint("\x1B" "[" "{}A", kint=kint)
 
-        # CSI 04/01 Cursor Up (CUU)
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
         # Emacs ⌃P previous-line
         # Vi K
@@ -3169,9 +3199,9 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B[{}B", kint=kint)
+        self.write_form_kint("\x1B" "[" "{}B", kint=kint)
 
-        # CSI 04/02 Cursor Down (CUD)
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
         # Emacs ⌃N next-line
         # Vi ⌃J
@@ -3193,13 +3223,13 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B[{}d", kint=1)
+        self.write_form_kint("\x1B" "[" "{}d", kint=1)
         if kint > 1:
             kint_minus = kint - 1
-            self.write_form_kint("\x1B[{}B", kint=kint_minus)
+            self.write_form_kint("\x1B" "[" "{}B", kint=kint_minus)
 
-        # CSI 06/04 Line Position Absolute (VPA)
-        # CSI 04/02 Cursor Down (CUD)
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
         # Emacs ⎋ R move-to-window-line-top-bottom, with Zero-Based Positive K-Int
         # Vi ⇧H
@@ -3220,13 +3250,15 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B[{}d", kint=32100)  # todo: more Rows on Screen
+        assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
+
+        self.write_form_kint("\x1B" "[" "{}d", kint=32100)  # todo: more Rows
         if kint > 1:
             kint_minus = kint - 1
-            self.write_form_kint("\x1B[{}A", kint=kint_minus)
+            self.write_form_kint("\x1B" "[" "{}A", kint=kint_minus)
 
-        # CSI 06/04 Line Position Absolute (VPA)
-        # CSI 04/01 Cursor Up (CUU)
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
         # Emacs ⎋ R move-to-window-line-top-bottom, with Negative K-Int
         # Vi ⇧L
@@ -3262,27 +3294,23 @@ class LineTerminal:
 
         #
 
-        st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
 
         for i in range(kint):
             st.stwrite("\x1B" "[" "4" "P")  # CSI 05/00
             if i < (kint - 1):
-                # st.stwrite("\x1B" "[" "B")  # CSI 04/02
-                st.stwrite("\n")  # 00/10  # "\x1B[E"  # "\x1B[1E"
+                st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
 
         for i in range(kint - 1):
             st.stwrite("\x1B" "[" "A")  # CSI 04/01
 
-        # CSI 05/00 Delete Character (DCH)
+        assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character (DCH)
 
-        # 00/10 Line Feed (LF) \n ^J
-        # 00/13 Carriage Return (CR) \r ⌃M
-        # ESC 04/05 Next Line (NEL)
-        # CSI 04/02 Cursor Down (CUD)
-        # CSI 04/05 Cursor Next Line (CNL)
-        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
+        assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
+        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
-        # CSU 04/01 Cursor Up (CUU)
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
         # FIXME: << to land past Dent
 
@@ -3313,33 +3341,28 @@ class LineTerminal:
 
         #
 
-        st.stwrite("\x1B" "[" "4h")  # CSI 06/08 Insert
+        st.stwrite("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
 
         for i in range(kint):
-            st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
+            st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
             st.stwrite(4 * " ")
             if i < (kint - 1):
-                # st.stwrite("\x1B" "[" "B")  # CSI 04/02
-                st.stwrite("\n")  # 00/10  # "\x1B[E"  # "\x1B[1E"
+                st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
 
         for i in range(kint - 1):
             st.stwrite("\x1B" "[" "A")  # CSI 04/01
 
-        st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
 
         st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
 
         # FIXME: >> to land past Dent
 
-        # CSI 06/08 Set Mode (SM)  # 4 Insertion Replacement Mode (IRM)
-        # CSI 06/12 Reset Mode (RM)  # 4 Insertion Replacement Mode (IRM)
+        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
 
-        # 00/10 Line Feed (LF) \n ^J
-        # 00/13 Carriage Return (CR) \r ⌃M
-        # ESC 04/05 Next Line (NEL)
-        # CSI 04/02 Cursor Down (CUD)
-        # CSI 04/05 Cursor Next Line (CNL)
-        # "\r" (aka "\0x0D") and "\x1B[G" and "\x1B[1G" all go to Column 1
+        assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
+        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
     #
     # Delete the Lines at and below the Screen Cursor
@@ -3371,10 +3394,10 @@ class LineTerminal:
 
         #
 
-        st.stwrite("\r")  # 00/13  # "\x1B[G"  # "\x1B[1G"
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
         st.stwrite(("\x1B" "[" "{}" "M").format(kint))  # CSI 04/13
 
-        # CSI 04/13 Delete Line (DL)
+        assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line (DL)
 
         # Vi D D
 
@@ -3472,13 +3495,24 @@ class LineTerminal:
 #   Emacs ⌃R ⌃S
 #
 
+#
+# escape-sequences:
+#   ⎋[d line-position-absolute  ⎋[G cursor-character-absolute
+#   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[m plain
+#
+#   ⎋[1m bold  ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange  ⎋[m plain
+#   ⎋[4h insertion-mode  ⎋[6 q bar  ⎋[4l replacement-mode  ⎋[4 q skid  ⎋[ q unstyled
+#   ⎋[M delete-line  ⎋[L insert-line  ⎋[P delete-character  ⎋[@ insert-character
+#   ⎋[T scroll-up  ⎋[S scroll-down
+#
+
 DONT_QUIT_KCAP_STRS = ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
 
 FUNC_BY_KCAP_STR = {
     "⎋": LineTerminal.kdo_hold_kstr,
     "⎋⎋": LineTerminal.kdo_help_quit,  # Meta Esc
-    "⎋G G": LineTerminal.kdo_dent_n,
-    "⎋G ⎋G": LineTerminal.kdo_dent_n,
+    "⎋G G": LineTerminal.kdo_home_n,
+    "⎋G ⎋G": LineTerminal.kdo_home_n,
     "⎋G Tab": LineTerminal.kdo_column_0n,
     # "⎋ R": LineTerminal.kdo_row_middle_up_down,
     "⎋[": LineTerminal.kdo_quote_csi_kstrs_n,  # b'\x1B\x5B'  # Option [
@@ -3544,8 +3578,8 @@ FUNC_BY_KCAP_STR = {
     "Delete": LineTerminal.kdo_char_minus_n,  # b'\x7F'
     #
     "⌥⎋": LineTerminal.kdo_help_quit,  # Option Esc
-    "⌥G G": LineTerminal.kdo_dent_n,
-    "⌥G ⌥G": LineTerminal.kdo_dent_n,
+    "⌥G G": LineTerminal.kdo_home_n,
+    "⌥G ⌥G": LineTerminal.kdo_home_n,
     "⌥G Tab": LineTerminal.kdo_column_0n,
     # "⌥ R": LineTerminal.kdo_row_middle_up_down,
     "⌥[": LineTerminal.kdo_quote_csi_kstrs_n,  # b'\xE2\x80\x9C'  # Option [
