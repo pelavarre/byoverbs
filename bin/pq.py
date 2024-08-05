@@ -1730,6 +1730,18 @@ class BytesLogger:
         print(f"    yield {rep}", file=logfile)
 
 
+#
+# escape-sequences:
+#
+#   ⎋[d line-position-absolute  ⎋[G cursor-character-absolute
+#   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[m plain
+#
+#   ⎋[1m bold  ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange  ⎋[m plain
+#   ⎋[4h insert  ⎋[6 q bar  ⎋[4l replace  ⎋[4 q skid  ⎋[ q unstyled
+#   ⎋[M delete-line  ⎋[L insert-line  ⎋[P delete-char  ⎋[@ insert-char
+#   ⎋[T scroll-up  ⎋[S scroll-down
+#
+
 Y_32100 = 32100  # larger than all Screen Row Heights tested
 X_32100 = 32100  # larger than all Screen Column Widths tested
 
@@ -1742,10 +1754,12 @@ CUF_X = "\x1B" "[" "{}C"  # CSI 04/03 Cursor Forward
 CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor Backward
 CHA = "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
 CHA_Y = "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
+CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation (CBT)
+VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+
+ICH_X = "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
 DL_Y = "\x1B" "[" "{}M"  # CSI 04/13 Delete Line (DL)
 DCH_X = "\x1B" "[" "{}P"  # CSI 05/00 Delete Character (DCH)
-CBT = "\x1B" "[" "Z"  # CSI 05/10 Cursor Backward Tabulation (CBT)
-VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
 # ESC 04/05 Next Line (NEL)
 # CSI 04/05 Cursor Next Line (CNL)
@@ -2962,10 +2976,9 @@ class LineTerminal:
 
         #
 
-        kint_8x = 8 * kint
-        self.write_form_kint("\x1B" "[" "{}D", kint=kint_8x)
+        self.write_form_kint("\x1B" "[" "{}Z", kint=kint)
 
-        assert CBT == "\x1B" "[" "Z"  # CSI 05/10 Cursor Backward Tabulation (CBT)
+        assert CBT_X == "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation (CBT)
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor Backward
 
         # Pq ⇧Tab tab.minus.n  # missing from Emacs, Vi, VsCode
@@ -3341,11 +3354,9 @@ class LineTerminal:
 
         #
 
-        st.stwrite("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
-
         for i in range(kint):
             st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
-            st.stwrite(4 * " ")
+            self.write_form_kint("\x1B" "[" "{}@", kint=4)  # CSI 04/00
             if i < (kint - 1):
                 st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
 
@@ -3354,11 +3365,9 @@ class LineTerminal:
 
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
 
-        st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
-
         # FIXME: >> to land past Dent
 
-        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
+        assert ICH_X == "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
 
         assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
@@ -3493,17 +3502,6 @@ class LineTerminal:
 #   Snap Cursor over Text while Replacing - don't
 #
 #   Emacs ⌃R ⌃S
-#
-
-#
-# escape-sequences:
-#   ⎋[d line-position-absolute  ⎋[G cursor-character-absolute
-#   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[m plain
-#
-#   ⎋[1m bold  ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange  ⎋[m plain
-#   ⎋[4h insertion-mode  ⎋[6 q bar  ⎋[4l replacement-mode  ⎋[4 q skid  ⎋[ q unstyled
-#   ⎋[M delete-line  ⎋[L insert-line  ⎋[P delete-character  ⎋[@ insert-character
-#   ⎋[T scroll-up  ⎋[S scroll-down
 #
 
 DONT_QUIT_KCAP_STRS = ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
