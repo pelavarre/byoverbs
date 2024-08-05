@@ -1614,7 +1614,7 @@ def ex_macros(ilines) -> list[str]:
     """Edit in the way of Emacs"""
 
     lt = LineTerminal()
-    olines = lt.verbs_wrangle(ilines, kmap="Emacs")
+    olines = lt.top_wrangle(ilines, kmap="Emacs")
 
     return olines
 
@@ -1623,7 +1623,7 @@ def visual_ex(ilines) -> list[str]:
     """Edit in the way of Ex Vi"""
 
     lt = LineTerminal()
-    olines = lt.verbs_wrangle(ilines, kmap="Vi")
+    olines = lt.top_wrangle(ilines, kmap="Vi")
 
     return olines
 
@@ -1745,21 +1745,24 @@ class BytesLogger:
 Y_32100 = 32100  # larger than all Screen Row Heights tested
 X_32100 = 32100  # larger than all Screen Column Widths tested
 
-LF = "\n"  # 00/10 Line Feed (LF) ⌃J
-CR = "\r"  # 00/13 Carriage Return (CR) ⌃M
+BS = "\b"  # 00/08 Backspace ⌃H
+HT = "\t"  # 00/09 Character Tabulation ⌃I
+LF = "\n"  # 00/10 Line Feed ⌃J
+CR = "\r"  # 00/13 Carriage Return ⌃M
 
 CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 CUD_Y = "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 CUF_X = "\x1B" "[" "{}C"  # CSI 04/03 Cursor Forward
 CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor Backward
-CHA = "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
-CHA_Y = "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
-CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation (CBT)
+CHA = "\x1B" "[" "G"  # CSI 04/07 Cursor Character Absolute 1
+CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute
+IL_Y = "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
+CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
 VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
 ICH_X = "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
-DL_Y = "\x1B" "[" "{}M"  # CSI 04/13 Delete Line (DL)
-DCH_X = "\x1B" "[" "{}P"  # CSI 05/00 Delete Character (DCH)
+DL_Y = "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
+DCH_X = "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
 # ESC 04/05 Next Line (NEL)
 # CSI 04/05 Cursor Next Line (CNL)
@@ -1839,7 +1842,7 @@ class BytesTerminal:
             self.tcgetattr_else = tcgetattr
 
             assert before in (termios.TCSADRAIN, termios.TCSAFLUSH), (before,)
-            if False:  # jitter 3/Aug  # ⌃C prints Py Traceback
+            if False:  # jitter Sat 3/Aug  # ⌃C prints Py Traceback
                 tty.setcbreak(fd, when=termios.TCSAFLUSH)  # ⌃C prints Py Traceback
             else:
                 tty.setraw(fd, when=before)  # SetRaw defaults to TcsaFlush
@@ -1992,7 +1995,7 @@ class BytesTerminal:
 
         # Else block to read 1 Byte from Keyboard
 
-        if False:  # jitter 3/Aug
+        if False:  # jitter Sat 3/Aug
             os.write(fd, b"??")
 
         stdio.flush()
@@ -2008,7 +2011,7 @@ class BytesTerminal:
         else:
             self.kinterrupts += 1
             if self.kinterrupts >= 3:
-                if False:  # jitter 3/Aug  # ⌃C prints Py Traceback
+                if False:  # jitter Sat 3/Aug  # ⌃C prints Py Traceback
                     raise KeyboardInterrupt()
 
         return kbytes
@@ -2382,42 +2385,7 @@ class LineTerminal:
 
         self.vmode_stwrite(vmode)
 
-    def texts_wrangle(self) -> None:
-        """Take Input as Insert Text or Replace Text, till ⌃C or ⎋"""
-
-        st = self.st
-
-        vmode = self.vmodes[-1]
-        assert vmode, (vmode,)
-
-        while True:
-            self.screen_print()
-
-            if self.kstr_holds:
-                self.verb_read(vmode="")  # Texts_Wrangle KStr_Holds
-                self.verb_eval(vmode="")  # Texts_Wrangle KStr_Holds
-                continue
-
-            self.verb_read(vmode=vmode)  # Texts_Wrangle Replace/ Insert
-
-            kbytes = self.kbytes
-            kchars = kbytes.decode()  # may raise UnicodeDecodeError
-            kcap_str = self.kcap_str
-
-            if kcap_str in ("⌃C", "⎋"):
-                break
-
-            unprintable_keys = ["⌥[", "⎋["]
-            if kcap_str in unprintable_keys:
-                self.verb_eval(vmode="")  # Texts_Wrangle Unprintable-Keys
-            elif kchars.isprintable():
-                st.stwrite(kchars)
-            else:
-                self.verb_eval(vmode="")  # Texts_Wrangle Replace/ Insert
-
-        # assert False  # jitter 4/Aug
-
-    def verbs_wrangle(self, ilines, kmap) -> list[str]:
+    def top_wrangle(self, ilines, kmap) -> list[str]:
         """Launch, and run till SystemExit"""
 
         olines = self.olines
@@ -2454,23 +2422,73 @@ class LineTerminal:
 
             self.help_quit()
 
-            # Read & Eval & Print in a loop till SystemExit
+            try:
+                if False:  # jitter Sun 4/Aug
+                    self.vmode_enter("Insert")
+                    self.texts_wrangle()
+                    self.vmode_exit()
+                self.verbs_wrangle()
+            except SystemExit as exc:
+                if exc.code:
+                    raise
 
-            vmode = self.vmodes[-1]
-            assert not vmode, (vmode,)
+            olines.clear()
 
-            while True:
-                try:
-                    self.screen_print()
-                    self.verb_read(vmode="")  # Verbs_Wrangle
-                    self.verb_eval(vmode="")  # Verbs_Wrangle
-                except SystemExit as exc:
-                    if exc.code:
-                        raise
+            return olines
 
-                    olines.clear()
+    def verbs_wrangle(self) -> list[str]:
+        """Read & Eval & Print in a loop till SystemExit"""
 
-                    return olines
+        vmode = self.vmodes[-1]
+        assert not vmode, (vmode,)
+
+        while True:
+            self.screen_print()
+            self.verb_read(vmode="")  # Verbs_Wrangle
+            self.verb_eval(vmode="")  # Verbs_Wrangle
+
+    def texts_wrangle(self) -> None:
+        """Take Input as Insert Text or Replace Text, till ⌃C or ⎋"""
+
+        st = self.st
+
+        vmode = self.vmodes[-1]
+        assert vmode, (vmode,)
+
+        while True:
+            self.screen_print()
+
+            if self.kstr_holds:
+                self.verb_read(vmode="")  # Texts_Wrangle KStr_Holds
+                self.verb_eval(vmode="")  # Texts_Wrangle KStr_Holds
+                continue
+
+            self.verb_read(vmode=vmode)  # Texts_Wrangle Replace/ Insert
+
+            kbytes = self.kbytes
+            kchars = kbytes.decode()  # may raise UnicodeDecodeError
+            kcap_str = self.kcap_str
+
+            if kcap_str in ("⌃C", "⎋"):
+                break
+
+            if vmode == "Insert":
+                if kcap_str == "Delete":
+                    self.kdo_char_delete_left()
+                    continue
+                if kcap_str == "Return":
+                    self.kdo_insert_return()
+                    continue
+
+            unprintable_keys = ["⌥[", "⎋["]
+            if kcap_str in unprintable_keys:
+                self.verb_eval(vmode="")  # Texts_Wrangle Unprintable-Keys
+            elif kchars.isprintable():
+                st.stwrite(kchars)
+            else:
+                self.verb_eval(vmode="")  # Texts_Wrangle Replace/ Insert
+
+        # assert False  # jitter 4/Aug
 
     def screen_print(self) -> None:
         """Speak after taking Keyboard Chord Sequences as Commands or Text"""
@@ -2978,7 +2996,7 @@ class LineTerminal:
 
         self.write_form_kint("\x1B" "[" "{}Z", kint=kint)
 
-        assert CBT_X == "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation (CBT)
+        assert CBT_X == "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor Backward
 
         # Pq ⇧Tab tab.minus.n  # missing from Emacs, Vi, VsCode
@@ -3002,9 +3020,9 @@ class LineTerminal:
 
         #
 
-        st.stwrite(kint * "\t")  # 00/08
+        st.stwrite(kint * "\t")  # 00/09
 
-        # 00/08 Character Tabulation (HT)  # \t Tab
+        assert HT == "\t"  # 00/09 Character Tabulation ⌃I
 
         # Pq Tab tab.plus.n  # missing from Emacs, Vi, VsCode
 
@@ -3317,12 +3335,9 @@ class LineTerminal:
         for i in range(kint - 1):
             st.stwrite("\x1B" "[" "A")  # CSI 04/01
 
-        assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character (DCH)
-
-        assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
-        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
-
+        assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
+        assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
         # FIXME: << to land past Dent
@@ -3367,11 +3382,10 @@ class LineTerminal:
 
         # FIXME: >> to land past Dent
 
-        assert ICH_X == "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
-
-        assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
-        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+        assert ICH_X == "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
+        assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
     #
     # Delete the Lines at and below the Screen Cursor
@@ -3406,7 +3420,7 @@ class LineTerminal:
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
         st.stwrite(("\x1B" "[" "{}" "M").format(kint))  # CSI 04/13
 
-        assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line (DL)
+        assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
         # Vi D D
 
@@ -3449,6 +3463,30 @@ class LineTerminal:
         self.vmode_exit()
 
         # Vi ⇧R
+
+    def kdo_insert_return(self) -> None:
+        """Insert an Empty Line above, and land at Left of Line"""
+
+        st = self.st
+
+        st.stwrite("\x1B" "[" "L")  # CSI 04/12 Insert Line
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
+        st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
+
+        assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
+
+        # Vi I Return
+
+    def kdo_char_delete_left(self) -> None:
+        """Delete 1 Character to the Left"""
+
+        st = self.st
+
+        st.stwrite("\b")  # 00/08  # "\x08"  # "\x1B" "[" "D
+        st.stwrite("\x1B" "[" "P")  # CSI 05/00 Delete Character
+
+        assert BS == "\b"  # 00/08 Backspace ⌃H
+        assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
     #
     #
