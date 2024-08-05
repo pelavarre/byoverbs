@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 
 """
-docker ps -a --no-trunc
+usage: docker help
+
+a self-sufficient runtime for containers
+
+options:
+  -h, --help  show this help message and exit
+
+examples:
+  docker help
+  docker ps -a --no-trunc
 """
 
 import byotools as byo
