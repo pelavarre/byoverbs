@@ -828,6 +828,9 @@ pqv from itext of naive or aware date/time
 pq em/vi
     frame and deframe
 
+cd
+    may as well echo arrival, since we've redefined 'cd' while PS1='\$ '
+
 
 ## Copied from
 

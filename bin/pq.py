@@ -2313,12 +2313,13 @@ class LineTerminal:
 
     olines: list[str]  # the Lines to sketch
 
-    kstr_holds: list[str]  # list("")  # list("-45")  # list("⎋", "[")
     kbytes: bytes  # the Bytes of the last Keyboard Chord
     kcap_str: str  # the Str of the KeyCap Words of the last Keyboard Chord
+    kstr_starts: list[str]  # []  # ['⌃U']  # ['⌃U', '-']  # ['⌃U', '⌃U']
+    kstr_stops: list[str]  # []  # ['⎋'] for any of ⌃C ⌃D ⌃G ⎋ ⌃\
 
     kmap: str  # ''  # 'Emacs'  # 'Vi'
-    vmodes: list[str]  # ''  # 'Insert'  # 'Replace'
+    vmodes: list[str]  # ''  # 'Replace'  # 'Insert'
 
     def __init__(self) -> None:
 
@@ -2329,7 +2330,8 @@ class LineTerminal:
 
         self.olines = list()
 
-        self.kstr_holds = list()
+        self.kstr_starts = list()
+        self.kstr_stops = list()
         self.kbytes = b""
         self.kcap_str = ""
 
@@ -2339,7 +2341,7 @@ class LineTerminal:
         # lots of empty happens only until first Keyboard Input
 
     def vmode_enter(self, vmode) -> None:
-        """Take Input as Insert Text or Replace Text, till Exit"""
+        """Take Input as Replace Text or Insert Text, till Exit"""
 
         vmodes = self.vmodes
 
@@ -2348,8 +2350,8 @@ class LineTerminal:
 
         self.vmode_stwrite(vmode)
 
-    def vmode_stwrite(self, vmode) -> None:
-        """Redefine Write as Insert or Replace, and choose a Cursor Style"""
+    def vmode_stwrite(self, vmode) -> None:  # for 'vmode_exit' or for 'vmode_enter'
+        """Redefine StrTerminal Write as Replace or Insert, & choose a Cursor Style"""
 
         st = self.st
 
@@ -2420,13 +2422,11 @@ class LineTerminal:
                         "Logging Screen Bytes into:  cat", bt.sbyteslogger.logfile.name
                     )
 
-            self.help_quit()
+            self.help_quit()  # to begin with
 
             try:
                 if False:  # jitter Sun 4/Aug
-                    self.vmode_enter("Insert")
-                    self.texts_wrangle()
-                    self.vmode_exit()
+                    self.texts_vmode_wrangle("Insert")
                 self.verbs_wrangle()
             except SystemExit as exc:
                 if exc.code:
@@ -2444,13 +2444,23 @@ class LineTerminal:
 
         while True:
             self.screen_print()
-            self.verb_read(vmode="")  # Verbs_Wrangle
-            self.verb_eval(vmode="")  # Verbs_Wrangle
+            self.verb_read(vmode="")  # for Verbs_Wrangle
+            self.verb_eval(vmode="")  # for Verbs_Wrangle
+
+    def texts_vmode_wrangle(self, vmode) -> None:
+        """Enter Replace/ Insert V-Mode, Wrangle Texts, then exit V-Mode"""
+
+        assert vmode, (vmode,)
+
+        self.vmode_enter(vmode)
+        self.texts_wrangle()
+        self.vmode_exit()
 
     def texts_wrangle(self) -> None:
-        """Take Input as Insert Text or Replace Text, till ⌃C or ⎋"""
+        """Take Input as Replace Text or Insert Text, till ⌃C or ⎋"""
 
-        st = self.st
+        kstr_starts = self.kstr_starts
+        kstr_stops = self.kstr_stops
 
         vmode = self.vmodes[-1]
         assert vmode, (vmode,)
@@ -2458,19 +2468,18 @@ class LineTerminal:
         while True:
             self.screen_print()
 
-            if self.kstr_holds:
-                self.verb_read(vmode="")  # Texts_Wrangle KStr_Holds
-                self.verb_eval(vmode="")  # Texts_Wrangle KStr_Holds
-                continue
+            # Read one Keyboard Chord Sequence from the Keyboard
 
-            self.verb_read(vmode=vmode)  # Texts_Wrangle Replace/ Insert
+            if kstr_starts:
+                self.verb_read(vmode="")  # for Texts_Wrangle while KStr_Starts
+            else:
+                self.verb_read(vmode=vmode)  # for Texts_Wrangle Replace/ Insert
 
             kbytes = self.kbytes
             kchars = kbytes.decode()  # may raise UnicodeDecodeError
             kcap_str = self.kcap_str
 
-            if kcap_str in ("⌃C", "⎋"):
-                break
+            # Bind Delete and Return differently while Insert
 
             if vmode == "Insert":
                 if kcap_str == "Delete":
@@ -2480,15 +2489,55 @@ class LineTerminal:
                     self.kdo_insert_return()
                     continue
 
-            unprintable_keys = ["⌥[", "⎋["]
-            if kcap_str in unprintable_keys:
-                self.verb_eval(vmode="")  # Texts_Wrangle Unprintable-Keys
-            elif kchars.isprintable():
-                st.stwrite(kchars)
-            else:
-                self.verb_eval(vmode="")  # Texts_Wrangle Replace/ Insert
+                # Vim deletes ⌃U Lines and ⌃W Words while Insert
+                # Vim leaps over ⌃U Lines and ⌃W Words while Replace
 
-        # assert False  # jitter 4/Aug
+                # Vim does Replace Delete over what's not too old
+
+            # Exit Replace/ Insert Mode on request
+
+            kstr_stops.clear()
+            assert STOP_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
+            if kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\"):
+                break
+
+            # Take unprintable K Chars as Verbs,
+            # and sometimes take - 0 1 2 3 4 5 6 7 8 9 as more K Start's
+
+            textual = self.kchars_is_text(
+                kchars, kcap_str=kcap_str, kstr_starts=kstr_starts
+            )
+
+            if not textual:
+                self.verb_eval(vmode="")  # for Texts_Wrangle untextuals
+                continue
+
+            # Take the KCap_Str as Text Input
+
+            self.kdo_text_write_n()  # for Texts_Wrangle textuals
+
+    def kchars_is_text(self, kchars, kcap_str, kstr_starts) -> bool:
+        """Say to take the K Chars as Text, else not"""
+
+        isprintable = kchars.isprintable()
+        kstarts_sorted_set = sorted(set(kstr_starts))
+        kstarts_closed = kstr_starts[1:][-1:] == ["⌃U"]
+
+        if kcap_str == "⌃U":
+            assert not isprintable, (isprintable, kcap_str)
+
+        if kcap_str == "-":
+            if kstarts_sorted_set in (["-"], ["-", "⌃U"], ["⌃U"]):  # not []
+                isprintable = False
+
+        if kcap_str in list("0123456789"):
+            if kstr_starts and not kstarts_closed:
+                isprintable = False
+
+        if kcap_str in ["⌥[", "⎋["]:
+            isprintable = False
+
+        return isprintable  # for Texts_Wrangle
 
     def screen_print(self) -> None:
         """Speak after taking Keyboard Chord Sequences as Commands or Text"""
@@ -2532,35 +2581,55 @@ class LineTerminal:
 
         st = self.st
 
-        kstr_holds = self.kstr_holds
+        kstr_starts = self.kstr_starts
+        kstr_stops = self.kstr_stops
         kcap_str = self.kcap_str
 
-        # Take the Str of 1 Keyboard Chord Sequence as a call of 1 Python Def
+        # Choose 1 Python Def to call, on behalf of 1 Keyboard Chord Sequence
 
-        kstr_holds_before = list(kstr_holds)
-
-        kdo_func = LineTerminal.kdo_text_write_n
+        kdo_func = LineTerminal.kdo_text_write_n  # for outside Kdo_Func_By_KCap_Str
         if (not vmode) or (not kcap_str.isprintable()):
             if kcap_str in KDO_FUNC_BY_KCAP_STR.keys():
                 kdo_func = KDO_FUNC_BY_KCAP_STR[kcap_str]
 
-        assert kdo_func.__name__.startswith("kdo_"), (kdo_func.__name__, kcap_str)
-
         if KDEBUG:
             if kdo_func is not LineTerminal.kdo_force_quit:
-                self.kstr_holds.clear()
-                return
+                kdo_func = LineTerminal.kdo_text_write_n  # for K Debug
+
+        assert kdo_func.__name__.startswith("kdo_"), (kdo_func.__name__, kcap_str)
 
         if KCDEBUG:
-            st.stprint(f"func={kdo_func.__name__} {kstr_holds=}  # verb_eval")
+            kint = self.kint_peek(default=None)
+            st.stprint(f"func={kdo_func.__name__} {kstr_starts=} {kint=}  # to eval")
             sys.stderr.flush()
+
+        # Call the 1 Python Def
+
+        kstr_starts_before = list(kstr_starts)
 
         done = self.kdo_inverse_or_nop(kdo_func)
         if not done:
             kdo_func(self)
 
-        if kstr_holds == kstr_holds_before:
-            self.kstr_holds.clear()  # for when Func is not .kdo_hold_kstr, etc
+        # Forget the K Start's, unless this Func shrunk or grew or changed them
+
+        if kstr_starts == kstr_starts_before:
+            kstr_starts.clear()  # for when Func is not .kdo_hold_start_kstr, etc
+
+        # Forget the K Stop's before now, but hold onto the next if present
+
+        assert STOP_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
+
+        kstr_stops.clear()
+        if kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\"):
+            kstr_stops.append(kcap_str)
+
+        # Trace the exit
+
+        if KCDEBUG:
+            kint = self.kint_peek(default=None)
+            st.stprint(f"func={kdo_func.__name__} {kstr_starts=} {kint=}  # evalled")
+            sys.stderr.flush()
 
     def kdo_inverse_or_nop(self, kdo_func) -> bool:
         """Call the Inverse or do nothing, and return True, else return False"""
@@ -2572,10 +2641,12 @@ class LineTerminal:
             return False
 
         (kdo_inverse_func, default) = kdo_inverse_func_by[kdo_func]
+        assert default is not None, (default, kdo_func.__name__)
 
         # Call for more work when given a positive K-Int
 
         kint = self.kint_peek(default)
+        assert kint is not None, (kint, default)  # because 'default' is not None
         if kint > 0:
             return False
 
@@ -2658,26 +2729,9 @@ class LineTerminal:
         # Vi ⇧Z ⇧Q quit-no-save
         # Vi ⇧Z ⇧Z save-quit
 
-    def help_quit_if(self) -> None:
-        """Help quit Vi, or just drop some Extras out of the Key-Cap Str Holds"""
-
-        kstr_holds = self.kstr_holds
-        kcap_str = self.kcap_str
-
-        assert STOP_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
-        dont_quit_kcap_strs = STOP_KCAP_STRS
-
-        for quitting_kcap_str in dont_quit_kcap_strs:
-            if kstr_holds[-1:] == [quitting_kcap_str]:
-                kstr_holds.clear()
-
-                if kcap_str == quitting_kcap_str:
-                    self.help_quit()
-                    return
-
     def kdo_help_quit(self) -> None:
 
-        self.help_quit()  # no .kint_pull here
+        self.help_quit()  # for 'kdo_help_quit', but no .kint_pull here
 
     def help_quit(self) -> None:
         """Say how to quit Vi"""
@@ -2727,15 +2781,15 @@ class LineTerminal:
         """Block till CSI Sequence complete, then take it as Text"""
 
         st = self.st
-        kcap_str_holds = self.kstr_holds
+        kstr_stops = self.kstr_stops
         kcap_str = self.kcap_str
         # no .pull_int here
 
         # Run as [ only after ⎋, else reject the .kcap_str [ as if entirely unbound
 
         if kcap_str == "[":
-            if (not kcap_str_holds) or (kcap_str_holds[-1] != "⎋"):
-                self.kdo_text_write_n()
+            if (not kstr_stops) or (kstr_stops[-1] != "⎋"):
+                self.kdo_text_write_n()  # for Quote_Csi_KStrs_N of Key Cap [
                 return
 
         # Block till CSI Sequence complete
@@ -2781,67 +2835,126 @@ class LineTerminal:
     def kdo_kminus(self) -> None:
         """Jump back by one or more Lines, but land past the Dent"""
 
-        kstr_holds = self.kstr_holds
-        # no .pull_int here
+        kstr_starts = self.kstr_starts  # no .pull_int here
 
-        if kstr_holds and (kstr_holds == ["⌃U"]):
+        # Hold Key Cap "-" for context, after Emacs ⌃U, but not after Vi 0123456789
 
-            if kstr_holds == ["⌃U", "-"]:
-                self.kstr_holds = ["⌃U"]
+        kdigits = list(_ for _ in kstr_starts if _ in list("0123456789"))
+        kstarts_closed = kstr_starts[1:][-1:] == ["⌃U"]
+
+        if not kdigits:
+            if kstr_starts and not kstarts_closed:
+                self.kdo_hold_start_kstr()  # kdo_ - calls kdo_
                 return
-
-            self.kdo_hold_kstr()  # kdo_ calls kdo_
-            return
 
         self.kdo_dent_minus_n()  # as if "-":  # kdo_ calls kdo_  # K Int live
 
-        # Emacs ⌃U - universal-argument negative
+        # Emacs - K Int Char after ⌃U
+        # Vi - otherwise
 
     def kdo_kzero(self) -> None:
         """Hold another Digit, else jump to First Column"""
 
-        kstr_holds = self.kstr_holds
-        # no .pull_int here
+        kstr_starts = self.kstr_starts  # no .pull_int here
 
-        # Help quit Vi, or just drop some Extras out of the Key-Cap Str Holds
+        # Hold Key Cap "0" for context, after Emacs ⌃U or after Vi 123456789
 
-        self.help_quit_if()
+        kstarts_closed = kstr_starts[1:][-1:] == ["⌃U"]
 
-        # Hold 0 as another Digit, if after 1 2 3 4 5 6 7 8 9, or if after Emacs ⌃U
-
-        if kstr_holds and (kstr_holds[0] in "0123456789"):  # never '0' here
-            self.kdo_hold_kstr()  # kdo_ calls kdo_
-            return
-
-        if kstr_holds and (kstr_holds[0] == "⌃U"):
-            self.kdo_hold_kstr()  # kdo_ calls kdo_
+        if kstr_starts and not kstarts_closed:
+            self.kdo_hold_start_kstr()  # kdo_ 0 calls kdo_
             return
 
         # Else jump to First Column
 
         self.kdo_column_1()  # for when Vi 0 not held  # kdo_ calls kdo_
 
-        # Emacs ⌃U 0 digit
-        # Vi 0 after 1 2 3 4 5 6 7 8 9
+        # Emacs 0 K Int Digit after ⌃U
+        # Vi 0 K Int Digit after 1 2 3 4 5 6 7 8 9
         # Vi 0 otherwise
 
-    def kdo_hold_kstr(self) -> None:
-        """Hold Key-Cap Str's till Line-Terminal Key-Cap Sequence complete"""
+    def kdo_hold_start_kstr(self) -> None:
+        """Hold Key-Cap Str's till taken as Arg"""
 
-        kstr_holds = self.kstr_holds
+        kstr_starts = self.kstr_starts  # no .pull_int here
+
+        kstr_starts_before = list(kstr_starts)
+        self.hold_start_kstr()
+
+        assert kstr_starts != kstr_starts_before, (kstr_starts, kstr_starts_before)
+
+    def hold_start_kstr(self) -> None:
+        """Hold Key-Cap Str's till taken as Arg"""
+
+        kstr_starts = self.kstr_starts  # no .pull_int here
         kcap_str = self.kcap_str
 
-        # Help quit Vi, or just drop some Extras out of the Key-Cap Str Holds
+        assert kcap_str in (["⌃U"] + list("-0123456789")), (kcap_str,)
 
-        self.help_quit_if()
+        # ⌃U+ vs [-]⌃U* vs [-][-]⌃U* vs [0123456789]+⌃U? vs [-][0123456789]+⌃U?
 
-        # Hold this Key-Cap for now
+        kdigits = list(_ for _ in kstr_starts if _ in list("0123456789"))
 
-        kstr_holds.append(kcap_str)
+        kstarts_sorted_set = sorted(set(kstr_starts))
+        kpithy = kstarts_sorted_set not in ([], ["-"], ["-", "⌃U"], ["⌃U"])
+        assert kpithy == bool(kdigits), (kpithy, kdigits, kstr_starts)
+
+        # Take ⌃U after Digits as starting over, else pile them up
+
+        kstarts_closed = kstr_starts[1:][-1:] == ["⌃U"]
+
+        if kcap_str == "⌃U":
+            if kdigits and kstarts_closed:
+                kstr_starts.clear()
+            kstr_starts.append("⌃U")
+            return
+
+        # Take an odd or even count of Dash, until the first Digit
+
+        if kcap_str == "-":
+            if not kdigits:
+                if kstr_starts != ["-"]:
+                    kstr_starts.clear()
+                kstr_starts.append("-")
+                return
+
+            # else fall-thru
+
+        # Hold the first Digit, or more Digits, after one Dash or none
+
+        if kcap_str in list("0123456789"):
+            if not kdigits:
+                negated = kstr_starts == ["-"]
+                kstr_starts.clear()
+                if negated:
+                    kstr_starts.append("-")
+                kstr_starts.append(kcap_str)
+                return
+            elif not kstarts_closed:
+                kstr_starts.append(kcap_str)
+                return
+
+            # else fall-thru
+
+        # Take this Key-Cap Str as Verb
+
+        self.kdo_text_write_n()  # for KDo_Hold_Start_KStr of Key Cap -0123456789
 
         # Emacs '-', and Emacs 0 1 1 2 3 4 5 6 7 8 9, after Emacs ⌃U
         # Pq Em/Vi Csi Sequences:  ⎋[m, ⎋[1m, ⎋[31m, ...
         # Vi 1 2 3 4 5 6 7 8 9, and Vi 0 thereafter
+
+    def kdo_hold_stop_kstr(self) -> None:
+        """Hold Key-Cap Stop Str just long enough to see if struck twice in a row"""
+
+        kstr_stops = self.kstr_stops  # ignores the .kstr_starts
+        kcap_str = self.kcap_str
+
+        assert len(kstr_stops) <= 1, (len(kstr_stops), kstr_stops, kcap_str)
+        if kstr_stops == [kcap_str]:
+            self.help_quit()  # for 'help_quit_if'
+
+        # Pq ⎋ ⌃C ⌃D ⌃G ⌃\  # missing from Emacs, Vi, VsCode
 
     #
     # Boil our memory of Keyboard Chord Sequences down to one Int Value
@@ -2850,10 +2963,12 @@ class LineTerminal:
     def kint_push(self, kint) -> None:
         """Fill the cleared Key-Cap Str Holds, as if Emacs ⌃U ..."""
 
-        kstr_holds = self.kstr_holds
-        assert not kstr_holds, (kstr_holds,)
+        kstr_starts = self.kstr_starts
+        assert not kstr_starts, (kstr_starts,)
 
-        kstr_holds.extend(["⌃U"] + list(str(kint)))
+        kstr_starts.extend(["⌃U"] + list(str(kint)) + ["⌃U"])
+
+        # does pushed as wrapped, could push as not-wrapped
 
     def kint_pull_positive(self, default) -> int:
         """Fetch & clear a Positive Int Literal from out of the Key-Cap Str Holds"""
@@ -2866,49 +2981,53 @@ class LineTerminal:
     def kint_pull(self, default) -> int:
         """Fetch & clear an Int Literal from out of the Key-Cap Str Holds"""
 
-        kstr_holds = self.kstr_holds
+        assert default is not None
+
+        kstr_starts = self.kstr_starts
 
         kint = self.kint_peek(default)
-        kstr_holds.clear()
+        assert kint is not None, (kint, default)  # because 'default' is not None
+
+        kstr_starts.clear()
 
         return kint
 
-    def kint_peek(self, default) -> int:
+    def kint_peek(self, default) -> int | None:
         """Fetch the Key-Cap Str Holds, without adding or removing them"""
 
-        kstr_holds = self.kstr_holds
-        holds = list(kstr_holds)
+        kstr_starts = self.kstr_starts
 
-        # Cancel the Key-Cap Str Holds, if running after a Stop Key Cap
+        # ⌃U+ vs [-]⌃U* vs [-][-]⌃U* vs [0123456789]+⌃U? vs [-][0123456789]+⌃U?
 
-        assert STOP_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
-        stop_kcap_strs = STOP_KCAP_STRS
+        kdigits = list(_ for _ in kstr_starts if _ in list("0123456789"))
+        kliteral = "".join(_ for _ in kstr_starts if _ in list("-0123456789"))
 
-        for holdable in stop_kcap_strs:
-            if holds[-1:] == [holdable]:
-                holds.clear()
-
-        # Make sense of Emacs corners of ⌃U ⌃U, ⌃U - -, ⌃U without digits
-
-        if holds and (holds[0] == "⌃U"):
-            holds.pop(0)
-            if holds == ["-"]:  # todo: Emacs says ⌃U !- = ⌃U 0 ?
-                holds.pop(0)
-            if not holds:  # todo: Emacs says ⌃U != ⌃U 0 ?
-                holds.append("0")
-                assert holds == ["0"], (holds,)
+        kstarts_sorted_set = sorted(set(kstr_starts))
+        kpithy = kstarts_sorted_set not in ([], ["-"], ["-", "⌃U"], ["⌃U"])
+        assert kpithy == bool(kdigits), (kpithy, kdigits, kstr_starts)
 
         # Take Int Literal, else Default
 
-        kint = default
-        if holds:
-            kint = int("".join(holds))  # may raise ValueError
+        kint = default  # may be None
+        if kstr_starts:
+            if kdigits:
+                kint = int(kliteral)  # might never raise ValueError
+            elif kstr_starts[:2] == ["-", "-"]:
+                assert kstarts_sorted_set in (["-"], ["-", "⌃U"]), (kstarts_sorted_set,)
+                kint = 4 ** len(kstr_starts[3:])  # up from 1 at ["-", "-", "⌃U"]
+            elif kstr_starts[:1] == ["-"]:
+                assert kstarts_sorted_set in (["-"], ["-", "⌃U"]), (kstarts_sorted_set,)
+                kint = 4 ** len(kstr_starts[1:])  # down from -1 at ["-"]
+                kint *= -1
+            else:
+                assert kstarts_sorted_set == ["⌃U"], (kstarts_sorted_set,)
+                kint = 4 ** len(kstr_starts)  # up from 4 at ["⌃U"]
 
         # Succeed
 
         return kint  # positive kint for the Vi .kmap
 
-        # raises ValueError if ever '.kstr_holds' isn't an Int Literal nor cancelled
+        # raises ValueError if ever '.kstr_starts' isn't Cancelled or an Int Literal
 
     #
     # Move the Screen Cursor to a Column, relatively or absolutely
@@ -3389,7 +3508,7 @@ class LineTerminal:
         # Vi D D
 
     #
-    # Switch between Insert Mode, Replace Mode, and View Mode
+    # Switch between Replace Mode, Insert Mode, and View Mode
     #
 
     def kdo_insert_n_till(self) -> None:
@@ -3404,9 +3523,7 @@ class LineTerminal:
 
         #
 
-        self.vmode_enter("Insert")
-        self.texts_wrangle()
-        self.vmode_exit()
+        self.texts_vmode_wrangle("Insert")
 
         # Vi I
 
@@ -3422,9 +3539,7 @@ class LineTerminal:
 
         #
 
-        self.vmode_enter("Replace")
-        self.texts_wrangle()
-        self.vmode_exit()
+        self.texts_vmode_wrangle("Replace")
 
         # Vi ⇧R
 
@@ -3503,7 +3618,7 @@ class LineTerminal:
 STOP_KCAP_STRS = ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
 
 KDO_FUNC_BY_KCAP_STR = {
-    "⎋": LineTerminal.kdo_hold_kstr,
+    "⎋": LineTerminal.kdo_hold_stop_kstr,
     "⎋⎋": LineTerminal.kdo_help_quit,  # Meta Esc
     "⎋G G": LineTerminal.kdo_home_n,
     "⎋G ⎋G": LineTerminal.kdo_home_n,
@@ -3512,9 +3627,10 @@ KDO_FUNC_BY_KCAP_STR = {
     "⎋[": LineTerminal.kdo_quote_csi_kstrs_n,  # b'\x1B\x5B'  # Option [
     #
     "⌃A": LineTerminal.kdo_home_plus_n1,  # b'\x01'
-    "⌃C": LineTerminal.kdo_hold_kstr,  # b'\x03'
-    "⌃D": LineTerminal.kdo_hold_kstr,  # b'\x04'
+    "⌃C": LineTerminal.kdo_hold_stop_kstr,  # b'\x03'
+    "⌃D": LineTerminal.kdo_hold_stop_kstr,  # b'\x04'
     "⌃E": LineTerminal.kdo_end_plus_n1,  # b'\x05'
+    "⌃G": LineTerminal.kdo_hold_stop_kstr,  # b'\x07'
     "Tab": LineTerminal.kdo_tab_plus_n,  # b'\x09'  # b'\t'
     "⌃J": LineTerminal.kdo_line_plus_n,  # b'\x0A'  # b'\n'
     "⌃L ⌃C : Q ! Return": LineTerminal.kdo_force_quit,  # b'\x0C...
@@ -3522,7 +3638,7 @@ KDO_FUNC_BY_KCAP_STR = {
     "⌃N": LineTerminal.kdo_line_plus_n,  # b'\x0E'
     "⌃P": LineTerminal.kdo_line_minus_n,  # b'\x10'
     "⌃Q": LineTerminal.kdo_quote_kchars,  # b'\x11'
-    "⌃U": LineTerminal.kdo_hold_kstr,  # b'\x15'
+    "⌃U": LineTerminal.kdo_hold_start_kstr,  # b'\x15'
     "⌃V": LineTerminal.kdo_quote_kchars,  # b'\x16'
     "⌃X ⌃C": LineTerminal.kdo_force_quit,  # b'\x18...
     "⌃X ⌃S ⌃X ⌃C": LineTerminal.kdo_force_quit,  # b'\x18...
@@ -3532,22 +3648,22 @@ KDO_FUNC_BY_KCAP_STR = {
     "→": LineTerminal.kdo_column_plus_n,  # b'\x1B[C'
     "←": LineTerminal.kdo_column_minus_n,  # b'\x1B[D'
     "⇧Tab": LineTerminal.kdo_tab_minus_n,  # b'\x1B[Z'
-    "⌃\\": LineTerminal.kdo_hold_kstr,  # ⌃\  # b'\x1C'
+    "⌃\\": LineTerminal.kdo_hold_stop_kstr,  # ⌃\  # b'\x1C'
     #
     "Spacebar": LineTerminal.kdo_char_plus_n,  # b'\x20'
     "$": LineTerminal.kdo_end_plus_n1,  # b'\x24'
     "+": LineTerminal.kdo_dent_plus_n,  # b'\x2B'
     "-": LineTerminal.kdo_kminus,  # b'\x2D'
     "0": LineTerminal.kdo_kzero,  # b'0'
-    "1": LineTerminal.kdo_hold_kstr,
-    "2": LineTerminal.kdo_hold_kstr,
-    "3": LineTerminal.kdo_hold_kstr,
-    "4": LineTerminal.kdo_hold_kstr,
-    "5": LineTerminal.kdo_hold_kstr,
-    "6": LineTerminal.kdo_hold_kstr,
-    "7": LineTerminal.kdo_hold_kstr,
-    "8": LineTerminal.kdo_hold_kstr,
-    "9": LineTerminal.kdo_hold_kstr,
+    "1": LineTerminal.kdo_hold_start_kstr,
+    "2": LineTerminal.kdo_hold_start_kstr,
+    "3": LineTerminal.kdo_hold_start_kstr,
+    "4": LineTerminal.kdo_hold_start_kstr,
+    "5": LineTerminal.kdo_hold_start_kstr,
+    "6": LineTerminal.kdo_hold_start_kstr,
+    "7": LineTerminal.kdo_hold_start_kstr,
+    "8": LineTerminal.kdo_hold_start_kstr,
+    "9": LineTerminal.kdo_hold_start_kstr,
     "<": LineTerminal.kdo_lines_dedent_n,
     ">": LineTerminal.kdo_lines_dent_n,
     #
