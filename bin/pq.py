@@ -2654,9 +2654,9 @@ class LineTerminal:
 
         # Emacs ⌃X ⌃S ⌃X ⌃C save-buffer save-buffers-kill-terminal
 
-        # Vim ⌃L ⌃C : Q ! Return quit-no-save
-        # Vim ⇧Z ⇧Q quit-no-save
-        # Vim ⇧Z ⇧Z save-quit
+        # Vi ⌃L ⌃C : Q ! Return quit-no-save
+        # Vi ⇧Z ⇧Q quit-no-save
+        # Vi ⇧Z ⇧Z save-quit
 
     def help_quit_if(self) -> None:
         """Help quit Vi, or just drop some Extras out of the Key-Cap Str Holds"""
@@ -2819,7 +2819,7 @@ class LineTerminal:
 
         # Else jump to First Column
 
-        self.kdo_column_1()  # as if "0":  # kdo_ calls kdo_
+        self.kdo_column_1()  # for when Vi 0 not held  # kdo_ calls kdo_
 
         # Emacs ⌃U 0 digit
         # Vi 0 after 1 2 3 4 5 6 7 8 9
@@ -2917,7 +2917,7 @@ class LineTerminal:
     def kdo_char_minus_n(self) -> None:
         """Step back by one or more Chars"""
 
-        self.kdo_column_minus_n()  # Classic Vi wraps left
+        self.kdo_column_minus_n()  # Vim wraps Delete ^H left  # Emacs wraps ←
 
         # Emacs ← left-char
         # Vi Delete
@@ -2926,7 +2926,7 @@ class LineTerminal:
     def kdo_char_plus_n(self) -> None:
         """Step ahead by one or more Chars"""
 
-        self.kdo_column_plus_n()  # Classic Vi wraps right
+        self.kdo_column_plus_n()  # Vim wraps Spacebar right  # Emacs wraps →
 
         # Emacs → right-char
         # Vi Spacebar
@@ -2953,6 +2953,8 @@ class LineTerminal:
 
     def kdo_column_1(self) -> None:
         """Jump to Left of Line"""
+
+        # no .pull_int here
 
         st = self.st
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
@@ -2982,7 +2984,11 @@ class LineTerminal:
 
         # no .pull_int here
 
-        self.kdo_column_1()  # Classic Vi ^ past Dent
+        st = self.st
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
+
+        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
+        assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
 
         # Vi ^
 
@@ -3049,10 +3055,6 @@ class LineTerminal:
     def kdo_dent_line_n(self) -> None:
         """Jump to a numbered Line, but land past the Dent"""
 
-        st = self.st
-
-        #
-
         assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
 
         kint = self.kint_pull(default=32100)  # todo: more Rows
@@ -3066,8 +3068,7 @@ class LineTerminal:
         #
 
         self.write_form_kint("\x1B" "[" "{}d", kint=kint)
-
-        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"  # Classic Vi past Dent
+        self.kdo_column_dent_beyond()  # Vim G lands past Dent
 
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
@@ -3080,7 +3081,7 @@ class LineTerminal:
         """Jump back by one or more Lines, but land past the Dent"""
 
         self.kdo_line_minus_n()
-        self.kdo_column_1()  # Classic Vi - past Dent
+        self.kdo_column_dent_beyond()  # Vim - lands past Dent
 
         # Vi -
 
@@ -3088,7 +3089,7 @@ class LineTerminal:
         """Jump ahead by one or more Lines, but land past the Dent"""
 
         self.kdo_line_plus_n()
-        self.kdo_column_1()  # Classic Vi + past Dent
+        self.kdo_column_dent_beyond()  # Vim + past Dent
 
         # Vi +
 
@@ -3112,7 +3113,7 @@ class LineTerminal:
             kint_minus = kint - 1
             self.write_form_kint("\x1B" "[" "{}B", kint=kint_minus)
 
-        self.kdo_column_1()  # Classic Vi _ past Dent
+        self.kdo_column_dent_beyond()  # Vim _ past Dent
 
         assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
@@ -3151,10 +3152,6 @@ class LineTerminal:
     def kdo_home_n(self) -> None:
         """Jump to a numbered Line, and land at Left of Line"""
 
-        st = self.st
-
-        #
-
         assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
 
         kint = self.kint_pull(default=32100)  # todo: more Rows
@@ -3168,16 +3165,15 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B" "[" "{}d", kint=kint)  # Classic Vi past Dent
-        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
+        self.write_form_kint("\x1B" "[" "{}d", kint=kint)
+        self.kdo_column_1()  # Emacs ⎋G G lands at far Left  # kdo_ calls kdo_
 
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
         assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
 
-        # Emacs ⎋G G goto-line
-        # Emacs ⎋G ⎋G goto-line
+        # Emacs ⎋G G goto-line  # also Emacs ⎋G ⎋G goto-line
 
     def kdo_home_plus_n1(self) -> None:
         """Jump ahead by zero or more Lines, and land at Left of Line"""
