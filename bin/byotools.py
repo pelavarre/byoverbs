@@ -32,7 +32,7 @@ import zoneinfo
 assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 
 
-# Ubuntu 2018
+# Ubuntu 2018 Long-Term-Stable (LTS)
 
 ... == subprocess.run  # new since Sep/2015 Python 3.5  # type: ignore
 
@@ -40,7 +40,7 @@ assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 ... == "{:_}".format(12345)  # new since Dec/2016 Python 3.6  # type: ignore
 ... == (re.search(r"..", "abcde") or [""])[0]  # new since Python 3.6  # type: ignore
 
-# Ubuntu 2020
+# Ubuntu 2020 LTS
 
 ... == breakpoint  # new since Jun/2018 Python 3.7  # type: ignore
 ... == dataclasses  # new since Jun/2018 Python 3.7  # type: ignore
@@ -49,7 +49,7 @@ assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 ... == shlex.join  # new since Oct/2019 Python 3.8  # type: ignore
 # ... == pprint.pp  # new since Oct/2019 Python 3.8  # type: ignore
 
-# Ubuntu 2022
+# Ubuntu 2022 LTS
 
 ... == str.removeprefix, str.removesuffix  # new since Oct/2020 Python 3.9  # type: ignore
 ... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
@@ -59,7 +59,7 @@ assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 # ... == int.bit_count  # new since Oct/2021 Python 3.10
 # ... == list(zip([], [], strict=True))  # new since Oct/2021 Python 3.10
 
-# Ubuntu 2024
+# Ubuntu 2024 LTS
 
 # ... == tomllib  # new since Oct/2022 Python 3.11
 # ... == termios.tcgetwinsize(sys.stderr.fileno())  # new since Oct/2022 Python 3.11
@@ -67,7 +67,7 @@ assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 
 # ... # new since Oct/2023 Python 3.12
 
-# Ubuntu 2026
+# Ubuntu 2026 LTS
 
 # "abba".replace("b", "B", count=1)  # kwarg ok since Oct/2024 Python 3.13
 
