@@ -1,1 +1,4 @@
 (set -xe; date && time "$@")
+rc=$?
+echo + exit $rc
+exit $rc
