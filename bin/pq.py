@@ -2425,9 +2425,8 @@ class LineTerminal:
             self.help_quit()  # to begin with
 
             try:
-                if False:  # jitter Sun 4/Aug
-                    self.texts_vmode_wrangle("Insert")
-                self.verbs_wrangle()
+                self.texts_vmode_wrangle("Replace")  # as if Vi +:startreplace
+                self.verbs_wrangle()  # as if Vi +:stopinsert, not Vi +:startinsert
             except SystemExit as exc:
                 if exc.code:
                     raise
@@ -2582,7 +2581,6 @@ class LineTerminal:
         st = self.st
 
         kstr_starts = self.kstr_starts
-        kstr_stops = self.kstr_stops
         kcap_str = self.kcap_str
 
         # Choose 1 Python Def to call, on behalf of 1 Keyboard Chord Sequence
@@ -2756,7 +2754,7 @@ class LineTerminal:
     def kdo_force_quit(self) -> None:
         """Revert changes to the O Lines, and quit this Linux Process"""
 
-        _ = self.kint_pull(default=0)  # todo: 'returncode = ' here
+        _ = self.kint_pull(default=0)  # todo: 'returncode = ' inside 'kdo_force_quit'
 
         sys.exit()  # ignore the K Int
 
@@ -2787,8 +2785,8 @@ class LineTerminal:
         st.stprint(f"Press {quits} to quit")
 
         # 'Press ⌃L⌃C:Q!Return or ⌃X⌃C or ⌃X⌃S⌃X⌃C or ⇧Z⇧Q or ⇧Z⇧Z to quit'
-        # todo: many Emacs don't bind '⌃C R' to (revert-buffer 'ignoreAuto 'noConfirm)
-        # todo: and Emacs still freaks if you delete the ⌃X⌃S File before calling ⌃X⌃S
+        # todo: Emacs doesn't bind '⌃C R' to (revert-buffer 'ignoreAuto 'noConfirm)
+        # todo: Emacs freaks if you delete the ⌃X⌃S File before calling ⌃X⌃S
 
         # Emacs/ Vi famously leave how-to-quit nearly never mentioned
 
@@ -2830,11 +2828,12 @@ class LineTerminal:
                 return
 
         # Block till CSI Sequence complete
+        # todo: only """ !"#$%&'()*+,-./0123456789:;<=>? """ doesn't end Esc [ or Esc O
 
         kbytes = b"\x1B" b"["
         kcap_str = "⎋ ["
 
-        while True:  # todo: what ends an Esc [ or Esc O Sequence?
+        while True:
             (kchord_bytes, kchord_str) = st.read_one_kchord_bytes_str()
 
             kbytes += kchord_bytes
@@ -2848,7 +2847,7 @@ class LineTerminal:
             read_2 = kchord_bytes
             if len(read_2) == 1:
                 ord_2 = read_2[-1]
-                if 0x20 <= ord_2 < 0x40:
+                if 0x20 <= ord_2 < 0x40:  # !"#$%&'()*+,-./0123456789:;<=>?
                     continue
 
             break
@@ -3591,53 +3590,6 @@ class LineTerminal:
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
 
-#
-# presently:
-#
-#   Option Mouse click moves Cursor via ← ↑ → ↓
-#
-#   ⎋GG ⎋G⎋G ⎋[
-#   ⌃A ⌃E ⌃H Tab ⇧Tab ⌃J ⌃N ⌃P ⌃Q ⌃U ⌃V Return ← ↑ → ↓
-#   Spacebar $ + - 0 1 2 3 4 5 6 7 8 9 ⇧G ^ _ H J K L | Delete
-#   << >> DD
-#   I ⇧R ⌃C ⎋
-#   ⌥GG ⌥G⌥G
-#
-#   ⎋ ⌃C ⌃D ⌃G ⌃\ ⇧QVIReturn
-#   ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧Z⇧Q ⇧Z⇧Z
-#
-
-#
-# todo:
-#
-#   Experiment with defaulting a la vim +:startreplace
-#       +:stopinsert +:startinsert
-#
-#   Return while Inserting - as if inserting an empty row above 1st column
-#   Return while Replacing - don't
-#
-#   Emacs ^A ^E while editing, vs Vi ^E ^Y to fine scroll
-#
-#   ⌃K ⇧A C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X A C$ CC D$ DD I O R S X ⌃C ⎋
-#   Emacs ⌃O vs Vim ⌃O ⌃I
-#
-#   ⌃H⌃A ⌃H⌃K
-#   ^Z and ways to send ^C ^\ Assert-False
-#
-#   [ Vi ⌃B Vi ⌃F Scroller CSI Sequences ]
-#   Emacs ⌃V ⌥V vs Vim ⌃V
-#   [ < > C D to movement ⇧G etc ]
-#   ⇧M
-#
-#   ⌃L [ of Shadow Screen, of File larger than Screen ]
-#   Emacs ⌃T
-#   Emacs ⌃W ⌃Y
-#   Vi :set ruler
-#   Snap Cursor over Text while Replacing - don't
-#
-#   Emacs ⌃R ⌃S
-#
-
 STOP_KCAP_STRS = ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
 
 KDO_FUNC_BY_KCAP_STR = {
@@ -3723,7 +3675,7 @@ KDO_FUNC_BY_KCAP_STR = {
 # todo: Emacs ⌃U - for non-positive K-Int
 
 # todo: assert Keys of KDO_FUNC_BY_KCAP_STR reachable by StrTerminal
-#   such as ⎋' isn't reachable while '⎋ G Tab' defined
+#   such as '⎋' isn't reachable while '⎋ G Tab' defined
 #       because 'kdo_func_kcap_strs'
 
 
@@ -3741,6 +3693,69 @@ KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
     LineTerminal.kdo_tab_minus_n: (LineTerminal.kdo_tab_plus_n, 1),  # Tab ⇥
     LineTerminal.kdo_tab_plus_n: (LineTerminal.kdo_tab_minus_n, 1),  # ⇧Tab ⇤
 }
+
+
+#
+# presently:
+#
+#   Option Mouse click moves Cursor via ← ↑ → ↓
+#
+#   ⎋GG ⎋G⎋G ⎋[
+#   ⌃A ⌃E ⌃H Tab ⇧Tab ⌃J ⌃N ⌃P ⌃Q ⌃U ⌃V Return ← ↑ → ↓
+#   Spacebar $ + - 0 1 2 3 4 5 6 7 8 9 ⇧G ^ _ H J K L | Delete
+#   << >> DD
+#   I ⇧R ⌃C ⎋
+#   ⌥GG ⌥G⌥G
+#
+#   ⎋ ⌃C ⌃D ⌃G ⌃\ ⇧QVIReturn
+#   ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧Z⇧Q ⇧Z⇧Z
+#
+
+#
+# smallish todo's:
+#
+#   ⌃K ⇧A C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X A C$ CC D$ DD I O R S X ⌃C ⎋
+#
+#   Pq ⌃Q escape to Vi ⌃D ⌃E ⌃G ⌃L ⌃U ⌃V ⌃W etc
+#       Vi ^E ^Y to fine scroll
+#       Vi ⌃B Vi ⌃F Scroller CSI Sequences
+#
+#   Pq ⌃V escape to Emacs ⌃B ⌃C ⌃D ⌃F ⌃Q ⌃O ⌃V ⌃Y etc
+#       Emacs ⌃O to open line above
+#
+#   Emacs ⌃T while still replacing/ inserting
+#
+#   Restore tty.setraw for c from Breakpoint into Pdb
+#
+
+#
+# bigger todo's:
+#
+#   ⌃H⌃A ⌃H⌃K
+#
+#   ^Z and ways to send ^C ^\ Assert-False
+#
+#   Bounce Cursor to Tracer
+#       Trace the unicode.name while Replace/ Insert
+#
+
+#
+# later todo's:
+#
+#   Vim ⌃O ⌃I
+#
+#   ⇧M
+#
+#   ⌃L [ of Shadow Screen, of File larger than Screen ]
+#   < > C D to movement ⇧G etc
+#   Emacs ⌃W ⌃Y
+#   Vi :set ruler
+#
+#   Snap Cursor over Text while Replacing - don't <= What did this mean?
+#
+#   Emacs ⌃R ⌃S Searches
+#
+
 
 #
 # Amp up Import TextWrap

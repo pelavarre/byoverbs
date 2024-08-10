@@ -813,12 +813,7 @@ pq em/vi
     frame and deframe
 
 pq em/vi
-    Replace/ Insert Spacebar
-    Pq ⌃Q escape to Vi ⌃D ⌃G ⌃L ⌃U ⌃W etc
-    Pq ⌃V escape to Emacs ⌃C ⌃D etc
-    trace the unicode.name while Replace/ Insert
     y:x Arg to do jump Cursor
-    restore tty.setraw for c from breakpoint
 
 
 ### 11 - Eleventh Traunch
