@@ -5,3 +5,5 @@ else
     set -xe
     git reflog --date=relative --numstat "$@"
 fi
+
+# Linux:  ls --full-time -R .git/ |grep ^- |sort -k6 |head

@@ -809,6 +809,17 @@ p
 pq
     echo Abc Def Xyz |pq 'owords = [iwords[-1]]' |cat -
 
+pq em/vi
+    frame and deframe
+
+pq em/vi
+    Replace/ Insert Spacebar
+    Pq ⌃Q escape to Vi ⌃D ⌃G ⌃L ⌃U ⌃W etc
+    Pq ⌃V escape to Emacs ⌃C ⌃D etc
+    trace the unicode.name while Replace/ Insert
+    y:x Arg to do jump Cursor
+    restore tty.setraw for c from breakpoint
+
 
 ### 11 - Eleventh Traunch
 
@@ -824,9 +835,6 @@ vi.py
 
 pqv from itext of naive or aware date/time
     print it out in every longitude from earliest to latest
-
-pq em/vi
-    frame and deframe
 
 cd
     may as well echo arrival, since we've redefined 'cd' while PS1='\$ '
