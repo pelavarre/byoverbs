@@ -2587,14 +2587,14 @@ class LineTerminal:
 
         # Choose 1 Python Def to call, on behalf of 1 Keyboard Chord Sequence
 
-        kdo_func = LineTerminal.kdo_text_write_n  # for outside Kdo_Func_By_KCap_Str
+        kdo_func = LineTerminal.kdo_kcap_write_n  # for outside Kdo_Func_By_KCap_Str
         if (not vmode) or (not kcap_str.isprintable()):
             if kcap_str in KDO_FUNC_BY_KCAP_STR.keys():
                 kdo_func = KDO_FUNC_BY_KCAP_STR[kcap_str]
 
         if KDEBUG:
             if kdo_func is not LineTerminal.kdo_force_quit:
-                kdo_func = LineTerminal.kdo_text_write_n  # for K Debug
+                kdo_func = LineTerminal.kdo_kcap_write_n  # for K Debug
 
         assert kdo_func.__name__.startswith("kdo_"), (kdo_func.__name__, kcap_str)
 
@@ -2689,6 +2689,24 @@ class LineTerminal:
         return False
 
     def kdo_text_write_n(self) -> None:
+        """Take the Chars of 1 Keyboard Chord Sequence as Text to write to Screen"""
+
+        st = self.st
+        kbytes = self.kbytes
+        kchars = kbytes.decode()  # may raise UnicodeDecodeError
+
+        kint = self.kint_pull(default=1)
+        if not kint:
+            return
+        if kint < 0:
+            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert
+            return
+
+        st.stwrite(kint * kchars)
+
+        # Spacebar, printable US-Ascii, and printable Unicode
+
+    def kdo_kcap_write_n(self) -> None:
         """Take the Str of 1 Keyboard Chord Sequence as Chars to write to Screen"""
 
         st = self.st
@@ -2701,9 +2719,9 @@ class LineTerminal:
             self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert
             return
 
-        st.stwrite(kint * kcap_str)  # distinct printable echo gentler than beep
+        st.stwrite(kint * kcap_str)  # distinct printable echo less loud than beep
 
-        # Spacebar, printable US-Ascii, and printable Unicode
+        # unbound Keyboard Chord Sequences
 
     def alarm_ring(self) -> None:
         """Ring the Bell"""
@@ -2808,7 +2826,7 @@ class LineTerminal:
 
         if kcap_str == "[":
             if (not kstr_stops) or (kstr_stops[-1] != "⎋"):
-                self.kdo_text_write_n()  # for Quote_Csi_KStrs_N of Key Cap [
+                self.kdo_kcap_write_n()  # for Quote_Csi_KStrs_N of Key Cap [
                 return
 
         # Block till CSI Sequence complete
@@ -2960,7 +2978,7 @@ class LineTerminal:
 
         # Take this Key-Cap Str as Verb
 
-        self.kdo_text_write_n()  # for KDo_Hold_Start_KStr of Key Cap -0123456789
+        self.kdo_kcap_write_n()  # for KDo_Hold_Start_KStr of Key Cap -0123456789
 
         # Emacs '-', and Emacs 0 1 1 2 3 4 5 6 7 8 9, after Emacs ⌃U
         # Pq Em/Vi Csi Sequences:  ⎋[m, ⎋[1m, ⎋[31m, ...
@@ -3548,17 +3566,18 @@ class LineTerminal:
         # Vi ⇧R
 
     def kdo_insert_return(self) -> None:
-        """Insert an Empty Line above, and land at Left of Line"""
+        """Insert an Empty Line below, and land at Left of Line"""
 
         st = self.st
 
-        st.stwrite("\x1B" "[" "L")  # CSI 04/12 Insert Line
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
         st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
 
+        st.stwrite("\x1B" "[" "L")  # CSI 04/12 Insert Line
+
         assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 
-        # Vi I Return
+        # Vi I Return  # todo: move tail of Line into new inserted Line
 
     def kdo_char_delete_left(self) -> None:
         """Delete 1 Character to the Left"""
