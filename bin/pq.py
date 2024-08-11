@@ -2058,7 +2058,7 @@ Shift = "\N{Upwards White Arrow}"  # ⇧
 Command = "\N{Place of Interest Sign}"  # ⌘  # Super  # Windows
 
 
-KCAP_SEP = " "  # 1 Space separates one KCHORD_STR from the next in a KCAP_STR
+KCAP_SEP = " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
 
 KCHORD_STR_BY_KCHARS = {
     "\x00": "⌃Spacebar",  # ⌃@  # ⌃⇧2
@@ -2198,10 +2198,26 @@ for _KCHARS, _COUNT in collections.Counter(_KCHARS_LIST).items():
 class StrTerminal:
     """Read/ Write Str Characters at Keyboard/ Screen of a Terminal"""
 
-    bt: BytesTerminal  # wrapped by us, here
+    bt: BytesTerminal  # wrapped here
+    kpushes: list[tuple[bytes, str]]  # cached here
 
-    def __init__(self, bt) -> None:
-        self.bt = bt
+    def __init__(self) -> None:
+        self.bt = BytesTerminal()
+        self.kpushes = list()
+
+    def __enter__(self) -> "StrTerminal":  # -> typing.Self:
+        r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
+
+        bt = self.bt
+        bt.__enter__()
+
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+        r"""Start line-buffering Input, start replacing \n Output with \r\n, etc"""
+
+        bt = self.bt
+        bt.__exit__(*exc_info)
 
     def stwrite(self, schars) -> None:
         """Write Chars to the Screen, but without implicitly also writing a Line-End"""
@@ -2220,6 +2236,30 @@ class StrTerminal:
         ebytes = end.encode()
 
         bt.btprint(sbytes, end=ebytes)
+
+    def append_one_kchord_bytes_str(self, kbytes, kstr) -> None:
+        """Say to read a Bytes/Str pair again, as if read too far ahead"""
+
+        kpushes = self.kpushes
+
+        kpush = (kbytes, kstr)
+        kpushes.append(kpush)
+
+    def pull_one_kchord_bytes_str(self) -> tuple[bytes, str]:
+        """Let the caller read again what they read ahead"""
+
+        kpushes = self.kpushes
+
+        if kpushes:
+            kpush = kpushes.pop(0)
+            return kpush
+
+        kpush = self.read_one_kchord_bytes_str()
+
+        assert kpush[0], (kpush,)  # 1 or more Bytes always
+        assert kpush[-1], (kpush,)  # 1 or more Chars always
+
+        return kpush
 
     def read_one_kchord_bytes_str(self) -> tuple[bytes, str]:
         """Read 1 Keyboard Chord from the Keyboard, as Bytes and Str"""
@@ -2247,7 +2287,7 @@ class StrTerminal:
 
         # Succeed
 
-        assert KCAP_SEP == " "
+        assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
         assert " " not in kchord_str, (kchord_str,)
 
         if KDEBUG:
@@ -2324,7 +2364,7 @@ class StrTerminal:
 class LineTerminal:
     """React to Sequences of Key Chords by laying Chars of Lines over the Screen"""
 
-    st: StrTerminal  # wrapped by us here
+    st: StrTerminal  # wrapped here
 
     olines: list[str]  # the Lines to sketch
 
@@ -2338,10 +2378,7 @@ class LineTerminal:
 
     def __init__(self) -> None:
 
-        bt = BytesTerminal()
-        st = StrTerminal(bt)
-
-        self.st = st
+        self.st = StrTerminal()
 
         self.olines = list()
 
@@ -2354,53 +2391,6 @@ class LineTerminal:
         self.vmodes = [""]
 
         # lots of empty happens only until first Keyboard Input
-
-    def vmode_enter(self, vmode) -> None:
-        """Take Input as Replace Text or Insert Text, till Exit"""
-
-        vmodes = self.vmodes
-
-        assert vmode in ("", "Insert", "Replace"), vmode
-        vmodes.append(vmode)
-
-        self.vmode_stwrite(vmode)
-
-    def vmode_stwrite(self, vmode) -> None:  # for 'vmode_exit' or for 'vmode_enter'
-        """Redefine StrTerminal Write as Replace or Insert, & choose a Cursor Style"""
-
-        st = self.st
-
-        assert vmode in ("", "Insert", "Replace"), vmode
-        if KCDEBUG:
-            st.stprint(f"{vmode=}  # vmode_stwrite")
-
-        if not vmode:
-            st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
-            st.stwrite("\x1B" "[" " q")  # CSI 02/00 07/01  # No-Style Cursor
-        elif vmode in "Insert":
-            st.stwrite("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
-            st.stwrite("\x1B" "[" "6 q")  # CSI 02/00 07/01  # 6 Bar Cursor
-        else:
-            assert vmode == "Replace", (vmode,)
-            st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
-            st.stwrite("\x1B" "[" "4 q")  # CSI 02/00 07/01  # 4 Skid Cursor
-
-        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
-        assert SM_IRM == "\x1B" "[" "4h"  # CSI 06/08 Set Mode Insert/ Replace
-
-        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
-        assert DECSCUSR_SKID == "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
-        assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
-
-    def vmode_exit(self) -> None:
-        """Undo 'def vmode_enter'"""
-
-        vmodes = self.vmodes
-
-        vmodes.pop()
-        vmode = vmodes[-1]
-
-        self.vmode_stwrite(vmode)
 
     def top_wrangle(self, ilines, kmap) -> list[str]:
         """Launch, and run till SystemExit"""
@@ -2415,8 +2405,7 @@ class LineTerminal:
         klog_exists = self.st.bt.kbyteslogger.exists
         slog_exists = self.st.bt.sbyteslogger.exists
 
-        with BytesTerminal() as bt:
-            st = StrTerminal(bt)
+        with StrTerminal() as st:
             self.st = st
 
             # Tell the StrTerminal what to say at first
@@ -2425,6 +2414,7 @@ class LineTerminal:
             for oline in olines:
                 st.stprint(oline)
 
+            bt = st.bt
             if (not klog_exists) or (not slog_exists):
                 st.stprint()
                 if not klog_exists:
@@ -2577,6 +2567,53 @@ class LineTerminal:
 
         return True
 
+    def vmode_enter(self, vmode) -> None:
+        """Take Input as Replace Text or Insert Text, till Exit"""
+
+        vmodes = self.vmodes
+
+        assert vmode in ("", "Insert", "Replace"), vmode
+        vmodes.append(vmode)
+
+        self.vmode_stwrite(vmode)
+
+    def vmode_stwrite(self, vmode) -> None:  # for 'vmode_exit' or for 'vmode_enter'
+        """Redefine StrTerminal Write as Replace or Insert, & choose a Cursor Style"""
+
+        st = self.st
+
+        assert vmode in ("", "Insert", "Replace"), vmode
+        if KCDEBUG:
+            st.stprint(f"{vmode=}  # vmode_stwrite")
+
+        if not vmode:
+            st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
+            st.stwrite("\x1B" "[" " q")  # CSI 02/00 07/01  # No-Style Cursor
+        elif vmode in "Insert":
+            st.stwrite("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
+            st.stwrite("\x1B" "[" "6 q")  # CSI 02/00 07/01  # 6 Bar Cursor
+        else:
+            assert vmode == "Replace", (vmode,)
+            st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
+            st.stwrite("\x1B" "[" "4 q")  # CSI 02/00 07/01  # 4 Skid Cursor
+
+        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
+        assert SM_IRM == "\x1B" "[" "4h"  # CSI 06/08 Set Mode Insert/ Replace
+
+        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
+        assert DECSCUSR_SKID == "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
+        assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
+
+    def vmode_exit(self) -> None:
+        """Undo 'def vmode_enter'"""
+
+        vmodes = self.vmodes
+
+        vmodes.pop()
+        vmode = vmodes[-1]
+
+        self.vmode_stwrite(vmode)
+
     def screen_print(self) -> None:
         """Speak after taking Keyboard Chord Sequences as Commands or Text"""
 
@@ -2589,7 +2626,7 @@ class LineTerminal:
 
         # Read one Keyboard Chord
 
-        (kbytes, kcap_str) = st.read_one_kchord_bytes_str()
+        (kbytes, kcap_str) = st.pull_one_kchord_bytes_str()
 
         if not vmode:
             self.verb_tail_read(kbytes, kcap_str=kcap_str)
@@ -2606,36 +2643,94 @@ class LineTerminal:
         # '⌃L'  # '⇧Z ⇧Z'
 
     def verb_tail_read(self, kbytes, kcap_str) -> None:
-        """ "Read zero or more Keyboard Chords to complete the Sequence"""
+        """Read zero or more Keyboard Chords to complete the Sequence"""
 
         st = self.st
 
-        many_kbytes = kbytes
-        many_kcap_str = kcap_str
+        assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
+        ksep = " "
 
-        kdo_func_kcap_strs = KDO_FUNC_KCAP_STRS
+        # Make a big deal of the first Choice
 
-        sep = " "  # '⇧Tab'  # '⇧T a b'  # '⎋⇧Fn X'  # '⎋⇧FnX'
-        while any(_.startswith(many_kcap_str + " ") for _ in kdo_func_kcap_strs):
-            (kchord_bytes, kchord_str) = st.read_one_kchord_bytes_str()
+        b = kbytes
+        s = kcap_str
 
-            many_kbytes += kchord_bytes
-            many_kcap_str += sep + kchord_str
+        choices = list()
+        choice = (b, s)
+        choices.append(choice)
 
-            # FIXME: ⌃V ⌃W should return as just ⌃V now, and ⌃W later, because ⌃V bound
-            # FIXME: < < and and > < and D D and so on could be bound as pairs
+        # Read ahead till one Func or no Funcs found
 
-            # 1 'D' is a complete Sequence, because 2 'D ' doesn't start 6 'Delete'
+        eq_choice = (b"", "")
+        while True:
+            assert b and s, (b, s)
+
+            # Remember the last exact Find
+
+            finds = self.kcap_str_findall(s)
+            if s in finds:
+                eq_choice = (b, s)
+
+            # Succeed when one Func found
+
+            if len(finds) == 1:
+                assert eq_choice[-1] == s, (eq_choice, s, finds)
+
+                last_choice = (b, s)
+                break
+
+            # Quit after finding nothing
+            # Fall back to last exact Find, else to first Choice
+
+            if not finds:
+                last_choice = eq_choice if eq_choice[-1] else choices[0]
+
+                index = choices.index(last_choice)
+                for choice in choices[(index + 1) :]:
+                    (bi, si) = choice
+                    st.append_one_kchord_bytes_str(bi, kstr=si)
+
+                break
+
+            (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
+
+            choice = (kchord_bytes, kchord_str)
+            choices.append(choice)
+
+            b += kchord_bytes
+            s += ksep + kchord_str
 
         # Succeed
 
-        mkb = many_kbytes
-        mkcs = many_kcap_str
+        (bn, sn) = last_choice
         if KCDEBUG:
-            st.stprint(f"kbytes={mkb} kcap_str={mkcs!r}  # verb_read")
+            st.stprint(f"kbytes={bn} kcap_str={sn!r}  # verb_read")
 
-        self.kbytes = many_kbytes
-        self.kcap_str = many_kcap_str
+        self.kbytes = bn
+        self.kcap_str = sn
+
+    def kcap_str_findall(self, kcap_str) -> list[str]:
+        """List every matching LineTerminal Verb"""
+
+        kdo_func_kcap_strs = KDO_FUNC_KCAP_STRS
+
+        assert (
+            KCAP_SEP == " "
+        )  # solves '⇧Tab' vs '⇧T a b'  # solves '⎋⇧FnX' vs '⎋⇧Fn X'
+        ksep = " "
+
+        #
+
+        eq_finds = list(_ for _ in kdo_func_kcap_strs if _ == kcap_str)
+
+        p = kcap_str + ksep
+        startswith_finds = list(_ for _ in kdo_func_kcap_strs if _.startswith(p))
+
+        #
+
+        finds = eq_finds + startswith_finds
+
+        return finds
 
     def verb_eval(self, vmode) -> None:
         """Take 1 Keyboard Chord Sequence as a Command to execute"""
@@ -2875,7 +2970,7 @@ class LineTerminal:
             self.alarm_ring()  # 'negative repetition arg' for Texts_Wrangle etc
             return
 
-        (kbytes, kchord_str) = st.read_one_kchord_bytes_str()
+        (kbytes, kchord_str) = st.pull_one_kchord_bytes_str()
 
         kchars = kbytes.decode()  # may raise UnicodeEncodeError
         st.stwrite(kint * kchars)  # b'\x1B'  # b'['  # b'A'
@@ -2906,7 +3001,7 @@ class LineTerminal:
         kcap_str = "⎋ ["
 
         while True:
-            (kchord_bytes, kchord_str) = st.read_one_kchord_bytes_str()
+            (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
 
             kbytes += kchord_bytes
 
@@ -3840,7 +3935,7 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #   Emacs  ⌃A ⌃E ⌃N ⌃P ⌃Q ⌃U
 #   Emacs  ⌥GG ⌥GTab
 #
-#   Vi  Return ⌃V ← ↓ ↑ →
+#   Vi  Return ⌃E ⌃V ⌃Y ← ↓ ↑ →
 #   Vi  Spacebar $ + - 0 123456789 << >>
 #   Vi  ⇧G ⇧H ⇧L ⇧R ^ _
 #   Vi  DD H I J K L | Delete
