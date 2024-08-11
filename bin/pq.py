@@ -93,7 +93,6 @@ import unicodedata
 
 
 KDEBUG = False  # Debug 'os.read'
-KCDEBUG = False  # Debug 'KDO_FUNC_BY_KCAP_STR'
 
 
 #
@@ -1637,7 +1636,7 @@ class BytesLogger:
 
     tag: str  # 'k'  # 's'
     exists: bool  # True if the Log File already existed
-    logfile: typing.TextIO  # '.pqinfo/keylog.py'
+    pylogfile: typing.TextIO  # opened here  # '.pqinfo/keylog.py'
     logged: dt.datetime  # when 'def log_bytes_io' last ran
 
     def __init__(self, name, tag) -> None:
@@ -1654,8 +1653,11 @@ class BytesLogger:
         exists = path.exists()
         self.exists = exists
 
-        logfile = path.open("a")
-        self.logfile = logfile
+        # pylogfile = io.StringIO()
+        # pylogfile.name = "<io.StringIO>"
+        pylogfile = path.open("a")  # last wins
+
+        self.pylogfile = pylogfile
 
         if not exists:
             self.write_prolog()
@@ -1665,7 +1667,7 @@ class BytesLogger:
     def write_prolog(self) -> None:
         """Write the Code before the Log"""
 
-        logfile = self.logfile
+        pylogfile = self.pylogfile
         tag = self.tag
 
         assert tag in ("k", "s"), (tag,)  # todo: accept more tags?
@@ -1710,14 +1712,14 @@ class BytesLogger:
         py = k_py if tag == "k" else s_py
         py = textwrap.dedent(py).strip()
 
-        logfile.write(py + "\n" "\n")
+        pylogfile.write(py + "\n" "\n")
 
         # todo: duck away from PyPi·Org Black 'E501 line too long (... > 999 characters'
 
     def log_bytes_io(self, sbytes) -> None:
         """Log some Keyboard Input Bytes, Screen Output Bytes, etc"""
 
-        logfile = self.logfile
+        pylogfile = self.pylogfile
         logged = self.logged
 
         now = dt.datetime.now()
@@ -1726,8 +1728,8 @@ class BytesLogger:
 
         rep = black_repr(sbytes)
 
-        print(f"    time.sleep({total_seconds})", file=logfile)
-        print(f"    yield {rep}", file=logfile)
+        print(f"    time.sleep({total_seconds})", file=pylogfile)
+        print(f"    yield {rep}", file=pylogfile)
 
 
 #
@@ -2015,8 +2017,8 @@ class BytesTerminal:
 
         stdio.flush()
 
-        self.kbyteslogger.logfile.flush()  # plus ~0.050 ms, ugh
-        self.sbyteslogger.logfile.flush()  # plus another ~0.050 ms, ugh
+        self.kbyteslogger.pylogfile.flush()  # plus ~0.050 ms, ugh
+        self.sbyteslogger.pylogfile.flush()  # plus another ~0.050 ms, ugh
 
         kbytes = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
         kbyteslogger.log_bytes_io(kbytes)  # logs In after Read
@@ -2365,6 +2367,8 @@ class LineTerminal:
     """React to Sequences of Key Chords by laying Chars of Lines over the Screen"""
 
     st: StrTerminal  # wrapped here
+    logfile: typing.TextIO  # opened here  # '.pqinfo/funclog.log'  # logfmt
+    logfile_exists: bool  # created by earlier processes
 
     olines: list[str]  # the Lines to sketch
 
@@ -2378,7 +2382,20 @@ class LineTerminal:
 
     def __init__(self) -> None:
 
+        dirpath = pathlib.Path(".pqinfo")
+        dirpath.mkdir(parents=True, exist_ok=True)  # 'parents=' unneeded at './'
+
+        path = dirpath / "pq.log"  # '.pqinfo/pq.log'
+        self.logfile_exists = path.exists()
+
+        # logfile = io.StringIO()
+        # logfile.name = "<io.StringIO>"
+        logfile = path.open("a")  # last wins
+
+        self.logfile = logfile
+
         self.st = StrTerminal()
+        self.logfile = logfile
 
         self.olines = list()
 
@@ -2404,6 +2421,7 @@ class LineTerminal:
 
         klog_exists = self.st.bt.kbyteslogger.exists
         slog_exists = self.st.bt.sbyteslogger.exists
+        tlog_exists = self.logfile_exists
 
         with StrTerminal() as st:
             self.st = st
@@ -2415,16 +2433,22 @@ class LineTerminal:
                 st.stprint(oline)
 
             bt = st.bt
-            if (not klog_exists) or (not slog_exists):
+            if (not klog_exists) or (not slog_exists) or (not tlog_exists):
                 st.stprint()
                 if not klog_exists:
                     st.stprint(
-                        "Logging Keyboard Chord Bytes into:  cat",
-                        bt.kbyteslogger.logfile.name,
+                        "Logging Keyboard Chord Bytes into:  tail -F -n +15",
+                        bt.kbyteslogger.pylogfile.name,
                     )
                 if not slog_exists:
                     st.stprint(
-                        "Logging Screen Bytes into:  cat", bt.sbyteslogger.logfile.name
+                        "Logging Screen Bytes into:  tail -F -n +15",
+                        bt.sbyteslogger.pylogfile.name,
+                    )
+                if not tlog_exists:
+                    st.stprint(
+                        "Logging LogFmt Lines into:  tail -F",
+                        self.logfile.name,
                     )
 
             self.help_quit()  # to begin with
@@ -2486,9 +2510,12 @@ class LineTerminal:
             if not kchars.isprintable():
                 self.verb_tail_read(kbytes, kcap_str=kcap_str)
 
+            print(f"{kcap_str=} {kbytes=} {vmode=}", file=self.logfile)
+
             kbytes = self.kbytes
             kchars = kbytes.decode()  # may raise UnicodeDecodeError
             kchars = self.kbytes.decode()  # may raise UnicodeDecodeError
+            kcap_str = self.kcap_str
 
             # Bind Delete and Return differently while Insert
 
@@ -2583,8 +2610,7 @@ class LineTerminal:
         st = self.st
 
         assert vmode in ("", "Insert", "Replace"), vmode
-        if KCDEBUG:
-            st.stprint(f"{vmode=}  # vmode_stwrite")
+        print(f"{vmode=}", file=self.logfile)
 
         if not vmode:
             st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
@@ -2626,6 +2652,7 @@ class LineTerminal:
 
         # Read one Keyboard Chord
 
+        self.logfile.flush()
         (kbytes, kcap_str) = st.pull_one_kchord_bytes_str()
 
         if not vmode:
@@ -2634,8 +2661,7 @@ class LineTerminal:
 
         # Succeed
 
-        if KCDEBUG:
-            st.stprint(f"{kbytes=} {kcap_str=}  # verb_read")
+        print(f"{kcap_str=} {kbytes=}", file=self.logfile)
 
         self.kbytes = kbytes
         self.kcap_str = kcap_str
@@ -2692,6 +2718,7 @@ class LineTerminal:
 
                 break
 
+            self.logfile.flush()
             (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
 
             choice = (kchord_bytes, kchord_str)
@@ -2703,8 +2730,6 @@ class LineTerminal:
         # Succeed
 
         (bn, sn) = last_choice
-        if KCDEBUG:
-            st.stprint(f"kbytes={bn} kcap_str={sn!r}  # verb_read")
 
         self.kbytes = bn
         self.kcap_str = sn
@@ -2735,8 +2760,6 @@ class LineTerminal:
     def verb_eval(self, vmode) -> None:
         """Take 1 Keyboard Chord Sequence as a Command to execute"""
 
-        st = self.st
-
         kstr_starts = self.kstr_starts
         kcap_str = self.kcap_str
 
@@ -2753,11 +2776,6 @@ class LineTerminal:
 
         assert kdo_func.__name__.startswith("kdo_"), (kdo_func.__name__, kcap_str)
 
-        if KCDEBUG:
-            kint = self.kint_peek(default=None)
-            st.stprint(f"func={kdo_func.__name__} {kstr_starts=} {kint=}  # to eval")
-            sys.stderr.flush()
-
         # Call the 1 Python Def
 
         kstr_starts_before = list(kstr_starts)
@@ -2768,23 +2786,19 @@ class LineTerminal:
             LineTerminal.kdo_hold_stop_kstr,
         )
 
+        kint_else = self.kint_peek(default=None)  # maybe None
         if kdo_func in kstr_starts_funcs:
+            print(f"kint={kint_else} func={kdo_func.__name__}", file=self.logfile)
             kdo_func(self)
         else:
             done = self.kdo_inverse_or_nop(kdo_func)
             if not done:
+                print(f"kint={kint_else} func={kdo_func.__name__}", file=self.logfile)
                 kdo_func(self)
 
         # Forget the K Start's and/or K Stop's when we should
 
         self.kstarts_kstops_choose_after(kstr_starts_before, kcap_str=kcap_str)
-
-        # Trace the exit
-
-        if KCDEBUG:
-            kint = self.kint_peek(default=None)
-            st.stprint(f"func={kdo_func.__name__} {kstr_starts=} {kint=}  # evalled")
-            sys.stderr.flush()
 
     def kstarts_kstops_choose_after(self, kstr_starts_before, kcap_str) -> None:
         """Forget the K Start's and/or add one K Stop's, like when we should"""
@@ -2832,6 +2846,7 @@ class LineTerminal:
 
         if not kint:
             self.kint_pull(default=0)
+            print(f"kint=0 func={kdo_func.__name__}", file=self.logfile)
             return True
 
         # Call the inverse when given a negative K-Int
@@ -2839,6 +2854,7 @@ class LineTerminal:
         if kint < 0:
             self.kint_pull(default=0)
             self.kint_push(-kint)
+            print(f"kint=0 func={kdo_inverse_func.__name__}", file=self.logfile)
             kdo_inverse_func(self)
             self.kint_pull(default=0)
             return True
@@ -2970,6 +2986,7 @@ class LineTerminal:
             self.alarm_ring()  # 'negative repetition arg' for Texts_Wrangle etc
             return
 
+        self.logfile.flush()
         (kbytes, kchord_str) = st.pull_one_kchord_bytes_str()
 
         kchars = kbytes.decode()  # may raise UnicodeEncodeError
@@ -3001,6 +3018,7 @@ class LineTerminal:
         kcap_str = "⎋ ["
 
         while True:
+            self.logfile.flush()
             (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
 
             kbytes += kchord_bytes
@@ -3008,7 +3026,7 @@ class LineTerminal:
             sep = " "  # '⇧Tab'  # '⇧T a b'  # '⎋⇧Fn X'  # '⎋⇧FnX'
             kcap_str += sep + kchord_str
 
-            if KDEBUG or KCDEBUG:
+            if KDEBUG:
                 st.stprint(f"{kbytes=} {kcap_str=}  # kdo_quote_csi_kstrs_n")
 
             read_2 = kchord_bytes
