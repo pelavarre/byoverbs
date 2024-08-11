@@ -3095,7 +3095,8 @@ class LineTerminal:
         kstr_starts = self.kstr_starts  # no .pull_int here
         kcap_str = self.kcap_str
 
-        assert kcap_str in (["⌃U"] + list("-0123456789")), (kcap_str,)
+        kcap_split = kcap_str.split()[-1]  # such as '3' from '⌃Q 3'
+        assert kcap_split in (["⌃U"] + list("-0123456789")), (kcap_split,)
 
         # ⌃U+ vs [-]⌃U* vs [-][-]⌃U* vs [0123456789]+⌃U? vs [-][0123456789]+⌃U?
 
@@ -3109,7 +3110,7 @@ class LineTerminal:
 
         kstarts_closed = kstr_starts[1:][-1:] == ["⌃U"]
 
-        if kcap_str == "⌃U":
+        if kcap_split == "⌃U":
             if kdigits and kstarts_closed:
                 kstr_starts.clear()  # for .hold_start_kstr ⌃U
             kstr_starts.append("⌃U")
@@ -3117,7 +3118,7 @@ class LineTerminal:
 
         # Take an odd or even count of Dash, until the first Digit
 
-        if kcap_str == "-":
+        if kcap_split == "-":
             if not kdigits:
                 if kstr_starts != ["-"]:
                     kstr_starts.clear()  # for .hold_start_kstr -
@@ -3128,16 +3129,16 @@ class LineTerminal:
 
         # Hold the first Digit, or more Digits, after one Dash or none
 
-        if kcap_str in list("0123456789"):
+        if kcap_split in list("0123456789"):
             if not kdigits:
                 negated = kstr_starts == ["-"]
                 kstr_starts.clear()  # for .hold_start_kstr 0123456789
                 if negated:
                     kstr_starts.append("-")
-                kstr_starts.append(kcap_str)
+                kstr_starts.append(kcap_split)
                 return
             elif not kstarts_closed:
-                kstr_starts.append(kcap_str)
+                kstr_starts.append(kcap_split)
                 return
 
             # else fall-thru
@@ -3874,7 +3875,8 @@ PQ_KDO_FUNC_BY_KCAP_STR = {
     "⌃L : Q ! Return": LT.kdo_force_quit,  # b'\x0C...
     "⌃L ⇧Z ⇧Q": LT.kdo_force_quit,  # b'\x0C...
     "⌃L ⇧Z ⇧Z": LT.kdo_force_quit,  # b'\x0C...
-    "⌃Q ⌃E": LT.kdo_add_bottom_row,  # b'\x16\x05'
+    # "⌃Q ⌃Q": LT.kdo_quote_kchars,  # b'\x11...  # no, go with ⌃V ⌃Q
+    # "⌃V ⌃V": LT.kdo_quote_kchars,  # b'\x16...  # no, go with ⌃Q ⌃V
     "⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
     "⌃X ⌃S ⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
     "⇧Tab": LT.kdo_tab_minus_n,  # b'\x1B[Z'
@@ -3889,6 +3891,18 @@ PQ_KDO_FUNC_BY_KCAP_STR = {
     "⌥[": LT.kdo_quote_csi_kstrs_n,  # b'\xE2\x80\x9C'  # Option [
     #
 }
+
+assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
+
+for _ITEM in EM_KDO_FUNC_BY_KCAP_STR.items():
+    _KCAP_STR = "⌃V" + " " + _ITEM[0]
+    if _KCAP_STR not in PQ_KDO_FUNC_BY_KCAP_STR.keys():
+        PQ_KDO_FUNC_BY_KCAP_STR[_KCAP_STR] = _ITEM[-1]
+
+for _ITEM in VI_KDO_FUNC_BY_KCAP_STR.items():
+    _KCAP_STR = "⌃Q" + " " + _ITEM[0]
+    if _KCAP_STR not in PQ_KDO_FUNC_BY_KCAP_STR.keys():
+        PQ_KDO_FUNC_BY_KCAP_STR[_KCAP_STR] = _ITEM[-1]
 
 KDO_FUNC_BY_KCAP_STR = dict()
 KDO_FUNC_BY_KCAP_STR.update(EM_KDO_FUNC_BY_KCAP_STR)
