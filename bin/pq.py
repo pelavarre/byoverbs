@@ -2786,7 +2786,7 @@ class LineTerminal:
             LineTerminal.kdo_hold_stop_kstr,
         )
 
-        kint_else = self.kint_peek(default=None)  # maybe None
+        kint_else = self.kint_peek_else(default=None)
         if kdo_func in kstr_starts_funcs:
             print(f"kint={kint_else} func={kdo_func.__name__}", file=self.logfile)
             kdo_func(self)
@@ -2838,7 +2838,6 @@ class LineTerminal:
         # Call for more work when given a positive K-Int
 
         kint = self.kint_peek(default)
-        assert kint is not None, (kint, default)  # because 'default' is not None
         if kint > 0:
             return False
 
@@ -3211,13 +3210,22 @@ class LineTerminal:
         kstr_starts = self.kstr_starts
 
         kint = self.kint_peek(default)
-        assert kint is not None, (kint, default)  # because 'default' is not None
-
         kstr_starts.clear()  # for .kint_pull
 
         return kint
 
-    def kint_peek(self, default) -> int | None:
+    def kint_peek(self, default) -> int:
+        """Fetch the Key-Cap Str Holds, without adding or removing them"""
+
+        assert default is not None
+
+        kint_else = self.kint_peek_else(default)
+        assert kint_else is not None, (kint_else, default)
+        kint = kint_else
+
+        return kint
+
+    def kint_peek_else(self, default) -> int | None:
         """Fetch the Key-Cap Str Holds, without adding or removing them"""
 
         kstr_starts = self.kstr_starts
