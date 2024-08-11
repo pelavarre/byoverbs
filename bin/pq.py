@@ -2478,6 +2478,13 @@ class LineTerminal:
             kchars = kbytes.decode()  # may raise UnicodeDecodeError
             kcap_str = self.kcap_str
 
+            if not kchars.isprintable():
+                self.verb_tail_read(kbytes, kcap_str=kcap_str)
+
+            kbytes = self.kbytes
+            kchars = kbytes.decode()  # may raise UnicodeDecodeError
+            kchars = self.kbytes.decode()  # may raise UnicodeDecodeError
+
             # Bind Delete and Return differently while Insert
 
             if vmode == "Insert":
@@ -2496,8 +2503,10 @@ class LineTerminal:
             # Exit Replace/ Insert Mode on request
 
             kstr_stops.clear()
+
             assert STOP_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
             if kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\"):
+                kstr_stops.append(kcap_str)  # like for ⎋[1m
                 break
 
             # Take unprintable K Chars as Verbs,
@@ -2561,24 +2570,15 @@ class LineTerminal:
     def verb_read(self, vmode) -> None:
         """Read one Keyboard Chord Sequence from the Keyboard, as Bytes and as Str"""
 
-        verbs = list(KDO_FUNC_BY_KCAP_STR.keys())
-        kdo_func_kcap_strs = list(verbs)  # copied better than aliased
-
         st = self.st
 
-        # Read one Keyboard Chord, and then zero or more to say which Verb to run
+        # Read one Keyboard Chord
 
         (kbytes, kcap_str) = st.read_one_kchord_bytes_str()
 
-        sep = " "  # '⇧Tab'  # '⇧T a b'  # '⎋⇧Fn X'  # '⎋⇧FnX'
         if not vmode:
-            while any(_.startswith(kcap_str + " ") for _ in kdo_func_kcap_strs):
-                (kchord_bytes, kchord_str) = st.read_one_kchord_bytes_str()
-
-                kbytes += kchord_bytes
-                kcap_str += sep + kchord_str
-
-                # 1 'D' is a complete Sequence, because 2 'D ' doesn't start 6 'Delete'
+            self.verb_tail_read(kbytes, kcap_str=kcap_str)
+            return
 
         # Succeed
 
@@ -2589,6 +2589,35 @@ class LineTerminal:
         self.kcap_str = kcap_str
 
         # '⌃L'  # '⇧Z ⇧Z'
+
+    def verb_tail_read(self, kbytes, kcap_str) -> None:
+        """ "Read zero or more Keyboard Chords to complete the Sequence"""
+
+        st = self.st
+
+        lotsa_kbytes = kbytes
+        lotsa_kcap_str = kcap_str
+
+        kdo_func_kcap_strs = KDO_FUNC_KCAP_STRS
+
+        sep = " "  # '⇧Tab'  # '⇧T a b'  # '⎋⇧Fn X'  # '⎋⇧FnX'
+        while any(_.startswith(lotsa_kcap_str + " ") for _ in kdo_func_kcap_strs):
+            (kchord_bytes, kchord_str) = st.read_one_kchord_bytes_str()
+
+            lotsa_kbytes += kchord_bytes
+            lotsa_kcap_str += sep + kchord_str
+
+            # 1 'D' is a complete Sequence, because 2 'D ' doesn't start 6 'Delete'
+
+        # Succeed
+
+        kb = lotsa_kbytes
+        kcs = lotsa_kcap_str
+        if KCDEBUG:
+            st.stprint(f"kbytes={kb!r} kcap_str={kcs!r}  # verb_read")
+
+        self.kbytes = lotsa_kbytes
+        self.kcap_str = lotsa_kcap_str
 
     def verb_eval(self, vmode) -> None:
         """Take 1 Keyboard Chord Sequence as a Command to execute"""
@@ -2660,8 +2689,12 @@ class LineTerminal:
         assert STOP_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
 
         kstr_stops.clear()
+        stopped = self.kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
+        if stopped:
+            kstr_stops.append(self.kcap_str)
+
         if kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\"):
-            kstr_stops.append(kcap_str)
+            assert stopped, (stopped, kcap_str, self.kcap_str)
 
     def kdo_inverse_or_nop(self, kdo_func) -> bool:
         """Call the Inverse or do nothing, and return True, else return False"""
@@ -2775,7 +2808,7 @@ class LineTerminal:
 
         # Emacs ⌃X ⌃S ⌃X ⌃C save-buffer save-buffers-kill-terminal
 
-        # Vi ⌃L ⌃C : Q ! Return quit-no-save
+        # Vi ⌃C ⌃L : Q ! Return quit-no-save
         # Vi ⇧Z ⇧Q quit-no-save
         # Vi ⇧Z ⇧Z save-quit
 
@@ -2792,12 +2825,17 @@ class LineTerminal:
         quit_kcap_strs = list()
         for kcap_str, func in KDO_FUNC_BY_KCAP_STR.items():
             if func is LineTerminal.kdo_force_quit:
-                quit_kcap_strs.append(kcap_str)
+
+                quit_kcap_str = kcap_str
+                if (kcap_str[:1] != "⌃") or (kcap_str[:2] == "⌃L"):
+                    quit_kcap_str = "⌃C " + kcap_str
+
+                quit_kcap_strs.append(quit_kcap_str)
 
         st.stprint()
 
-        quits = " or ".join("".join(_.split()) for _ in quit_kcap_strs)
-        st.stprint(f"Press {quits} to quit")
+        quits = " ".join("".join(_.split()) for _ in quit_kcap_strs)
+        st.stprint(f"To quit, press any of:  {quits}")
 
         # 'Press ⌃L⌃C:Q!Return or ⌃X⌃C or ⌃X⌃S⌃X⌃C or ⇧Z⇧Q or ⇧Z⇧Z to quit'
         # todo: Emacs doesn't bind '⌃C R' to (revert-buffer 'ignoreAuto 'noConfirm)
@@ -3621,8 +3659,6 @@ EM_KDO_FUNC_BY_KCAP_STR = {
     "⌃P": LT.kdo_line_minus_n,  # b'\x10'
     "⌃Q": LT.kdo_quote_kchars,  # b'\x11'
     "⌃U": LT.kdo_hold_start_kstr,  # b'\x15'
-    "⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
-    "⌃X ⌃S ⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
     # "⌃X 8 Return": LT.unicodedata_lookup,  # Emacs insert-char
     #
     "⌥G G": LT.kdo_home_n,
@@ -3633,7 +3669,6 @@ EM_KDO_FUNC_BY_KCAP_STR = {
 
 VI_KDO_FUNC_BY_KCAP_STR = {
     #
-    "⌃L ⌃C : Q ! Return": LT.kdo_force_quit,  # b'\x0C...
     "Return": LT.kdo_dent_plus_n,  # b'\x0D'  # b'\r'
     "⌃V": LT.kdo_quote_kchars,  # b'\x16'
     "↑": LT.kdo_line_minus_n,  # b'\x1B[A'
@@ -3661,11 +3696,7 @@ VI_KDO_FUNC_BY_KCAP_STR = {
     "⇧G": LT.kdo_dent_line_n,  # b'G'
     "⇧H": LT.kdo_row_n_down,  # b'H'
     "⇧L": LT.kdo_row_n_up,  # b'L'
-    "⇧Q V I Return": LT.kdo_help_quit,  # b'Qvi\r'
     "⇧R": LT.kdo_replace_n_till,  # b'R'
-    "⇧Z ⇧Q": LT.kdo_force_quit,  # b'ZQ'
-    "⇧Z ⇧Z": LT.kdo_force_quit,  # b'ZZ'
-    "[": LT.kdo_quote_csi_kstrs_n,  # b'\x5B'
     "^": LT.kdo_column_dent_beyond,  # b'\x5E'
     "_": LT.kdo_dent_plus_n1,  # b'\x5F'
     #
@@ -3691,8 +3722,18 @@ PQ_KDO_FUNC_BY_KCAP_STR = {
     "⌃G": LT.kdo_hold_stop_kstr,  # b'\x07'
     "Tab": LT.kdo_tab_plus_n,  # b'\x09'  # b'\t'
     "⌃J": LT.kdo_line_plus_n,  # b'\x0A'  # b'\n'
+    "⌃L : Q ! Return": LT.kdo_force_quit,  # b'\x0C...
+    "⌃L ⇧Z ⇧Q": LT.kdo_force_quit,  # b'\x0C...
+    "⌃L ⇧Z ⇧Z": LT.kdo_force_quit,  # b'\x0C...
+    "⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
+    "⌃X ⌃S ⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
     "⇧Tab": LT.kdo_tab_minus_n,  # b'\x1B[Z'
     "⌃\\": LT.kdo_hold_stop_kstr,  # ⌃\  # b'\x1C'
+    #
+    "⇧Q V I Return": LT.kdo_help_quit,  # b'Qvi\r'
+    "⇧Z ⇧Q": LT.kdo_force_quit,  # b'ZQ'
+    "⇧Z ⇧Z": LT.kdo_force_quit,  # b'ZZ'
+    "[": LT.kdo_quote_csi_kstrs_n,  # b'\x5B'
     #
     "⌥⎋": LT.kdo_help_quit,  # Option Esc
     "⌥[": LT.kdo_quote_csi_kstrs_n,  # b'\xE2\x80\x9C'  # Option [
@@ -3703,6 +3744,8 @@ KDO_FUNC_BY_KCAP_STR = dict()
 KDO_FUNC_BY_KCAP_STR.update(EM_KDO_FUNC_BY_KCAP_STR)
 KDO_FUNC_BY_KCAP_STR.update(VI_KDO_FUNC_BY_KCAP_STR)
 KDO_FUNC_BY_KCAP_STR.update(PQ_KDO_FUNC_BY_KCAP_STR)
+
+KDO_FUNC_KCAP_STRS = sorted(KDO_FUNC_BY_KCAP_STR.keys())
 
 # hand-sorted as ⎋, ⌃, 0..9, ⇧A..⇧Z, A..Z order of K Bytes
 # not so much by ⎋ ⌃ ⌥ ⇧ ⌘ Fn order
@@ -3736,19 +3779,20 @@ KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # presently
 #
-#   Keyboard Trace at:  tail -F -n +15 .pqinfo/keylog.py
+#   Emacs  ⎋GG ⎋GTab
+#   Emacs  ⌃A ⌃E ⌃N ⌃P ⌃Q ⌃U
+#   Emacs  ⌥GG ⌥GTab
+#
+#   Vi  Return ⌃V ← ↓ ↑ →
+#   Vi  Spacebar $ + - 0 123456789 << >>
+#   Vi  ⇧G ⇧H ⇧L ⇧R ^ _
+#   Vi  DD H I J K L | Delete
+#
+#   Pq  ⎋ ⎋⎋ ⎋[ ⌃C ⌃D ⌃G Tab ⇧Tab ⌃J ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⌃\
+#   Pq  ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z [ ⌥⎋ ⌥[
 #
 #   Option Mouse click moves Cursor via ← ↑ → ↓
-#
-#   ⎋GG ⎋G⎋G ⎋[
-#   ⌃A ⌃E ⌃H Tab ⇧Tab ⌃J ⌃N ⌃P ⌃Q ⌃U ⌃V Return ← ↑ → ↓
-#   Spacebar $ + - 0 1 2 3 4 5 6 7 8 9 ⇧G ^ _ H J K L | Delete
-#   << >> DD
-#   I ⇧R ⌃C ⎋
-#   ⌥GG ⌥G⌥G
-#
-#   ⎋ ⌃C ⌃D ⌃G ⌃\ ⇧QVIReturn
-#   ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧Z⇧Q ⇧Z⇧Z
+#   Keyboard Trace at:  tail -F -n +15 .pqinfo/keylog.py
 #
 
 #
@@ -3763,7 +3807,7 @@ KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #   Pq ⌃V escape to Emacs ⌃B ⌃C ⌃D ⌃F ⌃Q ⌃O ⌃V ⌃Y etc
 #       Emacs ⌃O to open line above
 #
-#   Emacs ⌃T while still replacing/ inserting
+#   Emacs ⌃T with just last Key Cap
 #
 #   Restore tty.setraw for c from Breakpoint into Pdb
 #
