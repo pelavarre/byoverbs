@@ -263,23 +263,23 @@ class PyExecQueryResult:
 
         # Take up Sh Args as if "--" comes before the first Positional Argument
 
-        lotsa_shargs = list()
+        many_shargs = list()
         for index, sharg in enumerate(shargs):
             if sharg == "--":  # accepts explicit "--" Sh Arg
-                lotsa_shargs.extend(shargs[index:])
+                many_shargs.extend(shargs[index:])
                 break
 
             if not sharg.startswith("-"):  # inserts implicit "--" Sh Arg
-                lotsa_shargs.append("--")
-                lotsa_shargs.extend(shargs[index:])
+                many_shargs.append("--")
+                many_shargs.extend(shargs[index:])
                 break
 
-            lotsa_shargs.append(sharg)
+            many_shargs.append(sharg)
 
         # Parse the Sh Args
 
         try:
-            ns = parser.parse_args_else(lotsa_shargs)  # often prints help & exits zero
+            ns = parser.parse_args_else(many_shargs)  # often prints help & exits zero
         except SystemExit:
             self.assert_lots_ok()  # ~100 ms in Jun/2024
             raise
@@ -1736,7 +1736,7 @@ class BytesLogger:
 #   ⎋[d line-position-absolute  ⎋[G cursor-character-absolute
 #   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[m plain
 #
-#   ⎋[1m bold  ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange  ⎋[m plain
+#   ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange  ⎋[m plain
 #   ⎋[4h insert  ⎋[6 q bar  ⎋[4l replace  ⎋[4 q skid  ⎋[ q unstyled
 #   ⎋[M delete-line  ⎋[L insert-line  ⎋[P delete-char  ⎋[@ insert-char
 #   ⎋[T scroll-up  ⎋[S scroll-down
@@ -1750,17 +1750,27 @@ HT = "\t"  # 00/09 Character Tabulation ⌃I
 LF = "\n"  # 00/10 Line Feed ⌃J
 CR = "\r"  # 00/13 Carriage Return ⌃M
 
+assert ESC == b"\x1B"
+
+SS3 = b"\x1B" b"O"  # 04/15 Single Shift Three
+
+CSI = b"\x1B" b"["  # 05/11 Control Sequence Introducer
+CSI_I_P_BYTES = b"".join(bytes([_]) for _ in range(0x20, 0x40))
+
 CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 CUD_Y = "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 CUF_X = "\x1B" "[" "{}C"  # CSI 04/03 Cursor Forward
 CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor Backward
 CHA = "\x1B" "[" "G"  # CSI 04/07 Cursor Character Absolute 1
 CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute
-IL_Y = "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
 VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
+SU_Y = "\x1B" "[" "{}S"  # CSI 05/03 Scroll Up   # Insert Bottom Lines
+SD_Y = "\x1B" "[" "{}T"  # CSI 05/04 Scroll Down  # Insert Top Lines
+
 ICH_X = "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
+IL_Y = "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 DL_Y = "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 DCH_X = "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
@@ -1903,6 +1913,9 @@ class BytesTerminal:
         """Read the Bytes of a single Keyboard Chord from the Keyboard"""
 
         assert ESC == b"\x1B"
+        assert CSI == b"\x1B" b"["
+        assert SS3 == b"\x1B" b"O"
+        assert CSI_I_P_BYTES == b"".join(bytes([_]) for _ in range(0x20, 0x40))
 
         # Block to fetch at least 1 Byte
 
@@ -1927,19 +1940,21 @@ class BytesTerminal:
 
             # Block or don't, to fetch the rest of the Esc Sequence
 
-            if read_1 in (b"O", b"["):
-                while True:  # todo: what ends an Esc [ or Esc O Sequence?
+            if read_1 == b"O":  # 01/11 04/15 SS3
+                read_2 = self.read_kchar_bytes_if()
+                kchord_bytes += read_2  # practically never in range(0x20, 0x40)
+
+            elif read_1 == b"[":  # 01/11 05/11 CSI
+                while True:
                     read_2 = self.read_kchar_bytes_if()
                     kchord_bytes += read_2
 
                     if len(read_2) == 1:
                         ord_2 = read_2[-1]
-                        if 0x20 <= ord_2 < 0x40:
+                        if 0x20 <= ord_2 < 0x40:  # !"#$%&'()*+,-./0123456789:;<=>?
                             continue
 
                     break
-
-                    # "\x1B" "O" Sequences often then stop short, 3 Bytes in total
 
         if KDEBUG:
             self.btprint(str(kchord_bytes).encode(), end=b"\r\n")  # todo: logging
@@ -2272,11 +2287,11 @@ class StrTerminal:
 
         # Show the Key Caps of US-Ascii, plus the ⌃ ⇧ Control/ Shift Key Caps
 
-        elif (o < 0x20) or (o == 0x7F):
+        elif (o < 0x20) or (o == 0x7F):  # C0 Control Bytes, or \x7F Delete (DEL)
             s = "⌃" + chr(o ^ 0x40)  # '⌃@'
-        elif "A" <= ch <= "Z":
+        elif "A" <= ch <= "Z":  # printable Upper Case English
             s = "⇧" + chr(o)  # '⇧A'
-        elif "a" <= ch <= "z":
+        elif "a" <= ch <= "z":  # printable Lower Case English
             s = chr(o ^ 0x20)  # 'A'
 
         # Test that no Keyboard sends the C1 Control Bytes, nor the Quasi-C1 Bytes
@@ -2595,29 +2610,32 @@ class LineTerminal:
 
         st = self.st
 
-        lotsa_kbytes = kbytes
-        lotsa_kcap_str = kcap_str
+        many_kbytes = kbytes
+        many_kcap_str = kcap_str
 
         kdo_func_kcap_strs = KDO_FUNC_KCAP_STRS
 
         sep = " "  # '⇧Tab'  # '⇧T a b'  # '⎋⇧Fn X'  # '⎋⇧FnX'
-        while any(_.startswith(lotsa_kcap_str + " ") for _ in kdo_func_kcap_strs):
+        while any(_.startswith(many_kcap_str + " ") for _ in kdo_func_kcap_strs):
             (kchord_bytes, kchord_str) = st.read_one_kchord_bytes_str()
 
-            lotsa_kbytes += kchord_bytes
-            lotsa_kcap_str += sep + kchord_str
+            many_kbytes += kchord_bytes
+            many_kcap_str += sep + kchord_str
+
+            # FIXME: ⌃V ⌃W should return as just ⌃V now, and ⌃W later, because ⌃V bound
+            # FIXME: < < and and > < and D D and so on could be bound as pairs
 
             # 1 'D' is a complete Sequence, because 2 'D ' doesn't start 6 'Delete'
 
         # Succeed
 
-        kb = lotsa_kbytes
-        kcs = lotsa_kcap_str
+        mkb = many_kbytes
+        mkcs = many_kcap_str
         if KCDEBUG:
-            st.stprint(f"kbytes={kb!r} kcap_str={kcs!r}  # verb_read")
+            st.stprint(f"kbytes={mkb} kcap_str={mkcs!r}  # verb_read")
 
-        self.kbytes = lotsa_kbytes
-        self.kcap_str = lotsa_kcap_str
+        self.kbytes = many_kbytes
+        self.kcap_str = many_kcap_str
 
     def verb_eval(self, vmode) -> None:
         """Take 1 Keyboard Chord Sequence as a Command to execute"""
@@ -2701,7 +2719,7 @@ class LineTerminal:
 
         # Call for more work when given an un-invertible Func
 
-        kdo_inverse_func_by = KDO_INVERSE_FUNC_DEFAULT_BY_FUNC
+        kdo_inverse_func_by = VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC
         if kdo_func not in kdo_inverse_func_by.keys():
             return False
 
@@ -2873,6 +2891,8 @@ class LineTerminal:
         kcap_str = self.kcap_str
         # no .pull_int here
 
+        assert CSI_I_P_BYTES == b"".join(bytes([_]) for _ in range(0x20, 0x40))
+
         # Run as [ only after ⎋, else reject the .kcap_str [ as if entirely unbound
 
         if kcap_str == "[":
@@ -2881,7 +2901,6 @@ class LineTerminal:
                 return
 
         # Block till CSI Sequence complete
-        # todo: only """ !"#$%&'()*+,-./0123456789:;<=>? """ doesn't end Esc [ or Esc O
 
         kbytes = b"\x1B" b"["
         kcap_str = "⎋ ["
@@ -3629,7 +3648,7 @@ class LineTerminal:
 
         assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 
-        # Vi I Return  # todo: move tail of Line into new inserted Line
+        # Vi ⇧R I Return  # todo: move tail of Line into new inserted Line
 
     def kdo_char_delete_left(self) -> None:
         """Delete 1 Character to the Left"""
@@ -3641,6 +3660,38 @@ class LineTerminal:
 
         assert BS == "\b"  # 00/08 Backspace ⌃H
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
+
+        # Vi ⇧R I Delete
+
+    def kdo_add_bottom_row(self) -> None:
+        """Insert new Bottom Rows, and move Cursor Up by that much"""
+
+        kint = self.kint_pull_positive(default=1)
+        self.write_form_kint("\x1B" "[" "{}S", kint=kint)
+        self.write_form_kint("\x1B" "[" "{}A", kint=kint)
+
+        # Disassemble these StrTerminal Writes
+
+        assert SU_Y == "\x1B" "[" "{}S"  # CSI 05/03 Scroll Up   # Add Bottom Rows
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+
+        # Vi ⌃Y
+        # collides with Emacs ⌃Y
+
+    def kdo_add_top_row(self) -> None:
+        """Insert new Top Rows, and move Cursor Down by that much"""
+
+        kint = self.kint_pull_positive(default=1)
+        self.write_form_kint("\x1B" "[" "{}T", kint=kint)
+        self.write_form_kint("\x1B" "[" "{}B", kint=kint)
+
+        # Disassemble these StrTerminal Writes
+
+        assert SD_Y == "\x1B" "[" "{}T"  # CSI 05/04 Scroll Down  # Add Top Rows
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+
+        # Vi ⌃E
+        # collides with Emacs ⌃E
 
 
 STOP_KCAP_STRS = ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
@@ -3670,7 +3721,9 @@ EM_KDO_FUNC_BY_KCAP_STR = {
 VI_KDO_FUNC_BY_KCAP_STR = {
     #
     "Return": LT.kdo_dent_plus_n,  # b'\x0D'  # b'\r'
+    "⌃E": LT.kdo_add_bottom_row,  # b'\x05'
     "⌃V": LT.kdo_quote_kchars,  # b'\x16'
+    "⌃Y": LT.kdo_add_top_row,  # b'\x19'
     "↑": LT.kdo_line_minus_n,  # b'\x1B[A'
     "↓": LT.kdo_line_plus_n,  # b'\x1B[B'
     "→": LT.kdo_column_plus_n,  # b'\x1B[C'
@@ -3719,12 +3772,14 @@ PQ_KDO_FUNC_BY_KCAP_STR = {
     #
     "⌃C": LT.kdo_hold_stop_kstr,  # b'\x03'
     "⌃D": LT.kdo_hold_stop_kstr,  # b'\x04'
+    "⌃E": LT.kdo_end_plus_n1,  # b'\x05'
     "⌃G": LT.kdo_hold_stop_kstr,  # b'\x07'
     "Tab": LT.kdo_tab_plus_n,  # b'\x09'  # b'\t'
     "⌃J": LT.kdo_line_plus_n,  # b'\x0A'  # b'\n'
     "⌃L : Q ! Return": LT.kdo_force_quit,  # b'\x0C...
     "⌃L ⇧Z ⇧Q": LT.kdo_force_quit,  # b'\x0C...
     "⌃L ⇧Z ⇧Z": LT.kdo_force_quit,  # b'\x0C...
+    "⌃Q ⌃E": LT.kdo_add_bottom_row,  # b'\x16\x05'
     "⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
     "⌃X ⌃S ⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
     "⇧Tab": LT.kdo_tab_minus_n,  # b'\x1B[Z'
@@ -3760,7 +3815,9 @@ KDO_FUNC_KCAP_STRS = sorted(KDO_FUNC_BY_KCAP_STR.keys())
 # Run these K Do Func's as is when called with positive Arg,
 #   as paired when called with negative Arg, and as nothing when called with zeroed Arg
 
-KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
+VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
+    LT.kdo_add_bottom_row: (LT.kdo_add_top_row, 1),  # ⌃E
+    LT.kdo_add_top_row: (LT.kdo_add_bottom_row, 1),  # ⌃Y
     LT.kdo_column_minus_n: (LT.kdo_column_plus_n, 1),  # ← H
     LT.kdo_column_plus_n: (LT.kdo_column_minus_n, 1),  # → L
     LT.kdo_dent_minus_n: (LT.kdo_dent_plus_n, 1),  # -
