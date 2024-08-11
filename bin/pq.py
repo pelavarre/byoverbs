@@ -2503,7 +2503,7 @@ class LineTerminal:
             # Take unprintable K Chars as Verbs,
             # and sometimes take - 0 1 2 3 4 5 6 7 8 9 as more K Start's
 
-            textual = self.kchars_is_text(
+            textual = self.kchars_are_textual(
                 kchars, kcap_str=kcap_str, kstr_starts=kstr_starts
             )
 
@@ -2515,28 +2515,43 @@ class LineTerminal:
 
             self.kdo_text_write_n()  # for Texts_Wrangle textuals
 
-    def kchars_is_text(self, kchars, kcap_str, kstr_starts) -> bool:
+    def kchars_are_textual(self, kchars, kcap_str, kstr_starts) -> bool:
         """Say to take the K Chars as Text, else not"""
 
-        isprintable = kchars.isprintable()
         kstarts_sorted_set = sorted(set(kstr_starts))
         kstarts_closed = kstr_starts[1:][-1:] == ["⌃U"]
 
+        # Take the Unprintable K Chars as Verbs, not as Text
+
+        textual = kchars.isprintable()
+        if kstr_starts and not kstarts_closed:
+            textual = False
+
+        # Take Key Cap Sequences opened by K Starts as Verbs, not as Text
+        # Take the K Starts themselves as Verbs, not as Text, if started already
+
         if kcap_str == "⌃U":
-            assert not isprintable, (isprintable, kcap_str)
+            assert not textual, (textual, kchars)
 
         if kcap_str == "-":
             if kstarts_sorted_set in (["-"], ["-", "⌃U"], ["⌃U"]):  # not []
-                isprintable = False
+                assert not textual, (textual, kchars)
 
         if kcap_str in list("0123456789"):
             if kstr_starts and not kstarts_closed:
-                isprintable = False
+                assert not textual, (textual, kchars)
+
+        if not textual:
+            return False
+
+        # Take the K Caps that call for Quoting Input as Verbs, not as Text
 
         if kcap_str in ["⌥[", "⎋["]:
-            isprintable = False
+            return False
 
-        return isprintable  # for Texts_Wrangle
+        # Else take the K Chars as Text (as the K Chars themselves, not as the K Caps)
+
+        return True
 
     def screen_print(self) -> None:
         """Speak after taking Keyboard Chord Sequences as Commands or Text"""
@@ -2629,7 +2644,7 @@ class LineTerminal:
             st.stprint(f"func={kdo_func.__name__} {kstr_starts=} {kint=}  # evalled")
             sys.stderr.flush()
 
-    def kstarts_kstops_choose_after(self, kstr_starts_before, kcap_str):
+    def kstarts_kstops_choose_after(self, kstr_starts_before, kcap_str) -> None:
         """Forget the K Start's and/or add one K Stop's, like when we should"""
 
         kstr_starts = self.kstr_starts
@@ -3721,7 +3736,7 @@ KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # presently
 #
-#   (Keyboard Trace up only inside macOS Upper Right > Show Keyboard Viewer)
+#   Keyboard Trace at:  tail -F -n +15 .pqinfo/keylog.py
 #
 #   Option Mouse click moves Cursor via ← ↑ → ↓
 #
