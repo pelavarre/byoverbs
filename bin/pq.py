@@ -3592,85 +3592,105 @@ class LineTerminal:
 
 STOP_KCAP_STRS = ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
 
-KDO_FUNC_BY_KCAP_STR = {
-    "⎋": LineTerminal.kdo_hold_stop_kstr,
-    "⎋⎋": LineTerminal.kdo_help_quit,  # Meta Esc
-    "⎋G G": LineTerminal.kdo_home_n,
-    "⎋G ⎋G": LineTerminal.kdo_home_n,
-    "⎋G Tab": LineTerminal.kdo_column_plus,
-    # "⎋ R": LineTerminal.kdo_row_middle_up_down,
-    "⎋[": LineTerminal.kdo_quote_csi_kstrs_n,  # b'\x1B\x5B'  # Option [
+LT = LineTerminal
+
+EM_KDO_FUNC_BY_KCAP_STR = {
     #
-    "⌃A": LineTerminal.kdo_home_plus_n1,  # b'\x01'
-    "⌃C": LineTerminal.kdo_hold_stop_kstr,  # b'\x03'
-    "⌃D": LineTerminal.kdo_hold_stop_kstr,  # b'\x04'
-    "⌃E": LineTerminal.kdo_end_plus_n1,  # b'\x05'
-    "⌃G": LineTerminal.kdo_hold_stop_kstr,  # b'\x07'
-    "Tab": LineTerminal.kdo_tab_plus_n,  # b'\x09'  # b'\t'
-    "⌃J": LineTerminal.kdo_line_plus_n,  # b'\x0A'  # b'\n'
-    "⌃L ⌃C : Q ! Return": LineTerminal.kdo_force_quit,  # b'\x0C...
-    "Return": LineTerminal.kdo_dent_plus_n,  # b'\x0D'  # b'\r'
-    "⌃N": LineTerminal.kdo_line_plus_n,  # b'\x0E'
-    "⌃P": LineTerminal.kdo_line_minus_n,  # b'\x10'
-    "⌃Q": LineTerminal.kdo_quote_kchars,  # b'\x11'
-    "⌃U": LineTerminal.kdo_hold_start_kstr,  # b'\x15'
-    "⌃V": LineTerminal.kdo_quote_kchars,  # b'\x16'
-    "⌃X ⌃C": LineTerminal.kdo_force_quit,  # b'\x18...
-    "⌃X ⌃S ⌃X ⌃C": LineTerminal.kdo_force_quit,  # b'\x18...
-    # "⌃X 8 Return": LineTerminal.unicodedata_lookup,  # Emacs insert-char
-    "↑": LineTerminal.kdo_line_minus_n,  # b'\x1B[A'
-    "↓": LineTerminal.kdo_line_plus_n,  # b'\x1B[B'
-    "→": LineTerminal.kdo_column_plus_n,  # b'\x1B[C'
-    "←": LineTerminal.kdo_column_minus_n,  # b'\x1B[D'
-    "⇧Tab": LineTerminal.kdo_tab_minus_n,  # b'\x1B[Z'
-    "⌃\\": LineTerminal.kdo_hold_stop_kstr,  # ⌃\  # b'\x1C'
+    "⎋G G": LT.kdo_home_n,
+    "⎋G ⎋G": LT.kdo_home_n,
+    "⎋G Tab": LT.kdo_column_plus,
+    # "⎋ R": LT.kdo_row_middle_up_down,
+    "⌃A": LT.kdo_home_plus_n1,  # b'\x01'
+    "⌃E": LT.kdo_end_plus_n1,  # b'\x05'
+    "⌃N": LT.kdo_line_plus_n,  # b'\x0E'
+    "⌃P": LT.kdo_line_minus_n,  # b'\x10'
+    "⌃Q": LT.kdo_quote_kchars,  # b'\x11'
+    "⌃U": LT.kdo_hold_start_kstr,  # b'\x15'
+    "⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
+    "⌃X ⌃S ⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
+    # "⌃X 8 Return": LT.unicodedata_lookup,  # Emacs insert-char
     #
-    "Spacebar": LineTerminal.kdo_char_plus_n,  # b'\x20'
-    "$": LineTerminal.kdo_end_plus_n1,  # b'\x24'
-    "+": LineTerminal.kdo_dent_plus_n,  # b'\x2B'
-    "-": LineTerminal.kdo_kminus,  # b'\x2D'
-    "0": LineTerminal.kdo_kzero,  # b'0'
-    "1": LineTerminal.kdo_hold_start_kstr,
-    "2": LineTerminal.kdo_hold_start_kstr,
-    "3": LineTerminal.kdo_hold_start_kstr,
-    "4": LineTerminal.kdo_hold_start_kstr,
-    "5": LineTerminal.kdo_hold_start_kstr,
-    "6": LineTerminal.kdo_hold_start_kstr,
-    "7": LineTerminal.kdo_hold_start_kstr,
-    "8": LineTerminal.kdo_hold_start_kstr,
-    "9": LineTerminal.kdo_hold_start_kstr,
-    "<": LineTerminal.kdo_lines_dedent_n,
-    ">": LineTerminal.kdo_lines_dent_n,
-    #
-    "⇧G": LineTerminal.kdo_dent_line_n,  # b'G'
-    "⇧H": LineTerminal.kdo_row_n_down,  # b'H'
-    "⇧L": LineTerminal.kdo_row_n_up,  # b'L'
-    "⇧Q V I Return": LineTerminal.kdo_help_quit,  # b'Qvi\r'
-    "⇧R": LineTerminal.kdo_replace_n_till,  # b'R'
-    "⇧Z ⇧Q": LineTerminal.kdo_force_quit,  # b'ZQ'
-    "⇧Z ⇧Z": LineTerminal.kdo_force_quit,  # b'ZZ'
-    "[": LineTerminal.kdo_quote_csi_kstrs_n,  # b'\x5B'
-    "^": LineTerminal.kdo_column_dent_beyond,  # b'\x5E'
-    "_": LineTerminal.kdo_dent_plus_n1,  # b'\x5F'
-    #
-    "D": LineTerminal.kdo_dents_cut_n,  # b'd'
-    "H": LineTerminal.kdo_column_minus_n,  # b'h'
-    "I": LineTerminal.kdo_insert_n_till,  # b'i'
-    "J": LineTerminal.kdo_line_plus_n,  # b'j'
-    "K": LineTerminal.kdo_line_minus_n,  # b'k'
-    "L": LineTerminal.kdo_column_plus_n,  # b'l'
-    "|": LineTerminal.kdo_column_n,  # b'\x7C'
-    "Delete": LineTerminal.kdo_char_minus_n,  # b'\x7F'
-    #
-    "⌥⎋": LineTerminal.kdo_help_quit,  # Option Esc
-    "⌥G G": LineTerminal.kdo_home_n,
-    "⌥G ⌥G": LineTerminal.kdo_home_n,
-    "⌥G Tab": LineTerminal.kdo_column_plus,
-    # "⌥ R": LineTerminal.kdo_row_middle_up_down,
-    "⌥[": LineTerminal.kdo_quote_csi_kstrs_n,  # b'\xE2\x80\x9C'  # Option [
+    "⌥G G": LT.kdo_home_n,
+    "⌥G ⌥G": LT.kdo_home_n,
+    "⌥G Tab": LT.kdo_column_plus,
+    # "⌥ R": LT.kdo_row_middle_up_down,
 }
 
-# hand-sorted by ⎋ ⌃ ⌥ ⇧ ⌘ Fn order
+VI_KDO_FUNC_BY_KCAP_STR = {
+    #
+    "⌃L ⌃C : Q ! Return": LT.kdo_force_quit,  # b'\x0C...
+    "Return": LT.kdo_dent_plus_n,  # b'\x0D'  # b'\r'
+    "⌃V": LT.kdo_quote_kchars,  # b'\x16'
+    "↑": LT.kdo_line_minus_n,  # b'\x1B[A'
+    "↓": LT.kdo_line_plus_n,  # b'\x1B[B'
+    "→": LT.kdo_column_plus_n,  # b'\x1B[C'
+    "←": LT.kdo_column_minus_n,  # b'\x1B[D'
+    #
+    "Spacebar": LT.kdo_char_plus_n,  # b'\x20'
+    "$": LT.kdo_end_plus_n1,  # b'\x24'
+    "+": LT.kdo_dent_plus_n,  # b'\x2B'
+    "-": LT.kdo_kminus,  # b'\x2D'
+    "0": LT.kdo_kzero,  # b'0'
+    "1": LT.kdo_hold_start_kstr,
+    "2": LT.kdo_hold_start_kstr,
+    "3": LT.kdo_hold_start_kstr,
+    "4": LT.kdo_hold_start_kstr,
+    "5": LT.kdo_hold_start_kstr,
+    "6": LT.kdo_hold_start_kstr,
+    "7": LT.kdo_hold_start_kstr,
+    "8": LT.kdo_hold_start_kstr,
+    "9": LT.kdo_hold_start_kstr,
+    "<": LT.kdo_lines_dedent_n,
+    ">": LT.kdo_lines_dent_n,
+    #
+    "⇧G": LT.kdo_dent_line_n,  # b'G'
+    "⇧H": LT.kdo_row_n_down,  # b'H'
+    "⇧L": LT.kdo_row_n_up,  # b'L'
+    "⇧Q V I Return": LT.kdo_help_quit,  # b'Qvi\r'
+    "⇧R": LT.kdo_replace_n_till,  # b'R'
+    "⇧Z ⇧Q": LT.kdo_force_quit,  # b'ZQ'
+    "⇧Z ⇧Z": LT.kdo_force_quit,  # b'ZZ'
+    "[": LT.kdo_quote_csi_kstrs_n,  # b'\x5B'
+    "^": LT.kdo_column_dent_beyond,  # b'\x5E'
+    "_": LT.kdo_dent_plus_n1,  # b'\x5F'
+    #
+    "D": LT.kdo_dents_cut_n,  # b'd'
+    "H": LT.kdo_column_minus_n,  # b'h'
+    "I": LT.kdo_insert_n_till,  # b'i'
+    "J": LT.kdo_line_plus_n,  # b'j'
+    "K": LT.kdo_line_minus_n,  # b'k'
+    "L": LT.kdo_column_plus_n,  # b'l'
+    "|": LT.kdo_column_n,  # b'\x7C'
+    "Delete": LT.kdo_char_minus_n,  # b'\x7F'
+    #
+}
+
+PQ_KDO_FUNC_BY_KCAP_STR = {
+    #
+    "⎋": LT.kdo_hold_stop_kstr,
+    "⎋⎋": LT.kdo_help_quit,  # Meta Esc
+    "⎋[": LT.kdo_quote_csi_kstrs_n,  # b'\x1B\x5B'  # Option [
+    #
+    "⌃C": LT.kdo_hold_stop_kstr,  # b'\x03'
+    "⌃D": LT.kdo_hold_stop_kstr,  # b'\x04'
+    "⌃G": LT.kdo_hold_stop_kstr,  # b'\x07'
+    "Tab": LT.kdo_tab_plus_n,  # b'\x09'  # b'\t'
+    "⌃J": LT.kdo_line_plus_n,  # b'\x0A'  # b'\n'
+    "⇧Tab": LT.kdo_tab_minus_n,  # b'\x1B[Z'
+    "⌃\\": LT.kdo_hold_stop_kstr,  # ⌃\  # b'\x1C'
+    #
+    "⌥⎋": LT.kdo_help_quit,  # Option Esc
+    "⌥[": LT.kdo_quote_csi_kstrs_n,  # b'\xE2\x80\x9C'  # Option [
+    #
+}
+
+KDO_FUNC_BY_KCAP_STR = dict()
+KDO_FUNC_BY_KCAP_STR.update(EM_KDO_FUNC_BY_KCAP_STR)
+KDO_FUNC_BY_KCAP_STR.update(VI_KDO_FUNC_BY_KCAP_STR)
+KDO_FUNC_BY_KCAP_STR.update(PQ_KDO_FUNC_BY_KCAP_STR)
+
+# hand-sorted as ⎋, ⌃, 0..9, ⇧A..⇧Z, A..Z order of K Bytes
+# not so much by ⎋ ⌃ ⌥ ⇧ ⌘ Fn order
 
 # todo: Emacs ⌃U - for non-positive K-Int
 
@@ -3679,24 +3699,29 @@ KDO_FUNC_BY_KCAP_STR = {
 #       because 'kdo_func_kcap_strs'
 
 
+# Run these K Do Func's as is when called with positive Arg,
+#   as paired when called with negative Arg, and as nothing when called with zeroed Arg
+
 KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
-    LineTerminal.kdo_column_minus_n: (LineTerminal.kdo_column_plus_n, 1),  # ← H
-    LineTerminal.kdo_column_plus_n: (LineTerminal.kdo_column_minus_n, 1),  # → L
-    LineTerminal.kdo_dent_minus_n: (LineTerminal.kdo_dent_plus_n, 1),  # -
-    LineTerminal.kdo_dent_plus_n: (LineTerminal.kdo_dent_minus_n, 1),  # Return +
-    LineTerminal.kdo_line_minus_n: (LineTerminal.kdo_line_plus_n, 1),  # ↓ ⌃J ⌃N J
-    LineTerminal.kdo_line_plus_n: (LineTerminal.kdo_line_minus_n, 1),  # ↑ ⌃P K
-    LineTerminal.kdo_lines_dedent_n: (LineTerminal.kdo_lines_dent_n, 1),  # <<
-    LineTerminal.kdo_lines_dent_n: (LineTerminal.kdo_lines_dedent_n, 1),  # >>
-    LineTerminal.kdo_row_n_down: (LineTerminal.kdo_row_n_up, 1),  # ⇧L
-    LineTerminal.kdo_row_n_up: (LineTerminal.kdo_row_n_down, 1),  # ⇧H
-    LineTerminal.kdo_tab_minus_n: (LineTerminal.kdo_tab_plus_n, 1),  # Tab ⇥
-    LineTerminal.kdo_tab_plus_n: (LineTerminal.kdo_tab_minus_n, 1),  # ⇧Tab ⇤
+    LT.kdo_column_minus_n: (LT.kdo_column_plus_n, 1),  # ← H
+    LT.kdo_column_plus_n: (LT.kdo_column_minus_n, 1),  # → L
+    LT.kdo_dent_minus_n: (LT.kdo_dent_plus_n, 1),  # -
+    LT.kdo_dent_plus_n: (LT.kdo_dent_minus_n, 1),  # Return +
+    LT.kdo_line_minus_n: (LT.kdo_line_plus_n, 1),  # ↓ ⌃J ⌃N J
+    LT.kdo_line_plus_n: (LT.kdo_line_minus_n, 1),  # ↑ ⌃P K
+    LT.kdo_lines_dedent_n: (LT.kdo_lines_dent_n, 1),  # <<
+    LT.kdo_lines_dent_n: (LT.kdo_lines_dedent_n, 1),  # >>
+    LT.kdo_row_n_down: (LT.kdo_row_n_up, 1),  # ⇧L
+    LT.kdo_row_n_up: (LT.kdo_row_n_down, 1),  # ⇧H
+    LT.kdo_tab_minus_n: (LT.kdo_tab_plus_n, 1),  # Tab ⇥
+    LT.kdo_tab_plus_n: (LT.kdo_tab_minus_n, 1),  # ⇧Tab ⇤
 }
 
 
 #
-# presently:
+# presently
+#
+#   (Keyboard Trace up only inside macOS Upper Right > Show Keyboard Viewer)
 #
 #   Option Mouse click moves Cursor via ← ↑ → ↓
 #
@@ -3712,7 +3737,7 @@ KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 
 #
-# smallish todo's:
+# smallish todo's
 #
 #   ⌃K ⇧A C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X A C$ CC D$ DD I O R S X ⌃C ⎋
 #
@@ -3729,7 +3754,7 @@ KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 
 #
-# bigger todo's:
+# bigger todo's
 #
 #   ⌃H⌃A ⌃H⌃K
 #
