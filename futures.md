@@ -834,6 +834,9 @@ pqv from itext of naive or aware date/time
 cd
     may as well echo arrival, since we've redefined 'cd' while PS1='\$ '
 
+bin/q* of 'git log'
+    same as in 'qls' add the '--color-moved' in case of '-p'
+
 
 ## Copied from
 
