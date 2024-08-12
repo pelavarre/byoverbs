@@ -50,6 +50,9 @@ for X in 2023.12.15{,^{tag},^{commit},^{tree}}; do
     (set -xe; git show --name-only $X |grep TaggerDate)
 done
 
+
+git log --pretty=fuller --numstat --no-decorate --color-moved -p
+
 """
 
 

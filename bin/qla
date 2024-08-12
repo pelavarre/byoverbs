@@ -14,4 +14,4 @@ if [[ ${#authors[@]} == 0 ]]; then
 fi
 
 set -xe
-git log --pretty=fuller --no-decorate "${authors[@]}" "$@"
+git log --pretty=fuller --no-decorate "${authors[@]}" --color-moved "$@"
