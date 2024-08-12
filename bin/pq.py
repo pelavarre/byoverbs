@@ -2650,21 +2650,22 @@ class LineTerminal:
 
         st = self.st
 
-        # Read one Keyboard Chord
+        # Read the first Keyboard Chord of the Sequence
 
         self.logfile.flush()
-        (kbytes, kcap_str) = st.pull_one_kchord_bytes_str()
+        (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
 
-        if not vmode:
-            self.verb_tail_read(kbytes, kcap_str=kcap_str)
+        # Take just 1 Chord as a complete Sequence, when taking Chords as Chars
+
+        if vmode:
+            print(f"kcap_str={kchord_str!r} kbytes={kchord_bytes!r}", file=self.logfile)
+            self.kbytes = kchord_bytes
+            self.kcap_str = kchord_str
             return
 
-        # Succeed
+        # Read zero or more Keyboard Chords to complete the Sequence of a Verb
 
-        print(f"{kcap_str=} {kbytes=}", file=self.logfile)
-
-        self.kbytes = kbytes
-        self.kcap_str = kcap_str
+        self.verb_tail_read(kbytes=kchord_bytes, kcap_str=kchord_str)
 
         # '⌃L'  # '⇧Z ⇧Z'
 
@@ -2676,20 +2677,20 @@ class LineTerminal:
         assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
         ksep = " "
 
-        # Make a big deal of the first Choice
-
-        b = kbytes
-        s = kcap_str
-
+        b = b""
+        s = ""
+        eq_choice = (b, s)
         choices = list()
-        choice = (b, s)
-        choices.append(choice)
 
-        # Read ahead till one Func or no Funcs found
+        kb = kbytes
+        ks = kcap_str
 
-        eq_choice = (b"", "")
         while True:
-            assert b and s, (b, s)
+            b += kb
+            s += (ksep + ks) if s else ks
+
+            choice = (kb, ks)
+            choices.append(choice)
 
             # Remember the last exact Find
 
@@ -2697,13 +2698,13 @@ class LineTerminal:
             if s in finds:
                 eq_choice = (b, s)
 
-            # Succeed when one Func found
+                # Succeed when one Func found
 
-            if len(finds) == 1:
-                assert eq_choice[-1] == s, (eq_choice, s, finds)
+                if len(finds) == 1:
+                    assert eq_choice[-1] == s, (eq_choice, s, finds)
 
-                last_choice = (b, s)
-                break
+                    last_choice = eq_choice
+                    break
 
             # Quit after finding nothing
             # Fall back to last exact Find, else to first Choice
@@ -2713,26 +2714,20 @@ class LineTerminal:
 
                 index = choices.index(last_choice)
                 for choice in choices[(index + 1) :]:
-                    (bi, si) = choice
-                    st.append_one_kchord_bytes_str(bi, kstr=si)
+                    (kb, ks) = choice
+                    st.append_one_kchord_bytes_str(kb, kstr=ks)
 
                 break
 
             self.logfile.flush()
-            (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
-
-            choice = (kchord_bytes, kchord_str)
-            choices.append(choice)
-
-            b += kchord_bytes
-            s += ksep + kchord_str
+            (kb, ks) = st.pull_one_kchord_bytes_str()
 
         # Succeed
 
-        (bn, sn) = last_choice
+        (kb, ks) = last_choice
 
-        self.kbytes = bn
-        self.kcap_str = sn
+        self.kbytes = kb
+        self.kcap_str = ks
 
     def kcap_str_findall(self, kcap_str) -> list[str]:
         """List every matching LineTerminal Verb"""
@@ -2960,10 +2955,11 @@ class LineTerminal:
 
                 quit_kcap_strs.append(quit_kcap_str)
 
-        st.stprint()
+        quit_kcap_strs.sort()
 
-        quits = " ".join("".join(_.split()) for _ in quit_kcap_strs)
-        st.stprint(f"To quit, press any of:  {quits}")
+        st.stprint()
+        quits = "  ".join("".join(_.split()) for _ in quit_kcap_strs)
+        st.stprint(f"To quit, press one of  {quits}")
 
         # 'Press ⌃L⌃C:Q!Return or ⌃X⌃C or ⌃X⌃S⌃X⌃C or ⇧Z⇧Q or ⇧Z⇧Z to quit'
         # todo: Emacs doesn't bind '⌃C R' to (revert-buffer 'ignoreAuto 'noConfirm)
