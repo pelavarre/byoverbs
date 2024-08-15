@@ -811,15 +811,17 @@ pq
 
 pq em/vi
     frame and deframe
-
-pq em/vi
     y:x Arg to do jump Cursor
-
+    run inside C-x C-e 'edit-command-line
+    run inside Esc Z for 'zap-to-char
 
 ### 11 - Eleventh Traunch
 
 detect new or old Source Lines
     that have "{..}" without F
+
+bash.py
+    to search for .py over not .py
 
 vi.py
     as a bookmark of editor features to show off
