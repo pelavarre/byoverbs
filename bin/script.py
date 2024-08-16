@@ -6,7 +6,7 @@ rm -fr Session.*
 
 pwd
 ls
-screen -ls ||:  # perhaps No Sockets found
+screen -ls || :  # perhaps No Sockets found
 
 screen -S Session
 screen -X logfile Session.screen

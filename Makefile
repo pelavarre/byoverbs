@@ -127,7 +127,8 @@ flake8:
 # Lint the Python Data Types, quickly and meaningfully
 
 mypy:
-	grep -nR '^ *def ' bin/*.py demos/l*.py |grep -v ') -> ' ||:
+	grep -nR '^ *def ' bin/*.py demos/l*.py |grep -v ') -> ' || :
+	git diff --color-moved HEAD~1 |grep '[^f]".*[{].*[}]' || :
 	mv -i __init__.py ../__init__.py~
 	~/.pyvenvs/mypy/bin/mypy bin || (mv -i ../__init__.py~ __init__.py && exit 1)
 	mv -i ../__init__.py~ __init__.py

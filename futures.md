@@ -820,8 +820,23 @@ pq em/vi
 detect new or old Source Lines
     that have "{..}" without F
 
+vqgl 'fatal: no pattern given'
+    should block launch of Vi
+        ditto at vqol, eqgl, eqol
+    vqgl '||:'
+        doesn't just happen when you type:  vqgl ||:
+
 bash.py
     to search for .py over not .py
+    fix the Vi bugs of
+        not editing Colored Screen Transcripts
+    fix the Sh Screen bugs of
+        breaking Lines, flooding with Blank Lines, limiting Lines per Transcript
+        'screen -r' to the 1 detached, 'screen -ls' the LogFile names
+    default Ls to like toggle
+        ls -hlF -rt
+        ls -hAlF -rt
+    trace the expansions visibly
 
 vi.py
     as a bookmark of editor features to show off

@@ -101,7 +101,7 @@ rm -fr Session.*
 
 pwd
 ls
-screen -ls ||:  # perhaps No Sockets found
+screen -ls || :  # perhaps No Sockets found
 
 screen  # FIXME: tell me again is it Screen or Script for low-latency no-wrap
 script ~/s1.script
