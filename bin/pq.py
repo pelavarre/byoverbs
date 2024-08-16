@@ -3671,14 +3671,6 @@ class LineTerminal:
         st = self.st
         kint = self.kint_pull_positive(default=1)
 
-        # Beep & quit if not < <
-
-        self.verb_read("")  # after Vi <
-        kcap_str = self.kcap_str
-        if kcap_str not in ("<", ">"):  # Pq ⌃U - < <
-            self.alarm_ring()  # todo: Vi < when not < <
-            return
-
         # Delete 4 Columns at Left of Line, then climb back up
         # todo: Vim deletes only Blank Space
 
@@ -3706,14 +3698,6 @@ class LineTerminal:
 
         st = self.st
         kint = self.kint_pull_positive(default=1)
-
-        # Beep & quit if not > >
-
-        self.verb_read("")  # after Vi >
-        kcap_str = self.kcap_str
-        if kcap_str not in ("<", ">"):  # Pq ⌃U - > >
-            self.alarm_ring()  # todo: Vi > when not > >
-            return
 
         # Insert 4 Columns at Left of Line, then climb back up
 
@@ -3753,14 +3737,6 @@ class LineTerminal:
 
         if kint < 0:
             self.alarm_ring()  # todo: negative Vi D
-            return
-
-        # Require the 2nd Vi D after the 1st Vi D
-
-        self.verb_read("")  # after Vi D
-        kcap_str = self.kcap_str
-        if kcap_str != "D":
-            self.alarm_ring()  # todo: Vi D when not D D
             return
 
         # Cut N Lines here and below, and land past Dent
@@ -3925,8 +3901,8 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "7": (LT.kdo_hold_start_kstr, ("7",)),
     "8": (LT.kdo_hold_start_kstr, ("8",)),
     "9": (LT.kdo_hold_start_kstr, ("9",)),
-    "<": (LT.kdo_lines_dedent_n,),
-    ">": (LT.kdo_lines_dent_n,),
+    "< <": (LT.kdo_lines_dedent_n,),
+    "> >": (LT.kdo_lines_dent_n,),
     #
     "⇧G": (LT.kdo_dent_line_n,),  # b'G'
     "⇧H": (LT.kdo_row_n_down,),  # b'H'
@@ -3935,7 +3911,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "^": (LT.kdo_column_dent_beyond,),  # b'\x5E'
     "_": (LT.kdo_dent_plus_n1,),  # b'\x5F'
     #
-    "D": (LT.kdo_dents_cut_n,),  # b'd'
+    "D D": (LT.kdo_dents_cut_n,),  # b'd'
     "H": (LT.kdo_column_minus_n,),  # b'h'
     "I": (LT.kdo_insert_n_till,),  # b'i'
     "J": (LT.kdo_line_plus_n,),  # b'j'
@@ -4019,8 +3995,8 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
     LT.kdo_dent_plus_n: (LT.kdo_dent_minus_n, 1),  # Return +
     LT.kdo_line_minus_n: (LT.kdo_line_plus_n, 1),  # ↓ ⌃J ⌃N J
     LT.kdo_line_plus_n: (LT.kdo_line_minus_n, 1),  # ↑ ⌃P K
-    LT.kdo_lines_dedent_n: (LT.kdo_lines_dent_n, 1),  # <<
-    LT.kdo_lines_dent_n: (LT.kdo_lines_dedent_n, 1),  # >>
+    LT.kdo_lines_dedent_n: (LT.kdo_lines_dent_n, 1),  # < <
+    LT.kdo_lines_dent_n: (LT.kdo_lines_dedent_n, 1),  # > >
     LT.kdo_row_n_down: (LT.kdo_row_n_up, 1),  # ⇧L
     LT.kdo_row_n_up: (LT.kdo_row_n_down, 1),  # ⇧H
     LT.kdo_tab_minus_n: (LT.kdo_tab_plus_n, 1),  # Tab ⇥
