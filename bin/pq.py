@@ -2487,7 +2487,7 @@ class LineTerminal:
         self.texts_wrangle()
         self.vmode_exit()
 
-    def texts_wrangle(self) -> None:
+    def texts_wrangle(self) -> None:  # noqa C901 too complex(11
         """Take Input as Replace Text or Insert Text, till ⌃C or ⎋"""
 
         kstr_starts = self.kstr_starts
@@ -2520,6 +2520,10 @@ class LineTerminal:
             kchars = self.kbytes.decode()  # may raise UnicodeDecodeError
             kcap_str = self.kcap_str
 
+            textual = self.kchars_are_textual(
+                kchars, kcap_str=kcap_str, kstr_starts=kstr_starts
+            )
+
             # Bind Delete and Return differently while Insert
 
             if vmode == "Insert":
@@ -2540,16 +2544,14 @@ class LineTerminal:
             kstr_stops.clear()
 
             assert STOP_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
-            if kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\"):
-                kstr_stops.append(kcap_str)  # like for ⎋[1m
-                break
+            if not textual:
+                if kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\"):
+                    breakpoint()
+                    kstr_stops.append(kcap_str)  # like for ⎋[1m
+                    break
 
             # Take unprintable K Chars as Verbs,
             # and sometimes take - 0 1 2 3 4 5 6 7 8 9 as more K Start's
-
-            textual = self.kchars_are_textual(
-                kchars, kcap_str=kcap_str, kstr_starts=kstr_starts
-            )
 
             if not textual:
                 if kcap_str == "⌃T":

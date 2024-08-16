@@ -836,6 +836,13 @@ pqv from itext of naive or aware date/time
 cd
     may as well echo arrival, since we've redefined 'cd' while PS1='\$ '
 
+pq emo
+    respect case when mixed, like:  pq Ballot Box
+
+pq em/vi
+    type ⎋ on screen
+    bind 0 1 2 to themselves as Args, like let me create an alt 9
+
 
 ## Copied from
 
