@@ -2546,7 +2546,6 @@ class LineTerminal:
             assert STOP_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
             if not textual:
                 if kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\"):
-                    breakpoint()
                     kstr_stops.append(kcap_str)  # like for ⎋[1m
                     break
 
