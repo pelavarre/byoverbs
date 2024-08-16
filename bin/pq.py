@@ -2365,6 +2365,13 @@ class StrTerminal:
         # '⌃L'  # '⇧Z'
 
 
+PY_CALL = (
+    tuple[typing.Callable]
+    | tuple[typing.Callable, tuple]
+    | tuple[typing.Callable, tuple, dict]
+)
+
+
 @dataclasses.dataclass
 class LineTerminal:
     """React to Sequences of Key Chords by laying Chars of Lines over the Screen"""
@@ -2753,7 +2760,7 @@ class LineTerminal:
     def kcap_str_findall(self, kcap_str) -> list[str]:
         """List every matching LineTerminal Verb"""
 
-        kdo_func_kcap_strs = KDO_FUNC_KCAP_STRS
+        kdo_call_kcap_strs = KDO_CALL_KCAP_STRS
 
         assert (
             KCAP_SEP == " "
@@ -2762,10 +2769,10 @@ class LineTerminal:
 
         #
 
-        eq_finds = list(_ for _ in kdo_func_kcap_strs if _ == kcap_str)
+        eq_finds = list(_ for _ in kdo_call_kcap_strs if _ == kcap_str)
 
         p = kcap_str + ksep
-        startswith_finds = list(_ for _ in kdo_func_kcap_strs if _.startswith(p))
+        startswith_finds = list(_ for _ in kdo_call_kcap_strs if _.startswith(p))
 
         #
 
@@ -2779,34 +2786,59 @@ class LineTerminal:
         kstr_starts = self.kstr_starts
         kcap_str = self.kcap_str
 
-        kdo_func_by_kcap_str = KDO_FUNC_BY_KCAP_STR
+        kdo_call_by_kcap_str = KDO_CALL_BY_KCAP_STR
 
         # Choose 1 Python Def to call, on behalf of 1 Keyboard Chord Sequence
 
-        kdo_func = LineTerminal.kdo_kcap_write_n  # for outside .kdo_func_by_kcap_str
+        kdo_call: PY_CALL
+
+        kdo_call = (LineTerminal.kdo_kcap_write_n,)  # for outside .kdo_call_by_kcap_str
         if (not vmode) or (not kcap_str.isprintable()):
-            if kcap_str in kdo_func_by_kcap_str.keys():
-                kdo_func = kdo_func_by_kcap_str[kcap_str]
+            if kcap_str in kdo_call_by_kcap_str.keys():
+                kdo_call = kdo_call_by_kcap_str[kcap_str]
 
         if KDEBUG:
-            if kdo_func is not LineTerminal.kdo_force_quit:
-                kdo_func = LineTerminal.kdo_kcap_write_n  # for KDEBUG
+            if kdo_call[0] is not LineTerminal.kdo_force_quit:
+                kdo_call = (LineTerminal.kdo_kcap_write_n,)  # for KDEBUG
 
-        assert kdo_func.__name__.startswith("kdo_"), (kdo_func.__name__, kcap_str)
+        kdo_func = kdo_call[0]
+        assert kdo_func.__name__.startswith("kdo_"), (kdo_call, kcap_str)
 
         # Call the 1 Python Def
 
         kstr_starts_before = list(kstr_starts)
 
-        done = self.kdo_inverse_or_nop(kdo_func)
+        done = False
+        if len(kdo_call) == 1:  # takes the Inverse Func when no Args and no KwArgs
+            done = self.kdo_inverse_or_nop(kdo_func)
         if not done:
             kint_else = self.kint_peek_else(default=None)
             print(f"kint={kint_else} func={kdo_func.__name__}", file=self.logfile)
-            kdo_func(self)
+            (kdo_func, args, kwargs) = self.py_call_complete(kdo_call)
+            kdo_func(self, *args, **kwargs)
 
         # Forget the K Start's and/or K Stop's when we should
 
         self.kstarts_kstops_choose_after(kstr_starts_before, kcap_str=kcap_str)
+
+    def py_call_complete(self, call) -> tuple[typing.Callable, tuple, dict]:
+        """Complete the Python Call with Args and KwArgs"""
+
+        func = call[0]
+
+        args = ()
+
+        kwargs: dict
+        kwargs = dict()
+
+        if len(call) == 1:
+            return (func, args, kwargs)
+
+        if len(call) == 2:
+            return (func, call[-1], kwargs)
+
+        assert len(call) == 3, (call,)
+        return call
 
     def kstarts_kstops_choose_after(self, kstr_starts_before, kcap_str) -> None:
         """Forget the K Start's and/or add one K Stop's, like when we should"""
@@ -2965,7 +2997,8 @@ class LineTerminal:
         # no .pull_int here
 
         quit_kcap_strs = list()
-        for kcap_str, func in KDO_FUNC_BY_KCAP_STR.items():
+        for kcap_str, call in KDO_CALL_BY_KCAP_STR.items():
+            func = call[0]
             if func is LineTerminal.kdo_force_quit:
 
                 quit_kcap_str = kcap_str
@@ -3081,7 +3114,7 @@ class LineTerminal:
 
         if not kdigits:
             if kstr_starts and not kstarts_closed:
-                self.kdo_hold_start_kstr()
+                self.kdo_hold_start_kstr("-")
                 return
 
         kdo_func = LineTerminal.kdo_dent_minus_n  # Vi -
@@ -3096,13 +3129,12 @@ class LineTerminal:
         """Hold another Digit, else jump to First Column"""
 
         kstr_starts = self.kstr_starts  # no .pull_int here
+        kstarts_closed = kstr_starts[1:][-1:] == ["⌃U"]
 
         # Hold Key Cap "0" for context, after Emacs ⌃U or after Vi 123456789
 
-        kstarts_closed = kstr_starts[1:][-1:] == ["⌃U"]
-
         if kstr_starts and not kstarts_closed:
-            self.kdo_hold_start_kstr()
+            self.kdo_hold_start_kstr("0")
             return
 
         # Else jump to First Column
@@ -3113,17 +3145,17 @@ class LineTerminal:
         # Vi Digit 0 after 1 2 3 4 5 6 7 8 9
         # Vi 0
 
-    def kdo_hold_start_kstr(self) -> None:
+    def kdo_hold_start_kstr(self, kcap_str) -> None:
         """Hold Key-Cap Str's till taken as Arg"""
 
         kstr_starts = self.kstr_starts  # no .pull_int here
 
         kstr_starts_before = list(kstr_starts)
-        self.try_kdo_hold_start_kstr()
+        self.try_kdo_hold_start_kstr(kcap_str=kcap_str)
 
         assert kstr_starts != kstr_starts_before, (kstr_starts, kstr_starts_before)
 
-    def try_kdo_hold_start_kstr(self) -> None:
+    def try_kdo_hold_start_kstr(self, kcap_str) -> None:
         """Hold Key-Cap Str's till taken as Arg"""
 
         kstr_starts = self.kstr_starts  # no .pull_int here
@@ -3836,133 +3868,143 @@ class LineTerminal:
 
 STOP_KCAP_STRS = ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
 
+
 LT = LineTerminal
 
-EM_KDO_FUNC_BY_KCAP_STR = {
+
+EM_KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
+
+VI_KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
+
+PQ_KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
+
+KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
+
+EM_KDO_CALL_BY_KCAP_STR = {
     #
-    "⎋G G": LT.kdo_home_n,
-    "⎋G ⎋G": LT.kdo_home_n,
-    "⎋G Tab": LT.kdo_column_plus,
-    # "⎋ R": LT.kdo_row_middle_up_down,
-    "⌃A": LT.kdo_home_plus_n1,  # b'\x01'
-    "⌃E": LT.kdo_end_plus_n1,  # b'\x05'
-    "⌃N": LT.kdo_line_plus_n,  # b'\x0E'
-    "⌃P": LT.kdo_line_minus_n,  # b'\x10'
-    "⌃Q": LT.kdo_quote_kchars,  # b'\x11'
-    "⌃U": LT.kdo_hold_start_kstr,  # b'\x15'
-    # "⌃X 8 Return": LT.unicodedata_lookup,  # Emacs insert-char
+    "⎋G G": (LT.kdo_home_n,),
+    "⎋G ⎋G": (LT.kdo_home_n,),
+    "⎋G Tab": (LT.kdo_column_plus,),
+    # "⎋ R": (LT.kdo_row_middle_up_down,),
+    "⌃A": (LT.kdo_home_plus_n1,),  # b'\x01'
+    "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'
+    "⌃N": (LT.kdo_line_plus_n,),  # b'\x0E'
+    "⌃P": (LT.kdo_line_minus_n,),  # b'\x10'
+    "⌃Q": (LT.kdo_quote_kchars,),  # b'\x11'
+    "⌃U": (LT.kdo_hold_start_kstr, tuple(["⌃U"])),  # b'\x15'
+    # "⌃X 8 Return": (LT.unicodedata_lookup,),  # Emacs insert-char
     #
-    "⌥G G": LT.kdo_home_n,
-    "⌥G ⌥G": LT.kdo_home_n,
-    "⌥G Tab": LT.kdo_column_plus,
-    # "⌥ R": LT.kdo_row_middle_up_down,
+    "⌥G G": (LT.kdo_home_n,),
+    "⌥G ⌥G": (LT.kdo_home_n,),
+    "⌥G Tab": (LT.kdo_column_plus,),
+    # "⌥ R": (LT.kdo_row_middle_up_down,),
 }
 
-VI_KDO_FUNC_BY_KCAP_STR = {
+VI_KDO_CALL_BY_KCAP_STR = {
     #
-    "Return": LT.kdo_dent_plus_n,  # b'\x0D'  # b'\r'
-    "⌃E": LT.kdo_add_bottom_row,  # b'\x05'
-    "⌃V": LT.kdo_quote_kchars,  # b'\x16'
-    "⌃Y": LT.kdo_add_top_row,  # b'\x19'
-    "↑": LT.kdo_line_minus_n,  # b'\x1B[A'
-    "↓": LT.kdo_line_plus_n,  # b'\x1B[B'
-    "→": LT.kdo_column_plus_n,  # b'\x1B[C'
-    "←": LT.kdo_column_minus_n,  # b'\x1B[D'
+    "Return": (LT.kdo_dent_plus_n,),  # b'\x0D'  # b'\r'
+    "⌃E": (LT.kdo_add_bottom_row,),  # b'\x05'
+    "⌃V": (LT.kdo_quote_kchars,),  # b'\x16'
+    "⌃Y": (LT.kdo_add_top_row,),  # b'\x19'
+    "↑": (LT.kdo_line_minus_n,),  # b'\x1B[A'
+    "↓": (LT.kdo_line_plus_n,),  # b'\x1B[B'
+    "→": (LT.kdo_column_plus_n,),  # b'\x1B[C'
+    "←": (LT.kdo_column_minus_n,),  # b'\x1B[D'
     #
-    "Spacebar": LT.kdo_char_plus_n,  # b'\x20'
-    "$": LT.kdo_end_plus_n1,  # b'\x24'
-    "+": LT.kdo_dent_plus_n,  # b'\x2B'
-    "-": LT.kdo_kminus,  # b'\x2D'
-    "0": LT.kdo_kzero,  # b'0'
-    "1": LT.kdo_hold_start_kstr,
-    "2": LT.kdo_hold_start_kstr,
-    "3": LT.kdo_hold_start_kstr,
-    "4": LT.kdo_hold_start_kstr,
-    "5": LT.kdo_hold_start_kstr,
-    "6": LT.kdo_hold_start_kstr,
-    "7": LT.kdo_hold_start_kstr,
-    "8": LT.kdo_hold_start_kstr,
-    "9": LT.kdo_hold_start_kstr,
-    "<": LT.kdo_lines_dedent_n,
-    ">": LT.kdo_lines_dent_n,
+    "Spacebar": (LT.kdo_char_plus_n,),  # b'\x20'
+    "$": (LT.kdo_end_plus_n1,),  # b'\x24'
+    "+": (LT.kdo_dent_plus_n,),  # b'\x2B'
+    "-": (LT.kdo_kminus,),  # b'\x2D'
+    "0": (LT.kdo_kzero,),  # b'0'
+    "1": (LT.kdo_hold_start_kstr, ("1",)),
+    "2": (LT.kdo_hold_start_kstr, ("2",)),
+    "3": (LT.kdo_hold_start_kstr, ("3",)),
+    "4": (LT.kdo_hold_start_kstr, ("4",)),
+    "5": (LT.kdo_hold_start_kstr, ("5",)),
+    "6": (LT.kdo_hold_start_kstr, ("6",)),
+    "7": (LT.kdo_hold_start_kstr, ("7",)),
+    "8": (LT.kdo_hold_start_kstr, ("8",)),
+    "9": (LT.kdo_hold_start_kstr, ("9",)),
+    "<": (LT.kdo_lines_dedent_n,),
+    ">": (LT.kdo_lines_dent_n,),
     #
-    "⇧G": LT.kdo_dent_line_n,  # b'G'
-    "⇧H": LT.kdo_row_n_down,  # b'H'
-    "⇧L": LT.kdo_row_n_up,  # b'L'
-    "⇧R": LT.kdo_replace_n_till,  # b'R'
-    "^": LT.kdo_column_dent_beyond,  # b'\x5E'
-    "_": LT.kdo_dent_plus_n1,  # b'\x5F'
+    "⇧G": (LT.kdo_dent_line_n,),  # b'G'
+    "⇧H": (LT.kdo_row_n_down,),  # b'H'
+    "⇧L": (LT.kdo_row_n_up,),  # b'L'
+    "⇧R": (LT.kdo_replace_n_till,),  # b'R'
+    "^": (LT.kdo_column_dent_beyond,),  # b'\x5E'
+    "_": (LT.kdo_dent_plus_n1,),  # b'\x5F'
     #
-    "D": LT.kdo_dents_cut_n,  # b'd'
-    "H": LT.kdo_column_minus_n,  # b'h'
-    "I": LT.kdo_insert_n_till,  # b'i'
-    "J": LT.kdo_line_plus_n,  # b'j'
-    "K": LT.kdo_line_minus_n,  # b'k'
-    "L": LT.kdo_column_plus_n,  # b'l'
-    "|": LT.kdo_column_n,  # b'\x7C'
-    "Delete": LT.kdo_char_minus_n,  # b'\x7F'
+    "D": (LT.kdo_dents_cut_n,),  # b'd'
+    "H": (LT.kdo_column_minus_n,),  # b'h'
+    "I": (LT.kdo_insert_n_till,),  # b'i'
+    "J": (LT.kdo_line_plus_n,),  # b'j'
+    "K": (LT.kdo_line_minus_n,),  # b'k'
+    "L": (LT.kdo_column_plus_n,),  # b'l'
+    "|": (LT.kdo_column_n,),  # b'\x7C'
+    "Delete": (LT.kdo_char_minus_n,),  # b'\x7F'
     #
 }
 
-PQ_KDO_FUNC_BY_KCAP_STR = {
+PQ_KDO_CALL_BY_KCAP_STR = {
     #
-    "⎋": LT.kdo_hold_stop_kstr,
-    "⎋⎋": LT.kdo_help_quit,  # Meta Esc
-    "⎋[": LT.kdo_quote_csi_kstrs_n,  # b'\x1B\x5B'  # Option [
+    "⎋": (LT.kdo_hold_stop_kstr,),
+    "⎋⎋": (LT.kdo_help_quit,),  # Meta Esc
+    "⎋[": (LT.kdo_quote_csi_kstrs_n,),  # b'\x1B\x5B'  # Option [
     #
-    "⌃C": LT.kdo_hold_stop_kstr,  # b'\x03'
-    "⌃D": LT.kdo_hold_stop_kstr,  # b'\x04'
-    "⌃E": LT.kdo_end_plus_n1,  # b'\x05'
-    "⌃G": LT.kdo_hold_stop_kstr,  # b'\x07'
-    "Tab": LT.kdo_tab_plus_n,  # b'\x09'  # b'\t'
-    "⌃J": LT.kdo_line_plus_n,  # b'\x0A'  # b'\n'
-    "⌃L : Q ! Return": LT.kdo_force_quit,  # b'\x0C...
-    "⌃L ⇧Z ⇧Q": LT.kdo_force_quit,  # b'\x0C...
-    "⌃L ⇧Z ⇧Z": LT.kdo_force_quit,  # b'\x0C...
-    # "⌃Q ⌃Q": LT.kdo_quote_kchars,  # b'\x11...  # no, go with ⌃V ⌃Q
-    # "⌃V ⌃V": LT.kdo_quote_kchars,  # b'\x16...  # no, go with ⌃Q ⌃V
-    "⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
-    "⌃X ⌃S ⌃X ⌃C": LT.kdo_force_quit,  # b'\x18...
-    "⇧Tab": LT.kdo_tab_minus_n,  # b'\x1B[Z'
-    "⌃\\": LT.kdo_hold_stop_kstr,  # ⌃\  # b'\x1C'
+    "⌃C": (LT.kdo_hold_stop_kstr,),  # b'\x03'
+    "⌃D": (LT.kdo_hold_stop_kstr,),  # b'\x04'
+    "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'
+    "⌃G": (LT.kdo_hold_stop_kstr,),  # b'\x07'
+    "Tab": (LT.kdo_tab_plus_n,),  # b'\x09'  # b'\t'
+    "⌃J": (LT.kdo_line_plus_n,),  # b'\x0A'  # b'\n'
+    "⌃L : Q ! Return": (LT.kdo_force_quit,),  # b'\x0C...
+    "⌃L ⇧Z ⇧Q": (LT.kdo_force_quit,),  # b'\x0C...
+    "⌃L ⇧Z ⇧Z": (LT.kdo_force_quit,),  # b'\x0C...
+    # "⌃Q ⌃Q": (LT.kdo_quote_kchars,),  # b'\x11...  # no, go with ⌃V ⌃Q
+    # "⌃V ⌃V": (LT.kdo_quote_kchars,),  # b'\x16...  # no, go with ⌃Q ⌃V
+    "⌃X ⌃C": (LT.kdo_force_quit,),  # b'\x18...
+    "⌃X ⌃S ⌃X ⌃C": (LT.kdo_force_quit,),  # b'\x18...
+    "⇧Tab": (LT.kdo_tab_minus_n,),  # b'\x1B[Z'
+    "⌃\\": (LT.kdo_hold_stop_kstr,),  # ⌃\  # b'\x1C'
     #
-    "⇧Q V I Return": LT.kdo_help_quit,  # b'Qvi\r'
-    "⇧Z ⇧Q": LT.kdo_force_quit,  # b'ZQ'
-    "⇧Z ⇧Z": LT.kdo_force_quit,  # b'ZZ'
-    "[": LT.kdo_quote_csi_kstrs_n,  # b'\x5B'
+    "⇧Q V I Return": (LT.kdo_help_quit,),  # b'Qvi\r'
+    "⇧Z ⇧Q": (LT.kdo_force_quit,),  # b'ZQ'
+    "⇧Z ⇧Z": (LT.kdo_force_quit,),  # b'ZZ'
+    "[": (LT.kdo_quote_csi_kstrs_n,),  # b'\x5B'
     #
-    "⌥⎋": LT.kdo_help_quit,  # Option Esc
-    "⌥[": LT.kdo_quote_csi_kstrs_n,  # b'\xE2\x80\x9C'  # Option [
+    "⌥⎋": (LT.kdo_help_quit,),  # Option Esc
+    "⌥[": (LT.kdo_quote_csi_kstrs_n,),  # b'\xE2\x80\x9C'  # Option [
     #
 }
 
 assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
 
-for _ITEM in EM_KDO_FUNC_BY_KCAP_STR.items():
-    _KCAP_STR = "⌃V" + " " + _ITEM[0]
-    if _KCAP_STR not in PQ_KDO_FUNC_BY_KCAP_STR.keys():
-        PQ_KDO_FUNC_BY_KCAP_STR[_KCAP_STR] = _ITEM[-1]
+for _KCS, _CALL in EM_KDO_CALL_BY_KCAP_STR.items():
+    _KCAP_STR = "⌃V" + " " + _KCS
+    if _KCAP_STR not in PQ_KDO_CALL_BY_KCAP_STR.keys():
+        PQ_KDO_CALL_BY_KCAP_STR[_KCAP_STR] = _CALL
 
-for _ITEM in VI_KDO_FUNC_BY_KCAP_STR.items():
-    _KCAP_STR = "⌃Q" + " " + _ITEM[0]
-    if _KCAP_STR not in PQ_KDO_FUNC_BY_KCAP_STR.keys():
-        PQ_KDO_FUNC_BY_KCAP_STR[_KCAP_STR] = _ITEM[-1]
+for _KCS, _CALL in VI_KDO_CALL_BY_KCAP_STR.items():
+    _KCAP_STR = "⌃Q" + " " + _KCS
+    if _KCAP_STR not in PQ_KDO_CALL_BY_KCAP_STR.keys():
+        PQ_KDO_CALL_BY_KCAP_STR[_KCAP_STR] = _CALL
 
-KDO_FUNC_BY_KCAP_STR = dict()
-KDO_FUNC_BY_KCAP_STR.update(EM_KDO_FUNC_BY_KCAP_STR)
-KDO_FUNC_BY_KCAP_STR.update(VI_KDO_FUNC_BY_KCAP_STR)
-KDO_FUNC_BY_KCAP_STR.update(PQ_KDO_FUNC_BY_KCAP_STR)
+KDO_CALL_BY_KCAP_STR = dict()
+KDO_CALL_BY_KCAP_STR.update(EM_KDO_CALL_BY_KCAP_STR)
+KDO_CALL_BY_KCAP_STR.update(VI_KDO_CALL_BY_KCAP_STR)
+KDO_CALL_BY_KCAP_STR.update(PQ_KDO_CALL_BY_KCAP_STR)
 
-KDO_FUNC_KCAP_STRS = sorted(KDO_FUNC_BY_KCAP_STR.keys())
+KDO_CALL_KCAP_STRS = sorted(KDO_CALL_BY_KCAP_STR.keys())
 
 # hand-sorted as ⎋, ⌃, 0..9, ⇧A..⇧Z, A..Z order of K Bytes
 # not so much by ⎋ ⌃ ⌥ ⇧ ⌘ Fn order
 
 # todo: Emacs ⌃U - for non-positive K-Int
 
-# todo: assert Keys of KDO_FUNC_BY_KCAP_STR reachable by StrTerminal
-#   such as '⎋' isn't reachable while '⎋ G Tab' defined
-#       because 'kdo_func_kcap_strs'
+# todo: assert Keys of KDO_CALL_BY_KCAP_STR reachable by StrTerminal
+#   such as '⎋' less reachable while '⎋ G Tab' defined
+#       because 'kdo_call_kcap_strs'
 
 
 # Run these K Do Func's as is when called with positive Arg,
