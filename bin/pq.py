@@ -2499,26 +2499,10 @@ class LineTerminal:
         while True:
             self.screen_print()
 
-            # Read one Keyboard Chord Sequence from the Keyboard
+            # Read one textual/not Keyboard Chord Sequence from the Keyboard
+            # may raise UnicodeDecodeError
 
-            if kstr_starts:
-                self.verb_read(vmode="")  # for .texts_wrangle while .kstr_starts
-            else:
-                self.verb_read(vmode=vmode)  # for .texts_wrangle Replace/ Insert
-
-            kbytes = self.kbytes
-            kchars = kbytes.decode()  # may raise UnicodeDecodeError
-            kcap_str = self.kcap_str
-
-            if not kchars.isprintable():
-                self.verb_tail_read(kbytes, kcap_str=kcap_str)
-
-            print(f"{kcap_str=} {kbytes=} {vmode=}", file=self.logfile)
-
-            kbytes = self.kbytes
-            kchars = kbytes.decode()  # may raise UnicodeDecodeError
-            kchars = self.kbytes.decode()  # may raise UnicodeDecodeError
-            kcap_str = self.kcap_str
+            (kbytes, kchars, kcap_str) = self.verb_read_for_vmode(vmode)
 
             textual = self.kchars_are_textual(
                 kchars, kcap_str=kcap_str, kstr_starts=kstr_starts
@@ -2553,12 +2537,12 @@ class LineTerminal:
             # and sometimes take - 0 1 2 3 4 5 6 7 8 9 as more K Start's
 
             if not textual:
-                if kcap_str == "⌃T":
-                    print("Could transpose")
                 self.verb_eval(vmode="")  # for .texts_wrangle untextuals
                 continue
 
             # Take the KCap_Str as Text Input
+
+            assert textual, (textual,)
 
             self.kdo_text_write_n()  # for .texts_wrangle textuals
 
@@ -2651,8 +2635,39 @@ class LineTerminal:
 
         pass  # todo: do more inside 'def screen_print'
 
+    def verb_read_for_vmode(self, vmode) -> tuple[bytes, str, str]:
+        """Read one textual/not Keyboard Chord Sequence from the Keyboard"""
+
+        kstr_starts = self.kstr_starts
+
+        # Read the Head of the Sequence
+
+        if kstr_starts:
+            self.verb_read(vmode="")  # for .texts_wrangle while .kstr_starts
+        else:
+            self.verb_read(vmode=vmode)  # for .texts_wrangle Replace/ Insert
+
+        kbytes = self.kbytes
+        kchars = kbytes.decode()  # may raise UnicodeDecodeError
+        kcap_str = self.kcap_str
+
+        # Read the Tail of the Sequence when the Head isn't printable
+
+        if not kchars.isprintable():
+            self.verb_tail_read(kbytes, kcap_str=kcap_str)
+
+            kbytes = self.kbytes
+            kchars = kbytes.decode()  # may raise UnicodeDecodeError
+            kcap_str = self.kcap_str
+
+        print(f"{kcap_str=} {kbytes=} {vmode=}", file=self.logfile)
+
+        return (kbytes, kchars, kcap_str)
+
+        # often raises UnicodeDecodeError
+
     def verb_read(self, vmode) -> None:
-        """Read one Keyboard Chord Sequence from the Keyboard, as Bytes and as Str"""
+        """Read one Keyboard Chord Sequence from the Keyboard, as Bytes, Str, & Str"""
 
         st = self.st
 
