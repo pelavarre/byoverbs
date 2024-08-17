@@ -75,6 +75,7 @@ import re
 import select
 import shlex
 import shutil
+import signal
 import stat
 import sys
 import termios  # unhappy at Windows
@@ -1920,6 +1921,17 @@ class BytesTerminal:
 
         """
 
+    def terminal_stop(self) -> None:
+        """Suspend and resume this Screen/Keyboard Terminal"""
+
+        pid = os.getpid()
+
+        self.__exit__()
+        os.kill(pid, signal.SIGTSTP)
+        self.__enter__()
+
+        assert os.getpid() == pid, (os.getpid(), pid)
+
     def flush_enough(self) -> None:
         """Repair the damage that Breakpoint does to Entry"""
 
@@ -2530,17 +2542,6 @@ class LineTerminal:
 
             return olines
 
-    def verbs_wrangle(self) -> list[str]:
-        """Read & Eval & Print in a loop till SystemExit"""
-
-        vmode = self.vmodes[-1]
-        assert not vmode, (vmode,)
-
-        while True:
-            self.screen_print()
-            self.verb_read(vmode="")  # for .verbs_wrangle
-            self.verb_eval(vmode="")  # for .verbs_wrangle
-
     def texts_vmode_wrangle(self, vmode) -> None:
         """Enter Replace/ Insert V-Mode, Wrangle Texts, then exit V-Mode"""
 
@@ -2698,6 +2699,17 @@ class LineTerminal:
         """Speak after taking Keyboard Chord Sequences as Commands or Text"""
 
         pass  # todo: do more inside 'def screen_print'
+
+    def verbs_wrangle(self) -> list[str]:
+        """Read & Eval & Print in a loop till SystemExit"""
+
+        vmode = self.vmodes[-1]
+        assert not vmode, (vmode,)
+
+        while True:
+            self.screen_print()
+            self.verb_read(vmode="")  # for .verbs_wrangle
+            self.verb_eval(vmode="")  # for .verbs_wrangle
 
     def verb_read_for_vmode(self, vmode) -> tuple[bytes, str, str]:
         """Read one textual/not Keyboard Chord Sequence from the Keyboard"""
@@ -2959,25 +2971,6 @@ class LineTerminal:
 
         return False
 
-    def kdo_text_write_n(self) -> None:
-        """Take the Chars of 1 Keyboard Chord Sequence as Text to write to Screen"""
-
-        st = self.st
-        kbytes = self.kbytes
-        kchars = kbytes.decode()  # may raise UnicodeDecodeError
-
-        kint = self.kint_pull(default=1)
-        if not kint:
-            return
-        if kint < 0:
-            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert
-            return
-
-        ktext = kint * kchars
-        st.stwrite(ktext)  # for .kdo_text_write_n
-
-        # Spacebar, printable US-Ascii, and printable Unicode
-
     def kdo_kcap_write_n(self) -> None:
         """Take the Str of 1 Keyboard Chord Sequence as Chars to write to Screen"""
 
@@ -2996,6 +2989,25 @@ class LineTerminal:
 
         # distinct printable echo without beep for unbound Keyboard Chord Sequences
         # like calmly kindly tell you what Keys you struck
+
+    def kdo_text_write_n(self) -> None:
+        """Take the Chars of 1 Keyboard Chord Sequence as Text to write to Screen"""
+
+        st = self.st
+        kbytes = self.kbytes
+        kchars = kbytes.decode()  # may raise UnicodeDecodeError
+
+        kint = self.kint_pull(default=1)
+        if not kint:
+            return
+        if kint < 0:
+            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert
+            return
+
+        ktext = kint * kchars
+        st.stwrite(ktext)  # for .kdo_text_write_n
+
+        # Spacebar, printable US-Ascii, and printable Unicode
 
     def alarm_ring(self) -> None:
         """Ring the Bell"""
@@ -3024,8 +3036,21 @@ class LineTerminal:
         st.stwrite(schars)  # for .write_form_kint
 
     #
-    # Quit
+    # Pause or Quit
     #
+
+    def kdo_terminal_stop(self) -> None:
+        """Suspend and resume this Screen/Keyboard Terminal"""
+
+        st = self.st
+        bt = st.bt
+
+        self.vmode_enter(vmode="")
+        bt.terminal_stop()
+        self.vmode_exit()
+
+        # Emacs ⌃Z suspend-frame
+        # Vi ⌃Z
 
     def kdo_force_quit(self) -> None:
         """Revert changes to the O Lines, and quit this Linux Process"""
@@ -3282,9 +3307,17 @@ class LineTerminal:
 
         assert len(kstr_stops) <= 1, (len(kstr_stops), kstr_stops, kcap_str)
         if kstr_stops == [kcap_str]:
-            self.help_quit()  # for .kdo_hold_stop_kstr
+            if kcap_str == "⌃\\":
+                self.kdo_assert_false()
+            else:
+                self.help_quit()  # for .kdo_hold_stop_kstr
 
         # Pq ⎋ ⌃C ⌃D ⌃G ⌃\  # missing from Emacs, Vi, VsCode
+
+    def kdo_assert_false(self) -> None:
+        """Assert False"""
+
+        assert False, (self.kdo_assert_false,)
 
     #
     # Boil our memory of Keyboard Chord Sequences down to one Int Value
@@ -3643,10 +3676,10 @@ class LineTerminal:
         kint = self.kint_pull(default=1)
 
         if not kint:
-            self.alarm_ring()  # todo: zero Emacs ⌃A
+            self.alarm_ring()  # todo: zero Emacs ⌃A move-beginning-of-line
             return
         if kint < 0:
-            self.alarm_ring()  # todo: negative Emacs ⌃A
+            self.alarm_ring()  # todo: negative Emacs ⌃A move-beginning-of-line
             return
 
         #
@@ -3881,7 +3914,7 @@ class LineTerminal:
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
         # Vi ⌃Y
-        # collides with Emacs ⌃Y
+        # collides with Emacs ⌃Y yank
 
     def kdo_add_top_row(self) -> None:
         """Insert new Top Rows, and move Cursor Down by that much"""
@@ -3896,7 +3929,7 @@ class LineTerminal:
         assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
         # Vi ⌃E
-        # collides with Emacs ⌃E
+        # collides with Emacs ⌃E move-end-of-line
 
 
 STOP_KCAP_STRS = ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
@@ -3985,8 +4018,8 @@ PQ_KDO_CALL_BY_KCAP_STR = {
     "⎋⎋": (LT.kdo_help_quit,),  # Meta Esc
     "⎋[": (LT.kdo_quote_csi_kstrs_n,),  # b'\x1B\x5B'  # Option [
     #
-    "⌃C": (LT.kdo_hold_stop_kstr,),  # b'\x03'
-    "⌃D": (LT.kdo_hold_stop_kstr,),  # b'\x04'
+    "⌃C": (LT.kdo_hold_stop_kstr,),  # b'\x03'  # SIGINT
+    "⌃D": (LT.kdo_hold_stop_kstr,),  # b'\x04'  # SIGHUP
     "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'
     "⌃G": (LT.kdo_hold_stop_kstr,),  # b'\x07'
     "Tab": (LT.kdo_tab_plus_n,),  # b'\x09'  # b'\t'
@@ -3998,6 +4031,7 @@ PQ_KDO_CALL_BY_KCAP_STR = {
     # "⌃V ⌃V": (LT.kdo_quote_kchars,),  # b'\x16...  # no, go with ⌃Q ⌃V
     "⌃X ⌃C": (LT.kdo_force_quit,),  # b'\x18...
     "⌃X ⌃S ⌃X ⌃C": (LT.kdo_force_quit,),  # b'\x18...
+    "⌃Z": (LT.kdo_terminal_stop,),  # b'\x1A'  # SIGTSTP
     "⇧Tab": (LT.kdo_tab_minus_n,),  # b'\x1B[Z'
     "⌃\\": (LT.kdo_hold_stop_kstr,),  # ⌃\  # b'\x1C'
     #
@@ -4073,8 +4107,9 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #   Vi  ⇧G ⇧H ⇧L ⇧R ^ _
 #   Vi  DD H I J K L | Delete
 #
-#   Pq  ⎋ ⎋⎋ ⎋[ ⌃C ⌃D ⌃G Tab ⇧Tab ⌃J ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⌃\
-#   Pq  ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z [ ⌥⎋ ⌥[
+#   Pq ⎋ ⎋⎋ ⎋[ ⌃C ⌃D ⌃G ⌃Z ⌃\
+#   Pq Tab ⇧Tab ⌃J ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C
+#   Pq ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z [ ⌥⎋ ⌥[
 #
 #   Option Mouse click moves Cursor via ← ↑ → ↓
 #   Keyboard Trace at:  tail -F -n +15 .pqinfo/keylog.py
@@ -4082,8 +4117,6 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 
 #
 # smallish todo's
-#
-#   bind << >> DD outside of themselves  # verb_read D D < < > >
 #
 #   ⌃K ⇧A C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X A C$ CC D$ DD I O R S X ⌃C ⎋
 #   Pq ⌃Q escape to Vi ⌃D ⌃E ⌃G ⌃L ⌃U ⌃V ⌃W ^Y etc
@@ -4100,8 +4133,6 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #   Size the Screen
 #       ⇧M
 #       bind C⇧L D⇧L
-#
-#   ^Z and ways to send ^C ^\ Assert-False
 #
 #   ⌃H⌃A ⌃H⌃K
 #

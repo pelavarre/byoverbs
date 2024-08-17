@@ -6,6 +6,7 @@ bindkey |grep '...M"'  # Zsh
 stty -a |grep '\^'
 stty all |grep -B1 '\^'  # macOS only
 stty -ixon  && : 'define Control+S to undo Control+R, not XOFF'
+stty cbreak  # implies 'stty ixon' at macOS, but not at Linux
 : see also 'macOS > Terminal > Settings > Keyboard > Use Option as Meta Key'
 """
 
