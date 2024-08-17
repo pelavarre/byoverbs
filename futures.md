@@ -855,8 +855,7 @@ pq emo
     respect case when mixed, like:  pq Ballot Box
 
 pq em/vi
-    type ⎋ on screen
-    bind 0 1 2 to themselves as Args, like let me create an alt 9
+    test ⌃Q⌃V and ⌃V⌃Q against actual ← ↑ → ↓ ⎋ ⏎ ⇥ ⇤
 
 
 ## Copied from

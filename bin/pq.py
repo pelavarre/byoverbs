@@ -1767,6 +1767,7 @@ CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 CHA = "\x1B" "[" "G"  # CSI 04/07 Cursor Character Absolute 1
 CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute
 CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation
+EL_P = "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line
 CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
 VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
@@ -3010,20 +3011,21 @@ class LineTerminal:
     # Wrap around the Screen and Keyboard of our StrTerminal
     #
 
-    def write_form_kint(self, form, kint) -> None:
+    def write_form_kint_if(self, form, kint, default=1) -> None:
         """Write a CSI Form to the Screen filled out by the Digits of the K Int"""
 
         assert "{}" in form, (form,)
-        assert kint >= 1, (kint,)
+        if kint != default:
+            assert kint >= 1, (kint,)
 
         st = self.st
 
-        if kint == 1:
+        if kint == default:
             schars = form.format("")
         else:
             schars = form.format(kint)
 
-        st.stwrite(schars)  # for .write_form_kint
+        st.stwrite(schars)  # for .write_form_kint_if
 
     #
     # Pause or Quit
@@ -3405,6 +3407,7 @@ class LineTerminal:
         # Emacs ← left-char
         # Vi Delete
         # Vi ^H
+        # macOS ⌃B
 
     def kdo_char_plus_n(self) -> None:
         """Step ahead by one or more Chars"""
@@ -3414,6 +3417,7 @@ class LineTerminal:
         # Emacs ⌃F forward-char
         # Emacs → right-char
         # Vi Spacebar
+        # macOS ⌃F
 
     def kdo_column_plus(self) -> None:
         """Jump to a zero-based numbered Column for Pedantic Emacs"""
@@ -3429,7 +3433,7 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B" "[" "{}G", kint=kint_plus)
+        self.write_form_kint_if("\x1B" "[" "{}G", kint=kint_plus)
 
         assert CHA_Y == "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
 
@@ -3452,7 +3456,7 @@ class LineTerminal:
         """Jump back by one or more Columns"""
 
         kint = self.kint_pull_positive(default=1)
-        self.write_form_kint("\x1B" "[" "{}D", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}D", kint=kint)
 
         # 00/08 Backspace (BS) \b ⌃H
         # 07/15 Delete (DEL) \x7F ⌃? 'Eliminated Control Function'
@@ -3486,12 +3490,12 @@ class LineTerminal:
             return
         if kint < 0:
             self.alarm_ring()  # todo: Pq | Negative Column
-            self.write_form_kint("\x1B" "[" "{}G", kint=kint)
+            self.write_form_kint_if("\x1B" "[" "{}G", kint=kint)
             return
 
         #
 
-        self.write_form_kint("\x1B" "[" "{}G", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}G", kint=kint)
 
         assert CHA_Y == "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
 
@@ -3502,7 +3506,7 @@ class LineTerminal:
         """Jump ahead by one or more Columns"""
 
         kint = self.kint_pull_positive(default=1)
-        self.write_form_kint("\x1B" "[" "{}C", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}C", kint=kint)
 
         assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
 
@@ -3513,7 +3517,7 @@ class LineTerminal:
         """Jump back by one or more Column Tabs"""
 
         kint = self.kint_pull_positive(default=1)
-        self.write_form_kint("\x1B" "[" "{}Z", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}Z", kint=kint)
 
         assert CBT_X == "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
@@ -3524,7 +3528,7 @@ class LineTerminal:
         """Jump ahead by one or more Column Tabs"""
 
         kint = self.kint_pull_positive(default=1)
-        self.write_form_kint("\x1B" "[" "{}I", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}I", kint=kint)
         # st.stwrite(kint * "\t")  # 00/09
 
         assert CHT_X == "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tab~
@@ -3552,7 +3556,7 @@ class LineTerminal:
 
         #
 
-        self.write_form_kint("\x1B" "[" "{}d", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}d", kint=kint)
         self.kdo_column_dent_beyond()  # for Vim G
 
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
@@ -3595,7 +3599,7 @@ class LineTerminal:
 
         if kint > 1:
             kint_minus = kint - 1
-            self.write_form_kint("\x1B" "[" "{}B", kint=kint_minus)
+            self.write_form_kint_if("\x1B" "[" "{}B", kint=kint_minus)
 
         self.kdo_column_dent_beyond()  # for Vim _
 
@@ -3623,15 +3627,16 @@ class LineTerminal:
 
         if kint > 1:
             kint_minus = kint - 1
-            self.write_form_kint("\x1B" "[" "{}B", kint=kint_minus)
+            self.write_form_kint_if("\x1B" "[" "{}B", kint=kint_minus)
 
-        self.write_form_kint("\x1B" "[" "{}C", kint=32100)  # todo: more Columns
+        self.write_form_kint_if("\x1B" "[" "{}C", kint=32100)  # todo: more Columns
 
         assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
         assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
 
         # Emacs ⌃E move-end-of-line
         # Vi $
+        # macOS ⌃E
 
     def kdo_home_n(self) -> None:
         """Jump to a numbered Line, and land at Left of Line"""
@@ -3649,7 +3654,7 @@ class LineTerminal:
 
         # Jump to Line and land at Left of Line
 
-        self.write_form_kint("\x1B" "[" "{}d", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}d", kint=kint)
         self.kdo_column_1()  # for Emacs ⌥GG ⎋GG Goto-Line
 
         # Disassemble these StrTerminal Writes
@@ -3680,19 +3685,20 @@ class LineTerminal:
 
         if kint > 1:
             kint_minus = kint - 1
-            self.write_form_kint("\x1B" "[" "{}B", kint=kint_minus)
+            self.write_form_kint_if("\x1B" "[" "{}B", kint=kint_minus)
 
         self.kdo_column_1()  # for Emacs ⌃A Left of Line
 
         assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
         # Emacs ⌃A move-beginning-of-line
+        # macOS ⌃A
 
     def kdo_line_minus_n(self) -> None:
         """Jump back by one or more Lines"""
 
         kint = self.kint_pull_positive(default=1)
-        self.write_form_kint("\x1B" "[" "{}A", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}A", kint=kint)
 
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
@@ -3703,7 +3709,7 @@ class LineTerminal:
         """Jump ahead by one or more Lines"""
 
         kint = self.kint_pull_positive(default=1)
-        self.write_form_kint("\x1B" "[" "{}B", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}B", kint=kint)
 
         assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
@@ -3716,10 +3722,10 @@ class LineTerminal:
 
         kint = self.kint_pull_positive(default=1)
 
-        self.write_form_kint("\x1B" "[" "{}d", kint=1)
+        self.write_form_kint_if("\x1B" "[" "{}d", kint=1)
         if kint > 1:
             kint_minus = kint - 1
-            self.write_form_kint("\x1B" "[" "{}B", kint=kint_minus)
+            self.write_form_kint_if("\x1B" "[" "{}B", kint=kint_minus)
 
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
         assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
@@ -3734,10 +3740,10 @@ class LineTerminal:
 
         assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
 
-        self.write_form_kint("\x1B" "[" "{}d", kint=32100)  # todo: more Rows
+        self.write_form_kint_if("\x1B" "[" "{}d", kint=32100)  # todo: more Rows
         if kint > 1:
             kint_minus = kint - 1
-            self.write_form_kint("\x1B" "[" "{}A", kint=kint_minus)
+            self.write_form_kint_if("\x1B" "[" "{}A", kint=kint_minus)
 
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
@@ -3829,7 +3835,7 @@ class LineTerminal:
 
         for i in range(kint):
             st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
-            self.write_form_kint("\x1B" "[" "{}@", kint=4)  # CSI 04/00
+            self.write_form_kint_if("\x1B" "[" "{}@", kint=4)  # CSI 04/00
             if i < (kint - 1):
                 st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
 
@@ -3868,7 +3874,7 @@ class LineTerminal:
         # Cut N Lines here and below, and land past Dent
 
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
-        self.write_form_kint("\x1B" "[" "{}M", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}M", kint=kint)
 
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
@@ -3918,24 +3924,26 @@ class LineTerminal:
         kint = self.kint_pull_positive(default=1)
 
         st.stwrite("\b")  # 00/08  # "\x08"  # "\x1B" "[" "D
-        self.write_form_kint("\x1B" "[" "{}P", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}P", kint=kint)
 
         assert BS == "\b"  # 00/08 Backspace ⌃H
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
         # Vi I Delete
         # Vim ⇧R Delete for texts not too old, but Pq ⇧R Delete is Vi Delete
+        # macOS ⌃H
 
     def kdo_char_delete_right_n(self) -> None:
         """Delete 1 Character to the Left"""
 
         kint = self.kint_pull_positive(default=1)
-        self.write_form_kint("\x1B" "[" "{}P", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}P", kint=kint)
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
         # Emacs ⌃D delete-char, or delete-forward-char
         # Vim I ⌃D doesn't work, for no simple reason
         # Pq I ⌃D
+        # macOS ⌃D
 
     def kdo_insert_return_n(self) -> None:
         """Insert an Empty Line below, and land at Left of Line"""
@@ -3958,12 +3966,57 @@ class LineTerminal:
         kint = self.kint_pull_positive(default=1)
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
         st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
-        self.write_form_kint("\x1B" "[" "{}L", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}L", kint=kint)
 
         assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 
         # Vi ⇧R I Return  # todo: move tail of Line into new inserted Line
         # Vim ⇧R Return, but Pq ⇧R Return is Vi Return
+
+    def kdo_tail_cut_n(self) -> None:
+        """Cut the Tail of the Line, and land at Dent"""
+
+        st = self.st
+
+        kint_else = self.kint_peek_else(default=None)
+        self.kint_pull(default=0)
+
+        ps_0 = 0  # writes Spaces ahead  # CSI K default Ps = 0
+        if kint_else is None:
+            self.write_form_kint_if("\x1B" "[" "{}K", kint=ps_0, default=ps_0)
+            return
+
+        kint = kint_else
+
+        ps_2 = 2  # writes Spaces ahead and behind
+        if kint >= 1:
+            self.write_form_kint_if("\x1B" "[" "{}K", kint=ps_2, default=ps_0)  # empty
+            self.write_form_kint_if("\x1B" "[" "{}B", kint=1)  # down
+            self.write_form_kint_if("\x1B" "[" "{}M", kint=kint)  # goodbye
+            self.write_form_kint_if("\x1B" "[" "{}A", kint=1)  # up
+            return
+
+        ps_1 = 1  # writes Spaces here and behind
+        st.stwrite("\b")  # 00/08  # "\x08"  # "\x1B" "[" "D
+        ... == ps_1  # type: ignore  # \b needed if we delete what .ps_1 writes over
+        self.write_form_kint_if("\x1B" "[" "{}K", kint=ps_2, default=ps_0)
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
+        if kint < 0:
+            self.write_form_kint_if("\x1B" "[" "{}A", kint=-kint)  # up
+            self.write_form_kint_if("\x1B" "[" "{}M", kint=-kint)  # goodbye
+
+        # for _ in range(kint):
+
+        assert BS == "\b"  # 00/08 Backspace ⌃H
+        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
+
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+        assert EL_P == "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line
+        assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
+
+        # Emacs ⌃K kill-line
+        # macOS ⌃K
 
     #
     # Scroll Rows
@@ -3973,8 +4026,8 @@ class LineTerminal:
         """Insert new Bottom Rows, and move Cursor Up by that much"""
 
         kint = self.kint_pull_positive(default=1)
-        self.write_form_kint("\x1B" "[" "{}S", kint=kint)
-        self.write_form_kint("\x1B" "[" "{}A", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}S", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}A", kint=kint)
 
         # Disassemble these StrTerminal Writes
 
@@ -3988,8 +4041,8 @@ class LineTerminal:
         """Insert new Top Rows, and move Cursor Down by that much"""
 
         kint = self.kint_pull_positive(default=1)
-        self.write_form_kint("\x1B" "[" "{}T", kint=kint)
-        self.write_form_kint("\x1B" "[" "{}B", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}T", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}B", kint=kint)
 
         # Disassemble these StrTerminal Writes
 
@@ -4034,6 +4087,7 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⌃D": (LT.kdo_char_delete_right_n,),  # b'\x04'
     "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'
     "⌃F": (LT.kdo_char_plus_n,),  # b'\x06'
+    "⌃K": (LT.kdo_tail_cut_n,),  # b'\x0B'
     "⌃N": (LT.kdo_line_plus_n,),  # b'\x0E'
     "⌃P": (LT.kdo_line_minus_n,),  # b'\x10'
     "⌃Q": (LT.kdo_quote_kchars,),  # b'\x11'
@@ -4203,7 +4257,7 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 # presently
 #
 #   Emacs  ⎋GG ⎋GTab
-#   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃N ⌃P ⌃Q ⌃U
+#   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃P ⌃Q ⌃U
 #   Emacs  ⎋← ⎋→ ⌥← ⌥→ aka ⎋B ⎋F
 #   Emacs  ⌥GG ⌥GTab
 #
@@ -4225,7 +4279,7 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 #   Emacs ⌃K ⌃O
 #
-#   ⌃K ⇧A C ⇧D ⇧I ⇧O ⇧S ⇧X A C$ CC D$ O R S X ⌃C ⎋
+#   ⇧A C ⇧D ⇧I ⇧O ⇧S ⇧X A C$ CC D$ O R S X ⌃C ⎋
 #   Pq ⌃Q escape to Vi ⌃D ⌃G ⌃L ⌃V etc
 #   Pq ⌃V escape to Emacs ⌃C ⌃D ⌃Q ⌃O ⌃V ⌃Y etc
 #
