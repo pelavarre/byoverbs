@@ -854,9 +854,6 @@ cd
 pq emo
     respect case when mixed, like:  pq Ballot Box
 
-pq em/vi
-    test ⌃Q⌃V and ⌃V⌃Q against actual ← ↑ → ↓ ⎋ ⏎ ⇥ ⇤
-
 
 ## Copied from
 

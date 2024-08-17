@@ -2106,12 +2106,20 @@ class BytesTerminal:
 # Shifting Keys other than the Fn Key
 # Meta hides inside macOS Terminal > Settings > Keyboard > Use Option as Meta Key
 
-# 'Fn'
 Meta = "\N{Broken Circle With Northwest Arrow}"  # ⎋
 Control = "\N{Up Arrowhead}"  # ⌃
 Option = "\N{Option Key}"  # ⌥
 Shift = "\N{Upwards White Arrow}"  # ⇧
 Command = "\N{Place of Interest Sign}"  # ⌘  # Super  # Windows
+# 'Fn'
+
+KCAP_QUOTE_BY_STR = {
+    "Delete": unicodedata.lookup("Erase To The Left"),  # ⌫
+    "Return": unicodedata.lookup("Return Symbol"),  # ⏎
+    "Spacebar": unicodedata.lookup("Bottom Square Bracket"),  # ⎵  # ␣ Open Box
+    "Tab": unicodedata.lookup("Rightwards Arrow To Bar"),  # ⇥
+    "⇧Tab": unicodedata.lookup("Leftwards Arrow To Bar"),  # ⇤
+}
 
 
 KCAP_SEP = " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
@@ -2962,71 +2970,6 @@ class LineTerminal:
 
         return False
 
-    def kdo_kcap_write_n(self) -> None:
-        """Take the Str of 1 Keyboard Chord Sequence as Chars to write to Screen"""
-
-        st = self.st
-        kcap_str = self.kcap_str
-
-        kint = self.kint_pull(default=1)
-        if not kint:
-            return
-        if kint < 0:
-            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert K Cap Str
-            return
-
-        ktext = kint * kcap_str
-        st.stwrite(ktext)  # for .kdo_kcap_write_n
-
-        # distinct printable echo without beep for unbound Keyboard Chord Sequences
-        # like calmly kindly tell you what Keys you struck
-
-    def kdo_text_write_n(self) -> None:
-        """Take the Chars of 1 Keyboard Chord Sequence as Text to write to Screen"""
-
-        st = self.st
-        kbytes = self.kbytes
-        kchars = kbytes.decode()  # may raise UnicodeDecodeError
-
-        kint = self.kint_pull(default=1)
-        if not kint:
-            return
-        if kint < 0:
-            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert Text
-            return
-
-        ktext = kint * kchars
-        st.stwrite(ktext)  # for .kdo_text_write_n
-
-        # Spacebar, printable US-Ascii, and printable Unicode
-
-    def alarm_ring(self) -> None:
-        """Ring the Bell"""
-
-        self.st.stprint("\a", end="")
-
-        # 00/07 Bell (BEL)
-
-    #
-    # Wrap around the Screen and Keyboard of our StrTerminal
-    #
-
-    def write_form_kint_if(self, form, kint, default=1) -> None:
-        """Write a CSI Form to the Screen filled out by the Digits of the K Int"""
-
-        assert "{}" in form, (form,)
-        if kint != default:
-            assert kint >= 1, (kint,)
-
-        st = self.st
-
-        if kint == default:
-            schars = form.format("")
-        else:
-            schars = form.format(kint)
-
-        st.stwrite(schars)  # for .write_form_kint_if
-
     #
     # Pause or Quit
     #
@@ -3098,21 +3041,76 @@ class LineTerminal:
     # Quote
     #
 
+    def kdo_text_write_n(self) -> None:
+        """Take the Chars of 1 Keyboard Chord Sequence as Text to write to Screen"""
+
+        st = self.st
+        kbytes = self.kbytes
+        kchars = kbytes.decode()  # may raise UnicodeDecodeError
+
+        kint = self.kint_pull(default=1)
+        if not kint:
+            return
+        if kint < 0:
+            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert Text
+            return
+
+        ktext = kint * kchars
+        st.stwrite(ktext)  # for .kdo_text_write_n
+
+        # Spacebar, printable US-Ascii, and printable Unicode
+
+    def kdo_kcap_write_n(self) -> None:
+        """Take the Str of 1 Keyboard Chord Sequence as Chars to write to Screen"""
+
+        st = self.st
+        kcap_str = self.kcap_str
+
+        kint = self.kint_pull(default=1)
+        if not kint:
+            return
+        if kint < 0:
+            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert K Cap Str
+            return
+
+        ktext = kint * kcap_str
+        st.stwrite(ktext)  # for .kdo_kcap_write_n
+
+        # distinct printable echo without beep for unbound Keyboard Chord Sequences
+        # like calmly kindly tell you what Keys you struck
+
     def kdo_quote_kchars(self) -> None:
         """Block till the next K Chord, but then take it as Text, not as Command"""
 
         st = self.st
+
+        kcap_quote_by_str = KCAP_QUOTE_BY_STR
+
+        #
 
         kint = self.kint_pull(default=1)
         if kint < 0:
             self.alarm_ring()  # 'negative repetition arg' for Texts_Wrangle etc
             return
 
+        #
+
         self.logfile.flush()
         (kbytes, kchord_str) = st.pull_one_kchord_bytes_str()
+        if not kint:
+            return
 
-        kchars = kbytes.decode()  # may raise UnicodeEncodeError
-        ktext = kint * kchars
+        #
+
+        kcap_str = kchord_str
+        if kchord_str in kcap_quote_by_str.keys():
+            kcap_str = kcap_quote_by_str[kchord_str]
+
+        ktext = kint * kcap_str
+        if False:  # jitter Sat 17/Aug
+            kchars = kbytes.decode()  # may raise UnicodeEncodeError
+            ktext = kint * kchars
+
         st.stwrite(ktext)  # for .kdo_quote_kchars
 
         # Emacs ⌃Q quoted-insert/ replace
@@ -3172,6 +3170,33 @@ class LineTerminal:
 
         # Pq [ quote.csi.kstrs  # missing from Emacs, Vi, VsCode
         # unlike Vi [ Key Map
+
+    def alarm_ring(self) -> None:
+        """Ring the Bell"""
+
+        self.st.stprint("\a", end="")
+
+        # 00/07 Bell (BEL)
+
+    #
+    # Wrap around the Screen and Keyboard of our StrTerminal
+    #
+
+    def write_form_kint_if(self, form, kint, default=1) -> None:
+        """Write a CSI Form to the Screen filled out by the Digits of the K Int"""
+
+        assert "{}" in form, (form,)
+        if kint != default:
+            assert kint >= 1, (kint,)
+
+        st = self.st
+
+        if kint == default:
+            schars = form.format("")
+        else:
+            schars = form.format(kint)
+
+        st.stwrite(schars)  # for .write_form_kint_if
 
     #
     # For context, remember some of the Keyboard Chord Sequences awhile

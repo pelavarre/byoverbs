@@ -56,7 +56,7 @@ alias cd=ZSH_CHDIR
 #
 
 
-alias %%='echo -n "%%   ⌃ ⌥ ⇧ ⌘   # £   ← ↑ → ↓ ⎋ ⏎ ⇥ ⇤   ⋮ ·" |tee >(pbcopy) && echo'
+alias %%='echo -n "%% # £   ⎋ ⌃ ⌥ ⇧ ⌘ Fn   ← ↑ → ↓ ⏎ ⇥ ⇤   ⋮ ·" |tee >(pbcopy) && echo'
 
 function :scf: () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug: () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
