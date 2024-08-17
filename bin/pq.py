@@ -1808,6 +1808,9 @@ class BytesTerminal:
     #   https://www.ecma-international.org/publications-and-standards/standards/ecma-48
     #     /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
     #
+    #   termios.TCSADRAIN blocks till Queued Output gone, without dropping Queued Input
+    #   termios.TCSAFLUSH blocks till Queued Output gone and drops Queued Input
+    #
 
     stdio: typing.TextIO  # sys.stderr
     fd: int  # 2
@@ -1833,10 +1836,10 @@ class BytesTerminal:
         self.fd = fd
         self.kholds = bytearray()  # todo: write it sometimes
 
-        self.before = before  # todo: test Tcsa Flush, not only Tcsa Drain
+        self.before = before
         self.tcgetattr_else = None
         self.kinterrupts = 0
-        self.after = after
+        self.after = after  # todo: test Tcsa Flush on large Paste crashing us
 
         self.kbyteslogger = kbyteslogger
         self.sbyteslogger = sbyteslogger
@@ -1892,6 +1895,43 @@ class BytesTerminal:
             termios.tcsetattr(fd, when, tcgetattr)
 
         return None
+
+    def breakpoint(self) -> None:
+        r"""Breakpoint with line-buffered Input and \n Output taken to mean \r\n, etc"""
+
+        self.__exit__()
+        breakpoint()  # to step up the call stack:  u
+        self.__enter__()
+
+        _ = """
+
+        fd = self.fd
+        tcgetattr_else = self.tcgetattr_else
+
+        if tcgetattr_else is not None:
+            tcgetattr = tcgetattr_else
+            when = termios.TCSADRAIN
+            termios.tcsetattr(fd, when, tcgetattr)
+            stdio.flush()
+            tty.setraw(fd, when)
+
+        if False:  # jitter Sat 3/Aug
+            os.write(fd, b"??")
+
+        """
+
+    def flush_enough(self) -> None:
+        """Repair the damage that Breakpoint does to Entry"""
+
+        stdio = self.stdio
+        stdio.flush()
+
+        self.kbyteslogger.pylogfile.flush()  # plus ~0.050 ms, ugh
+        self.sbyteslogger.pylogfile.flush()  # plus another ~0.050 ms, ugh
+
+        fd = self.fd
+        when = termios.TCSADRAIN
+        tty.setraw(fd, when)
 
     def btwrite(self, sbytes) -> None:
         """Write Bytes to the Screen, but without implicitly also writing a Line-End"""
@@ -2000,7 +2040,6 @@ class BytesTerminal:
     def readkbyte(self) -> bytes:
         """Read 1 Byte from the Keyboard"""
 
-        stdio = self.stdio
         fd = self.fd
         assert self.tcgetattr_else
         kbyteslogger = self.kbyteslogger
@@ -2015,13 +2054,7 @@ class BytesTerminal:
 
         # Else block to read 1 Byte from Keyboard
 
-        if False:  # jitter Sat 3/Aug
-            os.write(fd, b"??")
-
-        stdio.flush()
-
-        self.kbyteslogger.pylogfile.flush()  # plus ~0.050 ms, ugh
-        self.sbyteslogger.pylogfile.flush()  # plus another ~0.050 ms, ugh
+        self.flush_enough()
 
         kbytes = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
         kbyteslogger.log_bytes_io(kbytes)  # logs In after Read
@@ -2123,6 +2156,9 @@ KCHORD_STR_BY_KCHARS = {
     "\xA0": "⌥Spacebar",  # '\N{No-Break Space}'
 }
 
+# the ⌥⇧Fn Key Cap quotes only the Shifting Keys, drops the substantive final Key Cap,
+# except that ⎋⇧Fn← ⎋⇧Fn→ ⎋⇧Fn↑ ⎋⇧Fn also exist
+
 assert list(KCHORD_STR_BY_KCHARS.keys()) == sorted(KCHORD_STR_BY_KCHARS.keys())
 
 
@@ -2223,6 +2259,13 @@ class StrTerminal:
 
         bt = self.bt
         bt.__exit__(*exc_info)
+
+    def breakpoint(self) -> None:
+        r"""Breakpoint with line-buffered Input and \n Output taken to mean \r\n, etc"""
+
+        self.__exit__()
+        breakpoint()  # to step up the call stack:  u
+        self.__enter__()
 
     def stwrite(self, schars) -> None:
         """Write Chars to the Screen, but without implicitly also writing a Line-End"""
@@ -2419,6 +2462,19 @@ class LineTerminal:
 
         # lots of empty happens only until first Keyboard Input
 
+    def breakpoint(self) -> None:
+        r"""Breakpoint with line-buffered Input and \n Output taken to mean \r\n, etc"""
+
+        st = self.st
+
+        if False:  # jitter Fri 16/Aug
+            breakpoint()  # why does this kind of work, but just in the first Break?
+            return
+
+        st.__exit__()
+        breakpoint()  # to step up the call stack:  u
+        st.__enter__()
+
     def top_wrangle(self, ilines, kmap) -> list[str]:
         """Launch, and run till SystemExit"""
 
@@ -2537,6 +2593,7 @@ class LineTerminal:
             assert STOP_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
             if not textual:
                 if kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\"):
+                    # self.breakpoint()
                     kstr_stops.append(kcap_str)  # like for ⎋[1m
                     break
 
@@ -4031,8 +4088,6 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #   ⌃K ⇧A C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X A C$ CC D$ DD I O R S X ⌃C ⎋
 #   Pq ⌃Q escape to Vi ⌃D ⌃E ⌃G ⌃L ⌃U ⌃V ⌃W ^Y etc
 #   Pq ⌃V escape to Emacs ⌃B ⌃C ⌃D ⌃F ⌃Q ⌃O ⌃V ⌃Y etc
-#
-#   Restore tty.setraw for c from Breakpoint into Pdb
 #
 
 #
