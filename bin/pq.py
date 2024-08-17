@@ -3076,8 +3076,12 @@ class LineTerminal:
         ktext = kint * kcap_str
         st.stwrite(ktext)  # for .kdo_kcap_write_n
 
-        # distinct printable echo without beep for unbound Keyboard Chord Sequences
-        # like calmly kindly tell you what Keys you struck
+        # Emacs ⌃Q quoted-insert/ replace
+        # Vi ⌃V
+        # Pq ⌃Q⌃V
+        # Pq ⌃V⌃Q
+
+        # Pq for any undefined Keyboard Chord Sequence, printed without an alarming Beep
 
     def kdo_quote_kchars(self) -> None:
         """Block till the next K Chord, but then take it as Text, not as Command"""
@@ -3112,9 +3116,6 @@ class LineTerminal:
             ktext = kint * kchars
 
         st.stwrite(ktext)  # for .kdo_quote_kchars
-
-        # Emacs ⌃Q quoted-insert/ replace
-        # Vi ⌃V
 
     def kdo_quote_csi_kstrs_n(self) -> None:
         """Block till CSI Sequence complete, then take it as Text"""
@@ -3970,31 +3971,46 @@ class LineTerminal:
         # Pq I ⌃D
         # macOS ⌃D
 
-    def kdo_insert_return_n(self) -> None:
-        """Insert an Empty Line below, and land at Left of Line"""
+    def kdo_line_insert_ahead_n(self) -> None:
+        """Insert 0 or more Empty Lines ahead, and land at Left before the First"""
 
         st = self.st
 
-        #
-
         kint = self.kint_pull(default=1)
-
-        if not kint:
-            return
-
         if kint < 0:
             self.alarm_ring()  # 'negative repetition arg' for Insert Return
             return
 
-        #
+        if kint:
+            st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
+            self.write_form_kint_if("\x1B" "[" "{}L", kint=kint)  # insert
+            self.write_form_kint_if("\x1B" "[" "{}A", kint=kint)  # up
 
-        kint = self.kint_pull_positive(default=1)
+        self.kdo_end_plus_n1()
+
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+        assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
+
+        # Emacs ⌃O open-line  # todo: move tail of Line into new inserted Line
+
+    def kdo_line_insert_behind_mostly_n(self) -> None:
+        """Insert 0 or more Empty Lines ahead, and land at Left of Last"""
+
+        st = self.st
+
+        kint = self.kint_pull(default=1)
+        if kint < 0:
+            self.alarm_ring()  # 'negative repetition arg' for Insert Return
+            return
+
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
-        st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
-        self.write_form_kint_if("\x1B" "[" "{}L", kint=kint)
+        if kint:
+            st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
+            self.write_form_kint_if("\x1B" "[" "{}L", kint=kint)
 
         assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 
+        # Emacs Return
         # Vi ⇧R I Return  # todo: move tail of Line into new inserted Line
         # Vim ⇧R Return, but Pq ⇧R Return is Vi Return
 
@@ -4093,7 +4109,7 @@ KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
 
 
 INSERT_PQ_KDO_CALL_BY_KCAP_STR = {
-    "Return": (LT.kdo_insert_return_n,),  # b'\x0D'  # b'\r'
+    "Return": (LT.kdo_line_insert_behind_mostly_n,),  # b'\x0D'  # b'\r'
     "Delete": (LT.kdo_char_delete_left_n,),  # b'\x7F'
     # "⌃W": (LT.kdo_word_delete_left_n,),  # b'\x04'
     # "⌃U": (LT.kdo_empty_line_n,),  # b'\x15'
@@ -4114,6 +4130,7 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⌃F": (LT.kdo_char_plus_n,),  # b'\x06'
     "⌃K": (LT.kdo_tail_cut_n,),  # b'\x0B'
     "⌃N": (LT.kdo_line_plus_n,),  # b'\x0E'
+    "⌃O": (LT.kdo_line_insert_ahead_n,),  # b'\x0B'
     "⌃P": (LT.kdo_line_minus_n,),  # b'\x10'
     "⌃Q": (LT.kdo_quote_kchars,),  # b'\x11'
     "⌃U": (LT.kdo_hold_start_kstr, tuple(["⌃U"])),  # b'\x15'
@@ -4302,11 +4319,11 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # smallish todo's
 #
-#   Emacs ⌃K ⌃O
+#   Emacs ⌃O
 #
-#   ⇧A C ⇧D ⇧I ⇧O ⇧S ⇧X A C$ CC D$ O R S X ⌃C ⎋
-#   Pq ⌃Q escape to Vi ⌃D ⌃G ⌃L ⌃V etc
-#   Pq ⌃V escape to Emacs ⌃C ⌃D ⌃Q ⌃O ⌃V ⌃Y etc
+#   ⇧A C ⇧D ⇧I ⇧O ⇧S ⇧X A C$ CC D$ O R S X
+#   Pq ⌃Q escape to Vi ⌃D ⌃G ⌃L etc
+#   Pq ⌃V escape to Emacs ⌃L  ⌃V ⌃W ⌃Y etc
 #
 
 #
