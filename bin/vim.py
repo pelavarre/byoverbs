@@ -36,9 +36,14 @@ import byotools as byo
 byo.sys_exit()
 
 
+# :helpgrep
+# :helpgrep CTRL-U
+# :cnext
+
 # demo +123
 # demo +startinsert
-# vim.py to take:  triage/scraps/jv_sad_builds.py:775
+# vim.py to take:  pathname:123
+# vim.py to take:  pathname:123:4
 
 # solve
 #
