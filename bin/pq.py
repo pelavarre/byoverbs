@@ -2120,11 +2120,11 @@ KCHORD_STR_BY_KCHARS = {
     "\x09": "Tab",  # '\t' ⇥
     "\x0D": "Return",  # '\r' ⏎
     "\x1B": "⎋",  # Esc  # Meta  # includes ⎋Spacebar ⎋Tab ⎋Return ⎋Delete without ⌥
-    "\x1B" "\x01": "⎋⇧Fn←",  # ⌥⇧Fn←   # coded with ⌃A
+    "\x1B" "\x01": "⌥⇧Fn←",  # ⎋⇧Fn←   # coded with ⌃A
     "\x1B" "\x03": "⎋FnReturn",  # coded with ⌃C  # not ⌥FnReturn
-    "\x1B" "\x04": "⎋⇧Fn→",  # ⌥⇧Fn→   # coded with ⌃D
-    "\x1B" "\x0B": "⎋⇧Fn↑",  # ⌥⇧Fn↑   # coded with ⌃K
-    "\x1B" "\x0C": "⎋⇧Fn↓",  # ⌥⇧Fn↓  # coded with ⌃L
+    "\x1B" "\x04": "⌥⇧Fn→",  # ⎋⇧Fn→   # coded with ⌃D
+    "\x1B" "\x0B": "⌥⇧Fn↑",  # ⎋⇧Fn↑   # coded with ⌃K
+    "\x1B" "\x0C": "⌥⇧Fn↓",  # ⎋⇧Fn↓  # coded with ⌃L
     "\x1B" "\x10": "⎋⇧Fn",  # ⎋ Meta ⇧ Shift of of F1..F12  # not ⌥⇧Fn  # coded with ⌃P
     "\x1B" "\x1B": "⎋⎋",  # Meta Esc  # not ⌥⎋
     "\x1B" "\x1B" "[" "3;5~": "⎋⌃FnDelete",  # ⌥⌃FnDelete  # LS1R
@@ -2166,8 +2166,8 @@ KCHORD_STR_BY_KCHARS = {
     "\x1B" "[" "F": "⇧Fn→",  # CSI 04/06 Cursor Preceding Line (CPL)
     "\x1B" "[" "H": "⇧Fn←",  # CSI 04/08 Cursor Position (CUP)
     "\x1B" "[" "Z": "⇧Tab",  # ⇤  # CSI 05/10 Cursor Backward Tabulation (CBT)
-    "\x1B" "b": "⎋←",  # ⌥← ⎋B  # ⎋←  # Emacs M-b Backword-Word
-    "\x1B" "f": "⎋→",  # ⌥→ ⎋F  # ⎋→  # Emacs M-f Forward-Word
+    "\x1B" "b": "⌥←",  # ⎋B  # ⎋←  # Emacs M-b Backword-Word
+    "\x1B" "f": "⌥→",  # ⎋F  # ⎋→  # Emacs M-f Forward-Word
     "\x20": "Spacebar",  # ' ' ␠ ␣ ␢
     "\x7F": "Delete",  # ␡ ⌫ ⌦
     "\xA0": "⌥Spacebar",  # '\N{No-Break Space}'
@@ -2445,7 +2445,7 @@ class LineTerminal:
     kbytes: bytes  # the Bytes of the last Keyboard Chord
     kcap_str: str  # the Str of the KeyCap Words of the last Keyboard Chord
     kstr_starts: list[str]  # []  # ['⌃U']  # ['⌃U', '-']  # ['⌃U', '⌃U']
-    kstr_stops: list[str]  # []  # ['⎋'] for any of ⌃C ⌃D ⌃G ⎋ ⌃\
+    kstr_stops: list[str]  # []  # ['⎋'] for any of ⌃C ⌃G ⎋ ⌃\
 
     kmap: str  # ''  # 'Emacs'  # 'Vi'
     vmodes: list[str]  # ''  # 'Replace'  # 'Insert'
@@ -2577,28 +2577,13 @@ class LineTerminal:
                 kchars, kcap_str=kcap_str, kstr_starts=kstr_starts
             )
 
-            # Bind Delete and Return differently while Insert
-
-            if vmode == "Insert":
-                if kcap_str == "Delete":
-                    self.kdo_char_delete_left()
-                    continue
-                if kcap_str == "Return":
-                    self.kdo_insert_return()
-                    continue
-
-                # Vim deletes ⌃U Lines and ⌃W Words while Insert
-                # Vim leaps over ⌃U Lines and ⌃W Words while Replace
-
-                # Vim does Replace Delete over what's not too old
-
             # Exit Replace/ Insert Mode on request
 
             kstr_stops.clear()
 
-            assert STOP_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
+            assert STOP_KCAP_STRS == ("⌃C", "⌃G", "⎋", "⌃\\")
             if not textual:
-                if kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\"):
+                if kcap_str in ("⌃C", "⌃G", "⎋", "⌃\\"):
                     # self.breakpoint()
                     kstr_stops.append(kcap_str)  # like for ⎋[1m
                     break
@@ -2607,7 +2592,7 @@ class LineTerminal:
             # and sometimes take - 0 1 2 3 4 5 6 7 8 9 as more K Start's
 
             if not textual:
-                self.verb_eval(vmode="")  # for .texts_wrangle untextuals
+                self.verb_eval(vmode)  # for .texts_wrangle untextuals
                 continue
 
             # Take the KCap_Str as Text Input
@@ -2861,15 +2846,18 @@ class LineTerminal:
         kcap_str = self.kcap_str
 
         kdo_call_by_kcap_str = KDO_CALL_BY_KCAP_STR
+        insert_pq_kdo_call_by_kcap_str = INSERT_PQ_KDO_CALL_BY_KCAP_STR
 
         # Choose 1 Python Def to call, on behalf of 1 Keyboard Chord Sequence
 
         kdo_call: PY_CALL
 
         kdo_call = (LineTerminal.kdo_kcap_write_n,)  # for outside .kdo_call_by_kcap_str
-        if (not vmode) or (not kcap_str.isprintable()):
-            if kcap_str in kdo_call_by_kcap_str.keys():
-                kdo_call = kdo_call_by_kcap_str[kcap_str]
+        if kcap_str in kdo_call_by_kcap_str.keys():
+            kdo_call = kdo_call_by_kcap_str[kcap_str]
+        if vmode == "Insert":
+            if kcap_str in insert_pq_kdo_call_by_kcap_str.keys():
+                kdo_call = insert_pq_kdo_call_by_kcap_str[kcap_str]
 
         if KDEBUG:
             if kdo_call[0] is not LineTerminal.kdo_force_quit:
@@ -2912,7 +2900,7 @@ class LineTerminal:
             return (func, call[-1], kwargs)
 
         assert len(call) == 3, (call,)
-        return call
+        return tuple(call)
 
     def kstarts_kstops_choose_after(self, kstr_starts_before, kcap_str) -> None:
         """Forget the K Start's and/or add one K Stop's, like when we should"""
@@ -2927,15 +2915,12 @@ class LineTerminal:
 
         # Forget the K Stop's, but then do hold onto the latest K Stop if present
 
-        assert STOP_KCAP_STRS == ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
+        assert STOP_KCAP_STRS == ("⌃C", "⌃G", "⎋", "⌃\\")
 
         kstr_stops.clear()
-        stopped = self.kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")
+        stopped = self.kcap_str in ("⌃C", "⌃G", "⎋", "⌃\\")
         if stopped:
             kstr_stops.append(self.kcap_str)
-
-        if kcap_str in ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\"):
-            assert stopped, (stopped, kcap_str, self.kcap_str)
 
     def kdo_inverse_or_nop(self, kdo_func) -> bool:
         """Call the Inverse or do nothing, and return True, else return False"""
@@ -2986,7 +2971,7 @@ class LineTerminal:
         if not kint:
             return
         if kint < 0:
-            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert
+            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert K Cap Str
             return
 
         ktext = kint * kcap_str
@@ -3006,7 +2991,7 @@ class LineTerminal:
         if not kint:
             return
         if kint < 0:
-            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert
+            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert Text
             return
 
         ktext = kint * kchars
@@ -3317,7 +3302,7 @@ class LineTerminal:
             else:
                 self.help_quit()  # for .kdo_hold_stop_kstr
 
-        # Pq ⎋ ⌃C ⌃D ⌃G ⌃\  # missing from Emacs, Vi, VsCode
+        # Pq ⎋ ⌃C ⌃G ⌃\  # missing from Emacs, Vi, VsCode
 
     def kdo_assert_false(self) -> None:
         """Assert False"""
@@ -3881,32 +3866,64 @@ class LineTerminal:
 
         # Vi ⇧R
 
-    def kdo_insert_return(self) -> None:
-        """Insert an Empty Line below, and land at Left of Line"""
-
-        st = self.st
-
-        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
-        st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
-
-        st.stwrite("\x1B" "[" "L")  # CSI 04/12 Insert Line
-
-        assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
-
-        # Vi ⇧R I Return  # todo: move tail of Line into new inserted Line
-
-    def kdo_char_delete_left(self) -> None:
+    def kdo_char_delete_left_n(self) -> None:
         """Delete 1 Character to the Left"""
 
         st = self.st
 
+        kint = self.kint_pull_positive(default=1)
+
         st.stwrite("\b")  # 00/08  # "\x08"  # "\x1B" "[" "D
-        st.stwrite("\x1B" "[" "P")  # CSI 05/00 Delete Character
+        self.write_form_kint("\x1B" "[" "{}P", kint=kint)
 
         assert BS == "\b"  # 00/08 Backspace ⌃H
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
-        # Vi ⇧R I Delete
+        # Vi I Delete
+        # Vim ⇧R Delete for texts not too old, but Pq ⇧R Delete is Vi Delete
+
+    def kdo_char_delete_right_n(self) -> None:
+        """Delete 1 Character to the Left"""
+
+        kint = self.kint_pull_positive(default=1)
+        self.write_form_kint("\x1B" "[" "{}P", kint=kint)
+        assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
+
+        # Emacs ⌃D delete-char, or delete-forward-char
+        # Vim I ⌃D doesn't work, for no simple reason
+        # Pq I ⌃D
+
+    def kdo_insert_return_n(self) -> None:
+        """Insert an Empty Line below, and land at Left of Line"""
+
+        st = self.st
+
+        #
+
+        kint = self.kint_pull(default=1)
+
+        if not kint:
+            return
+
+        if kint < 0:
+            self.alarm_ring()  # 'negative repetition arg' for Insert Return
+            return
+
+        #
+
+        kint = self.kint_pull_positive(default=1)
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
+        st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
+        self.write_form_kint("\x1B" "[" "{}L", kint=kint)
+
+        assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
+
+        # Vi ⇧R I Return  # todo: move tail of Line into new inserted Line
+        # Vim ⇧R Return, but Pq ⇧R Return is Vi Return
+
+    #
+    # Scroll Rows
+    #
 
     def kdo_add_bottom_row(self) -> None:
         """Insert new Bottom Rows, and move Cursor Up by that much"""
@@ -3939,19 +3956,29 @@ class LineTerminal:
         # collides with Emacs ⌃E move-end-of-line
 
 
-STOP_KCAP_STRS = ("⌃C", "⌃D", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
+STOP_KCAP_STRS = ("⌃C", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
 
 
 LT = LineTerminal
 
 
+INSERT_PQ_KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
 EM_KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
-
 VI_KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
-
 PQ_KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
 
 KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
+
+
+INSERT_PQ_KDO_CALL_BY_KCAP_STR = {
+    "Return": (LT.kdo_insert_return_n,),  # b'\x0D'  # b'\r'
+    "Delete": (LT.kdo_char_delete_left_n,),  # b'\x7F'
+    # "⌃W": (LT.kdo_word_delete_left_n,),  # b'\x04'
+    # "⌃U": (LT.kdo_empty_line_n,),  # b'\x15'
+}
+
+# todo: Vim ⌃W is a delete-last-word
+
 
 EM_KDO_CALL_BY_KCAP_STR = {
     #
@@ -3961,6 +3988,7 @@ EM_KDO_CALL_BY_KCAP_STR = {
     # "⎋ R": (LT.kdo_row_middle_up_down,),
     "⌃A": (LT.kdo_home_plus_n1,),  # b'\x01'
     "⌃B": (LT.kdo_char_minus_n,),  # b'\x02'
+    "⌃D": (LT.kdo_char_delete_right_n,),  # b'\x04'
     "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'
     "⌃F": (LT.kdo_char_plus_n,),  # b'\x06'
     "⌃N": (LT.kdo_line_plus_n,),  # b'\x0E'
@@ -3975,10 +4003,12 @@ EM_KDO_CALL_BY_KCAP_STR = {
     # "⌥ R": (LT.kdo_row_middle_up_down,),
 }
 
+
 VI_KDO_CALL_BY_KCAP_STR = {
     #
     "Return": (LT.kdo_dent_plus_n,),  # b'\x0D'  # b'\r'
     "⌃E": (LT.kdo_add_bottom_row,),  # b'\x05'
+    "⌃J": (LT.kdo_line_plus_n,),  # b'\x0A'  # b'\n'
     "⌃V": (LT.kdo_quote_kchars,),  # b'\x16'
     "⌃Y": (LT.kdo_add_top_row,),  # b'\x19'
     "↑": (LT.kdo_line_minus_n,),  # b'\x1B[A'
@@ -4021,6 +4051,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     #
 }
 
+
 PQ_KDO_CALL_BY_KCAP_STR = {
     #
     "⎋": (LT.kdo_hold_stop_kstr,),
@@ -4028,12 +4059,14 @@ PQ_KDO_CALL_BY_KCAP_STR = {
     "⎋[": (LT.kdo_quote_csi_kstrs_n,),  # b'\x1B\x5B'  # Option [
     #
     "⌃C": (LT.kdo_hold_stop_kstr,),  # b'\x03'  # SIGINT
-    "⌃D": (LT.kdo_hold_stop_kstr,),  # b'\x04'  # SIGHUP
-    "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'
+    "⌃D": (LT.kdo_char_delete_right_n,),  # b'\x04'  # SIGHUP  # Pq like macOS/ Emacs
+    "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'  # Pq like macOS/ Emacs
     "⌃G": (LT.kdo_hold_stop_kstr,),  # b'\x07'
     "Tab": (LT.kdo_tab_plus_n,),  # b'\x09'  # b'\t'
-    "⌃J": (LT.kdo_line_plus_n,),  # b'\x0A'  # b'\n'
+    "⌃L : Q Return": (LT.kdo_force_quit,),  # b'\x0C...
     "⌃L : Q ! Return": (LT.kdo_force_quit,),  # b'\x0C...
+    "⌃L : W Q Return": (LT.kdo_force_quit,),  # b'\x0C...
+    "⌃L : W Q ! Return": (LT.kdo_force_quit,),  # b'\x0C...
     "⌃L ⇧Z ⇧Q": (LT.kdo_force_quit,),  # b'\x0C...
     "⌃L ⇧Z ⇧Z": (LT.kdo_force_quit,),  # b'\x0C...
     # "⌃Q ⌃Q": (LT.kdo_quote_kchars,),  # b'\x11...  # no, go with ⌃V ⌃Q
@@ -4044,6 +4077,10 @@ PQ_KDO_CALL_BY_KCAP_STR = {
     "⇧Tab": (LT.kdo_tab_minus_n,),  # b'\x1B[Z'
     "⌃\\": (LT.kdo_hold_stop_kstr,),  # ⌃\  # b'\x1C'
     #
+    ": Q Return": (LT.kdo_force_quit,),  # b':q\r'
+    ": Q ! Return": (LT.kdo_force_quit,),  # b':q!\r'
+    ": W Q Return": (LT.kdo_force_quit,),  # b':wq\r'
+    ": W Q ! Return": (LT.kdo_force_quit,),  # b':wq!\r'
     "⇧Q V I Return": (LT.kdo_help_quit,),  # b'Qvi\r'
     "⇧Z ⇧Q": (LT.kdo_force_quit,),  # b'ZQ'
     "⇧Z ⇧Z": (LT.kdo_force_quit,),  # b'ZZ'
@@ -4053,6 +4090,7 @@ PQ_KDO_CALL_BY_KCAP_STR = {
     "⌥[": (LT.kdo_quote_csi_kstrs_n,),  # b'\xE2\x80\x9C'  # Option [
     #
 }
+
 
 assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
 
@@ -4067,6 +4105,7 @@ for _KCS, _CALL in VI_KDO_CALL_BY_KCAP_STR.items():
         PQ_KDO_CALL_BY_KCAP_STR[_KCAP_STR] = _CALL
 
 KDO_CALL_BY_KCAP_STR = dict()
+KDO_CALL_BY_KCAP_STR.update(INSERT_PQ_KDO_CALL_BY_KCAP_STR)
 KDO_CALL_BY_KCAP_STR.update(EM_KDO_CALL_BY_KCAP_STR)
 KDO_CALL_BY_KCAP_STR.update(VI_KDO_CALL_BY_KCAP_STR)
 KDO_CALL_BY_KCAP_STR.update(PQ_KDO_CALL_BY_KCAP_STR)
@@ -4089,6 +4128,8 @@ KDO_CALL_KCAP_STRS = sorted(KDO_CALL_BY_KCAP_STR.keys())
 VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
     LT.kdo_add_bottom_row: (LT.kdo_add_top_row, 1),  # ⌃E
     LT.kdo_add_top_row: (LT.kdo_add_bottom_row, 1),  # ⌃Y
+    LT.kdo_char_delete_left_n: (LT.kdo_char_delete_right_n, 1),  # Delete
+    LT.kdo_char_delete_right_n: (LT.kdo_char_delete_left_n, 1),  # ⌃D
     LT.kdo_column_minus_n: (LT.kdo_column_plus_n, 1),  # ← H
     LT.kdo_column_plus_n: (LT.kdo_column_minus_n, 1),  # → L
     LT.kdo_dent_minus_n: (LT.kdo_dent_plus_n, 1),  # -
@@ -4108,17 +4149,17 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 # presently
 #
 #   Emacs  ⎋GG ⎋GTab
-#   Emacs  ⌃A ⌃B ⌃E ⌃F ⌃N ⌃P ⌃Q ⌃U
+#   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃N ⌃P ⌃Q ⌃U
 #   Emacs  ⌥GG ⌥GTab
 #
-#   Vi  Return ⌃E ⌃V ⌃Y ← ↓ ↑ →
+#   Vi  Return ⌃E ⌃J ⌃V ⌃Y ← ↓ ↑ →
 #   Vi  Spacebar $ + - 0 123456789 << >>
 #   Vi  ⇧G ⇧H ⇧L ⇧R ^ _
 #   Vi  DD H I J K L | Delete
 #
-#   Pq ⎋ ⎋⎋ ⎋[ ⌃C ⌃D ⌃G ⌃Z ⌃\
-#   Pq Tab ⇧Tab ⌃J ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C
-#   Pq ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z [ ⌥⎋ ⌥[
+#   Pq ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
+#   Pq ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
+#   Pq I⌃D IReturn IDelete
 #
 #   Option Mouse click moves Cursor via ← ↑ → ↓
 #   Keyboard Trace at:  tail -F -n +15 .pqinfo/keylog.py
@@ -4127,9 +4168,11 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # smallish todo's
 #
+#   Vi ⇧B ⇧W B W
+#   Emacs ⎋← ⎋→ ⌥← ⌥→ aka ⎋B ⎋F
 #   ⌃K ⇧A C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X A C$ CC D$ DD I O R S X ⌃C ⎋
-#   Pq ⌃Q escape to Vi ⌃D ⌃E ⌃G ⌃L ⌃U ⌃V ⌃W ^Y etc
-#   Pq ⌃V escape to Emacs ⌃B ⌃C ⌃D ⌃F ⌃Q ⌃O ⌃V ⌃Y etc
+#   Pq ⌃Q escape to Vi ⌃D ⌃G ⌃L ⌃V etc
+#   Pq ⌃V escape to Emacs ⌃C ⌃D ⌃Q ⌃O ⌃V ⌃Y etc
 #
 
 #

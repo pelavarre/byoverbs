@@ -9,5 +9,5 @@ else
     "$D"/flake8.bash "$@"
     "$D"/mypy.bash "$@"
     grep -nHR '^ *def ' "$@" |grep -v ' -> ' || :
-    git diff --color-moved HEAD~1 |grep '[^f]".*[{].*[}]'
+    git diff --color-moved HEAD~1 |grep '[^f]".*[{]..*[}]'
 fi
