@@ -1927,7 +1927,12 @@ class BytesTerminal:
         pid = os.getpid()
 
         self.__exit__()
+
+        print("Pq Terminal Stop: ⌃Z F G Return")
+        print("macOS ⌃C might stop working till you close Window")  # even past:  reset
+        print("Linux might freak lots more than that")
         os.kill(pid, signal.SIGTSTP)
+
         self.__enter__()
 
         assert os.getpid() == pid, (os.getpid(), pid)
@@ -3410,6 +3415,7 @@ class LineTerminal:
 
         self.kdo_column_minus_n()  # Vim wraps Delete ^H left  # Emacs wraps ←
 
+        # Emacs ⌃B backward-char
         # Emacs ← left-char
         # Vi Delete
         # Vi ^H
@@ -3419,6 +3425,7 @@ class LineTerminal:
 
         self.kdo_column_plus_n()  # Vim wraps Spacebar right  # Emacs wraps →
 
+        # Emacs ⌃F forward-char
         # Emacs → right-char
         # Vi Spacebar
 
@@ -3666,7 +3673,7 @@ class LineTerminal:
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
         assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
 
-        # Emacs ⎋G G goto-line  # also Emacs ⎋G ⎋G goto-line
+        # Emacs ⎋G G goto-line  # also Emacs ⎋G ⎋G goto-line  # not zero-based
 
     def kdo_home_plus_n1(self) -> None:
         """Jump ahead by zero or more Lines, and land at Left of Line"""
@@ -3953,7 +3960,9 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⎋G Tab": (LT.kdo_column_plus,),
     # "⎋ R": (LT.kdo_row_middle_up_down,),
     "⌃A": (LT.kdo_home_plus_n1,),  # b'\x01'
+    "⌃B": (LT.kdo_char_minus_n,),  # b'\x02'
     "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'
+    "⌃F": (LT.kdo_char_plus_n,),  # b'\x06'
     "⌃N": (LT.kdo_line_plus_n,),  # b'\x0E'
     "⌃P": (LT.kdo_line_minus_n,),  # b'\x10'
     "⌃Q": (LT.kdo_quote_kchars,),  # b'\x11'
@@ -4099,7 +4108,7 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 # presently
 #
 #   Emacs  ⎋GG ⎋GTab
-#   Emacs  ⌃A ⌃E ⌃N ⌃P ⌃Q ⌃U
+#   Emacs  ⌃A ⌃B ⌃E ⌃F ⌃N ⌃P ⌃Q ⌃U
 #   Emacs  ⌥GG ⌥GTab
 #
 #   Vi  Return ⌃E ⌃V ⌃Y ← ↓ ↑ →
@@ -4126,6 +4135,17 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # bigger todo's
 #
+#   Chose ⌃H⌃K inside Texts/ Verbs
+#       Refactor Texts_Wrangle & Verb_Eval to form a (KBytes, KCap_Str, Py_Call)
+#       Print ⌃H⌃K as all three of (KBytes, KCap_Str, Py_Call)
+#
+#   Revert to Ex Mode to do ⌃H⌃A
+#       Take a line of input as literal ignoring case
+#           but "..." or '...' to respect case, except auto-close the " or '
+#           and take r"...' or r'...' to do Py RegEx for which to hit
+#       Do the reverse-lookup to find (KBytes, KCap_Str, Py_Call)
+#           not only Py Func
+#
 #   Bounce Cursor to Tracer
 #       Trace the unicode.name while Replace/ Insert
 #       Delete the Message we last wrote, write the new, log Messages & lost Messages
@@ -4133,8 +4153,6 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #   Size the Screen
 #       ⇧M
 #       bind C⇧L D⇧L
-#
-#   ⌃H⌃A ⌃H⌃K
 #
 #   Shadow the Screen
 #       Vim ⌃O ⌃I Undo/Redo movements that pierce the Shadow
