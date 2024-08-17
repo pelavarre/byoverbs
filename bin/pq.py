@@ -2581,9 +2581,9 @@ class LineTerminal:
 
             kstr_stops.clear()
 
-            assert STOP_KCAP_STRS == ("⌃C", "⌃G", "⎋", "⌃\\")
+            assert STOP_KCAP_STRS == ("⌃C", "⌃G", "⌃L", "⎋", "⌃\\")
             if not textual:
-                if kcap_str in ("⌃C", "⌃G", "⎋", "⌃\\"):
+                if kcap_str in ("⌃C", "⌃G", "⌃L", "⎋", "⌃\\"):
                     # self.breakpoint()
                     kstr_stops.append(kcap_str)  # like for ⎋[1m
                     break
@@ -2915,10 +2915,10 @@ class LineTerminal:
 
         # Forget the K Stop's, but then do hold onto the latest K Stop if present
 
-        assert STOP_KCAP_STRS == ("⌃C", "⌃G", "⎋", "⌃\\")
+        assert STOP_KCAP_STRS == ("⌃C", "⌃G", "⌃L", "⎋", "⌃\\")
 
         kstr_stops.clear()
-        stopped = self.kcap_str in ("⌃C", "⌃G", "⎋", "⌃\\")
+        stopped = self.kcap_str in ("⌃C", "⌃G", "⌃L", "⎋", "⌃\\")
         if stopped:
             kstr_stops.append(self.kcap_str)
 
@@ -3002,7 +3002,7 @@ class LineTerminal:
     def alarm_ring(self) -> None:
         """Ring the Bell"""
 
-        self.st.stprint("\a")
+        self.st.stprint("\a", end="")
 
         # 00/07 Bell (BEL)
 
@@ -3082,10 +3082,11 @@ class LineTerminal:
         quit_kcap_strs.sort()
 
         st.stprint()
-        quits = "  ".join("".join(_.split()) for _ in quit_kcap_strs)
-        st.stprint(f"To quit, press one of  {quits}")
+        st.stprint(
+            "To quit, press one of"
+            " ⌃C⇧Z⇧Q ⌃C⇧Z⇧Z ⌃G⌃X⌃C ⌃C⌃L:Q!Return ⌃G⌃X⌃S⌃X⌃C ⌃C⌃L:WQ!Return"
+        )
 
-        # 'Press ⌃L⌃C:Q!Return or ⌃X⌃C or ⌃X⌃S⌃X⌃C or ⇧Z⇧Q or ⇧Z⇧Z to quit'
         # todo: Emacs doesn't bind '⌃C R' to (revert-buffer 'ignoreAuto 'noConfirm)
         # todo: Emacs freaks if you delete the ⌃X⌃S File before calling ⌃X⌃S
 
@@ -3421,7 +3422,7 @@ class LineTerminal:
 
         kint = self.kint_pull(default=0)
         if kint < 0:  # Emacs says 'Wrong type argument: wholenump'
-            self.alarm_ring()  # 'negative repetition arg' for Emacs ⎋ G Tab
+            self.alarm_ring()  # 'negative repetition arg' for Emacs ⌥GTab ⎋GTab
             return
 
         kint_plus = kint + 1
@@ -3432,7 +3433,7 @@ class LineTerminal:
 
         assert CHA_Y == "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
 
-        # Emacs ⎋ G Tab move-to-column
+        # Emacs ⌥G ⎋G Tab move-to-column
 
     def kdo_column_1(self) -> None:
         """Jump to Left of Line"""
@@ -3533,7 +3534,7 @@ class LineTerminal:
         # Pq Tab tab.plus.n  # missing from Emacs, Vi, VsCode
 
     #
-    # Move the Screen Cursor to a Row, relatively or absolutely
+    # Move the Screen Cursor to Row, at Left or at Dent, relatively or absolutely
     #
 
     def kdo_dent_line_n(self) -> None:
@@ -3649,7 +3650,7 @@ class LineTerminal:
         # Jump to Line and land at Left of Line
 
         self.write_form_kint("\x1B" "[" "{}d", kint=kint)
-        self.kdo_column_1()  # for Emacs ⎋G G Goto-Line
+        self.kdo_column_1()  # for Emacs ⌥GG ⎋GG Goto-Line
 
         # Disassemble these StrTerminal Writes
 
@@ -3658,7 +3659,8 @@ class LineTerminal:
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
         assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
 
-        # Emacs ⎋G G goto-line  # also Emacs ⎋G ⎋G goto-line  # not zero-based
+        # Emacs ⌥GG ⎋GG goto-line  # not zero-based
+        # Emacs ⌥G⌥G ⎋G⎋G goto-line  # not zero-based
 
     def kdo_home_plus_n1(self) -> None:
         """Jump ahead by zero or more Lines, and land at Left of Line"""
@@ -3722,7 +3724,7 @@ class LineTerminal:
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
         assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
-        # Emacs ⎋ R move-to-window-line-top-bottom, with Zero-Based Positive K-Int
+        # Emacs ⌥R ⎋R move-to-window-line-top-bottom, with Zero-Based Positive K-Int
         # Vi ⇧H
 
     def kdo_row_n_up(self) -> None:
@@ -3740,8 +3742,50 @@ class LineTerminal:
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
-        # Emacs ⎋ R move-to-window-line-top-bottom, with Negative K-Int
+        # Emacs ⌥R ⎋R move-to-window-line-top-bottom, with Negative K-Int
         # Vi ⇧L
+
+    #
+    # Move the Screen Cursor ahead and back by a couple of sizes of Words
+    #
+
+    def kdo_bigword_minus_n(self) -> None:
+        """Step back by one or more Bigger Words"""
+
+        self.kdo_tab_minus_n()
+
+        # Emacs ⌥B ⎋B  backward-word, inside of superword-mode
+        # Vi ⇧B
+
+    def kdo_bigword_plus_n(self) -> None:
+        """Step ahead by one or more Bigger Words"""
+
+        self.kdo_tab_plus_n()
+
+        # Emacs ⌥F ⎋F  forward-word, inside of superword-mode
+        # Vi ⇧W
+
+    def kdo_lilword_minus_n(self) -> None:
+        """Step back by one or more Little Words"""
+
+        kint = self.kint_pull_positive(default=1)
+        self.kint_push(4 * kint)
+
+        self.kdo_char_minus_n()
+
+        # Emacs ⌥B ⎋B  backward-word, outside of superword-mode
+        # Vi B
+
+    def kdo_lilword_plus_n(self) -> None:
+        """Step ahead by one or more Little Words"""
+
+        kint = self.kint_pull_positive(default=1)
+        self.kint_push(4 * kint)
+
+        self.kdo_char_plus_n()
+
+        # Emacs ⌥F ⎋F  forward-word, outside of superword-mode
+        # Vi W
 
     #
     # Dedent or Dent the Lines at and below the Screen Cursor
@@ -3766,7 +3810,7 @@ class LineTerminal:
         for i in range(kint - 1):
             st.stwrite("\x1B" "[" "A")  # CSI 04/01
 
-        self.kdo_column_dent_beyond()  # for Vim < <
+        self.kdo_column_dent_beyond()  # for Vim <<
 
         # Disassemble these StrTerminal Writes
 
@@ -3792,7 +3836,7 @@ class LineTerminal:
         for i in range(kint - 1):
             st.stwrite("\x1B" "[" "A")  # CSI 04/01
 
-        self.kdo_column_dent_beyond()  # for Vim > >
+        self.kdo_column_dent_beyond()  # for Vim >>
 
         # Disassemble these StrTerminal Writes
 
@@ -3828,7 +3872,7 @@ class LineTerminal:
 
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
-        # Vi D D
+        # Vi DD
 
     #
     # Switch between Replace Mode, Insert Mode, and View Mode
@@ -3956,7 +4000,7 @@ class LineTerminal:
         # collides with Emacs ⌃E move-end-of-line
 
 
-STOP_KCAP_STRS = ("⌃C", "⌃G", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
+STOP_KCAP_STRS = ("⌃C", "⌃G", "⌃L", "⎋", "⌃\\")  # ..., b'\x1B, b'\x1C'
 
 
 LT = LineTerminal
@@ -3985,7 +4029,6 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⎋G G": (LT.kdo_home_n,),
     "⎋G ⎋G": (LT.kdo_home_n,),
     "⎋G Tab": (LT.kdo_column_plus,),
-    # "⎋ R": (LT.kdo_row_middle_up_down,),
     "⌃A": (LT.kdo_home_plus_n1,),  # b'\x01'
     "⌃B": (LT.kdo_char_minus_n,),  # b'\x02'
     "⌃D": (LT.kdo_char_delete_right_n,),  # b'\x04'
@@ -3997,10 +4040,12 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⌃U": (LT.kdo_hold_start_kstr, tuple(["⌃U"])),  # b'\x15'
     # "⌃X 8 Return": (LT.unicodedata_lookup,),  # Emacs insert-char
     #
+    "⌥←": (LT.kdo_bigword_minus_n,),  # encoded as ⎋B  # can be from ⎋←
+    "⌥→": (LT.kdo_bigword_plus_n,),  # encoded as ⎋F  # can be from ⎋→
     "⌥G G": (LT.kdo_home_n,),
     "⌥G ⌥G": (LT.kdo_home_n,),
     "⌥G Tab": (LT.kdo_column_plus,),
-    # "⌥ R": (LT.kdo_row_middle_up_down,),
+    #
 }
 
 
@@ -4030,22 +4075,26 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "7": (LT.kdo_hold_start_kstr, ("7",)),
     "8": (LT.kdo_hold_start_kstr, ("8",)),
     "9": (LT.kdo_hold_start_kstr, ("9",)),
-    "< <": (LT.kdo_lines_dedent_n,),
-    "> >": (LT.kdo_lines_dent_n,),
+    "< <": (LT.kdo_lines_dedent_n,),  # <<
+    "> >": (LT.kdo_lines_dent_n,),  # >>
     #
+    "⇧B": (LT.kdo_bigword_minus_n,),  # b'B'
     "⇧G": (LT.kdo_dent_line_n,),  # b'G'
     "⇧H": (LT.kdo_row_n_down,),  # b'H'
     "⇧L": (LT.kdo_row_n_up,),  # b'L'
     "⇧R": (LT.kdo_replace_n_till,),  # b'R'
+    "⇧W": (LT.kdo_bigword_plus_n,),  # b'W'
     "^": (LT.kdo_column_dent_beyond,),  # b'\x5E'
     "_": (LT.kdo_dent_plus_n1,),  # b'\x5F'
     #
-    "D D": (LT.kdo_dents_cut_n,),  # b'd'
+    "B": (LT.kdo_lilword_minus_n,),  # b'b'
+    "D D": (LT.kdo_dents_cut_n,),  # b'd'  # DD
     "H": (LT.kdo_column_minus_n,),  # b'h'
     "I": (LT.kdo_insert_n_till,),  # b'i'
     "J": (LT.kdo_line_plus_n,),  # b'j'
     "K": (LT.kdo_line_minus_n,),  # b'k'
     "L": (LT.kdo_column_plus_n,),  # b'l'
+    "W": (LT.kdo_lilword_plus_n,),  # b'w'
     "|": (LT.kdo_column_n,),  # b'\x7C'
     "Delete": (LT.kdo_char_minus_n,),  # b'\x7F'
     #
@@ -4063,6 +4112,7 @@ PQ_KDO_CALL_BY_KCAP_STR = {
     "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'  # Pq like macOS/ Emacs
     "⌃G": (LT.kdo_hold_stop_kstr,),  # b'\x07'
     "Tab": (LT.kdo_tab_plus_n,),  # b'\x09'  # b'\t'
+    "⌃L": (LT.kdo_hold_stop_kstr,),  # b'\x07'
     "⌃L : Q Return": (LT.kdo_force_quit,),  # b'\x0C...
     "⌃L : Q ! Return": (LT.kdo_force_quit,),  # b'\x0C...
     "⌃L : W Q Return": (LT.kdo_force_quit,),  # b'\x0C...
@@ -4128,16 +4178,20 @@ KDO_CALL_KCAP_STRS = sorted(KDO_CALL_BY_KCAP_STR.keys())
 VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
     LT.kdo_add_bottom_row: (LT.kdo_add_top_row, 1),  # ⌃E
     LT.kdo_add_top_row: (LT.kdo_add_bottom_row, 1),  # ⌃Y
+    LT.kdo_bigword_minus_n: (LT.kdo_bigword_minus_n, 1),  # ⇧B  # ⌥→
+    LT.kdo_bigword_plus_n: (LT.kdo_bigword_minus_n, 1),  # ⇧W  # ⌥→
     LT.kdo_char_delete_left_n: (LT.kdo_char_delete_right_n, 1),  # Delete
     LT.kdo_char_delete_right_n: (LT.kdo_char_delete_left_n, 1),  # ⌃D
     LT.kdo_column_minus_n: (LT.kdo_column_plus_n, 1),  # ← H
     LT.kdo_column_plus_n: (LT.kdo_column_minus_n, 1),  # → L
     LT.kdo_dent_minus_n: (LT.kdo_dent_plus_n, 1),  # -
     LT.kdo_dent_plus_n: (LT.kdo_dent_minus_n, 1),  # Return +
+    LT.kdo_lilword_minus_n: (LT.kdo_lilword_minus_n, 1),  # B
+    LT.kdo_lilword_plus_n: (LT.kdo_lilword_minus_n, 1),  # W
     LT.kdo_line_minus_n: (LT.kdo_line_plus_n, 1),  # ↓ ⌃J ⌃N J
     LT.kdo_line_plus_n: (LT.kdo_line_minus_n, 1),  # ↑ ⌃P K
-    LT.kdo_lines_dedent_n: (LT.kdo_lines_dent_n, 1),  # < <
-    LT.kdo_lines_dent_n: (LT.kdo_lines_dedent_n, 1),  # > >
+    LT.kdo_lines_dedent_n: (LT.kdo_lines_dent_n, 1),  # <<
+    LT.kdo_lines_dent_n: (LT.kdo_lines_dedent_n, 1),  # >>
     LT.kdo_row_n_down: (LT.kdo_row_n_up, 1),  # ⇧L
     LT.kdo_row_n_up: (LT.kdo_row_n_down, 1),  # ⇧H
     LT.kdo_tab_minus_n: (LT.kdo_tab_plus_n, 1),  # Tab ⇥
@@ -4150,11 +4204,12 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 #   Emacs  ⎋GG ⎋GTab
 #   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃N ⌃P ⌃Q ⌃U
+#   Emacs  ⎋← ⎋→ ⌥← ⌥→ aka ⎋B ⎋F
 #   Emacs  ⌥GG ⌥GTab
 #
 #   Vi  Return ⌃E ⌃J ⌃V ⌃Y ← ↓ ↑ →
 #   Vi  Spacebar $ + - 0 123456789 << >>
-#   Vi  ⇧G ⇧H ⇧L ⇧R ^ _
+#   Vi  ⇧B ⇧W ⇧G ⇧H ⇧L ⇧R B W ^ _
 #   Vi  DD H I J K L | Delete
 #
 #   Pq ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
@@ -4168,9 +4223,9 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # smallish todo's
 #
-#   Vi ⇧B ⇧W B W
-#   Emacs ⎋← ⎋→ ⌥← ⌥→ aka ⎋B ⎋F
-#   ⌃K ⇧A C ⇧D ⇧I ⇧O ⇧R ⇧S ⇧X A C$ CC D$ DD I O R S X ⌃C ⎋
+#   Emacs ⌃K ⌃O
+#
+#   ⌃K ⇧A C ⇧D ⇧I ⇧O ⇧S ⇧X A C$ CC D$ O R S X ⌃C ⎋
 #   Pq ⌃Q escape to Vi ⌃D ⌃G ⌃L ⌃V etc
 #   Pq ⌃V escape to Emacs ⌃C ⌃D ⌃Q ⌃O ⌃V ⌃Y etc
 #
@@ -4203,15 +4258,22 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #       < > C D to movement ⇧G etc
 #       Bind Undo Keys to roll back
 #
+#   Files smaller than the Screen, with ⎋[m marks in them
+#
 
 #
 # later todo's:
 #
-#   ⌃L [ of Shadow Screen, of File larger than Screen ]
+#   Vi ⌃L Emacs ⌃L of Shadow Screen
 #   Emacs ⌃W ⌃Y
 #   Vi :set ruler
 #
 #   Emacs ⌃R ⌃S Searches
+#
+#   More obscure Vi ⌃ and Emacs ⌃ and Emacs ⌥
+#   Emacs ⌃C ⌃X Name Spaces
+#
+#   Screens of Files
 #
 
 
