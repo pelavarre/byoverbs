@@ -2564,7 +2564,7 @@ class LineTerminal:
             self.help_quit()  # for .top_wrangle
 
             try:
-                self.texts_vmode_wrangle("Replace")  # as if Vi +:startreplace
+                self.texts_vmode_wrangle("Replace", kint=1)  # as if Vi +:startreplace
                 self.verbs_wrangle()  # as if Vi +:stopinsert, not Vi +:startinsert
             except SystemExit as exc:
                 if exc.code:
@@ -2574,16 +2574,22 @@ class LineTerminal:
 
             return olines
 
-    def texts_vmode_wrangle(self, vmode) -> None:
+    def texts_vmode_wrangle(self, vmode, kint) -> None:
         """Enter Replace/ Insert V-Mode, Wrangle Texts, then exit V-Mode"""
+
+        st = self.st
 
         assert vmode, (vmode,)
 
         self.vmode_enter(vmode)
-        self.texts_wrangle()
+        ktexts = self.texts_wrangle()
+        if kint > 1:
+            kint_minus = kint - 1
+            st.stwrite(kint_minus * ktexts)  # for .texts_vmode_wrangle Replace/ Insert
+
         self.vmode_exit()
 
-    def texts_wrangle(self) -> None:  # noqa C901 too complex(11
+    def texts_wrangle(self) -> str:
         """Take Input as Replace Text or Insert Text, till ⌃C or ⎋"""
 
         kstr_starts = self.kstr_starts
@@ -2592,6 +2598,7 @@ class LineTerminal:
         vmode = self.vmodes[-1]
         assert vmode, (vmode,)
 
+        ktexts = ""
         while True:
             self.screen_print()
 
@@ -2620,13 +2627,17 @@ class LineTerminal:
 
             if not textual:
                 self.verb_eval(vmode)  # for .texts_wrangle untextuals
+                ktexts = ""
                 continue
 
             # Take the KCap_Str as Text Input
 
             assert textual, (textual,)
 
-            self.kdo_text_write_n()  # for .texts_wrangle textuals
+            ktext = self.kdo_text_write_n()  # for .texts_wrangle textuals
+            ktexts += ktext
+
+        return ktexts
 
     def kchars_are_textual(self, kchars, kcap_str, kstr_starts) -> bool:
         """Say to take the K Chars as Text, else not"""
@@ -3059,7 +3070,7 @@ class LineTerminal:
     # Quote
     #
 
-    def kdo_text_write_n(self) -> None:
+    def kdo_text_write_n(self) -> str:
         """Take the Chars of 1 Keyboard Chord Sequence as Text to write to Screen"""
 
         st = self.st
@@ -3068,13 +3079,15 @@ class LineTerminal:
 
         kint = self.kint_pull(default=1)
         if not kint:
-            return
+            return ""
         if kint < 0:
             self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert Text
-            return
+            return ""
 
         ktext = kint * kchars
         st.stwrite(ktext)  # for .kdo_text_write_n
+
+        return ktext
 
         # Spacebar, printable US-Ascii, and printable Unicode
 
@@ -3934,13 +3947,15 @@ class LineTerminal:
         #
 
         kint = self.kint_pull(default=1)
-        if kint != 1:
+        if not kint:
+            return
+        if kint < 0:
             self.alarm_ring()  # todo: arg for Vi I
             return
 
         #
 
-        self.texts_vmode_wrangle("Insert")
+        self.texts_vmode_wrangle("Insert", kint=kint)
 
         # Vi I
 
@@ -3950,13 +3965,15 @@ class LineTerminal:
         #
 
         kint = self.kint_pull(default=1)
-        if kint != 1:
+        if not kint:
+            return
+        if kint < 0:
             self.alarm_ring()  # todo: arg for Vi ⇧R
             return
 
         #
 
-        self.texts_vmode_wrangle("Replace")
+        self.texts_vmode_wrangle("Replace", kint=kint)
 
         # Vi ⇧R
 
@@ -4201,6 +4218,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "^": (LT.kdo_column_dent_beyond,),  # b'\x5E'
     "_": (LT.kdo_dent_plus_n1,),  # b'\x5F'
     #
+    # "A": (LT.kdo_column_plus_insert_n_till,),  # b'a'
     "B": (LT.kdo_lilword_minus_n,),  # b'b'
     "D D": (LT.kdo_dents_cut_n,),  # b'd'  # DD
     "H": (LT.kdo_column_minus_n,),  # b'h'
@@ -4337,7 +4355,7 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # smallish todo's
 #
-#   Vi ⇧A C ⇧D ⇧I ⇧O ⇧S ⇧X A C$ CC D$ O R S X
+#   Vi ⇧A C ⇧D ⇧I ⇧O ⇧S ⇧X A C$ CC C⇧L D$ D⇧L O R S X
 #   Pq ⌃Q escape to Vi ⌃D ⌃G ⌃L etc
 #   Pq ⌃V escape to Emacs ⌃L ⌃V ⌃W ⌃Y etc
 #
@@ -4362,7 +4380,9 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 #   Size the Screen
 #       ⇧M
-#       bind C⇧L D⇧L
+#
+#   Track the Cursor
+#       C⇧H D⇧H
 #
 #   Shadow the Screen
 #       Vim ⌃O ⌃I Undo/Redo movements that pierce the Shadow
