@@ -1823,6 +1823,7 @@ class BytesTerminal:
     kinterrupts: int
     after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH
 
+    at_flush_funcs: list[typing.Callable]
     kbyteslogger: BytesLogger  # logs Keyboard Bytes In
     sbyteslogger: BytesLogger  # logs Screen Bytes Out
 
@@ -1843,6 +1844,7 @@ class BytesTerminal:
         self.kinterrupts = 0
         self.after = after  # todo: test Tcsa Flush on large Paste crashing us
 
+        self.at_flush_funcs = list()
         self.kbyteslogger = kbyteslogger
         self.sbyteslogger = sbyteslogger
 
@@ -1938,18 +1940,26 @@ class BytesTerminal:
 
         assert os.getpid() == pid, (os.getpid(), pid)
 
-    def flush_enough(self) -> None:
-        """Repair the damage that Breakpoint does to Entry"""
+    def at_flush(self, func) -> None:
+        """Register to run just before blocking to wait for Keyboard Input"""
 
+        at_flush_funcs = self.at_flush_funcs
+
+        at_flush_funcs.insert(0, func)
+
+    def flush_bytes_before_input(self) -> None:
+        """Run just before blocking to wait for Keyboard Input"""
+
+        at_flush_funcs = self.at_flush_funcs
         stdio = self.stdio
-        stdio.flush()
 
-        self.kbyteslogger.pylogfile.flush()  # plus ~0.050 ms, ugh
-        self.sbyteslogger.pylogfile.flush()  # plus another ~0.050 ms, ugh
+        if not self.kbhit(timeout=0):
+            for at_flush_func in at_flush_funcs:
+                at_flush_func()
 
-        fd = self.fd
-        when = termios.TCSADRAIN
-        tty.setraw(fd, when)
+            stdio.flush()
+            self.kbyteslogger.pylogfile.flush()  # plus ~0.050 ms, ugh
+            self.sbyteslogger.pylogfile.flush()  # plus another ~0.050 ms, ugh
 
     def btwrite(self, sbytes) -> None:
         """Write Bytes to the Screen, but without implicitly also writing a Line-End"""
@@ -2072,7 +2082,7 @@ class BytesTerminal:
 
         # Else block to read 1 Byte from Keyboard
 
-        self.flush_enough()
+        self.flush_bytes_before_input()
 
         kbytes = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
         kbyteslogger.log_bytes_io(kbytes)  # logs In after Read
@@ -2269,7 +2279,10 @@ class StrTerminal:
     kpushes: list[tuple[bytes, str]]  # cached here
 
     def __init__(self) -> None:
-        self.bt = BytesTerminal()
+        bt = BytesTerminal()
+        bt.at_flush(self.flush_strs_before_input)
+
+        self.bt = bt
         self.kpushes = list()
 
     def __enter__(self) -> "StrTerminal":  # -> typing.Self:
@@ -2292,6 +2305,11 @@ class StrTerminal:
         self.__exit__()
         breakpoint()  # to step up the call stack:  u
         self.__enter__()
+
+    def flush_strs_before_input(self) -> None:
+        """Run just before blocking to wait for Keyboard Input"""
+
+        pass
 
     def stwrite(self, schars) -> None:
         """Write Chars to the Screen, but without implicitly also writing a Line-End"""
@@ -4299,7 +4317,7 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 # presently
 #
 #   Emacs  ⎋GG ⎋GTab
-#   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃P ⌃Q ⌃U
+#   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃O ⌃P ⌃Q ⌃U
 #   Emacs  ⎋← ⎋→ ⌥← ⌥→ aka ⎋B ⎋F
 #   Emacs  ⌥GG ⌥GTab
 #
@@ -4319,11 +4337,9 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # smallish todo's
 #
-#   Emacs ⌃O
-#
-#   ⇧A C ⇧D ⇧I ⇧O ⇧S ⇧X A C$ CC D$ O R S X
+#   Vi ⇧A C ⇧D ⇧I ⇧O ⇧S ⇧X A C$ CC D$ O R S X
 #   Pq ⌃Q escape to Vi ⌃D ⌃G ⌃L etc
-#   Pq ⌃V escape to Emacs ⌃L  ⌃V ⌃W ⌃Y etc
+#   Pq ⌃V escape to Emacs ⌃L ⌃V ⌃W ⌃Y etc
 #
 
 #
