@@ -3985,6 +3985,27 @@ class LineTerminal:
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
         # Vim D D  # Vim DD
+        # VsCode ⌘X
+
+    def kdo_dents_cut_here_below_dent_above(self) -> None:
+        """Cut Lines here and below, and land at Dent of Line Above"""
+
+        kint_else = self.kint_peek_else(default=None)
+        if kint_else is not None:
+            self.alarm_ring()  # 'repetition arg' for D ⇧G, D ⇧L
+            return
+
+        assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
+        self.write_form_kint_if("\x1B" "[" "{}M", kint=32100)
+
+        self.write_form_kint_if("\x1B" "[" "{}A", kint=1)
+        self.kdo_column_dent_beyond()
+
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+        assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
+
+        # Vim D ⇧G
+        # Vim D ⇧L
 
     #
     # Visit Replace or Insert to change/ drop/ add Text Chars/ Lines/ Heads/ Tails
@@ -4280,7 +4301,24 @@ class LineTerminal:
 
         # Vim S = Vim X + Vim I
 
-    def kdo_dents_cut_n_ins_till(self) -> None:
+    def kdo_dents_cut_here_below_ins_till(self) -> None:
+        """Cut Lines here and below, and Insert here"""
+
+        st = self.st
+
+        self.kdo_dents_cut_here_below_dent_above()
+        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
+        st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
+
+        self.kdo_ins_n_till()
+
+        assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
+        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
+
+        # Vim C ⇧G
+        # Vim C ⇧L
+
+    def kdo_dents_cut_n_ins_above(self) -> None:
         """Cut N Lines here and below, and land past Dent"""
 
         self.kdo_dents_cut_n()
@@ -4290,6 +4328,7 @@ class LineTerminal:
 
         self.kdo_line_ins_above_n()
 
+        # Vim C C = Vim D D + Vim ⇧O
         # Vim ⇧S = Vim D D + Vim ⇧O
 
     #
@@ -4404,8 +4443,8 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "7": (LT.kdo_hold_start_kstr, ("7",)),
     "8": (LT.kdo_hold_start_kstr, ("8",)),
     "9": (LT.kdo_hold_start_kstr, ("9",)),
-    "< <": (LT.kdo_lines_dedent_n,),  # <<
-    "> >": (LT.kdo_lines_dent_n,),  # >>
+    "< <": (LT.kdo_lines_dedent_n,),  # b'<' b'<'  # <<
+    "> >": (LT.kdo_lines_dent_n,),  # b'>' b'>'  # >>
     #
     "⇧A": (LT.kdo_end_plus_ins_n_till,),  # b'A'
     "⇧B": (LT.kdo_bigword_minus_n,),  # b'B'
@@ -4416,7 +4455,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "⇧L": (LT.kdo_row_n_up,),  # b'L'
     "⇧O": (LT.kdo_line_ins_above_n,),  # b'O'
     "⇧R": (LT.kdo_replace_n_till,),  # b'R'
-    "⇧S": (LT.kdo_dents_cut_n_ins_till,),  # b'S'
+    "⇧S": (LT.kdo_dents_cut_n_ins_above,),  # b'S'
     "⇧W": (LT.kdo_bigword_plus_n,),  # b'W'
     "⇧X": (LT.kdo_char_cut_left_n,),  # b'X'
     "^": (LT.kdo_column_dent_beyond,),  # b'\x5E'
@@ -4424,7 +4463,12 @@ VI_KDO_CALL_BY_KCAP_STR = {
     #
     "A": (LT.kdo_column_plus_ins_n_till,),  # b'a'
     "B": (LT.kdo_lilword_minus_n,),  # b'b'
-    "D D": (LT.kdo_dents_cut_n,),  # b'd'  # DD
+    "C C": (LT.kdo_dents_cut_n_ins_above,),  # b'c' b'c'  # CC
+    "C ⇧G": (LT.kdo_dents_cut_here_below_ins_till,),  # b'c' b'G'  # C⇧G
+    "C ⇧L": (LT.kdo_dents_cut_here_below_ins_till,),  # b'c' b'L'  # C⇧L
+    "D D": (LT.kdo_dents_cut_n,),  # b'd' b'd'  # DD
+    "D ⇧G": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'G'  # D⇧G
+    "D ⇧L": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'L'  # D⇧L
     "E": (LT.kdo_lilword_plus_n_almost,),  # b'e'
     "H": (LT.kdo_column_minus_n,),  # b'h'
     "I": (LT.kdo_ins_n_till,),  # b'i'
@@ -4553,7 +4597,7 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #   Vim  Return ⌃E ⌃J ⌃V ⌃Y ← ↓ ↑ →
 #   Vim  Spacebar $ + - 0 123456789 << >>
 #   Vim  ⇧A ⇧B ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
-#   Vim  A B DD E H I J K L O S W X | Delete
+#   Vim  A B CC C⇧G C⇧L DD D⇧G D⇧L E H I J K L O S W X | Delete
 #
 #   Pq ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
 #   Pq ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
@@ -4567,19 +4611,18 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 # smallish todo's
 #
 #   Vim ⇧C C$ ⇧D D$
-#   Vim C⇧L D⇧L
+#
+#   Vim Q Q @ Q etc
 #
 #   Repeats of ⇧I ⇧O ⇧R I O which include Return's & Delete's
+#
+#   Vim R
 #
 #   Vim I ⌃O
 #   Vim I ⌃O Calls of Insert/ Replace that don't move the Cursor Left
 #
-#   Vim R
-#
 #   Pq ⌃Q escape to Vim ⌃D ⌃G ⌃L etc
 #   Pq ⌃V escape to Emacs ⌃L ⌃V ⌃W ⌃Y etc
-#
-#   Vim Q Q @ Q etc
 #
 
 #
