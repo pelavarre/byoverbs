@@ -3835,6 +3835,25 @@ class LineTerminal:
         # Emacs ⌥F ⎋F  forward-word, inside of superword-mode
         # Vim ⇧W
 
+    def kdo_bigword_plus_n_almost(self) -> None:
+        """Step ahead by one or more Bigger Words, but land on end of Word"""
+
+        kint = self.kint_peek(default=1)
+        if not kint:
+            return
+        if kint < 0:
+            self.alarm_ring()  # 'negative repetition arg' for Vim ⇧E
+            return
+
+        kint = self.kint_pull_positive(default=1)
+        self.kint_push(6 * kint)
+
+        self.kdo_char_plus_n()
+
+        assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
+
+        # Vim ⇧E
+
     def kdo_lilword_minus_n(self) -> None:
         """Step back by one or more Little Words"""
 
@@ -3856,6 +3875,25 @@ class LineTerminal:
 
         # Emacs ⌥F ⎋F  forward-word, outside of superword-mode
         # Vim W
+
+    def kdo_lilword_plus_n_almost(self) -> None:
+        """Step ahead by one or more Little Words, but land on end of Word"""
+
+        kint = self.kint_peek(default=1)
+        if not kint:
+            return
+        if kint < 0:
+            self.alarm_ring()  # 'negative repetition arg' for Vim ⇧E
+            return
+
+        kint = self.kint_pull_positive(default=1)
+        self.kint_push(3 * kint)
+
+        self.kdo_char_plus_n()
+
+        assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
+
+        # Vim E
 
     #
     # Dedent or Dent the Lines at and below the Screen Cursor
@@ -4371,6 +4409,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     #
     "⇧A": (LT.kdo_end_plus_ins_n_till,),  # b'A'
     "⇧B": (LT.kdo_bigword_minus_n,),  # b'B'
+    "⇧E": (LT.kdo_bigword_plus_n_almost,),  # b'E'
     "⇧G": (LT.kdo_dent_line_n,),  # b'G'
     "⇧H": (LT.kdo_row_n_down,),  # b'H'
     "⇧I": (LT.kdo_column_dent_beyond_ins_n_till,),  # b'I'
@@ -4386,6 +4425,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "A": (LT.kdo_column_plus_ins_n_till,),  # b'a'
     "B": (LT.kdo_lilword_minus_n,),  # b'b'
     "D D": (LT.kdo_dents_cut_n,),  # b'd'  # DD
+    "E": (LT.kdo_lilword_plus_n_almost,),  # b'e'
     "H": (LT.kdo_column_minus_n,),  # b'h'
     "I": (LT.kdo_ins_n_till,),  # b'i'
     "J": (LT.kdo_line_plus_n,),  # b'j'
@@ -4512,8 +4552,8 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 #   Vim  Return ⌃E ⌃J ⌃V ⌃Y ← ↓ ↑ →
 #   Vim  Spacebar $ + - 0 123456789 << >>
-#   Vim  ⇧A ⇧B ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
-#   Vim  A B DD H I J K L O S W X | Delete
+#   Vim  ⇧A ⇧B ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
+#   Vim  A B DD E H I J K L O S W X | Delete
 #
 #   Pq ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
 #   Pq ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
@@ -4525,8 +4565,6 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 
 #
 # smallish todo's
-#
-#   Vim E ⇧E
 #
 #   Vim ⇧C C$ ⇧D D$
 #   Vim C⇧L D⇧L
