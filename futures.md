@@ -851,9 +851,16 @@ pqv from itext of naive or aware date/time
 cd
     may as well echo arrival, since we've redefined 'cd' while PS1='\$ '
 
-pq emo
-    respect case when mixed, like:  pq Ballot Box
-
+pq emo (testcases)
+    pq emo
+        respect case when mixed, like:  pq Ballot Box
+    pq emo top
+        doesn't find:  pq emo top hat
+    pq emo hug
+        doesn't
+    pq emojis unicodedata \>e
+        \<string\>:94: SyntaxWarning: invalid escape sequence '\ '
+        %
 
 ## Copied from
 

@@ -2274,7 +2274,7 @@ for _KCHARS, _COUNT in collections.Counter(_KCHARS_LIST).items():
 
 @dataclasses.dataclass
 class StrTerminal:
-    """Read/ Write Str Characters at Keyboard/ Screen of a Terminal"""
+    """Read/ Write Str Chars at Keyboard/ Screen of a Terminal"""
 
     bt: BytesTerminal  # wrapped here
     kpushes: list[tuple[bytes, str]]  # cached here
@@ -3889,6 +3889,8 @@ class LineTerminal:
         assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
+        # Vim < <  # Vim <<
+
     def kdo_lines_dent_n(self) -> None:
         """Insert 1 Dent of Blank Space into the Left of one or more Lines"""
 
@@ -3915,6 +3917,8 @@ class LineTerminal:
         assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
+        # Vim > >  # Vim >>
+
     #
     # Delete the Lines at and below the Screen Cursor
     #
@@ -3932,7 +3936,7 @@ class LineTerminal:
             return
 
         if kint < 0:
-            self.alarm_ring()  # todo: negative Vim D
+            self.alarm_ring()  # todo: negative Vim D D
             return
 
         # Cut N Lines here and below, and land past Dent
@@ -3942,13 +3946,13 @@ class LineTerminal:
 
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
-        # Vim DD
+        # Vim D D  # Vim DD
 
     #
     # Visit Replace or Insert to change/ drop/ add Text Chars/ Lines/ Heads/ Tails
     #
 
-    def kdo_insert_n_till(self) -> str:
+    def kdo_ins_n_till(self) -> str:
         """Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
 
         #
@@ -3994,8 +3998,8 @@ class LineTerminal:
         # Vim ⇧R
         # Pq ⇧R repeats even when ⌃C quits ⇧R, not ⌃G ⎋ ⌃\  # Vim ⇧R does not
 
-    def kdo_char_delete_left_n(self) -> None:
-        """Delete 1 Character to the Left"""
+    def kdo_char_cut_left_n(self) -> None:
+        """Delete N Chars to the Left, but from this Line only"""
 
         kint = self.kint_pull_positive(default=1)
 
@@ -4007,24 +4011,30 @@ class LineTerminal:
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
         # Vim ⇧X
-        # Vim I Delete
-        # Vim ⇧R Delete of repetition text  # Pq ⇧R Delete is Vim Delete
-        # macOS ⌃H
 
-    def kdo_char_delete_right_n(self) -> None:
-        """Delete 1 Character to the Left"""
+        # Vim I Delete into U Undo
+        # Vim ⇧R Delete of repetition text  # Pq ⇧R Delete is Vim Delete
+        # Emacs Delete into ⌃Y Yank
+        # macOS ⌃H into ⌘Z Undo
+
+        # FIXME: Emacs Delete, Vim I Delete, macOS Vim ⌃H wrap into Lines Above
+
+    def kdo_char_cut_right_n(self) -> None:
+        """Delete N Chars to the Right, but from this Line only"""
 
         kint = self.kint_pull_positive(default=1)
         self.write_form_kint_if("\x1B" "[" "{}P", kint=kint)
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
-        # Emacs ⌃D delete-char, or delete-forward-char
         # Vim X
+
+        # Emacs ⌃D delete-char, or delete-forward-char
         # Vim I ⌃D doesn't work, for no simple reason
         # Pq I ⌃D
-        # macOS ⌃D
+        # macOS ⌃D into ⌘Z Undo
+        # todo: Emacs ⌃D, macOS Vim ⌃D wrap into Lines Below
 
-    def kdo_line_insert_ahead_n(self) -> None:
+    def kdo_line_ins_ahead_n(self) -> None:
         """Insert 0 or more Empty Lines ahead, and land at Left before the First"""
 
         st = self.st
@@ -4046,7 +4056,7 @@ class LineTerminal:
 
         # Emacs ⌃O open-line  # todo: move tail of Line into new inserted Line
 
-    def kdo_line_insert_behind_mostly_n(self) -> None:
+    def kdo_line_ins_behind_mostly_n(self) -> None:
         """Insert 0 or more Empty Lines ahead, and land at Left of Last"""
 
         st = self.st
@@ -4083,7 +4093,8 @@ class LineTerminal:
 
         kint = kint_else
 
-        ps_2 = 2  # writes Spaces ahead and behind
+        ps_2 = 2  # writes Spaces ahead and behind, via EL_P
+
         if kint >= 1:
             self.write_form_kint_if("\x1B" "[" "{}K", kint=ps_2, default=ps_0)  # empty
             self.write_form_kint_if("\x1B" "[" "{}B", kint=1)  # down
@@ -4091,9 +4102,7 @@ class LineTerminal:
             self.write_form_kint_if("\x1B" "[" "{}A", kint=1)  # up
             return
 
-        ps_1 = 1  # writes Spaces here and behind
         st.stwrite("\b")  # 00/08  # "\x08"  # "\x1B" "[" "D
-        ... == ps_1  # type: ignore  # \b needed if we delete what .ps_1 writes over
         self.write_form_kint_if("\x1B" "[" "{}K", kint=ps_2, default=ps_0)
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
         if kint < 0:
@@ -4111,41 +4120,41 @@ class LineTerminal:
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
         # Emacs ⌃K kill-line
-        # macOS ⌃K
+        # macOS ⌃K into ⌘Z Undo
 
     #
     # Move before Insert
     #
 
-    def kdo_column_plus_insert_n_till(self) -> None:
+    def kdo_column_plus_ins_n_till(self) -> None:
         """Step one Column ahead and then visit Insert Mode"""
 
         self.write_form_kint_if("\x1B" "[" "{}C", kint=1)
-        self.kdo_insert_n_till()
+        self.kdo_ins_n_till()
 
         assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
 
         # Vim A = Vim I + Vim ⌃O L
 
-    def kdo_column_dent_beyond_insert_n_till(self) -> None:
+    def kdo_column_dent_beyond_ins_n_till(self) -> None:
         """Jump to the first Column beyond the Dent, then visit Insert Mode"""
 
         self.kdo_column_dent_beyond()
-        self.kdo_insert_n_till()
+        self.kdo_ins_n_till()
 
         # Vim ⇧I = Vim ^ + Vim I
 
-    def kdo_end_plus_insert_n_till(self) -> None:
+    def kdo_end_plus_ins_n_till(self) -> None:
         """Jump out beyond End of Line, then visit Insert Mode"""
 
         self.write_form_kint_if("\x1B" "[" "{}C", kint=32100)  # todo: more Columns
-        self.kdo_insert_n_till()
+        self.kdo_ins_n_till()
 
         assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
 
         # Vim ⇧A = Vim I + Vim ⌃O $
 
-    def kdo_line_insert_above_n(self) -> None:
+    def kdo_line_ins_above_n(self) -> None:
         """Insert 1 Empty Line above, visit Insert Mode at Left, then repeat Texts"""
 
         st = self.st
@@ -4156,12 +4165,12 @@ class LineTerminal:
         # st.stwrite("\n")  # nope, not here
         self.write_form_kint_if("\x1B" "[" "{}L", kint=1)
 
-        ktexts = self.kdo_insert_n_till()
+        ktexts = self.kdo_ins_n_till()
         for _ in range(kint - 1):
             st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
             st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
             self.write_form_kint_if("\x1B" "[" "{}L", kint=1)
-            st.stwrite(ktexts)  # for .kdo_line_insert_below_n Insert
+            st.stwrite(ktexts)  # for .kdo_line_ins_below_n Insert
             self.write_form_kint_if("\x1B" "[" "{}D", kint=1)  # FIXME: not Repl/ Ins
 
             # FIXME: repeat the Returns & Deletes too
@@ -4175,7 +4184,7 @@ class LineTerminal:
         # Vim ⇧O
         # Pq ⇧O repeats even when ⌃C quits I, not ⌃G ⎋ ⌃\  # Vim ⇧O does not
 
-    def kdo_line_insert_below_n(self) -> None:
+    def kdo_line_ins_below_n(self) -> None:
         """Insert 1 Empty Line ahead, visit Insert Mode at Left, then repeat Texts"""
 
         st = self.st
@@ -4186,12 +4195,12 @@ class LineTerminal:
         st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
         self.write_form_kint_if("\x1B" "[" "{}L", kint=1)
 
-        ktexts = self.kdo_insert_n_till()
+        ktexts = self.kdo_ins_n_till()
         for _ in range(kint - 1):
             st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
             st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
             self.write_form_kint_if("\x1B" "[" "{}L", kint=1)
-            st.stwrite(ktexts)  # for .kdo_line_insert_below_n Insert
+            st.stwrite(ktexts)  # for .kdo_line_ins_below_n Insert
             self.write_form_kint_if("\x1B" "[" "{}D", kint=1)  # FIXME: not Repl/ Ins
 
             # FIXME: repeat the Returns & Deletes too
@@ -4204,6 +4213,46 @@ class LineTerminal:
 
         # Vim O
         # Pq O repeats even when ⌃C quits I, not ⌃G ⎋ ⌃\  # Vim O does not
+
+    #
+    # Cut before Insert
+    #
+
+    def kdo_char_cut_left_n_ins_till(self) -> None:
+        """Delete N Chars to the Left, but from this Line only, and then Insert"""
+
+        self.kdo_char_cut_left_n()
+
+        kint_else = self.kint_peek_else(default=None)
+        assert kint_else is None, (kint_else,)
+
+        self.kdo_ins_n_till()
+
+        # Pq ⌃U - ... S = Vim ⇧X + Vim I
+
+    def kdo_char_cut_right_n_ins_till(self) -> None:
+        """Delete N Chars to the Right, but from this Line only, and then Insert"""
+
+        self.kdo_char_cut_right_n()
+
+        kint_else = self.kint_peek_else(default=None)
+        assert kint_else is None, (kint_else,)
+
+        self.kdo_ins_n_till()
+
+        # Vim S = Vim X + Vim I
+
+    def kdo_dents_cut_n_ins_till(self) -> None:
+        """Cut N Lines here and below, and land past Dent"""
+
+        self.kdo_dents_cut_n()
+
+        kint_else = self.kint_peek_else(default=None)
+        assert kint_else is None, (kint_else,)
+
+        self.kdo_line_ins_above_n()
+
+        # Vim ⇧S = Vim D D + Vim ⇧O
 
     #
     # Scroll Rows
@@ -4255,10 +4304,10 @@ KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
 
 
 INSERT_PQ_KDO_CALL_BY_KCAP_STR = {
-    "Return": (LT.kdo_line_insert_behind_mostly_n,),  # b'\x0D'  # b'\r'
-    "Delete": (LT.kdo_char_delete_left_n,),  # b'\x7F'
+    "Return": (LT.kdo_line_ins_behind_mostly_n,),  # b'\x0D'  # b'\r'
+    "Delete": (LT.kdo_char_cut_left_n,),  # b'\x7F'
 }
-# "⌃W": (LT.kdo_word_delete_left_n,),  # b'\x04'
+# "⌃W": (LT.kdo_word_cut_left_n,),  # b'\x04'
 # "⌃U": (LT.kdo_empty_line_n,),  # b'\x15'
 
 # todo: Vim ⌃W is a delete-last-word
@@ -4271,12 +4320,12 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⎋G Tab": (LT.kdo_column_plus,),
     "⌃A": (LT.kdo_home_plus_n1,),  # b'\x01'
     "⌃B": (LT.kdo_char_minus_n,),  # b'\x02'
-    "⌃D": (LT.kdo_char_delete_right_n,),  # b'\x04'
+    "⌃D": (LT.kdo_char_cut_right_n,),  # b'\x04'
     "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'
     "⌃F": (LT.kdo_char_plus_n,),  # b'\x06'
     "⌃K": (LT.kdo_tail_cut_n,),  # b'\x0B'
     "⌃N": (LT.kdo_line_plus_n,),  # b'\x0E'
-    "⌃O": (LT.kdo_line_insert_ahead_n,),  # b'\x0B'
+    "⌃O": (LT.kdo_line_ins_ahead_n,),  # b'\x0B'
     "⌃P": (LT.kdo_line_minus_n,),  # b'\x10'
     "⌃Q": (LT.kdo_quote_kchars,),  # b'\x11'
     "⌃U": (LT.kdo_hold_start_kstr, tuple(["⌃U"])),  # b'\x15'
@@ -4320,30 +4369,32 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "< <": (LT.kdo_lines_dedent_n,),  # <<
     "> >": (LT.kdo_lines_dent_n,),  # >>
     #
-    "⇧A": (LT.kdo_end_plus_insert_n_till,),  # b'A'
+    "⇧A": (LT.kdo_end_plus_ins_n_till,),  # b'A'
     "⇧B": (LT.kdo_bigword_minus_n,),  # b'B'
     "⇧G": (LT.kdo_dent_line_n,),  # b'G'
     "⇧H": (LT.kdo_row_n_down,),  # b'H'
-    "⇧I": (LT.kdo_column_dent_beyond_insert_n_till,),  # b'I'
+    "⇧I": (LT.kdo_column_dent_beyond_ins_n_till,),  # b'I'
     "⇧L": (LT.kdo_row_n_up,),  # b'L'
-    "⇧O": (LT.kdo_line_insert_above_n,),  # b'O'
+    "⇧O": (LT.kdo_line_ins_above_n,),  # b'O'
     "⇧R": (LT.kdo_replace_n_till,),  # b'R'
+    "⇧S": (LT.kdo_dents_cut_n_ins_till,),  # b'S'
     "⇧W": (LT.kdo_bigword_plus_n,),  # b'W'
-    "⇧X": (LT.kdo_char_delete_left_n,),  # b'X'
+    "⇧X": (LT.kdo_char_cut_left_n,),  # b'X'
     "^": (LT.kdo_column_dent_beyond,),  # b'\x5E'
     "_": (LT.kdo_dent_plus_n1,),  # b'\x5F'
     #
-    "A": (LT.kdo_column_plus_insert_n_till,),  # b'a'
+    "A": (LT.kdo_column_plus_ins_n_till,),  # b'a'
     "B": (LT.kdo_lilword_minus_n,),  # b'b'
     "D D": (LT.kdo_dents_cut_n,),  # b'd'  # DD
     "H": (LT.kdo_column_minus_n,),  # b'h'
-    "I": (LT.kdo_insert_n_till,),  # b'i'
+    "I": (LT.kdo_ins_n_till,),  # b'i'
     "J": (LT.kdo_line_plus_n,),  # b'j'
     "K": (LT.kdo_line_minus_n,),  # b'k'
     "L": (LT.kdo_column_plus_n,),  # b'l'
-    "O": (LT.kdo_line_insert_below_n,),  # b'o'
+    "O": (LT.kdo_line_ins_below_n,),  # b'o'
+    "S": (LT.kdo_char_cut_right_n_ins_till,),  # b's'
     "W": (LT.kdo_lilword_plus_n,),  # b'w'
-    "X": (LT.kdo_char_delete_right_n,),  # b'x'
+    "X": (LT.kdo_char_cut_right_n,),  # b'x'
     "|": (LT.kdo_column_n,),  # b'\x7C'
     "Delete": (LT.kdo_char_minus_n,),  # b'\x7F'
     #
@@ -4357,7 +4408,7 @@ PQ_KDO_CALL_BY_KCAP_STR = {
     "⎋[": (LT.kdo_quote_csi_kstrs_n,),  # b'\x1B\x5B'  # Option [
     #
     "⌃C": (LT.kdo_hold_stop_kstr,),  # b'\x03'  # SIGINT
-    "⌃D": (LT.kdo_char_delete_right_n,),  # b'\x04'  # SIGHUP  # Pq like macOS/ Emacs
+    "⌃D": (LT.kdo_char_cut_right_n,),  # b'\x04'  # SIGHUP  # Pq like macOS/ Emacs
     "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'  # Pq like macOS/ Emacs
     "⌃G": (LT.kdo_hold_stop_kstr,),  # b'\x07'
     "Tab": (LT.kdo_tab_plus_n,),  # b'\x09'  # b'\t'
@@ -4429,24 +4480,27 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
     LT.kdo_add_top_row: (LT.kdo_add_bottom_row, 1),  # ⌃Y
     LT.kdo_bigword_minus_n: (LT.kdo_bigword_minus_n, 1),  # ⇧B  # ⌥→
     LT.kdo_bigword_plus_n: (LT.kdo_bigword_minus_n, 1),  # ⇧W  # ⌥→
-    LT.kdo_char_delete_left_n: (LT.kdo_char_delete_right_n, 1),  # Delete
-    LT.kdo_char_delete_right_n: (LT.kdo_char_delete_left_n, 1),  # ⌃D
+    LT.kdo_char_cut_left_n: (LT.kdo_char_cut_right_n, 1),  # Delete
+    LT.kdo_char_cut_right_n: (LT.kdo_char_cut_left_n, 1),  # ⌃D
     LT.kdo_column_minus_n: (LT.kdo_column_plus_n, 1),  # ← H
     LT.kdo_column_plus_n: (LT.kdo_column_minus_n, 1),  # → L
     LT.kdo_dent_minus_n: (LT.kdo_dent_plus_n, 1),  # -
     LT.kdo_dent_plus_n: (LT.kdo_dent_minus_n, 1),  # Return +
     LT.kdo_lilword_minus_n: (LT.kdo_lilword_minus_n, 1),  # B
     LT.kdo_lilword_plus_n: (LT.kdo_lilword_minus_n, 1),  # W
-    LT.kdo_line_minus_n: (LT.kdo_line_plus_n, 1),  # ↓ ⌃J ⌃N J
-    LT.kdo_line_plus_n: (LT.kdo_line_minus_n, 1),  # ↑ ⌃P K
+    LT.kdo_line_minus_n: (LT.kdo_line_plus_n, 1),  # ↓ ⌃J J  # Emacs ⌃N
+    LT.kdo_line_plus_n: (LT.kdo_line_minus_n, 1),  # ↑ K  # Emacs ⌃P
     LT.kdo_lines_dedent_n: (LT.kdo_lines_dent_n, 1),  # <<
     LT.kdo_lines_dent_n: (LT.kdo_lines_dedent_n, 1),  # >>
     LT.kdo_row_n_down: (LT.kdo_row_n_up, 1),  # ⇧L
     LT.kdo_row_n_up: (LT.kdo_row_n_down, 1),  # ⇧H
     LT.kdo_tab_minus_n: (LT.kdo_tab_plus_n, 1),  # Tab ⇥
     LT.kdo_tab_plus_n: (LT.kdo_tab_minus_n, 1),  # ⇧Tab ⇤
+    LT.kdo_char_cut_right_n_ins_till: (LT.kdo_char_cut_left_n_ins_till, 1),  # S
+    LT.kdo_char_cut_left_n_ins_till: (LT.kdo_char_cut_right_n_ins_till, 1),  # (unbound)
 }
 
+#
 
 #
 # presently
@@ -4458,8 +4512,8 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 #   Vim  Return ⌃E ⌃J ⌃V ⌃Y ← ↓ ↑ →
 #   Vim  Spacebar $ + - 0 123456789 << >>
-#   Vim  ⇧B ⇧G ⇧H ⇧L ⇧O ⇧R ⇧X ⇧W ^ _
-#   Vim  A B DD H I J K L O X W | Delete
+#   Vim  ⇧A ⇧B ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
+#   Vim  A B DD H I J K L O S W X | Delete
 #
 #   Pq ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
 #   Pq ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
@@ -4472,7 +4526,11 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # smallish todo's
 #
-#   Vim ⇧C ⇧D ⇧S C$ CC C⇧L D$ D⇧L S
+#   Vim E ⇧E
+#
+#   Vim ⇧C C$ ⇧D D$
+#   Vim C⇧L D⇧L
+#
 #   Repeats of ⇧I ⇧O ⇧R I O which include Return's & Delete's
 #
 #   Vim I ⌃O
@@ -4482,6 +4540,8 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 #   Pq ⌃Q escape to Vim ⌃D ⌃G ⌃L etc
 #   Pq ⌃V escape to Emacs ⌃L ⌃V ⌃W ⌃Y etc
+#
+#   Vim Q Q @ Q etc
 #
 
 #
