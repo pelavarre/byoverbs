@@ -40,9 +40,9 @@ examples:
   pq.py  # show these examples, run self-tests, and exit
   pq --help  # show this help message and exit
   pq --yolo  # do what's popular now  # like parse the Paste & guess what to do
-  pq  # end every Line of the Os/Copy Paste Clipboard Buffer
-  pq |cat -  # show the Os/Copy Paste Clipboard Buffer
-  cat - |pq  # type into the Os/Copy Paste Clipboard Buffer
+  pq  # end every Line of the Os Copy/Paste Clipboard Buffer
+  pq |cat -  # show the Os Copy/Paste Clipboard Buffer
+  cat - |pq  # type into the Os Copy/Paste Clipboard Buffer
   pq dent  # insert 4 Spaces at the left of each Line
   pq dedent  # remove the leading Blank Columns from the Lines
   pq len lines  # count Lines
@@ -50,7 +50,7 @@ examples:
   echo '[0, 11, 22]' |pq json |cat -  # format Json consistently
   pq 'oline = "<< " + iline + " >>"'  # add Prefix and Suffix to each Line
   pq 'olines = ilines[:3] + ["..."] + ilines[-3:]'  # show Head and Tail
-  pq vi  # edit the Os/Copy Paste Clipboard Buffer, in the way of Vim or Emacs
+  pq vi  # edit the Os Copy/Paste Clipboard Buffer, in the way of Vim or Emacs
 """
 
 # quirks to come when we add 'pq vi':
@@ -68,6 +68,7 @@ import dataclasses
 import datetime as dt
 import difflib
 import itertools
+import json
 import os
 import pathlib
 import pdb
@@ -87,13 +88,7 @@ import unicodedata
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
 
-
-#
-# Configure  # todo: less compile-time choices of modes
-#
-
-
-KDEBUG = False  # Debug 'os.read'
+... == json  # type: ignore   # PyLance ReportUnusedExpression
 
 
 #
@@ -530,7 +525,7 @@ class PyExecQueryResult:
 
         full_py_graf = before_py_graf + run_py_graf + after_py_graf
         full_py_graf = graf_deframe(full_py_graf)
-        if len(full_py_graf) > 3:
+        if len(full_py_graf) >= 3:
             full_py_graf = before_py_graf + div + run_py_graf + div + after_py_graf
             full_py_graf = graf_deframe(full_py_graf)
 
@@ -1628,122 +1623,63 @@ def visual_ex(ilines) -> list[str]:
     return olines
 
 
-ESC = b"\x1B"
-
-
 @dataclasses.dataclass
-class BytesLogger:
-    """Log Bytes arriving over time, for a time-accurate replay or analysis later"""
+class ReprLogger:
+    """Log Repr's of Object's arriving over Time"""
 
-    tag: str  # 'k'  # 's'
-    exists: bool  # True if the Log File already existed
-    pylogfile: typing.TextIO  # opened here  # '.pqinfo/keylog.py'
-    logged: dt.datetime  # when 'def log_bytes_io' last ran
+    exists: bool  # whether the LogFile already existed
+    lap: dt.datetime  # when 'def rlprint' last ran
+    logger: typing.TextIO  # wrapped here  # '.pqinfo/keylog.py'  # logfmt
 
-    def __init__(self, name, tag) -> None:
-        """Write the Code before the Log"""
+    def __init__(self, pathname) -> None:
 
-        assert tag in ("k", "s"), (tag,)  # todo: accept more tags?
+        dirname = os.path.dirname(pathname)  # '.pqinfo' from '.pqinfo/screenlog.py'
 
-        self.tag = tag
-
-        dirpath = pathlib.Path(".pqinfo")
+        dirpath = pathlib.Path(dirname)
         dirpath.mkdir(parents=True, exist_ok=True)  # 'parents=' unneeded at './'
 
-        path = dirpath / name  # '.pqinfo/screenlog.py'
+        path = pathlib.Path(pathname)
         exists = path.exists()
+        logger = path.open("a")  # last wins
+
         self.exists = exists
+        self.lap = dt.datetime.now()
+        self.logger = logger
 
-        # pylogfile = io.StringIO()
-        # pylogfile.name = "<io.StringIO>"
-        pylogfile = path.open("a")  # last wins
+    def rlprint(self, *args) -> None:
+        """Print the time since last Print, and the Repr of each Arg, not the Str"""
 
-        self.pylogfile = pylogfile
+        logger = self.logger
+        lap = self.lap
 
-        if not exists:
-            self.write_prolog()
-            pylogfile.flush()
+        next_now = dt.datetime.now()
+        self.lap = next_now
 
-        self.logged = dt.datetime.now()
+        between = (next_now - lap).total_seconds()
 
-    def write_prolog(self) -> None:
-        """Write the Code before the Log"""
-
-        pylogfile = self.pylogfile
-        tag = self.tag
-
-        assert tag in ("k", "s"), (tag,)  # todo: accept more tags?
-
-        k_py = f'''
-            #!/usr/bin/env python3
-
-            import time
-            import typing
-
-            if __name__ == "__main__":
-                import keylog
-
-                for kbytes in keylog.kbytes_walk():
-                    print(repr(kbytes))
-
-
-            def {tag}bytes_walk() -> typing.Generator[bytes, None, None]:
-                """Yield Bytes slowly over Time, as a replay of this Log"""
-        '''
-
-        s_py = f'''
-            #!/usr/bin/env python3
-
-            import os
-            import sys
-            import time
-            import typing
-
-            if __name__ == "__main__":
-                import screenlog
-
-                fd = sys.stdout.fileno()
-                for sbytes in screenlog.sbytes_walk():
-                    os.write(fd, sbytes)
-
-
-            def {tag}bytes_walk() -> typing.Generator[bytes, None, None]:
-                """Yield Bytes slowly over Time, as a replay of this Log"""
-        '''
-
-        py = k_py if tag == "k" else s_py
-        py = textwrap.dedent(py).strip()
-
-        pylogfile.write(py + "\n" "\n")
-
-        # todo: duck away from PyPi·Org Black 'E501 line too long (... > 999 characters'
-
-    def log_bytes_io(self, sbytes) -> None:
-        """Log some Keyboard Input Bytes, Screen Output Bytes, etc"""
-
-        pylogfile = self.pylogfile
-        logged = self.logged
-
-        now = dt.datetime.now()
-        total_seconds = (now - logged).total_seconds()
-        self.logged = now
-
-        rep = black_repr(sbytes)
-
-        print(f"    time.sleep({total_seconds})", file=pylogfile)
-        print(f"    yield {rep}", file=pylogfile)
+        sep = " "
+        stamp = f"{between:.6f}"
+        text = stamp + sep + sep.join(repr(_) for _ in args)
+        print(text, file=logger)
 
 
 #
-# escape-sequences:
+# Name Control Bytes and Escape Sequences
 #
-#   ⎋[d line-position-absolute  ⎋[G cursor-character-absolute
-#   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[m plain
+
 #
-#   ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange  ⎋[m plain
+#   ⌃H ⌃I ⌃J ⌃M ⌃[  ⎋[I Tab  ⎋[Z ⇧Tab
+#   ⎋[d row-go  ⎋[G column-go
+#
+#   ⎋[M rows-delete  ⎋[L rows-insert  ⎋[P chars-delete  ⎋[@ chars-insert
+#   ⎋[K tail-erase  ⎋[1K head-erase  ⎋[2K row-erase
+#   ⎋[T scrolls-up  ⎋[S scrolls-down
+#
 #   ⎋[4h insert  ⎋[6 q bar  ⎋[4l replace  ⎋[4 q skid  ⎋[ q unstyled
-#   ⎋[M delete-line  ⎋[L insert-line  ⎋[P delete-char  ⎋[@ insert-char
-#   ⎋[T scroll-up  ⎋[S scroll-down
+#
+#   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline
+#   ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange
+#   ⎋[m plain
 #
 
 Y_32100 = 32100  # larger than all Screen Row Heights tested
@@ -1754,36 +1690,40 @@ HT = "\t"  # 00/09 Character Tabulation ⌃I
 LF = "\n"  # 00/10 Line Feed ⌃J
 CR = "\r"  # 00/13 Carriage Return ⌃M
 
-assert ESC == b"\x1B"
+ESC = "\x1B"  # 01/11 Escape ⌃[
 
-SS3 = b"\x1B" b"O"  # 04/15 Single Shift Three
+SS3 = "\x1B" "O"  # 04/15 Single Shift Three  # in macOS F1 F2 F3 F4
 
-CSI = b"\x1B" b"["  # 05/11 Control Sequence Introducer
-CSI_I_P_BYTES = b"".join(bytes([_]) for _ in range(0x20, 0x40))
+CSI = "\x1B" "["  # 05/11 Control Sequence Introducer
+CSI_EXTRAS = "".join(chr(_) for _ in range(0x20, 0x40))
+# Parameter, Intermediate, and Not-Final Bytes of a CSI Escape Sequence
 
 CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 CUD_Y = "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 CUF_X = "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
 CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
+
+# ESC 04/05 Next Line (NEL)
+# CSI 04/05 Cursor Next Line (CNL)
+
 CHA = "\x1B" "[" "G"  # CSI 04/07 Cursor Character Absolute 1
 CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute
-CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation
-EL_P = "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line
-CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
 VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-SU_Y = "\x1B" "[" "{}S"  # CSI 05/03 Scroll Up   # Insert Bottom Lines
-SD_Y = "\x1B" "[" "{}T"  # CSI 05/04 Scroll Down  # Insert Top Lines
-# SL_X = "\x1B" "[" "{} @"  # CSI 02/00 04/00 Scroll Left  # no-op at macOS Terminal
-# SR_X = "\x1B" "[" "{} A"  # CSI 02/00 04/01 Scroll Right  # no-op at macOS Terminal
+CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation
+CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
 
 ICH_X = "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
 IL_Y = "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 DL_Y = "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 DCH_X = "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
-# ESC 04/05 Next Line (NEL)
-# CSI 04/05 Cursor Next Line (CNL)
+EL_P = "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line
+
+SU_Y = "\x1B" "[" "{}S"  # CSI 05/03 Scroll Up   # Insert Bottom Lines
+SD_Y = "\x1B" "[" "{}T"  # CSI 05/04 Scroll Down  # Insert Top Lines
+# SL_X = "\x1B" "[" "{} @"  # CSI 02/00 04/00 Scroll Left  # no-op at macOS Terminal
+# SR_X = "\x1B" "[" "{} A"  # CSI 02/00 04/01 Scroll Right  # no-op at macOS Terminal
 
 RM_IRM = "\x1B" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
 SM_IRM = "\x1B" "[" "4h"  # CSI 06/08 4 Set Mode Insert/ Replace
@@ -1798,7 +1738,7 @@ DECSCUSR_BAR = "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
 
 @dataclasses.dataclass
 class BytesTerminal:
-    """Read/ Write the Bytes at Keyboard/ Screen of a Terminal"""
+    """Write/ Read Bytes at Screen/ Keyboard of the Terminal"""
 
     #
     # lots of docs:
@@ -1811,43 +1751,43 @@ class BytesTerminal:
     #   https://www.ecma-international.org/publications-and-standards/standards/ecma-48
     #     /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
     #
-    #   termios.TCSADRAIN blocks till Queued Output gone, without dropping Queued Input
-    #   termios.TCSAFLUSH blocks till Queued Output gone and drops Queued Input
+    #   termios.TCSADRAIN doesn't drop Queued Input but blocks till Queued Output gone
+    #   termios.TCSAFLUSH drops Queued Input and blocks till Queued Output gone
     #
 
     stdio: typing.TextIO  # sys.stderr
     fd: int  # 2
-    kholds: bytearray  # b"" till lookahead reads too fast
+    kholds: bytearray  # empty till lookahead reads too many Bytes
 
-    before: int  # termios.TCSADRAIN  # termios.TCSAFLUSH
-    tcgetattr_else: list[int | list[bytes | int]] | None
-    kinterrupts: int
-    after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH
+    before: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Entry
+    tcgetattr_else: list[int | list[bytes | int]] | None  # sampled at Entry
+    kinterrupts: int  # count of ⌃C's  # counted between Entry and Exit
+    after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Exit
 
-    at_flush_funcs: list[typing.Callable]
-    kbyteslogger: BytesLogger  # logs Keyboard Bytes In
-    sbyteslogger: BytesLogger  # logs Screen Bytes Out
+    at_btflush_funcs: list[typing.Callable]  # runs before blocking to read Input
+    klogger: ReprLogger  # logs Keyboard Bytes In
+    slogger: ReprLogger  # logs Screen Bytes Out
 
     def __init__(self, before=termios.TCSADRAIN, after=termios.TCSADRAIN) -> None:
 
         stdio = sys.stderr
         fd = stdio.fileno()
 
-        kbyteslogger = BytesLogger("keylog.py", tag="k")
-        sbyteslogger = BytesLogger("screenlog.py", tag="s")
+        klogger = ReprLogger(".pqinfo/keylog.log")
+        slogger = ReprLogger(".pqinfo/screenlog.log")
 
         self.stdio = stdio
         self.fd = fd
-        self.kholds = bytearray()  # todo: write it sometimes
+        self.kholds = bytearray()  # todo: reads too many Bytes sometimes
 
         self.before = before
-        self.tcgetattr_else = None
+        self.tcgetattr_else = None  # is None after Exit and before Entry
         self.kinterrupts = 0
-        self.after = after  # todo: test Tcsa Flush on large Paste crashing us
+        self.after = after  # todo: need Tcsa Flush on large Paste crashing us
 
-        self.at_flush_funcs = list()
-        self.kbyteslogger = kbyteslogger
-        self.sbyteslogger = sbyteslogger
+        self.at_btflush_funcs = list()
+        self.klogger = klogger
+        self.slogger = slogger
 
         # termios.TCSAFLUSH destroys Input, like for when Paste crashes Code
 
@@ -1863,6 +1803,9 @@ class BytesTerminal:
             assert tcgetattr is not None
 
             self.tcgetattr_else = tcgetattr
+
+            # todo: sample Replace/ Insert Mode
+            # todo: sample Cursor Style
 
             assert before in (termios.TCSADRAIN, termios.TCSAFLUSH), (before,)
             if False:  # jitter Sat 3/Aug  # ⌃C prints Py Traceback
@@ -1881,16 +1824,18 @@ class BytesTerminal:
 
         if tcgetattr_else is not None:
 
-            # Revert Screen Settings to Defaults  # todo: when are our Defaults wrong?
+            # Revert Screen Settings to Defaults
+            # todo: revert these only when we know we disrupted these
 
             s0 = "\x1B" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
             s1 = "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
-            self.btwrite((s0 + s1).encode())
+            after_bytes = (s0 + s1).encode()
+            self.btwrite(after_bytes)
 
             assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
             assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
 
-            #
+            # Start line-buffering Input, start replacing \n Output with \r\n, etc
 
             tcgetattr = tcgetattr_else
             self.tcgetattr_else = None
@@ -1901,32 +1846,60 @@ class BytesTerminal:
 
         return None
 
-    def breakpoint(self) -> None:
+    def btbreakpoint(self) -> None:
         r"""Breakpoint with line-buffered Input and \n Output taken to mean \r\n, etc"""
 
         self.__exit__()
         breakpoint()  # to step up the call stack:  u
         self.__enter__()
 
-        _ = """
+    def btloopback(self) -> None:
+        """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
         fd = self.fd
-        tcgetattr_else = self.tcgetattr_else
 
-        if tcgetattr_else is not None:
-            tcgetattr = tcgetattr_else
-            when = termios.TCSADRAIN
-            termios.tcsetattr(fd, when, tcgetattr)
-            stdio.flush()
-            tty.setraw(fd, when)
+        # Sketch what's going on
 
-        if False:  # jitter Sat 3/Aug
-            os.write(fd, b"??")
+        self.btprint(
+            "Press a Keyboard Chord to see it, thrice and more to write it".encode()
+        )
+        self.btprint(
+            "Press some of ⎋ Fn ⌃ ⌥ ⇧ ⌘ and ← ↑ → ↓ ⏎ ⇥ ⇤ and so on and on".encode()
+        )
 
-        """
+        self.btprint("Press ⌃M ⌃J ⌃M ⌃J to quit".encode())
 
-    def terminal_stop(self) -> None:
-        """Suspend and resume this Screen/Keyboard Terminal"""
+        # Race ahead to pass plain US Ascii through, without explanation,
+        # except not the Spacebar
+
+        count_by = collections.defaultdict(int)
+
+        for code in range(0x20, 0x7F):
+            kbytes = bytes([code])
+            count_by[kbytes] = 3
+
+        # Loopback till ⌃M ⌃J ⌃M ⌃J
+        # Print Repr Bytes once and twice and thrice, but write the Bytes thereafter
+
+        kbytes_list = list()
+        while True:
+
+            kbytes = self.read_kchord_bytes_if()
+            kbytes_list.append(kbytes)
+
+            count_by[kbytes] += 1
+
+            if count_by[kbytes] >= 3:
+                os.write(fd, kbytes)
+            else:
+                rep = repr(kbytes).encode()
+                self.btwrite(b" " + rep)
+
+            if kbytes_list[-4:] == [b"\r", b"\n", b"\r", b"\n"]:
+                break
+
+    def btstop(self) -> None:
+        """Suspend and resume this Screen/ Keyboard Terminal Process"""
 
         pid = os.getpid()
 
@@ -1941,26 +1914,25 @@ class BytesTerminal:
 
         assert os.getpid() == pid, (os.getpid(), pid)
 
-    def at_flush(self, func) -> None:
+    def at_btflush(self, func) -> None:
         """Register to run just before blocking to wait for Keyboard Input"""
 
-        at_flush_funcs = self.at_flush_funcs
+        at_btflush_funcs = self.at_btflush_funcs
+        at_btflush_funcs.insert(0, func)
 
-        at_flush_funcs.insert(0, func)
-
-    def flush_bytes_before_input(self) -> None:
+    def btflush(self) -> None:
         """Run just before blocking to wait for Keyboard Input"""
 
-        at_flush_funcs = self.at_flush_funcs
+        at_btflush_funcs = self.at_btflush_funcs
         stdio = self.stdio
 
-        if not self.kbhit(timeout=0):
-            for at_flush_func in at_flush_funcs:
-                at_flush_func()
+        for at_btflush_func in at_btflush_funcs:
+            at_btflush_func()
 
-            stdio.flush()
-            self.kbyteslogger.pylogfile.flush()  # plus ~0.050 ms, ugh
-            self.sbyteslogger.pylogfile.flush()  # plus another ~0.050 ms, ugh
+        self.slogger.logger.flush()  # plus ~0.050 ms
+        self.klogger.logger.flush()  # plus ~0.050 ms
+
+        stdio.flush()
 
     def btwrite(self, sbytes) -> None:
         """Write Bytes to the Screen, but without implicitly also writing a Line-End"""
@@ -1972,66 +1944,83 @@ class BytesTerminal:
 
         fd = self.fd
         assert self.tcgetattr_else
-        sbyteslogger = self.sbyteslogger
+        slogger = self.slogger
 
         sep = b" "
         join = sep.join(args)
         sbytes = join + end
 
-        sbyteslogger.log_bytes_io(sbytes)  # logs Out before Write
+        slogger.rlprint(sbytes)  # logs Out before Write
         os.write(fd, sbytes)
 
         # doesn't raise UnicodeEncodeError
+        # called with end=b"" to write without adding b"\r\n"
+        # called with end=b"n" to add b"\n" in place of b"\r\n"
 
-    def read_kchord_bytes_if(self) -> bytes:  # noqa C901 complex
-        """Read the Bytes of a single Keyboard Chord from the Keyboard"""
+    def read_kchord_bytes_if(self) -> bytes:
+        """Read the Bytes of 1 Incomplete/ Complete Keyboard Chord from the Keyboard"""
 
-        assert ESC == b"\x1B"
-        assert CSI == b"\x1B" b"["
-        assert SS3 == b"\x1B" b"O"
-        assert CSI_I_P_BYTES == b"".join(bytes([_]) for _ in range(0x20, 0x40))
+        assert ESC == "\x1B"
+        assert CSI == "\x1B" "["
+        assert SS3 == "\x1B" "O"
 
         # Block to fetch at least 1 Byte
 
-        read_0 = self.read_kchar_bytes_if()  # often empties the .kholds
+        read_0 = self.read_kchar_bytes_if()  # often returns with the .kholds empty
+
         kchord_bytes = read_0
-        if read_0 == b"\x1B":
+        if read_0 != b"\x1B":
+            return kchord_bytes
 
-            # Accept 1 or more ESC Bytes, such as x 1B 1B in ⌥⌃FnDelete
+        # Accept 1 or more Esc Bytes, such as x 1B 1B in ⌥⌃FnDelete
 
-            while True:  # without Timeout would rudely block at ⎋⎋ Meta Esc
-                if not self.kbhit(timeout=0):
-                    return kchord_bytes
+        while True:
+            if not self.kbhit(timeout=0):
+                return kchord_bytes
 
-                read_1 = self.read_kchar_bytes_if()
-                kchord_bytes += read_1
-                if read_1 != b"\x1B":
-                    break
+                # ⎋ Esc that isn't ⎋⎋ Meta Esc
+                # ⎋⎋ Meta Esc that doesn't come with more Bytes
 
-            if kchord_bytes == b"\x1B\x5B":  # ⎋[ Meta [
-                if not self.kbhit(timeout=0):
-                    return kchord_bytes
+            read_1 = self.read_kchar_bytes_if()
+            kchord_bytes += read_1
+            if read_1 != b"\x1B":
+                break
 
-            # Block or don't, to fetch the rest of the Esc Sequence
+        if read_1 == b"O":  # 01/11 04/15 SS3
+            read_2 = self.read_kchar_bytes_if()
+            kchord_bytes += read_2  # rarely in range(0x20, 0x40) CSI_EXTRAS
+            return kchord_bytes
 
-            if read_1 == b"O":  # 01/11 04/15 SS3
-                read_2 = self.read_kchar_bytes_if()
-                kchord_bytes += read_2  # practically never in range(0x20, 0x40)
+        # Accept ⎋[ Meta [ cut short by itself, or longer CSI Escape Sequences
 
-            elif read_1 == b"[":  # 01/11 05/11 CSI
-                while True:
-                    read_2 = self.read_kchar_bytes_if()
-                    kchord_bytes += read_2
+        if read_1 == b"[":  # 01/11 ... 05/11 CSI
+            assert kchord_bytes.endswith(b"\x1B\x5B"), (kchord_bytes,)
+            if not self.kbhit(timeout=0):
+                return kchord_bytes  # ⎋[ Meta [
+            kchord_bytes = self.read_csi_kchord_bytes_if(kchord_bytes)
 
-                    if len(read_2) == 1:
-                        ord_2 = read_2[-1]
-                        if 0x20 <= ord_2 < 0x40:  # !"#$%&'()*+,-./0123456789:;<=>?
-                            continue
+        # Succeed
 
-                    break
+        return kchord_bytes
 
-        if KDEBUG:
-            self.btprint(str(kchord_bytes).encode(), end=b"\r\n")  # todo: logging
+        # cut short by end-of-input, or by undecodable Bytes
+        # doesn't raise UnicodeDecodeError
+
+    def read_csi_kchord_bytes_if(self, kchord_bytes) -> bytes:
+        """Block to read the rest of the CSI Escape Sequence"""
+
+        assert CSI_EXTRAS == "".join(chr(_) for _ in range(0x20, 0x40))
+
+        while True:
+            read_n = self.read_kchar_bytes_if()
+            kchord_bytes += read_n
+
+            if len(read_n) == 1:  # as when ord(read_2.encode()) < 0x80
+                ord_2 = read_n[-1]
+                if 0x20 <= ord_2 < 0x40:  # !"#$%&'()*+,-./0123456789:;<=>?
+                    continue  # Parameter/ Intermediate Bytes in CSI_EXTRAS
+
+            break
 
         return kchord_bytes
 
@@ -2039,7 +2028,7 @@ class BytesTerminal:
         # doesn't raise UnicodeDecodeError
 
     def read_kchar_bytes_if(self) -> bytes:
-        """Read the Bytes of 1 Unicode Char from the Keyboard, if not cut short"""
+        """Read the Bytes of 1 Incomplete/ Complete Keyboard Char from the Keyboard"""
 
         def decodable(kbytes: bytes) -> bool:
             try:
@@ -2061,6 +2050,8 @@ class BytesTerminal:
 
             break
 
+        assert kbytes  # todo: test end-of-input
+
         return kbytes
 
         # cut short by end-of-input, or by undecodable Bytes
@@ -2071,7 +2062,7 @@ class BytesTerminal:
 
         fd = self.fd
         assert self.tcgetattr_else
-        kbyteslogger = self.kbyteslogger
+        klogger = self.klogger
 
         # Read 1 Byte from Held Bytes
 
@@ -2083,10 +2074,10 @@ class BytesTerminal:
 
         # Else block to read 1 Byte from Keyboard
 
-        self.flush_bytes_before_input()
+        self.btflush()
 
         kbytes = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
-        kbyteslogger.log_bytes_io(kbytes)  # logs In after Read
+        klogger.rlprint(kbytes)  # logs In after Read
 
         if kbytes != b"\x03":  # ⌃C
             self.kinterrupts = 0
@@ -2274,14 +2265,13 @@ for _KCHARS, _COUNT in collections.Counter(_KCHARS_LIST).items():
 
 @dataclasses.dataclass
 class StrTerminal:
-    """Read/ Write Str Chars at Keyboard/ Screen of a Terminal"""
+    """Write/ Read Chars at Screen/ Keyboard of the Terminal"""
 
     bt: BytesTerminal  # wrapped here
     kpushes: list[tuple[bytes, str]]  # cached here
 
     def __init__(self) -> None:
         bt = BytesTerminal()
-        bt.at_flush(self.flush_strs_before_input)
 
         self.bt = bt
         self.kpushes = list()
@@ -2300,17 +2290,54 @@ class StrTerminal:
         bt = self.bt
         bt.__exit__(*exc_info)
 
-    def breakpoint(self) -> None:
+    def stbreakpoint(self) -> None:
         r"""Breakpoint with line-buffered Input and \n Output taken to mean \r\n, etc"""
 
         self.__exit__()
         breakpoint()  # to step up the call stack:  u
         self.__enter__()
 
-    def flush_strs_before_input(self) -> None:
-        """Run just before blocking to wait for Keyboard Input"""
+    def stloopback(self) -> None:
+        """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
-        pass
+        bt = self.bt
+
+        # Sketch what's going on
+
+        self.stprint("Press a Keyboard Chord to see it, thrice and more to write it")
+        self.stprint("Press some of ⎋ Fn ⌃ ⌥ ⇧ ⌘ and ← ↑ → ↓ ⏎ ⇥ ⇤ and so on and on")
+
+        self.stprint("Press ⌃M ⌃J ⌃M ⌃J to quit")
+
+        # Race ahead to pass plain US Ascii through, without explanation,
+        # except not the Spacebar
+
+        count_by = collections.defaultdict(int)
+
+        for code in range(0x21, 0x7F):
+            kbytes = bytes([code])
+            count_by[kbytes] = 3
+
+        # Loopback till ⌃M ⌃J ⌃M ⌃J
+        # Print Repr Bytes once and twice and thrice, but write the Bytes thereafter
+
+        kbytes_list = list()
+        while True:
+
+            (kbytes, kchord_str) = self.pull_one_kchord_bytes_str()
+            kbytes_list.append(kbytes)
+
+            count_by[kbytes] += 1
+
+            if count_by[kbytes] >= 3:
+                bt.btwrite(kbytes)
+            else:
+                b = repr(kbytes).encode()
+                s = repr(kchord_str).encode()
+                bt.btwrite(b" " + b + b" " + s)
+
+            if kbytes_list[-4:] == [b"\r", b"\n", b"\r", b"\n"]:
+                break
 
     def stwrite(self, schars) -> None:
         """Write Chars to the Screen, but without implicitly also writing a Line-End"""
@@ -2382,9 +2409,6 @@ class StrTerminal:
 
         assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
         assert " " not in kchord_str, (kchord_str,)
-
-        if KDEBUG:
-            self.stprint(kchord_bytes, kchord_str)
 
         return (kchord_bytes, kchord_str)
 
@@ -2465,8 +2489,8 @@ class LineTerminal:
     """React to Sequences of Key Chords by laying Chars of Lines over the Screen"""
 
     st: StrTerminal  # wrapped here
-    logfile: typing.TextIO  # opened here  # '.pqinfo/funclog.log'  # logfmt
-    logfile_exists: bool  # created by earlier processes
+    logger: typing.TextIO  # wrapped here  # '.pqinfo/pq.log'  # logfmt
+    logger_exists: bool  # created by earlier processes
 
     olines: list[str]  # the Lines to sketch
 
@@ -2480,20 +2504,11 @@ class LineTerminal:
 
     def __init__(self) -> None:
 
-        dirpath = pathlib.Path(".pqinfo")
-        dirpath.mkdir(parents=True, exist_ok=True)  # 'parents=' unneeded at './'
-
-        path = dirpath / "pq.log"  # '.pqinfo/pq.log'
-        self.logfile_exists = path.exists()
-
-        # logfile = io.StringIO()
-        # logfile.name = "<io.StringIO>"
-        logfile = path.open("a")  # last wins
-
-        self.logfile = logfile
+        pqlogger = ReprLogger(".pqinfo/pq.log")
 
         self.st = StrTerminal()
-        self.logfile = logfile
+        self.logger = pqlogger.logger
+        self.logger_exists = pqlogger.exists
 
         self.olines = list()
 
@@ -2507,21 +2522,24 @@ class LineTerminal:
 
         # lots of empty happens only until first Keyboard Input
 
-    def breakpoint(self) -> None:
+    def ltbreakpoint(self) -> None:
         r"""Breakpoint with line-buffered Input and \n Output taken to mean \r\n, etc"""
 
         st = self.st
-
-        if False:  # jitter Fri 16/Aug
-            breakpoint()  # why does this kind of work, but just in the first Break?
-            return
 
         st.__exit__()
         breakpoint()  # to step up the call stack:  u
         st.__enter__()
 
+    def ltflush(self) -> None:
+        """Run just before blocking to wait for Keyboard Input"""
+
+        self.logger.flush()
+
     def top_wrangle(self, ilines, kmap) -> list[str]:
         """Launch, and run till SystemExit"""
+
+        # Load up Lines to edit
 
         olines = self.olines
         olines.extend(ilines)
@@ -2530,12 +2548,16 @@ class LineTerminal:
 
         # Wrap around a StrTerminal wrapped around a ByteTerminal
 
-        klog_exists = self.st.bt.kbyteslogger.exists
-        slog_exists = self.st.bt.sbyteslogger.exists
-        tlog_exists = self.logfile_exists
-
         with StrTerminal() as st:
             self.st = st
+
+            bt = st.bt
+            bt.at_btflush(self.ltflush)
+
+            exists_by_name = dict()
+            exists_by_name[bt.klogger.logger.name] = bt.klogger.exists
+            exists_by_name[bt.slogger.logger.name] = bt.slogger.exists
+            exists_by_name[self.logger.name] = self.logger_exists
 
             # Tell the StrTerminal what to say at first
 
@@ -2543,24 +2565,12 @@ class LineTerminal:
             for oline in olines:
                 st.stprint(oline)
 
-            bt = st.bt
-            if (not klog_exists) or (not slog_exists) or (not tlog_exists):
+            if not all(exists_by_name.values()):
                 st.stprint()
-                if not klog_exists:
-                    st.stprint(
-                        "Logging Keyboard Chord Bytes into:  tail -F -n +15",
-                        bt.kbyteslogger.pylogfile.name,
-                    )
-                if not slog_exists:
-                    st.stprint(
-                        "Logging Screen Bytes into:  tail -F -n +15",
-                        bt.sbyteslogger.pylogfile.name,
-                    )
-                if not tlog_exists:
-                    st.stprint(
-                        "Logging LogFmt Lines into:  tail -F",
-                        self.logfile.name,
-                    )
+
+            for name, exists in exists_by_name.items():
+                if not exists:
+                    st.stprint("Logging into:  tail -F", name)
 
             self.help_quit()  # for .top_wrangle
 
@@ -2623,7 +2633,6 @@ class LineTerminal:
             assert STOP_KCAP_STRS == ("⌃C", "⌃G", "⌃L", "⎋", "⌃\\")
             if not textual:
                 if kcap_str in ("⌃C", "⌃G", "⌃L", "⎋", "⌃\\"):
-                    # self.breakpoint()
                     kstr_stops.append(kcap_str)  # like for ⎋[1m
                     break
 
@@ -2698,7 +2707,7 @@ class LineTerminal:
         st = self.st
 
         assert vmode in ("", "Insert", "Replace"), vmode
-        print(f"{vmode=}", file=self.logfile)
+        print(f"{vmode=}", file=self.logger)
 
         if not vmode:
             st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
@@ -2769,7 +2778,7 @@ class LineTerminal:
             kchars = kbytes.decode()  # may raise UnicodeDecodeError
             kcap_str = self.kcap_str
 
-        print(f"{kcap_str=} {kbytes=} {vmode=}", file=self.logfile)
+        print(f"{kcap_str=} {kbytes=} {vmode=}", file=self.logger)
 
         return (kbytes, kchars, kcap_str)
 
@@ -2782,13 +2791,12 @@ class LineTerminal:
 
         # Read the first Keyboard Chord of the Sequence
 
-        self.logfile.flush()
+        self.logger.flush()
         (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
 
         # Take just 1 Chord as a complete Sequence, when taking Chords as Chars
 
         if vmode:
-            print(f"kcap_str={kchord_str!r} kbytes={kchord_bytes!r}", file=self.logfile)
             self.kbytes = kchord_bytes
             self.kcap_str = kchord_str
             return
@@ -2849,7 +2857,7 @@ class LineTerminal:
 
                 break
 
-            self.logfile.flush()
+            self.logger.flush()
             (kb, ks) = st.pull_one_kchord_bytes_str()
 
         # Succeed
@@ -2902,10 +2910,6 @@ class LineTerminal:
             if kcap_str in insert_pq_kdo_call_by_kcap_str.keys():
                 kdo_call = insert_pq_kdo_call_by_kcap_str[kcap_str]
 
-        if KDEBUG:
-            if kdo_call[0] is not LineTerminal.kdo_force_quit:
-                kdo_call = (LineTerminal.kdo_kcap_write_n,)  # for KDEBUG
-
         kdo_func = kdo_call[0]
         assert kdo_func.__name__.startswith("kdo_"), (kdo_call, kcap_str)
 
@@ -2918,7 +2922,7 @@ class LineTerminal:
             done = self.kdo_inverse_or_nop(kdo_func)
         if not done:
             kint_else = self.kint_peek_else(default=None)
-            print(f"kint={kint_else} func={kdo_func.__name__}", file=self.logfile)
+            print(f"kint={kint_else} func={kdo_func.__name__}", file=self.logger)
             (kdo_func, args, kwargs) = self.py_call_complete(kdo_call)
             kdo_func(self, *args, **kwargs)
 
@@ -2987,7 +2991,7 @@ class LineTerminal:
 
         if not kint:
             self.kint_pull(default=0)
-            print(f"kint=0 func={kdo_func.__name__}", file=self.logfile)
+            print(f"kint=0 func={kdo_func.__name__}", file=self.logger)
             return True
 
         # Call the inverse when given a negative K-Int
@@ -2995,7 +2999,7 @@ class LineTerminal:
         if kint < 0:
             self.kint_pull(default=0)
             self.kint_push(-kint)
-            print(f"kint=0 func={kdo_inverse_func.__name__}", file=self.logfile)
+            print(f"kint=0 func={kdo_inverse_func.__name__}", file=self.logger)
             kdo_inverse_func(self)
             self.kint_pull(default=0)
             return True
@@ -3009,30 +3013,34 @@ class LineTerminal:
     #
 
     def kdo_terminal_stop(self) -> None:
-        """Suspend and resume this Screen/Keyboard Terminal"""
+        """Suspend and resume this Screen/ Keyboard Terminal"""
 
         st = self.st
         bt = st.bt
 
         self.vmode_enter(vmode="")
-        bt.terminal_stop()
+        bt.btstop()
         self.vmode_exit()
 
         # Emacs ⌃Z suspend-frame
         # Vim ⌃Z
 
-    def kdo_force_quit(self) -> None:
+    def kdo_quit_anyhow(self) -> None:
         """Revert changes to the O Lines, and quit this Linux Process"""
 
-        _ = self.kint_pull(default=0)  # todo: 'returncode = ' inside 'kdo_force_quit'
+        _ = self.kint_pull(default=0)  # todo: 'returncode = ' inside 'kdo_quit_anyhow'
 
-        sys.exit()  # ignore the K Int
+        sys.exit()
 
-        # Emacs ⌃X ⌃S ⌃X ⌃C save-buffer save-buffers-kill-terminal
+        # Emacs ⌃X ⌃S ⌃X ⌃C save-buffer save-buffers-kill-terminal  # Emacs ⌃X⌃S⌃X⌃C
+        # Vim ⌃C ⌃L : W Q Return save-quit  # Vim ⌃C⌃L :WQ Return
+        # Vim ⌃C ⌃L : W Q ! Return save-quit  # Vim ⌃C⌃L :WQ! Return
+        # Vim ⌃C ⌃L ⇧Z ⇧Z save-quit  # Vim ⇧Z⇧Z
 
-        # Vim ⌃C ⌃L : Q ! Return quit-no-save
-        # Vim ⇧Z ⇧Q quit-no-save
-        # Vim ⇧Z ⇧Z save-quit
+        # Emacs ⌃X ⌃C save-buffers-kill-terminal  # Emacs ⌃X⌃C
+        # Vim ⌃C ⌃L : Q Return quit-no-save  # Vim ⌃C⌃L :Q Return
+        # Vim ⌃C ⌃L : Q ! Return quit-no-save  # Vim ⌃C⌃L :Q! Return
+        # Vim ⌃C ⌃L ⇧Z ⇧Q quit-no-save  # Vim ⇧Z⇧Q
 
     def kdo_help_quit(self) -> None:
         """Take a Keyboard Chord Sequence to mean say how to quit Vim"""
@@ -3041,25 +3049,13 @@ class LineTerminal:
 
         self.help_quit()  # for .kdo_help_quit
 
+        # Vim ⎋ ⎋ via Meta Esc
+        # Vim ⌃C ⌃L ⇧Q V I Return  # Vim ⇧QVI Return
+
     def help_quit(self) -> None:
         """Say how to quit Vim"""
 
         st = self.st
-        # no .pull_int here
-
-        quit_kcap_strs = list()
-        for kcap_str, call in KDO_CALL_BY_KCAP_STR.items():
-            func = call[0]
-            if func is LineTerminal.kdo_force_quit:
-
-                quit_kcap_str = kcap_str
-                if (kcap_str[:1] != "⌃") or (kcap_str[:2] == "⌃L"):
-                    quit_kcap_str = "⌃C " + kcap_str
-
-                quit_kcap_strs.append(quit_kcap_str)
-
-        quit_kcap_strs.sort()
-
         st.stprint()
         st.stprint(
             "To quit, press one of"
@@ -3135,7 +3131,7 @@ class LineTerminal:
 
         #
 
-        self.logfile.flush()
+        self.logger.flush()
         (kbytes, kchord_str) = st.pull_one_kchord_bytes_str()
         if not kint:
             return
@@ -3161,7 +3157,7 @@ class LineTerminal:
         kcap_str = self.kcap_str
         # no .pull_int here
 
-        assert CSI_I_P_BYTES == b"".join(bytes([_]) for _ in range(0x20, 0x40))
+        assert CSI_EXTRAS == "".join(chr(_) for _ in range(0x20, 0x40))
 
         # Run as [ only after ⎋, else reject the .kcap_str [ as if entirely unbound
 
@@ -3176,16 +3172,13 @@ class LineTerminal:
         kcap_str = "⎋ ["
 
         while True:
-            self.logfile.flush()
+            self.logger.flush()
             (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
 
             kbytes += kchord_bytes
 
             sep = " "  # '⇧Tab'  # '⇧T a b'  # '⎋⇧Fn X'  # '⎋⇧FnX'
             kcap_str += sep + kchord_str
-
-            if KDEBUG:
-                st.stprint(f"{kbytes=} {kcap_str=}  # kdo_quote_csi_kstrs_n")
 
             read_2 = kchord_bytes
             if len(read_2) == 1:
@@ -3211,7 +3204,7 @@ class LineTerminal:
     def alarm_ring(self) -> None:
         """Ring the Bell"""
 
-        self.st.stprint("\a", end="")
+        self.st.stwrite("\a")
 
         # 00/07 Bell (BEL)
 
@@ -3992,7 +3985,7 @@ class LineTerminal:
 
         kint_else = self.kint_peek_else(default=None)
         if kint_else is not None:
-            self.alarm_ring()  # 'repetition arg' for D ⇧G, D ⇧L
+            self.alarm_ring()  # 'repetition arg' for C ⇧G, C ⇧L, D ⇧G, D ⇧L
             return
 
         assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
@@ -4497,30 +4490,29 @@ PQ_KDO_CALL_BY_KCAP_STR = {
     "⌃G": (LT.kdo_hold_stop_kstr,),  # b'\x07'
     "Tab": (LT.kdo_tab_plus_n,),  # b'\x09'  # b'\t'
     "⌃L": (LT.kdo_hold_stop_kstr,),  # b'\x07'
-    "⌃L : Q Return": (LT.kdo_force_quit,),  # b'\x0C...
-    "⌃L : Q ! Return": (LT.kdo_force_quit,),  # b'\x0C...
-    "⌃L : W Q Return": (LT.kdo_force_quit,),  # b'\x0C...
-    "⌃L : W Q ! Return": (LT.kdo_force_quit,),  # b'\x0C...
-    "⌃L ⇧Z ⇧Q": (LT.kdo_force_quit,),  # b'\x0C...
-    "⌃L ⇧Z ⇧Z": (LT.kdo_force_quit,),  # b'\x0C...
+    "⌃L : Q Return": (LT.kdo_quit_anyhow,),  # b'\x0C...
+    "⌃L : Q ! Return": (LT.kdo_quit_anyhow,),  # b'\x0C...
+    "⌃L : W Q Return": (LT.kdo_quit_anyhow,),  # b'\x0C...
+    "⌃L : W Q ! Return": (LT.kdo_quit_anyhow,),  # b'\x0C...
+    "⌃L ⇧Z ⇧Q": (LT.kdo_quit_anyhow,),  # b'\x0C...
+    "⌃L ⇧Z ⇧Z": (LT.kdo_quit_anyhow,),  # b'\x0C...
     # "⌃Q ⌃Q": (LT.kdo_quote_kchars,),  # b'\x11...  # no, go with ⌃V ⌃Q
     # "⌃V ⌃V": (LT.kdo_quote_kchars,),  # b'\x16...  # no, go with ⌃Q ⌃V
-    "⌃X ⌃C": (LT.kdo_force_quit,),  # b'\x18...
-    "⌃X ⌃S ⌃X ⌃C": (LT.kdo_force_quit,),  # b'\x18...
+    "⌃X ⌃C": (LT.kdo_quit_anyhow,),  # b'\x18...
+    "⌃X ⌃S ⌃X ⌃C": (LT.kdo_quit_anyhow,),  # b'\x18...
     "⌃Z": (LT.kdo_terminal_stop,),  # b'\x1A'  # SIGTSTP
     "⇧Tab": (LT.kdo_tab_minus_n,),  # b'\x1B[Z'
     "⌃\\": (LT.kdo_hold_stop_kstr,),  # ⌃\  # b'\x1C'
     #
-    ": Q Return": (LT.kdo_force_quit,),  # b':q\r'
-    ": Q ! Return": (LT.kdo_force_quit,),  # b':q!\r'
-    ": W Q Return": (LT.kdo_force_quit,),  # b':wq\r'
-    ": W Q ! Return": (LT.kdo_force_quit,),  # b':wq!\r'
+    ": Q Return": (LT.kdo_quit_anyhow,),  # b':q\r'
+    ": Q ! Return": (LT.kdo_quit_anyhow,),  # b':q!\r'
+    ": W Q Return": (LT.kdo_quit_anyhow,),  # b':wq\r'
+    ": W Q ! Return": (LT.kdo_quit_anyhow,),  # b':wq!\r'
     "⇧Q V I Return": (LT.kdo_help_quit,),  # b'Qvi\r'
-    "⇧Z ⇧Q": (LT.kdo_force_quit,),  # b'ZQ'
-    "⇧Z ⇧Z": (LT.kdo_force_quit,),  # b'ZZ'
+    "⇧Z ⇧Q": (LT.kdo_quit_anyhow,),  # b'ZQ'
+    "⇧Z ⇧Z": (LT.kdo_quit_anyhow,),  # b'ZZ'
     "[": (LT.kdo_quote_csi_kstrs_n,),  # b'\x5B'
     #
-    "⌥⎋": (LT.kdo_help_quit,),  # Option Esc
     "⌥[": (LT.kdo_quote_csi_kstrs_n,),  # b'\xE2\x80\x9C'  # Option [
     #
 }
@@ -4552,6 +4544,7 @@ KDO_CALL_KCAP_STRS = sorted(KDO_CALL_BY_KCAP_STR.keys())
 # todo: Emacs ⌃U - for non-positive K-Int
 
 # todo: assert Keys of KDO_CALL_BY_KCAP_STR reachable by StrTerminal
+#   such as ⌥ ⎋ never reached as Option Esc, despite ⎋ ⎋ reached as Meta Esc
 #   such as '⎋' less reachable while '⎋ G Tab' defined
 #       because 'kdo_call_kcap_strs'
 
@@ -4604,7 +4597,7 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #   Pq I⌃D IReturn IDelete
 #
 #   Option Mouse click moves Cursor via ← ↑ → ↓
-#   Keyboard Trace at:  tail -F -n +15 .pqinfo/keylog.py
+#   Log Files at:  tail -F .pqinfo/*.log
 #
 
 #
@@ -4955,6 +4948,11 @@ CUED_PY_GRAFS_TEXT = r"""
     iwords = iline.split()
     oline = iwords[-1] if iwords else ""
 
+    # bt loopback  # bt loop
+    olines = list()
+    with pq.BytesTerminal() as bt:
+        bt.btloopback()
+
     # bytes range
     obytes = ibytes  # todo: say this without ibytes
     obytes = b"".join(bytes([_]) for _ in range(0x100))
@@ -5063,6 +5061,11 @@ CUED_PY_GRAFS_TEXT = r"""
     # split split split  # |sed 's,  *,$,g' |tr '$' '\n'
     # |xargs -n 1  # xargs n 1  # xn1
     olines = itext.split()
+
+    # st loopback  # st loop
+    olines = list()
+    with pq.StrTerminal() as st:
+        st.stloopback()
 
     # tail tail  # t t t t t t t t t
     olines = ilines[-10:]

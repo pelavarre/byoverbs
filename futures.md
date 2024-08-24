@@ -862,6 +862,27 @@ pq emo (testcases)
         \<string\>:94: SyntaxWarning: invalid escape sequence '\ '
         %
 
+pq emo
+    but faster, like till next Qcl
+
+pq shell
+    as with pq vi
+
+assemble BuiltIns of Em/ Vi/ Shell as Folder of Py Files
+    run as a slow make process
+    create an empty Py File to have us fill it in
+        create a non-empty Py File to have it be the Code
+
+pq em/vi
+   fail |pbcopy earlier, e.g. at Linux w/out pbpaste/pbcopy
+
+pq emojis unicodedata
+
+    % pq emojis unicodedata >e
+    <string>:94: SyntaxWarning: invalid escape sequence '\ '
+    %
+
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md
