@@ -1858,6 +1858,16 @@ class BytesTerminal:
 
         fd = self.fd
 
+        # Enter before and exit after, if called before Entry
+
+        if not self.tcgetattr_else:
+            self.__enter__()
+            try:
+                self.btloopback()
+            finally:
+                self.__exit__(*sys.exc_info())
+            return
+
         # Sketch what's going on
 
         self.btprint(
@@ -1867,21 +1877,16 @@ class BytesTerminal:
             "Press some of ⎋ Fn ⌃ ⌥ ⇧ ⌘ and ← ↑ → ↓ ⏎ ⇥ ⇤ and so on and on".encode()
         )
 
-        self.btprint("Press ⌃M ⌃J ⌃M ⌃J to quit".encode())
+        self.btprint("Press ⌃M ⌃J ⌃M ⌃J ⌃M to quit".encode())
 
-        # Race ahead to pass plain US Ascii through, without explanation,
-        # except not the Spacebar
-
-        count_by = collections.defaultdict(int)
-
-        for code in range(0x20, 0x7F):
-            kbytes = bytes([code])
-            count_by[kbytes] = 3
-
-        # Loopback till ⌃M ⌃J ⌃M ⌃J
+        # Loopback till ⌃M ⌃J ⌃M ⌃J ⌃M
         # Print Repr Bytes once and twice and thrice, but write the Bytes thereafter
 
+        count_by: dict[bytes, int]
+
+        count_by = collections.defaultdict(int)
         kbytes_list = list()
+
         while True:
 
             kbytes = self.read_kchord_bytes_if()
@@ -1892,11 +1897,14 @@ class BytesTerminal:
             if count_by[kbytes] >= 3:
                 os.write(fd, kbytes)
             else:
+                sep = b" "
                 rep = repr(kbytes).encode()
-                self.btwrite(b" " + rep)
+                self.btwrite(sep + rep)
 
-            if kbytes_list[-4:] == [b"\r", b"\n", b"\r", b"\n"]:
+            if kbytes_list[-5:] == [b"\r", b"\n", b"\r", b"\n", b"\r"]:
                 break
+
+        self.btprint()
 
     def btstop(self) -> None:
         """Suspend and resume this Screen/ Keyboard Terminal Process"""
@@ -2302,26 +2310,31 @@ class StrTerminal:
 
         bt = self.bt
 
+        # Enter before and exit after, if called before Entry
+
+        if not self.bt.tcgetattr_else:
+            self.__enter__()
+            try:
+                self.stloopback()
+            finally:
+                self.__exit__(*sys.exc_info())
+            return
+
         # Sketch what's going on
 
         self.stprint("Press a Keyboard Chord to see it, thrice and more to write it")
         self.stprint("Press some of ⎋ Fn ⌃ ⌥ ⇧ ⌘ and ← ↑ → ↓ ⏎ ⇥ ⇤ and so on and on")
 
-        self.stprint("Press ⌃M ⌃J ⌃M ⌃J to quit")
+        self.stprint("Press ⌃M ⌃J ⌃M ⌃J ⌃M to quit")
 
-        # Race ahead to pass plain US Ascii through, without explanation,
-        # except not the Spacebar
-
-        count_by = collections.defaultdict(int)
-
-        for code in range(0x21, 0x7F):
-            kbytes = bytes([code])
-            count_by[kbytes] = 3
-
-        # Loopback till ⌃M ⌃J ⌃M ⌃J
+        # Loopback till ⌃M ⌃J ⌃M ⌃J ⌃M
         # Print Repr Bytes once and twice and thrice, but write the Bytes thereafter
 
+        count_by: dict[bytes, int]
+
+        count_by = collections.defaultdict(int)
         kbytes_list = list()
+
         while True:
 
             (kbytes, kchord_str) = self.pull_one_kchord_bytes_str()
@@ -2332,12 +2345,17 @@ class StrTerminal:
             if count_by[kbytes] >= 3:
                 bt.btwrite(kbytes)
             else:
-                b = repr(kbytes).encode()
-                s = repr(kchord_str).encode()
-                bt.btwrite(b" " + b + b" " + s)
+                bigsep = b"  "
+                kb = repr(kbytes).encode()
+                lilsep = b" "
+                ks = repr(kchord_str).encode()
 
-            if kbytes_list[-4:] == [b"\r", b"\n", b"\r", b"\n"]:
+                bt.btwrite(bigsep + kb + lilsep + ks)
+
+            if kbytes_list[-5:] == [b"\r", b"\n", b"\r", b"\n", b"\r"]:
                 break
+
+        bt.btprint()
 
     def stwrite(self, schars) -> None:
         """Write Chars to the Screen, but without implicitly also writing a Line-End"""
@@ -4736,18 +4754,19 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # Todo's that watch the Screen more closely
 #
-#   Size the Screen
-#       ⇧M
-#       less extreme $
-#
 #   Track the Cursor
 #       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
 #       Delete to Leftmost
-#
+#       less extreme $
+
 #   Bounce Cursor to Tracer on Screen
 #       Trace the unicode.name while Replace/ Insert
 #       Delete the Message we last wrote, write the new, log Messages & lost Messages
 #       Trace Y and X a la Vim :set ruler, cursorline, etc from my ~/.vimrc
+#
+#   Size the Screen
+#       ⇧M
+#       less extreme $
 #
 #   Shadow the Screen
 #       Undo/Redo piercing the Shadow
@@ -4965,6 +4984,9 @@ CUED_PY_LINES_TEXT = r"""
 
     obytes = ibytes  # sponged  # sponge
 
+    obytes = ibytes; pq.BytesTerminal().btloopback()  # bt loopback  # bt loop
+
+
     oline = (4 * " ") + iline  # dent  # dented  # textwrap.dented
 
     oline = ascii(iline)  # ascii  # |cat -etv  # cat etv  # shows $'\xA0' Nbsp
@@ -5013,6 +5035,7 @@ CUED_PY_LINES_TEXT = r"""
 
     oobject = max(len(_.split()) for _ in ilines)  # max len split  # max split
 
+
     otext = " ".join(itext)  # space
 
     otext = "".join(dict((_, _) for _ in itext).keys())  # text set  # text set
@@ -5030,6 +5053,8 @@ CUED_PY_LINES_TEXT = r"""
     otext = itext.title()  # title  # titled
 
     otext = itext.upper()  # upper  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
+
+    otext = itext; pq.StrTerminal().stloopback()  # st loopback  # st loop
 
     otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
 
@@ -5053,11 +5078,6 @@ CUED_PY_GRAFS_TEXT = r"""
     # awk  # |awk '{print $NF}'  # a a a a
     iwords = iline.split()
     oline = iwords[-1] if iwords else ""
-
-    # bt loopback  # bt loop
-    olines = list()
-    with pq.BytesTerminal() as bt:
-        bt.btloopback()
 
     # bytes range
     obytes = ibytes  # todo: say this without ibytes
@@ -5167,11 +5187,6 @@ CUED_PY_GRAFS_TEXT = r"""
     # split split split  # |sed 's,  *,$,g' |tr '$' '\n'
     # |xargs -n 1  # xargs n 1  # xn1
     olines = itext.split()
-
-    # st loopback  # st loop
-    olines = list()
-    with pq.StrTerminal() as st:
-        st.stloopback()
 
     # tail tail  # t t t t t t t t t
     olines = ilines[-10:]
