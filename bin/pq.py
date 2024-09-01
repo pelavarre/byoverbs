@@ -2496,8 +2496,10 @@ class LineTerminal:
 
     kbytes: bytes  # the Bytes of the last Keyboard Chord
     kcap_str: str  # the Str of the KeyCap Words of the last Keyboard Chord
-    kstr_starts: list[str]  # []  # ['⌃U']  # ['⌃U', '-']  # ['⌃U', '⌃U']
+
+    kstr_starts: list[str]  # []  # ['⌃U']  # ['⌃U', '-']  # ['⌃U', '⌃U']  # ['1', '2']
     kstr_stops: list[str]  # []  # ['⎋'] for any of ⌃C ⌃G ⎋ ⌃\
+    ktext: str
 
     kmap: str  # ''  # 'Emacs'  # 'Vim'
     vmodes: list[str]  # ''  # 'Replace'  # 'Insert'
@@ -2512,10 +2514,12 @@ class LineTerminal:
 
         self.olines = list()
 
-        self.kstr_starts = list()
-        self.kstr_stops = list()
         self.kbytes = b""
         self.kcap_str = ""
+
+        self.kstr_starts = list()
+        self.kstr_stops = list()
+        self.ktext = ""
 
         self.kmap = ""
         self.vmodes = [""]
@@ -2593,16 +2597,16 @@ class LineTerminal:
         assert vmode, (vmode,)
 
         self.vmode_enter(vmode)
-        ktexts = self.texts_wrangle()
+        ktext = self.texts_wrangle()
         if kint > 1:
             kint_minus = kint - 1
-            st.stwrite(kint_minus * ktexts)  # for .texts_vmode_wrangle Replace/ Insert
+            st.stwrite(kint_minus * ktext)  # for .texts_vmode_wrangle Replace/ Insert
 
         self.vmode_exit()
 
-        return ktexts
+        return ktext
 
-        # returns just 1 copy of the .ktexts  # not a catenated .kint * .ktexts
+        # returns just 1 copy of the .ktext  # not a catenated .kint * .ktext
 
     def texts_wrangle(self) -> str:
         """Take Input as Replace Text or Insert Text, till ⌃C or ⎋"""
@@ -2613,7 +2617,7 @@ class LineTerminal:
         vmode = self.vmodes[-1]
         assert vmode, (vmode,)
 
-        ktexts = ""
+        self.ktext = ""
         while True:
             self.screen_print()
 
@@ -2641,7 +2645,6 @@ class LineTerminal:
 
             if not textual:
                 self.verb_eval(vmode)  # for .texts_wrangle untextuals
-                ktexts = ""
                 continue
 
             # Take the KCap_Str as Text Input
@@ -2649,9 +2652,9 @@ class LineTerminal:
             assert textual, (textual,)
 
             ktext = self.kdo_text_write_n()  # for .texts_wrangle textuals
-            ktexts += ktext
+            self.ktext += ktext
 
-        return ktexts
+        return self.ktext
 
     def kchars_are_textual(self, kchars, kcap_str, kstr_starts) -> bool:
         """Say to take the K Chars as Text, else not"""
@@ -2893,8 +2896,9 @@ class LineTerminal:
     def verb_eval(self, vmode) -> None:
         """Take 1 Keyboard Chord Sequence as a Command to execute"""
 
-        kstr_starts = self.kstr_starts
         kcap_str = self.kcap_str
+        kstr_starts = self.kstr_starts
+        ktext = self.ktext
 
         kdo_call_by_kcap_str = KDO_CALL_BY_KCAP_STR
         insert_pq_kdo_call_by_kcap_str = INSERT_PQ_KDO_CALL_BY_KCAP_STR
@@ -2926,9 +2930,11 @@ class LineTerminal:
             (kdo_func, args, kwargs) = self.py_call_complete(kdo_call)
             kdo_func(self, *args, **kwargs)
 
-        # Forget the K Start's and/or K Stop's when we should
+        # Forget the K Start's, K Stop's, and/or K Text's when we should
 
         self.kstarts_kstops_choose_after(kstr_starts_before, kcap_str=kcap_str)
+        if ktext == self.ktext:
+            self.ktext = ""
 
     def py_call_complete(self, call) -> tuple[typing.Callable, tuple, dict]:
         """Complete the Python Call with Args and KwArgs"""
@@ -3458,6 +3464,9 @@ class LineTerminal:
 
         self.kdo_column_minus_n()  # Vim wraps Delete ^H left  # Emacs wraps ←
 
+        if self.ktext and not self.ktext.endswith("\r\n"):
+            self.ktext += "\b"
+
         # Emacs ⌃B backward-char
         # Emacs ← left-char
         # Vim Delete
@@ -3636,7 +3645,10 @@ class LineTerminal:
         self.kdo_line_plus_n()
         self.kdo_column_dent_beyond()  # for Vim +
 
+        self.ktext += "\r\n"
+
         # Vim +
+        # Vim Return
 
     def kdo_dent_plus_n1(self) -> None:
         """Jump ahead by zero or more Lines, but land past the Dent"""
@@ -4018,12 +4030,12 @@ class LineTerminal:
 
         #
 
-        ktexts = self.texts_vmode_wrangle("Insert", kint=kint)
+        ktext = self.texts_vmode_wrangle("Insert", kint=kint)
         self.write_form_kint_if("\x1B" "[" "{}D", kint=1)
 
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 
-        return ktexts
+        return ktext
 
         # Vim I
         # Pq I repeats even when ⌃C quits I, not ⌃G ⎋ ⌃\  # Vim I does not
@@ -4057,6 +4069,11 @@ class LineTerminal:
 
         self.write_form_kint_if("\x1B" "[" "{}D", kint=kint)
         self.write_form_kint_if("\x1B" "[" "{}P", kint=kint)
+
+        self.ktext += "\r\n"
+
+        if self.ktext and not self.ktext.endswith("\r\n"):
+            self.ktext = self.ktext[: -len("\r\n")]
 
         assert BS == "\b"  # 00/08 Backspace ⌃H
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
@@ -4118,10 +4135,14 @@ class LineTerminal:
             self.alarm_ring()  # 'negative repetition arg' for Insert Return
             return
 
+        if not kint:
+            return
+
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
-        if kint:
-            st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
-            self.write_form_kint_if("\x1B" "[" "{}L", kint=kint)
+        st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
+        self.write_form_kint_if("\x1B" "[" "{}L", kint=kint)
+
+        self.ktext += "\r\n"
 
         assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 
@@ -4244,21 +4265,25 @@ class LineTerminal:
 
         st = self.st
 
-        kint = self.kint_pull_positive(default=1)
+        kint = self.kint_pull(default=1)
+        if not kint:
+            return
+        if kint < 0:
+            self.alarm_ring()  # todo: 'negative repetition arg' for Vim ⇧E
+            return
 
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
-        # st.stwrite("\n")  # nope, not here
         self.write_form_kint_if("\x1B" "[" "{}L", kint=1)
 
-        ktexts = self.kdo_ins_n_till()
+        ktext = self.kdo_ins_n_till()
         for _ in range(kint - 1):
             st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
             st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
-            self.write_form_kint_if("\x1B" "[" "{}L", kint=1)
-            st.stwrite(ktexts)  # for .kdo_line_ins_below_n Insert
-            self.write_form_kint_if("\x1B" "[" "{}D", kint=1)  # FIXME: not Repl/ Ins
-
-            # FIXME: repeat the Returns & Deletes too
+            ktext_kint = len(ktext.splitlines())
+            if ktext_kint:
+                self.write_form_kint_if("\x1B" "[" "{}L", kint=ktext_kint)
+                st.stwrite(ktext)  # for .kdo_line_ins_below_n Insert
+                self.write_form_kint_if("\x1B" "[" "{}D", kint=ktext_kint)
 
         assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
@@ -4280,15 +4305,15 @@ class LineTerminal:
         st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
         self.write_form_kint_if("\x1B" "[" "{}L", kint=1)
 
-        ktexts = self.kdo_ins_n_till()
+        ktext = self.kdo_ins_n_till()
         for _ in range(kint - 1):
             st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
             st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
-            self.write_form_kint_if("\x1B" "[" "{}L", kint=1)
-            st.stwrite(ktexts)  # for .kdo_line_ins_below_n Insert
-            self.write_form_kint_if("\x1B" "[" "{}D", kint=1)  # FIXME: not Repl/ Ins
-
-            # FIXME: repeat the Returns & Deletes too
+            ktext_kint = len(ktext.splitlines())
+            if ktext_kint:
+                self.write_form_kint_if("\x1B" "[" "{}L", kint=ktext_kint)
+                st.stwrite(ktext)  # for .kdo_line_ins_below_n Insert
+                self.write_form_kint_if("\x1B" "[" "{}D", kint=ktext_kint)
 
         assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
@@ -4653,10 +4678,7 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # smallish todo's
 #
-#   Repeats of ⇧I ⇧O ⇧R I O which include Return's & Delete's
-#
 #   Vim R
-#
 #   Vim Q Q @ Q etc
 #
 #   Vim I ⌃O
