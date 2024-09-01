@@ -81,6 +81,7 @@ import stat
 import sys
 import termios  # unhappy at Windows
 import textwrap
+import time
 import traceback
 import tty  # unhappy at Windows
 import typing
@@ -88,7 +89,7 @@ import unicodedata
 
 ... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
 
-... == json  # type: ignore   # PyLance ReportUnusedExpression
+... == json, time  # type: ignore   # PyLance ReportUnusedExpression
 
 
 #
@@ -2565,8 +2566,8 @@ class LineTerminal:
     """React to Sequences of Key Chords by laying Chars of Lines over the Screen"""
 
     st: StrTerminal  # wrapped here
-    logger: typing.TextIO  # wrapped here  # '.pqinfo/pq.log'  # logfmt
-    logger_exists: bool  # created by earlier processes
+    ltlogger: typing.TextIO  # wrapped here  # '.pqinfo/pq.log'  # logfmt
+    pqlogger_exists: bool  # created by earlier processes
 
     olines: list[str]  # the Lines to sketch
 
@@ -2585,8 +2586,8 @@ class LineTerminal:
         pqlogger = ReprLogger(".pqinfo/pq.log")
 
         self.st = StrTerminal()
-        self.logger = pqlogger.logger
-        self.logger_exists = pqlogger.exists
+        self.ltlogger = pqlogger.logger
+        self.pqlogger_exists = pqlogger.exists
 
         self.olines = list()
 
@@ -2595,7 +2596,7 @@ class LineTerminal:
 
         self.kstr_starts = list()
         self.kstr_stops = list()
-        self.ktext = ""
+        self.ktext = ""  # .__init__
 
         self.kmap = ""
         self.vmodes = [""]
@@ -2614,7 +2615,7 @@ class LineTerminal:
     def ltflush(self) -> None:
         """Run just before blocking to wait for Keyboard Input"""
 
-        self.logger.flush()
+        self.ltlogger.flush()
 
     def top_wrangle(self, ilines, kmap) -> list[str]:
         """Launch, and run till SystemExit"""
@@ -2637,7 +2638,7 @@ class LineTerminal:
             exists_by_name = dict()
             exists_by_name[bt.klogger.logger.name] = bt.klogger.exists
             exists_by_name[bt.slogger.logger.name] = bt.slogger.exists
-            exists_by_name[self.logger.name] = self.logger_exists
+            exists_by_name[self.ltlogger.name] = self.pqlogger_exists
 
             # Tell the StrTerminal what to say at first
 
@@ -2674,7 +2675,10 @@ class LineTerminal:
         assert vmode, (vmode,)
 
         self.vmode_enter(vmode)
+
         ktext = self.texts_wrangle()
+        print(f"{ktext=}", file=self.ltlogger)
+
         if kint > 1:
             kint_minus = kint - 1
             st.stwrite(kint_minus * ktext)  # for .texts_vmode_wrangle Replace/ Insert
@@ -2696,7 +2700,7 @@ class LineTerminal:
 
         # Replace till 'Replace1' Mode
 
-        self.ktext = ""
+        self.ktext = ""  # entry into .texts_wrangle
         index = 0
         while True:
             index += 1
@@ -2735,12 +2739,12 @@ class LineTerminal:
                 self.verb_eval(vmode)  # for .texts_wrangle untextuals
                 continue
 
-            # Take the KCap_Str as Text Input
+            # Take the printable K Chars as Text Input
 
             assert textual, (textual,)
 
             ktext = self.kdo_text_write_n()  # for .texts_wrangle textuals
-            self.ktext += ktext
+            self.ktext += ktext  # .texts_wrangle of Textual K Chars
 
         return self.ktext
 
@@ -2798,7 +2802,7 @@ class LineTerminal:
         st = self.st
 
         assert vmode in ("", "Insert", "Replace", "Replace1"), (vmode,)
-        print(f"{vmode=}", file=self.logger)
+        print(f"{vmode=}", file=self.ltlogger)
 
         if not vmode:
             st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
@@ -2869,7 +2873,7 @@ class LineTerminal:
             kchars = kbytes.decode()  # may raise UnicodeDecodeError
             kcap_str = self.kcap_str
 
-        print(f"{kcap_str=} {kbytes=} {vmode=}", file=self.logger)
+        print(f"{kcap_str=} {kbytes=} {vmode=}", file=self.ltlogger)
 
         return (kbytes, kchars, kcap_str)
 
@@ -2882,7 +2886,7 @@ class LineTerminal:
 
         # Read the first Keyboard Chord of the Sequence
 
-        self.logger.flush()
+        self.ltlogger.flush()
         (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
 
         # Take just 1 Chord as a complete Sequence, when taking Chords as Chars
@@ -2948,7 +2952,7 @@ class LineTerminal:
 
                 break
 
-            self.logger.flush()
+            self.ltlogger.flush()
             (kb, ks) = st.pull_one_kchord_bytes_str()
 
         # Succeed
@@ -3014,7 +3018,7 @@ class LineTerminal:
             done = self.kdo_inverse_or_nop(kdo_func)
         if not done:
             kint_else = self.kint_peek_else(default=None)
-            print(f"kint={kint_else} func={kdo_func.__name__}", file=self.logger)
+            print(f"kint={kint_else} func={kdo_func.__name__}", file=self.ltlogger)
             (kdo_func, args, kwargs) = self.py_call_complete(kdo_call)
             kdo_func(self, *args, **kwargs)
 
@@ -3022,7 +3026,9 @@ class LineTerminal:
 
         self.kstarts_kstops_choose_after(kstr_starts_before, kcap_str=kcap_str)
         if ktext == self.ktext:
-            self.ktext = ""
+            if ktext:
+                print(f"{ktext=} cleared", file=self.ltlogger)
+            self.ktext = ""  # .verb_eval when .ktext unchanged
 
     def py_call_complete(self, call) -> tuple[typing.Callable, tuple, dict]:
         """Complete the Python Call with Args and KwArgs"""
@@ -3052,13 +3058,18 @@ class LineTerminal:
         # Forget the K Start's, unless this last Kdo_Func shrunk or grew or changed them
 
         if kstr_starts == kstr_starts_before:
+            if kstr_starts:
+                print(f"{kstr_starts=} cleared", file=self.ltlogger)
             kstr_starts.clear()  # for .kstarts_kstops_forget_if
 
         # Forget the K Stop's, but then do hold onto the latest K Stop if present
 
         assert STOP_KCAP_STRS == ("⌃C", "⌃G", "⌃L", "⎋", "⌃\\")
 
+        if kstr_stops:
+            print(f"{kstr_stops=} cleared", file=self.ltlogger)
         kstr_stops.clear()
+
         stopped = self.kcap_str in ("⌃C", "⌃G", "⌃L", "⎋", "⌃\\")
         if stopped:
             kstr_stops.append(self.kcap_str)
@@ -3085,15 +3096,15 @@ class LineTerminal:
 
         if not kint:
             self.kint_pull(default=0)
-            print(f"kint=0 func={kdo_func.__name__}", file=self.logger)
+            print(f"kint=0 func={kdo_func.__name__}", file=self.ltlogger)
             return True
 
         # Call the inverse when given a negative K-Int
 
         if kint < 0:
             self.kint_pull(default=0)
-            self.kint_push(-kint)
-            print(f"kint=0 func={kdo_inverse_func.__name__}", file=self.logger)
+            self.kint_push_positive(-kint)
+            print(f"kint=0 func={kdo_inverse_func.__name__}", file=self.ltlogger)
             kdo_inverse_func(self)
             self.kint_pull(default=0)
             return True
@@ -3225,7 +3236,7 @@ class LineTerminal:
 
         #
 
-        self.logger.flush()
+        self.ltlogger.flush()
         (kbytes, kchord_str) = st.pull_one_kchord_bytes_str()
         if not kint:
             return
@@ -3266,7 +3277,7 @@ class LineTerminal:
         kcap_str = "⎋ ["
 
         while True:
-            self.logger.flush()
+            self.ltlogger.flush()
             (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
 
             kbytes += kchord_bytes
@@ -3465,6 +3476,12 @@ class LineTerminal:
     # Boil our memory of Keyboard Chord Sequences down to one Int Value
     #
 
+    def kint_push_positive(self, kint) -> None:
+        """Set up to call another Keyboard Chord Sequence, but only positively"""
+
+        assert kint > 0, (kint,)
+        self.kint_push(kint)
+
     def kint_push(self, kint) -> None:
         """Fill the cleared Key-Cap Str Holds, as if Emacs ⌃U ..."""
 
@@ -3550,21 +3567,77 @@ class LineTerminal:
     def kdo_char_minus_n(self) -> None:
         """Step back by one or more Chars, into the Lines behind if need be"""
 
-        self.kdo_column_minus_n()  # Vim wraps Delete ^H left  # Emacs wraps ⌃B ←
+        st = self.st
 
-        if self.ktext and not self.ktext.endswith("\r\n"):
-            self.ktext += "\b"
+        kint = self.kint_pull_positive(default=1)
+
+        behind = (((st.row_y - 1) * st.x_columns) + st.column_x) - 1
+        kint_behind = min(behind, kint)
+
+        head = min(kint_behind, st.column_x - 1)
+        mid = (kint_behind - head) // st.x_columns
+        tail = (kint_behind - head) % st.x_columns
+
+        if not tail:
+            if head:
+                self.kint_push_positive(head)
+                self.kdo_column_minus_n()  # Vim wraps Delete ^H left  # Emacs wraps ⌃B ←
+
+                if self.ktext:
+                    self.ktext += "\b"  # Vim ⇧R Delete
+
+            if mid:
+                self.kint_push_positive(mid)
+                self.kdo_line_minus_n()
+
+        else:
+            self.kint_push_positive(st.x_columns)  # rightmost Column before next Row up
+            self.kdo_column_n()
+
+            self.kint_push_positive(mid + 1)
+            self.kdo_line_minus_n()
+
+            if tail > 1:
+                self.kint_push_positive(tail - 1)
+                self.kdo_column_minus_n()
 
         # Emacs ⌃B backward-char
         # Emacs ← left-char
-        # Vim Delete
-        # Vim ^H
+        # Vim ⇧R Delete and Vim R Delete
+        # Vim ⌃H and Vim ⇧R ⌃H and Vim R ⌃H
         # macOS ⌃B
 
     def kdo_char_plus_n(self) -> None:
         """Step ahead by one or more Chars, into the Lines ahead if need be"""
 
-        self.kdo_column_plus_n()  # Vim wraps Spacebar right  # Emacs wraps ⌃F →
+        st = self.st
+
+        kint = self.kint_pull_positive(default=1)
+
+        ahead = ((st.y_rows - st.row_y) * st.x_columns) + (st.x_columns - st.column_x)
+        kint_ahead = min(ahead, kint)
+
+        head = min(kint_ahead, st.x_columns - st.column_x)
+        mid = (kint_ahead - head) // st.x_columns
+        tail = (kint_ahead - head) % st.x_columns
+
+        if not tail:
+            if head:
+                self.kint_push_positive(head)
+                self.kdo_column_plus_n()  # Vim wraps Spacebar right  # Emacs wraps ⌃F →
+            if mid:
+                self.kint_push_positive(mid)
+                self.kdo_line_plus_n()
+
+        else:
+            self.kint_push_positive(mid + 1)  # leftmost Column after next Row down
+            self.kdo_line_plus_n()
+
+            self.kdo_column_1()
+
+            if tail > 1:
+                self.kint_push_positive(tail - 1)
+                self.kdo_column_plus_n()
 
         # Emacs ⌃F forward-char
         # Emacs → right-char
@@ -3733,10 +3806,11 @@ class LineTerminal:
         self.kdo_line_plus_n()
         self.kdo_column_dent_beyond()  # for Vim +
 
-        self.ktext += "\r\n"
+        self.ktext += "\r\n"  # Vim ⇧R Return or Vim R Return
 
         # Vim +
         # Vim Return
+        # Vim ⇧R Return and Vim R Return
 
     def kdo_dent_plus_n1(self) -> None:
         """Jump ahead by zero or more Lines, but land past the Dent"""
@@ -3939,7 +4013,7 @@ class LineTerminal:
             return
 
         kint = self.kint_pull_positive(default=1)
-        self.kint_push(6 * kint)
+        self.kint_push_positive(6 * kint)
 
         self.kdo_char_plus_n()
 
@@ -3951,7 +4025,7 @@ class LineTerminal:
         """Step back by one or more Little Words"""
 
         kint = self.kint_pull_positive(default=1)
-        self.kint_push(4 * kint)
+        self.kint_push_positive(4 * kint)
 
         self.kdo_char_minus_n()
 
@@ -3962,7 +4036,7 @@ class LineTerminal:
         """Step ahead by one or more Little Words"""
 
         kint = self.kint_pull_positive(default=1)
-        self.kint_push(4 * kint)
+        self.kint_push_positive(4 * kint)
 
         self.kdo_char_plus_n()
 
@@ -3980,7 +4054,7 @@ class LineTerminal:
             return
 
         kint = self.kint_pull_positive(default=1)
-        self.kint_push(3 * kint)
+        self.kint_push_positive(3 * kint)
 
         self.kdo_char_plus_n()
 
@@ -4174,28 +4248,60 @@ class LineTerminal:
     def kdo_char_cut_left_n(self) -> None:
         """Delete N Chars to the Left, but from this Line only"""
 
+        st = self.st
+
         kint = self.kint_pull_positive(default=1)
 
-        self.write_form_kint_if("\x1B" "[" "{}D", kint=kint)
-        self.write_form_kint_if("\x1B" "[" "{}P", kint=kint)
+        behind = (((st.row_y - 1) * st.x_columns) + st.column_x) - 1
+        kint_behind = min(behind, kint)
 
-        self.ktext += "\r\n"
+        head = min(kint_behind, st.column_x - 1)
+        mid = (kint_behind - head) // st.x_columns
+        tail = (kint_behind - head) % st.x_columns
 
-        if self.ktext and not self.ktext.endswith("\r\n"):
-            self.ktext = self.ktext[: -len("\r\n")]
+        if head:
+            self.kint_push_positive(head)
+            self.kdo_column_minus_n()  # Vim wraps I Delete left  # Emacs too
+            self.write_form_kint_if("\x1B" "[" "{}P", kint=head)
 
-        assert BS == "\b"  # 00/08 Backspace ⌃H
-        assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
+        if not tail:
+            if head:
+                if self.ktext:
+                    if not self.ktext.endswith("\r\n"):
+                        self.ktext = self.ktext[:-1]  # Vim I Delete
+
+            if mid:
+                self.kint_push_positive(mid)
+                self.kdo_line_minus_n()
+                self.write_form_kint_if("\x1B" "[" "{}M", kint=mid)
+
+        else:
+            self.kint_push_positive(st.x_columns)  # rightmost Column before next Row up
+            self.kdo_column_n()
+
+            if mid:
+                self.kint_push_positive(mid)
+                self.kdo_line_minus_n()
+                self.write_form_kint_if("\x1B" "[" "{}M", kint=mid)
+
+            self.kdo_line_minus_n()
+
+            if tail > 1:
+                tail_minus = tail - 1
+                self.kint_push_positive(tail_minus)
+                self.kdo_column_minus_n()
+                self.write_form_kint_if("\x1B" "[" "{}P", kint=tail_minus)
+
+        assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
         # Vim ⇧X
 
+        # Vim I ⌃H into U Undo
         # Vim I Delete into U Undo
         # Vim ⇧R Delete of repetition text  # Pq ⇧R Delete is Vim Delete
         # Emacs Delete into ⌃Y Yank
         # macOS ⌃H into ⌘Z Undo
-
-        # FIXME: Emacs Delete, Vim I Delete, macOS Vim ⌃H wrap into Lines Above
 
     def kdo_char_cut_right_n(self) -> None:
         """Delete N Chars to the Right, but from this Line only"""
@@ -4207,10 +4313,9 @@ class LineTerminal:
         # Vim X
 
         # Emacs ⌃D delete-char, or delete-forward-char
-        # Vim I ⌃D doesn't work, for no simple reason
+        # Vim I ⌃D doesn't work, for no simple reason  # Vim I ⌃O X does work
         # Pq I ⌃D
         # macOS ⌃D into ⌘Z Undo
-        # todo: Emacs ⌃D, macOS Vim ⌃D wrap into Lines Below
 
     def kdo_line_ins_ahead_n(self) -> None:
         """Insert 0 or more Empty Lines ahead, and land at Left before the First"""
@@ -4251,14 +4356,13 @@ class LineTerminal:
         st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
         self.write_form_kint_if("\x1B" "[" "{}L", kint=kint)
 
-        self.ktext += "\r\n"
+        self.ktext += "\r\n"  # Vim I Return
 
         assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 
         # Emacs Return
         # Vim I Return  # todo: move tail of Line into new inserted Line
-        # Vim ⇧R Return is Vim I Return
-        # Pq ⇧R Return is Vim Return
+        # Pq ⇧R Return is Vim Return, vs Vim ⇧R Return is Vim I Return
 
     def kdo_tail_head_cut_n(self) -> None:
         """Cut the Tail or Head of the Line, and also Lines Below or Above"""
@@ -4556,6 +4660,7 @@ KDO_CALL_BY_KCAP_STR: dict[str, PY_CALL]
 INSERT_PQ_KDO_CALL_BY_KCAP_STR = {
     "Return": (LT.kdo_line_ins_behind_mostly_n,),  # b'\x0D'  # b'\r'
     "Delete": (LT.kdo_char_cut_left_n,),  # b'\x7F'
+    "⌃H": (LT.kdo_char_cut_left_n,),  # b'\x08'
 }
 # "⌃W": (LT.kdo_word_cut_left_n,),  # b'\x04'
 # "⌃U": (LT.kdo_empty_line_n,),  # b'\x15'
@@ -4596,6 +4701,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     #
     "Return": (LT.kdo_dent_plus_n,),  # b'\x0D'  # b'\r'
     "⌃E": (LT.kdo_add_bottom_row,),  # b'\x05'
+    "⌃H": (LT.kdo_char_minus_n,),  # b'\x08'
     "⌃J": (LT.kdo_line_plus_n,),  # b'\x0A'  # b'\n'
     "⌃V": (LT.kdo_quote_kchars,),  # b'\x16'
     "⌃Y": (LT.kdo_add_top_row,),  # b'\x19'
@@ -4675,6 +4781,7 @@ PQ_KDO_CALL_BY_KCAP_STR = {
     "⌃D": (LT.kdo_char_cut_right_n,),  # b'\x04'  # SIGHUP  # Pq like macOS/ Emacs
     "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'  # Pq like macOS/ Emacs
     "⌃G": (LT.kdo_hold_stop_kstr,),  # b'\x07'
+    "⌃H": (LT.kdo_kcap_write_n,),  # b'\x08'  # KCap_Write till Pq ⌃H Help like Emacs
     "Tab": (LT.kdo_tab_plus_n,),  # b'\x09'  # b'\t'
     "⌃L": (LT.kdo_hold_stop_kstr,),  # b'\x07'
     "⌃L : Q Return": (LT.kdo_quit_anyhow,),  # b'\x0C...
@@ -4821,16 +4928,14 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #   Track the Cursor
 #       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
 #       Delete to Leftmost
-#       less extreme $
-
+#
+#   Size the Screen
+#       ⇧M
+#
 #   Bounce Cursor to Tracer on Screen
 #       Trace the unicode.name while Replace/ Insert
 #       Delete the Message we last wrote, write the new, log Messages & lost Messages
 #       Trace Y and X a la Vim :set ruler, cursorline, etc from my ~/.vimrc
-#
-#   Size the Screen
-#       ⇧M
-#       less extreme $
 #
 #   Shadow the Screen
 #       Undo/Redo piercing the Shadow
