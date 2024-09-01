@@ -3945,6 +3945,46 @@ class LineTerminal:
         # Vim ⌃J
         # Vim J
 
+    def kdo_line_first_tenths_n(self) -> None:
+        """Jump to First Line, or to 1...9 Tenths in from Top of File"""
+
+        st = self.st
+        y_rows = st.y_rows
+
+        kint = self.kint_pull(default=0)
+
+        tenths = 0
+        if kint in range(10):  # Emacs ⎋< doesn't doc unusual Args well
+            tenths = kint  # Emacs ⌃U ⎋< isn't ⌃U 4 ⎋<
+
+        row_y = 1
+        if tenths:
+            row_y = int((tenths * y_rows) / 10)
+
+        self.kint_push_positive(row_y)
+        self.kdo_home_line_n()
+
+        # Emacs ⎋< ⌥< beginning-of-buffer
+
+    def kdo_line_last_tenths_n(self) -> None:
+        """Jump to Last Line, or to 1...9 Tenths in from End of File"""
+
+        st = self.st
+        y_rows = st.y_rows
+
+        kint = self.kint_pull(default=0)
+
+        tenths = 0
+        if kint in range(10):  # Emacs ⎋> doesn't doc unusual Args well
+            tenths = kint  # Emacs ⌃U ⎋> isn't ⌃U 4 ⎋>
+
+        row_y = y_rows - int((tenths * y_rows) / 10)
+
+        self.kint_push_positive(row_y)
+        self.kdo_home_line_n()
+
+        # Emacs ⎋> ⌥> end-of-buffer
+
     def kdo_row_middle(self) -> None:
         """Jump to Middle of Screen"""
 
@@ -3954,7 +3994,9 @@ class LineTerminal:
         self.kint_pull(default=0)  # discarding .pull_int here
 
         middle_row_y = y_rows // 2
-        self.kint_push(middle_row_y)
+        row_y = middle_row_y
+
+        self.kint_push(row_y)
         self.kdo_dent_line_n()
 
         # Vim ⇧M
@@ -4756,6 +4798,8 @@ INSERT_PQ_KDO_CALL_BY_KCAP_STR = {
 
 EM_KDO_CALL_BY_KCAP_STR = {
     #
+    "⎋<": (LT.kdo_line_first_tenths_n,),
+    "⎋>": (LT.kdo_line_last_tenths_n,),
     "⎋G G": (LT.kdo_home_line_n,),
     "⎋G ⎋G": (LT.kdo_home_line_n,),
     "⎋G Tab": (LT.kdo_column_plus,),
@@ -4777,6 +4821,8 @@ EM_KDO_CALL_BY_KCAP_STR = {
     #
     "⌥←": (LT.kdo_bigword_minus_n,),  # encoded as ⎋B  # can be from ⎋←
     "⌥→": (LT.kdo_bigword_plus_n,),  # encoded as ⎋F  # can be from ⎋→
+    "⌥<": (LT.kdo_line_first_tenths_n,),
+    "⌥>": (LT.kdo_line_last_tenths_n,),
     "⌥G G": (LT.kdo_home_line_n,),
     "⌥G ⌥G": (LT.kdo_home_line_n,),
     "⌥G Tab": (LT.kdo_column_plus,),
