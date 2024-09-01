@@ -1667,6 +1667,7 @@ class ReprLogger:
 # Name Control Bytes and Escape Sequences
 #
 
+
 #
 #   ⌃H ⌃I ⌃J ⌃M ⌃[  ⎋[I Tab  ⎋[Z ⇧Tab
 #   ⎋[d row-go  ⎋[G column-go
@@ -1682,8 +1683,10 @@ class ReprLogger:
 #   ⎋[m plain
 #
 
+
 Y_32100 = 32100  # larger than all Screen Row Heights tested
 X_32100 = 32100  # larger than all Screen Column Widths tested
+
 
 BS = "\b"  # 00/08 Backspace ⌃H
 HT = "\t"  # 00/09 Character Tabulation ⌃I
@@ -1693,6 +1696,7 @@ CR = "\r"  # 00/13 Carriage Return ⌃M
 ESC = "\x1B"  # 01/11 Escape ⌃[
 
 SS3 = "\x1B" "O"  # 04/15 Single Shift Three  # in macOS F1 F2 F3 F4
+
 
 CSI = "\x1B" "["  # 05/11 Control Sequence Introducer
 CSI_EXTRAS = "".join(chr(_) for _ in range(0x20, 0x40))
@@ -1732,8 +1736,15 @@ DECSCUSR = "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
 DECSCUSR_SKID = "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
 DECSCUSR_BAR = "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
 
-# quoted Str sorted by the CSI Final Byte:  A, B, C, D, G, Z, d, etc
+# sort the quoted Str above by the CSI Final Byte:  A, B, C, D, G, Z, d, etc
+
 # the 02/00 ' ' of the CSI ' q' is its only 'Intermediate Byte'
+
+
+DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 Device Status Report  # Ps 6 for CPR
+
+# CSI 05/02 Active [Cursor] Position Report (CPR)
+CPR_Y_X_REGEX = r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 Active [Cursor] Pos Rep (CPR)
 
 
 @dataclasses.dataclass
@@ -2278,11 +2289,23 @@ class StrTerminal:
     bt: BytesTerminal  # wrapped here
     kpushes: list[tuple[bytes, str]]  # cached here
 
+    row_y: int  # Row of Screen Cursor in last CPR, initially -1
+    column_x: int  # Column of Screen Cursor in last CPR, initially -1
+
+    y_rows: int  # count Screen Rows, initially -1
+    x_columns: int  # count of Screen Columns, initially -1
+
     def __init__(self) -> None:
         bt = BytesTerminal()
 
         self.bt = bt
         self.kpushes = list()
+
+        self.row_y = -1
+        self.column_x = -1
+
+        self.y_rows = -1
+        self.x_columns = -1
 
     def __enter__(self) -> "StrTerminal":  # -> typing.Self:
         r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
@@ -2384,18 +2407,53 @@ class StrTerminal:
         kpushes.append(kpush)
 
     def pull_one_kchord_bytes_str(self) -> tuple[bytes, str]:
-        """Let the caller read again what they read ahead"""
+        """Revisit the input that was read ahead, else read the next Keyboard Chord"""
+
+        bt = self.bt
+        fd = bt.fd
 
         kpushes = self.kpushes
+
+        # Revisit the input that was read ahead
 
         if kpushes:
             kpush = kpushes.pop(0)
             return kpush
 
-        kpush = self.read_one_kchord_bytes_str()
+        # Look to find the Terminal Cursor
+
+        self.stwrite("\x1B" "[" "6" "n")
+        while True:
+            kpush = self.read_one_kchord_bytes_str()
+            kbytes, kstr = kpush
+            pattern = r"^\x1B\[([0-9]+);([0-9]+)R$".encode()
+            m = re.match(pattern, string=kbytes)
+            if not m:
+                break
+
+            (by, bx) = m.groups()
+            row_y = int(by)
+            column_x = int(bx)
+
+            (x_columns, y_rows) = os.get_terminal_size(fd)
+
+            assert 1 <= row_y <= y_rows, (row_y, y_rows)
+            assert 1 <= column_x <= x_columns, (column_x, x_columns)
+            assert y_rows >= 5, (y_rows,)  # macOS Terminal min 5 Rows
+            assert x_columns >= 20, (x_columns,)  # macOS Terminal min 20 Columns
+
+            self.row_y = row_y
+            self.column_x = column_x
+            self.y_rows = y_rows
+            self.x_columns = x_columns
+
+        # Else read the next Keyboard Chord
 
         assert kpush[0], (kpush,)  # 1 or more Bytes always
         assert kpush[-1], (kpush,)  # 1 or more Chars always
+
+        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
+        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
 
         return kpush
 
@@ -3490,9 +3548,9 @@ class LineTerminal:
     #
 
     def kdo_char_minus_n(self) -> None:
-        """Step back by one or more Chars"""
+        """Step back by one or more Chars, into the Lines behind if need be"""
 
-        self.kdo_column_minus_n()  # Vim wraps Delete ^H left  # Emacs wraps ←
+        self.kdo_column_minus_n()  # Vim wraps Delete ^H left  # Emacs wraps ⌃B ←
 
         if self.ktext and not self.ktext.endswith("\r\n"):
             self.ktext += "\b"
@@ -3504,9 +3562,9 @@ class LineTerminal:
         # macOS ⌃B
 
     def kdo_char_plus_n(self) -> None:
-        """Step ahead by one or more Chars"""
+        """Step ahead by one or more Chars, into the Lines ahead if need be"""
 
-        self.kdo_column_plus_n()  # Vim wraps Spacebar right  # Emacs wraps →
+        self.kdo_column_plus_n()  # Vim wraps Spacebar right  # Emacs wraps ⌃F →
 
         # Emacs ⌃F forward-char
         # Emacs → right-char
@@ -3859,7 +3917,7 @@ class LineTerminal:
 
         self.kdo_tab_minus_n()
 
-        # Emacs ⌥B ⎋B  backward-word, inside of superword-mode
+        # Emacs ⌥B ⎋B backward-word, inside of superword-mode
         # Vim ⇧B
 
     def kdo_bigword_plus_n(self) -> None:
@@ -3867,7 +3925,7 @@ class LineTerminal:
 
         self.kdo_tab_plus_n()
 
-        # Emacs ⌥F ⎋F  forward-word, inside of superword-mode
+        # Emacs ⌥F ⎋F forward-word, inside of superword-mode
         # Vim ⇧W
 
     def kdo_bigword_plus_n_almost(self) -> None:
@@ -3897,7 +3955,7 @@ class LineTerminal:
 
         self.kdo_char_minus_n()
 
-        # Emacs ⌥B ⎋B  backward-word, outside of superword-mode
+        # Emacs ⌥B ⎋B backward-word, outside of superword-mode
         # Vim B
 
     def kdo_lilword_plus_n(self) -> None:
@@ -3908,7 +3966,7 @@ class LineTerminal:
 
         self.kdo_char_plus_n()
 
-        # Emacs ⌥F ⎋F  forward-word, outside of superword-mode
+        # Emacs ⌥F ⎋F forward-word, outside of superword-mode
         # Vim W
 
     def kdo_lilword_plus_n_almost(self) -> None:
@@ -4068,7 +4126,7 @@ class LineTerminal:
         return ktext
 
         # Vim I
-        # Pq I repeats even when ⌃C quits I, not ⌃G ⎋ ⌃\  # Vim I does not
+        # Pq I repeats even when ⌃C quits I, not ⌃G ⎋ ⌃\  # Vim I doesn't
 
     def kdo_replace_n_till(self) -> None:
         """Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
@@ -4090,7 +4148,7 @@ class LineTerminal:
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 
         # Vim ⇧R
-        # Pq ⇧R repeats even when ⌃C quits ⇧R, not ⌃G ⎋ ⌃\  # Vim ⇧R does not
+        # Pq ⇧R repeats even when ⌃C quits ⇧R, not ⌃G ⎋ ⌃\  # Vim ⇧R doesn't
 
     def kdo_replace_n_once(self) -> None:
         """Replace 1 Text Sequence, or pass through ⌃O and Control Sequences"""
@@ -4249,7 +4307,7 @@ class LineTerminal:
 
         st = self.st
 
-        self.kdo_tail_cut_n_column_minus()
+        self.kdo_tail_cut_n()
 
         st.stwrite("\b")  # 00/08 Backspace (BS) \b ⌃H
         assert BS == "\b"  # 00/08 Backspace ⌃H
@@ -4343,7 +4401,7 @@ class LineTerminal:
         assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 
         # Vim ⇧O
-        # Pq ⇧O repeats even when ⌃C quits I, not ⌃G ⎋ ⌃\  # Vim ⇧O does not
+        # Pq ⇧O repeats even when ⌃C quits I, not ⌃G ⎋ ⌃\  # Vim ⇧O doesn't
 
     def kdo_line_ins_below_n(self) -> None:
         """Insert 1 Empty Line ahead, visit Insert Mode at Left, then repeat Texts"""
@@ -4373,7 +4431,7 @@ class LineTerminal:
         assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 
         # Vim O
-        # Pq O repeats even when ⌃C quits I, not ⌃G ⎋ ⌃\  # Vim O does not
+        # Pq O repeats even when ⌃C quits I, not ⌃G ⎋ ⌃\  # Vim O doesn't
 
     #
     # Cut before Insert
@@ -4522,6 +4580,8 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⌃Q": (LT.kdo_quote_kchars,),  # b'\x11'
     "⌃U": (LT.kdo_hold_start_kstr, tuple(["⌃U"])),  # b'\x15'
     # "⌃X 8 Return": (LT.unicodedata_lookup,),  # Emacs insert-char
+    "→": (LT.kdo_char_plus_n,),  # b'\x1B[C'  # Emacs wraps → like ⌃F
+    "←": (LT.kdo_char_minus_n,),  # b'\x1B[D'  # Emacs wraps ← like ⌃B
     #
     "⌥←": (LT.kdo_bigword_minus_n,),  # encoded as ⎋B  # can be from ⎋←
     "⌥→": (LT.kdo_bigword_plus_n,),  # encoded as ⎋F  # can be from ⎋→
@@ -4541,8 +4601,8 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "⌃Y": (LT.kdo_add_top_row,),  # b'\x19'
     "↑": (LT.kdo_line_minus_n,),  # b'\x1B[A'
     "↓": (LT.kdo_line_plus_n,),  # b'\x1B[B'
-    "→": (LT.kdo_column_plus_n,),  # b'\x1B[C'
-    "←": (LT.kdo_column_minus_n,),  # b'\x1B[D'
+    "→": (LT.kdo_column_plus_n,),  # b'\x1B[C'  # Vim doesn't wrap → like Spacebar
+    "←": (LT.kdo_column_minus_n,),  # b'\x1B[D'  # Vim doesn't wrap ← like Delete
     #
     "Spacebar": (LT.kdo_char_plus_n,),  # b'\x20'
     "$": (LT.kdo_end_plus_n1,),  # b'\x24'
@@ -4684,8 +4744,10 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
     LT.kdo_add_top_row: (LT.kdo_add_bottom_row, 1),  # ⌃Y
     LT.kdo_bigword_minus_n: (LT.kdo_bigword_minus_n, 1),  # ⇧B  # ⌥→
     LT.kdo_bigword_plus_n: (LT.kdo_bigword_minus_n, 1),  # ⇧W  # ⌥→
-    LT.kdo_char_cut_left_n: (LT.kdo_char_cut_right_n, 1),  # Delete
+    LT.kdo_char_cut_left_n: (LT.kdo_char_cut_right_n, 1),  # I Delete
     LT.kdo_char_cut_right_n: (LT.kdo_char_cut_left_n, 1),  # ⌃D
+    LT.kdo_char_minus_n: (LT.kdo_char_plus_n, 1),  # Vim Delete  # Emacs ⌃B ←
+    LT.kdo_char_plus_n: (LT.kdo_char_minus_n, 1),  # Vim Spacebar  # Emacs ⌃F →
     LT.kdo_column_minus_n: (LT.kdo_column_plus_n, 1),  # ← H
     LT.kdo_column_plus_n: (LT.kdo_column_minus_n, 1),  # → L
     LT.kdo_dent_minus_n: (LT.kdo_dent_plus_n, 1),  # -
@@ -4738,6 +4800,8 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 #   Pq ⌃Q escape to Vim ⌃D ⌃G ⌃L etc
 #   Pq ⌃V escape to Emacs ⌃L ⌃V ⌃W ⌃Y etc
+#
+#   Emacs insert-char of Py unicodedata.lookup
 #
 #   Chose ⌃H⌃K inside Texts/ Verbs
 #       Refactor Texts_Wrangle & Verb_Eval to form a (KBytes, KCap_Str, Py_Call)
