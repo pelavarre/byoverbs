@@ -1958,7 +1958,7 @@ class BytesTerminal:
         # called with end=b"n" to add b"\n" in place of b"\r\n"
 
     def read_kchord_bytes_if(self) -> bytes:
-        """Read the Bytes of 1 Incomplete/ Complete Keyboard Chord from the Keyboard"""
+        """Read the Bytes of 1 Incomplete/ Complete Keyboard Chord"""
 
         assert ESC == "\x1B"
         assert CSI == "\x1B" "["
@@ -2028,7 +2028,7 @@ class BytesTerminal:
         # doesn't raise UnicodeDecodeError
 
     def read_kchar_bytes_if(self) -> bytes:
-        """Read the Bytes of 1 Incomplete/ Complete Keyboard Char from the Keyboard"""
+        """Read the Bytes of 1 Incomplete/ Complete Keyboard Char"""
 
         def decodable(kbytes: bytes) -> bool:
             try:
@@ -2058,13 +2058,13 @@ class BytesTerminal:
         # doesn't raise UnicodeDecodeError
 
     def readkbyte(self) -> bytes:
-        """Read 1 Byte from the Keyboard"""
+        """Read 1 Keyboard Byte"""
 
         fd = self.fd
         assert self.tcgetattr_else
         klogger = self.klogger
 
-        # Read 1 Byte from Held Bytes
+        # Read 1 Keyboard Byte from Held Bytes
 
         kholds = self.kholds
         if kholds:
@@ -2072,7 +2072,7 @@ class BytesTerminal:
             kholds.pop()
             return kbytes
 
-        # Else block to read 1 Byte from Keyboard
+        # Else block to read 1 Keyboard Byte from Keyboard
 
         self.btflush()
 
@@ -2382,7 +2382,7 @@ class StrTerminal:
         return kpush
 
     def read_one_kchord_bytes_str(self) -> tuple[bytes, str]:
-        """Read 1 Keyboard Chord from the Keyboard, as Bytes and Str"""
+        """Read 1 Keyboard Chord, as Bytes and Str"""
 
         bt = self.bt
 
@@ -2594,6 +2594,7 @@ class LineTerminal:
 
         st = self.st
 
+        assert vmode in ("", "Insert", "Replace", "Replace1"), (vmode,)
         assert vmode, (vmode,)
 
         self.vmode_enter(vmode)
@@ -2609,7 +2610,7 @@ class LineTerminal:
         # returns just 1 copy of the .ktext  # not a catenated .kint * .ktext
 
     def texts_wrangle(self) -> str:
-        """Take Input as Replace Text or Insert Text, till ⌃C or ⎋"""
+        """Take Input as Replace Text or Insert Text, till ⎋ or ⌃C or 'Replace1' Mode"""
 
         kstr_starts = self.kstr_starts
         kstr_stops = self.kstr_stops
@@ -2617,14 +2618,25 @@ class LineTerminal:
         vmode = self.vmodes[-1]
         assert vmode, (vmode,)
 
+        # Replace till 'Replace1' Mode
+
         self.ktext = ""
+        index = 0
         while True:
+            index += 1
+
+            if index == 2:
+                if vmode == "Replace1":
+                    break
+
+            # Replace till till ⎋ or ⌃C
+
             self.screen_print()
 
-            # Read one textual/not Keyboard Chord Sequence from the Keyboard
-            # may raise UnicodeDecodeError
+            # Read 1 Short Text, or Whole Control, Keyboard Chord Sequence,
+            # or raise UnicodeDecodeError
 
-            (kbytes, kchars, kcap_str) = self.verb_read_for_vmode(vmode)
+            (kbytes, kchars, kcap_str) = self.text_else_verb_read(vmode)
 
             textual = self.kchars_are_textual(
                 kchars, kcap_str=kcap_str, kstr_starts=kstr_starts
@@ -2699,7 +2711,7 @@ class LineTerminal:
 
         vmodes = self.vmodes
 
-        assert vmode in ("", "Insert", "Replace"), vmode
+        assert vmode in ("", "Insert", "Replace", "Replace1"), (vmode,)
         vmodes.append(vmode)
 
         self.vmode_stwrite(vmode)
@@ -2709,7 +2721,7 @@ class LineTerminal:
 
         st = self.st
 
-        assert vmode in ("", "Insert", "Replace"), vmode
+        assert vmode in ("", "Insert", "Replace", "Replace1"), (vmode,)
         print(f"{vmode=}", file=self.logger)
 
         if not vmode:
@@ -2719,7 +2731,7 @@ class LineTerminal:
             st.stwrite("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
             st.stwrite("\x1B" "[" "6 q")  # CSI 02/00 07/01  # 6 Bar Cursor
         else:
-            assert vmode == "Replace", (vmode,)
+            assert vmode in ("Replace", "Replace1"), (vmode,)
             st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
             st.stwrite("\x1B" "[" "4 q")  # CSI 02/00 07/01  # 4 Skid Cursor
 
@@ -2756,8 +2768,8 @@ class LineTerminal:
             self.verb_read(vmode="")  # for .verbs_wrangle
             self.verb_eval(vmode="")  # for .verbs_wrangle
 
-    def verb_read_for_vmode(self, vmode) -> tuple[bytes, str, str]:
-        """Read one textual/not Keyboard Chord Sequence from the Keyboard"""
+    def text_else_verb_read(self, vmode) -> tuple[bytes, str, str]:
+        """Read 1 Short Text, or Whole Control, Keyboard Chord Sequence"""
 
         kstr_starts = self.kstr_starts
 
@@ -2785,10 +2797,10 @@ class LineTerminal:
 
         return (kbytes, kchars, kcap_str)
 
-        # often raises UnicodeDecodeError
+        # may raise UnicodeDecodeError
 
     def verb_read(self, vmode) -> None:
-        """Read one Keyboard Chord Sequence from the Keyboard, as Bytes, Str, & Str"""
+        """Read 1 Keyboard Chord Sequence, as Bytes and Str"""
 
         st = self.st
 
@@ -4062,6 +4074,27 @@ class LineTerminal:
         # Vim ⇧R
         # Pq ⇧R repeats even when ⌃C quits ⇧R, not ⌃G ⎋ ⌃\  # Vim ⇧R does not
 
+    def kdo_replace_n_once(self) -> None:
+        """Replace 1 Text Sequence, or pass through ⌃O and Control Sequences"""
+
+        #
+
+        kint = self.kint_pull(default=1)
+        if not kint:
+            return
+        if kint < 0:
+            self.alarm_ring()  # todo: arg for Vim R
+            return
+
+        #
+
+        self.texts_vmode_wrangle("Replace1", kint=kint)
+        self.write_form_kint_if("\x1B" "[" "{}D", kint=1)
+
+        assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
+
+        # Vim R
+
     def kdo_char_cut_left_n(self) -> None:
         """Delete N Chars to the Left, but from this Line only"""
 
@@ -4544,6 +4577,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "K": (LT.kdo_line_minus_n,),  # b'k'
     "L": (LT.kdo_column_plus_n,),  # b'l'
     "O": (LT.kdo_line_ins_below_n,),  # b'o'
+    "R": (LT.kdo_replace_n_once,),  # b'r'
     "S": (LT.kdo_char_cut_right_n_ins_till,),  # b's'
     "W": (LT.kdo_lilword_plus_n,),  # b'w'
     "X": (LT.kdo_char_cut_right_n,),  # b'x'
@@ -4655,7 +4689,7 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 
 #
-# presently
+# Demos up now
 #
 #   Emacs  ⎋GG ⎋GTab
 #   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃O ⌃P ⌃Q ⌃U
@@ -4676,20 +4710,16 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 
 #
-# smallish todo's
+# Todo's that take Keyboard Input
 #
-#   Vim R
 #   Vim Q Q @ Q etc
 #
-#   Vim I ⌃O
-#   Vim I ⌃O Calls of Insert/ Replace that don't move the Cursor Left
+#   Pq I ⌃Q ⌃O Escape
+#   Pq I ⌃Q ⌃O Calls of Insert/ Replace that don't move the Cursor Left
+#   Pq I ⌃Q ⌃O ⌃O and Pq I ⌃Q ⌃O ⌃I Cursor Histories
 #
 #   Pq ⌃Q escape to Vim ⌃D ⌃G ⌃L etc
 #   Pq ⌃V escape to Emacs ⌃L ⌃V ⌃W ⌃Y etc
-#
-
-#
-# bigger todo's
 #
 #   Chose ⌃H⌃K inside Texts/ Verbs
 #       Refactor Texts_Wrangle & Verb_Eval to form a (KBytes, KCap_Str, Py_Call)
@@ -4702,21 +4732,26 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #       Do the reverse-lookup to find (KBytes, KCap_Str, Py_Call)
 #           not only Py Func
 #
-#   Bounce Cursor to Tracer
-#       Trace the unicode.name while Replace/ Insert
-#       Delete the Message we last wrote, write the new, log Messages & lost Messages
+
+#
+# Todo's that watch the Screen more closely
 #
 #   Size the Screen
 #       ⇧M
+#       less extreme $
 #
 #   Track the Cursor
-#       C⇧H D⇧H
+#       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
+#       Delete to Leftmost
+#
+#   Bounce Cursor to Tracer on Screen
+#       Trace the unicode.name while Replace/ Insert
+#       Delete the Message we last wrote, write the new, log Messages & lost Messages
+#       Trace Y and X a la Vim :set ruler, cursorline, etc from my ~/.vimrc
 #
 #   Shadow the Screen
-#       Vim ⌃O ⌃I Undo/Redo movements that pierce the Shadow
+#       Undo/Redo piercing the Shadow
 #       Emacs ⌃T
-#       < > C D to movement ⇧G etc
-#       Bind Undo Keys to roll back
 #
 #   Files smaller than the Screen, with ⎋[m marks in them
 #
@@ -4725,12 +4760,13 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 # later todo's:
 #
 #   Vim ⌃L Emacs ⌃L of Shadow Screen
-#   Emacs ⌃W ⌃Y
-#   Vim :set ruler
+#   Emacs ⌃W ⌃Y Copy/Paste Buffer vs Os Copy/Paste Buffer
 #
 #   Emacs ⌃R ⌃S Searches
 #
 #   More obscure Vim ⌃ and Emacs ⌃ and Emacs ⌥
+#   Vim :set cursorline, etc from my ~/.vimrc
+#   Emacs ideas from my ~/.emacs
 #   Emacs ⌃C ⌃X Name Spaces
 #
 #   Screens of Files
