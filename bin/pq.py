@@ -1691,8 +1691,8 @@ X_32100 = 32100  # larger than all Screen Column Widths tested
 
 BS = "\b"  # 00/08 Backspace ⌃H
 HT = "\t"  # 00/09 Character Tabulation ⌃I
-LF = "\n"  # 00/10 Line Feed ⌃J
-CR = "\r"  # 00/13 Carriage Return ⌃M
+LF = "\n"  # 00/10 Line Feed ⌃J  # akin to CSI CUD "\x1B" "[" "B"
+CR = "\r"  # 00/13 Carriage Return ⌃M  # akin to CSI CHA "\x1B" "[" "G"
 
 ESC = "\x1B"  # 01/11 Escape ⌃[
 
@@ -1711,7 +1711,6 @@ CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 # ESC 04/05 Next Line (NEL)
 # CSI 04/05 Cursor Next Line (CNL)
 
-CHA = "\x1B" "[" "G"  # CSI 04/07 Cursor Character Absolute 1
 CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute
 VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
@@ -2250,11 +2249,31 @@ OPTION_KCHORD_STR_BY_1_KCHAR = {
 # the Mac US English Terminal Keyboard choice of Option + Printable-US-Ascii
 #
 
+
 #
-#  !"#$%&'()*+,-./0123456789:;<=>?
-# @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
-# `abcdefghijklmnopqrstuvwxyz{|}~
+#   ! " # $ % & ' ( ) * + , - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ?
+# @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _
+# ` a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ~
 #
+
+#
+# ⌥Spacebar ⌥! ⌥" ⌥# ⌥$ ⌥% ⌥& ⌥' ⌥( ⌥) ⌥* ⌥+ ⌥, ⌥- ⌥. ⌥/
+# ⌥0 ⌥1 ⌥2 ⌥3 ⌥4 ⌥5 ⌥6 ⌥7 ⌥8 ⌥9 ⌥: ⌥; ⌥< ⌥= ⌥> ⌥?
+# ⌥@ ⌥⇧A ⌥⇧B ⌥⇧C ⌥⇧D ⌥⇧E ⌥⇧F ⌥⇧G ⌥⇧H ⌥⇧I ⌥⇧J ⌥⇧K ⌥⇧L ⌥⇧M ⌥⇧N ⌥⇧O
+# ⌥⇧P ⌥⇧Q ⌥⇧R ⌥⇧S ⌥⇧T ⌥⇧U ⌥⇧V ⌥⇧W ⌥⇧X ⌥⇧Y ⌥⇧Z ⌥[ ⌥\ ⌥] ⌥^ ⌥_
+# ⌥` ⌥A ⌥B ⌥C ⌥D ⌥E ⌥F ⌥G ⌥H ⌥I ⌥J ⌥K ⌥L ⌥M ⌥N ⌥O
+# ⌥P ⌥Q ⌥R ⌥S ⌥T ⌥U ⌥V ⌥W ⌥X ⌥Y ⌥Z ⌥{ ⌥| ⌥} ⌥~
+#
+
+#
+# ⎋Spacebar ⎋! ⎋" ⎋# ⎋$ ⎋% ⎋& ⎋' ⎋( ⎋) ⎋* ⎋+ ⎋, ⎋- ⎋. ⎋/
+# ⎋0 ⎋1 ⎋2 ⎋3 ⎋4 ⎋5 ⎋6 ⎋7 ⎋8 ⎋9 ⎋: ⎋; ⎋< ⎋= ⎋> ⎋?
+# ⎋@ ⎋⇧A ⎋⇧B ⎋⇧C ⎋⇧D ⎋⇧E ⎋⇧F ⎋⇧G ⎋⇧H ⎋⇧I ⎋⇧J ⎋⇧K ⎋⇧L ⎋⇧M ⎋⇧N ⎋⇧O
+# ⎋⇧P ⎋⇧Q ⎋⇧R ⎋⇧S ⎋⇧T ⎋⇧U ⎋⇧V ⎋⇧W ⎋⇧X ⎋⇧Y ⎋⇧Z ⎋[ ⎋\ ⎋] ⎋^ ⎋_
+# ⎋` ⎋A ⎋B ⎋C ⎋D ⎋E ⎋F ⎋G ⎋H ⎋I ⎋J ⎋K ⎋L ⎋M ⎋N ⎋O
+# ⎋P ⎋Q ⎋R ⎋S ⎋T ⎋U ⎋V ⎋W ⎋X ⎋Y ⎋Z ⎋{ ⎋| ⎋} ⎋~
+#
+
 
 OPTION_KTEXT = """
      ⁄Æ‹›ﬁ‡æ·‚°±≤–≥÷º¡™£¢∞§¶•ªÚ…¯≠˘¿
@@ -3656,26 +3675,6 @@ class LineTerminal:
         # Vim Spacebar
         # macOS ⌃F
 
-    def kdo_column_plus(self) -> None:
-        """Jump to a zero-based numbered Column for Pedantic Emacs"""
-
-        #
-
-        kint = self.kint_pull(default=0)
-        if kint < 0:  # Emacs says 'Wrong type argument: wholenump'
-            self.alarm_ring()  # 'negative repetition arg' for Emacs ⎋GTab ⌥GTab
-            return
-
-        kint_plus = kint + 1
-
-        #
-
-        self.write_form_kint_if("\x1B" "[" "{}G", kint=kint_plus)
-
-        assert CHA_Y == "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
-
-        # Emacs ⎋GTab ⌥GTab move-to-column
-
     def kdo_column_1(self) -> None:
         """Jump to Left of Line"""
 
@@ -3687,7 +3686,6 @@ class LineTerminal:
         # Disassemble these StrTerminal Writes
 
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
-        assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
 
         # part of .kdo_kzero Vim 0
 
@@ -3716,32 +3714,49 @@ class LineTerminal:
         # Disassemble these StrTerminal Writes
 
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
-        assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
 
         # Vim ^
 
     def kdo_column_n(self) -> None:
-        """Jump to a numbered Column"""
+        """Jump to Column by number, but without changing the Line of the Cursor"""
 
-        #
+        st = self.st
 
-        kint = self.kint_pull(default=1)
-        if not kint:
-            self.alarm_ring()  # todo: Pq | Zero Column could be Middle
-            return
-        if kint < 0:
-            self.alarm_ring()  # todo: Pq | Negative Column
-            self.write_form_kint_if("\x1B" "[" "{}G", kint=kint)
-            return
+        kint = self.kint_pull(default=st.x_columns)  # Emacs ⎋GTab defaults to interact
 
-        #
+        middle_column_x = st.x_columns // 2
 
-        self.write_form_kint_if("\x1B" "[" "{}G", kint=kint)
+        if not kint:  # Emacs ⎋GTab rejects negative Arg
+            alt_kint = middle_column_x
+        elif kint < 0:  # negative Vim | Arg could jump to last Column and jump left
+            alt_kint = st.x_columns + 1 + kint
+        else:
+            alt_kint = kint  # Emacs ⎋GTab counts up from 0, doesn't offer Middle
+
+        next_column_x = min(max(1, alt_kint), st.x_columns)
+
+        # Jump to Row
+
+        self.write_form_kint_if("\x1B" "[" "{}G", kint=next_column_x)
 
         assert CHA_Y == "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
 
         # Vim |
         # VsCode ⌃G {line}:{column}
+
+    def kdo_column_n_plus(self) -> None:
+        """Jump to Column by +/- number, but count Columns up from Zero"""
+
+        kint_else = self.kint_peek_else(default=None)
+        if kint_else is None:
+            self.kint_push(0)  # Emacs ⎋GTab defaults to interact  # Pq to Middle
+        elif kint_else >= 0:
+            kint = self.kint_pull(default=0)
+            self.kint_push_positive(1 + kint)  # Pedantic Zero-Based Emacs ⎋GTab
+
+        self.kdo_column_n()
+
+        # Emacs ⎋GTab ⌥GTab move-to-column
 
     def kdo_column_plus_n(self) -> None:
         """Jump ahead by one or more Columns"""
@@ -3949,7 +3964,6 @@ class LineTerminal:
         """Jump to First Line, or to 1...9 Tenths in from Top of File"""
 
         st = self.st
-        y_rows = st.y_rows
 
         kint = self.kint_pull(default=0)
 
@@ -3959,7 +3973,7 @@ class LineTerminal:
 
         row_y = 1
         if tenths:
-            row_y = int((tenths * y_rows) / 10)
+            row_y = int((tenths * st.y_rows) / 10)
 
         self.kint_push_positive(row_y)
         self.kdo_home_line_n()
@@ -3970,7 +3984,6 @@ class LineTerminal:
         """Jump to Last Line, or to 1...9 Tenths in from End of File"""
 
         st = self.st
-        y_rows = st.y_rows
 
         kint = self.kint_pull(default=0)
 
@@ -3978,7 +3991,7 @@ class LineTerminal:
         if kint in range(10):  # Emacs ⎋> doesn't doc unusual Args well
             tenths = kint  # Emacs ⌃U ⎋> isn't ⌃U 4 ⎋>
 
-        row_y = y_rows - int((tenths * y_rows) / 10)
+        row_y = st.y_rows - int((tenths * st.y_rows) / 10)
 
         self.kint_push_positive(row_y)
         self.kdo_home_line_n()
@@ -3989,11 +4002,10 @@ class LineTerminal:
         """Jump to Middle of Screen"""
 
         st = self.st
-        y_rows = st.y_rows
 
         self.kint_pull(default=0)  # discarding .pull_int here
 
-        middle_row_y = y_rows // 2
+        middle_row_y = st.y_rows // 2
         row_y = middle_row_y
 
         self.kint_push(row_y)
@@ -4008,11 +4020,14 @@ class LineTerminal:
 
         kint = self.kint_pull(default=st.y_rows)  # Emacs ⎋G⎋G defaults to interact
 
-        alt_kint = kint  # Emacs ⎋R counts down from 0, doesn't offer a Middle choice
+        middle_row_y = st.y_rows // 2
+
         if not kint:  # Emacs ⎋G⎋G shrugs off non-positive Arg
-            alt_kint = st.y_rows // 2
+            alt_kint = middle_row_y
         elif kint < 0:  # negative Vim ⇧G Arg could jump to last Line and jump up
             alt_kint = st.y_rows + 1 + kint
+        else:
+            alt_kint = kint  # Emacs ⎋R counts up from 0, doesn't offer a Middle choice
 
         next_row_y = min(max(1, alt_kint), st.y_rows)
 
@@ -4022,10 +4037,8 @@ class LineTerminal:
 
         # Disassemble these StrTerminal Writes
 
-        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
-
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
-        assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
     def kdo_row_n_down(self) -> None:
         """Jump near Top of Screen, but then down ahead by zero or more Lines"""
@@ -4049,14 +4062,13 @@ class LineTerminal:
 
         st = self.st
         row_y = st.row_y
-        y_rows = st.y_rows
 
-        # Find Bottom from Top, else Top from Middle, else Middle
+        # Find Bottom from Top, else Top from Middle, else Middle  # same as Emacs ⎋R
 
         middle_row_y = st.y_rows // 2
 
         if row_y == 1:
-            next_row_y = y_rows
+            next_row_y = st.y_rows
         elif row_y == middle_row_y:
             next_row_y = 1
         else:
@@ -4069,7 +4081,7 @@ class LineTerminal:
             self.kint_push_positive(next_row_y)
         elif kint_else >= 0:
             kint = self.kint_pull(default=0)
-            self.kint_push_positive(1 + kint)  # Emacs ⎋R is zero-based
+            self.kint_push_positive(1 + kint)  # Pedantic Zero-Based Emacs ⎋R
 
         self.kdo_home_line_n()
 
@@ -4218,7 +4230,7 @@ class LineTerminal:
 
         for i in range(kint):
             st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
-            self.write_form_kint_if("\x1B" "[" "{}@", kint=4)  # CSI 04/00
+            self.write_form_kint_if("\x1B" "[" "{}@", kint=4)
             if i < (kint - 1):
                 st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
 
@@ -4802,7 +4814,7 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⎋>": (LT.kdo_line_last_tenths_n,),
     "⎋G G": (LT.kdo_home_line_n,),
     "⎋G ⎋G": (LT.kdo_home_line_n,),
-    "⎋G Tab": (LT.kdo_column_plus,),
+    "⎋G Tab": (LT.kdo_column_n_plus,),
     "⎋R": (LT.kdo_row_n_else_middle_top_bottom,),
     "⌃A": (LT.kdo_home_plus_n1,),  # b'\x01'
     "⌃B": (LT.kdo_char_minus_n,),  # b'\x02'
@@ -4825,7 +4837,7 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⌥>": (LT.kdo_line_last_tenths_n,),
     "⌥G G": (LT.kdo_home_line_n,),
     "⌥G ⌥G": (LT.kdo_home_line_n,),
-    "⌥G Tab": (LT.kdo_column_plus,),
+    "⌥G Tab": (LT.kdo_column_n_plus,),
     "⌥R": (LT.kdo_row_n_else_middle_top_bottom,),
     #
 }
@@ -5013,10 +5025,10 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # Demos up now
 #
-#   Emacs  ⎋G⎋G ⎋GG ⎋GTab
+#   Emacs  ⎋< ⎋> ⎋G⎋G ⎋GG ⎋GTab ⎋R
 #   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃O ⌃P ⌃Q ⌃U
 #   Emacs  ⎋← ⎋→ ⌥← ⌥→ aka ⎋B ⎋F
-#   Emacs  ⌥G⌥G ⌥GG ⌥GTab
+#   Emacs  ⌥< ⌥> ⌥G⌥G ⌥GG ⌥GTab ⌥R
 #
 #   Vim  Return ⌃E ⌃J ⌃V ⌃Y ← ↓ ↑ →
 #   Vim  Spacebar $ + - 0 123456789 << >>
@@ -5025,9 +5037,10 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 #   Pq ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
 #   Pq ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
-#   Pq I⌃D IReturn IDelete
+#   Pq I⌃D IReturn IDelete I⌃H
 #
 #   Option Mouse click moves Cursor via ← ↑ → ↓
+#
 #   Log Files at:  tail -F .pqinfo/*.log
 #
 
@@ -5071,23 +5084,25 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 #   Shadow the Screen
 #       Undo/Redo piercing the Shadow
-#       Emacs ⌃T
+#       Emacs ⎋Z, Vim F T ⇧F ⇧T
+#       Vim jump to Dent, Emacs ⎋M jump to Dent
+#       Emacs ⌃T ⎋T and Emacs ⎋C ⎋L ⎋U
 #
 #   Files smaller than the Screen, with ⎋[m marks in them
 #
 
 #
-# later todo's:
+# More Todo's:
 #
 #   Vim ⌃L Emacs ⌃L of Shadow Screen
 #   Emacs ⌃W ⌃Y Copy/Paste Buffer vs Os Copy/Paste Buffer
 #
 #   Emacs ⌃R ⌃S Searches
 #
-#   More obscure Vim ⌃ and Emacs ⌃ and Emacs ⎋ and Emacs ⎋ ⎋
-#   Vim :set cursorline, etc from my ~/.vimrc
-#   Emacs ideas from my ~/.emacs
-#   Emacs ⌃C ⌃X Name Spaces
+#   Vim presentations of :set cursorline, etc from my ~/.vimrc
+#   More obscure Keyboard Chord Sequences of Vim & Emacs
+#   Emacs ideas from my ~/.emacs, Vim ideas from my ~/.vimrc
+#   Emacs ⌃C A..Z Name Space, Emacs ⎋N ⎋O ⎋P Name Space, Vim \ A..Z Name Space
 #
 #   Screens of Files
 #
