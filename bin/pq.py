@@ -4130,49 +4130,82 @@ class LineTerminal:
         # Vim ⇧R Return is Vim I Return
         # Pq ⇧R Return is Vim Return
 
-    def kdo_tail_cut_n(self) -> None:
-        """Cut the Tail of the Line, and land at Dent"""
+    def kdo_tail_head_cut_n(self) -> None:
+        """Cut the Tail or Head of the Line, and also Lines Below or Above"""
 
         st = self.st
 
         kint_else = self.kint_peek_else(default=None)
         self.kint_pull(default=0)
 
-        ps_0 = 0  # writes Spaces ahead  # CSI K default Ps = 0
+        ps_0 = 0  # writes Spaces ahead
         if kint_else is None:
             self.write_form_kint_if("\x1B" "[" "{}K", kint=ps_0, default=ps_0)
             return
 
         kint = kint_else
 
-        ps_2 = 2  # writes Spaces ahead and behind, via EL_P
-
-        if kint >= 1:
-            self.write_form_kint_if("\x1B" "[" "{}K", kint=ps_2, default=ps_0)  # empty
-            self.write_form_kint_if("\x1B" "[" "{}B", kint=1)  # down
+        if kint >= 1:  # Emacs splits, doesn't delete left
+            st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
             self.write_form_kint_if("\x1B" "[" "{}M", kint=kint)  # goodbye
-            self.write_form_kint_if("\x1B" "[" "{}A", kint=1)  # up
             return
 
-        st.stwrite("\b")  # 00/08  # "\x08"  # "\x1B" "[" "D
-        self.write_form_kint_if("\x1B" "[" "{}K", kint=ps_2, default=ps_0)
-        st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
-        if kint < 0:
-            self.write_form_kint_if("\x1B" "[" "{}A", kint=-kint)  # up
-            self.write_form_kint_if("\x1B" "[" "{}M", kint=-kint)  # goodbye
+        ps_1 = 1  # writes Spaces at & behind  # Emacs deletes, doesn't just wipe
+        st.stwrite("\b")  # 00/08 Backspace (BS) \b ⌃H
+        self.write_form_kint_if("\x1B" "[" "{}K", kint=ps_1, default=ps_0)
+        self.write_form_kint_if("\x1B" "[" "{}C", kint=1)
 
-        # for _ in range(kint):
+        if not kint:
+            return
+
+        self.write_form_kint_if("\x1B" "[" "{}A", kint=-kint)  # up
+        self.write_form_kint_if("\x1B" "[" "{}M", kint=-kint)  # goodbye
 
         assert BS == "\b"  # 00/08 Backspace ⌃H
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
 
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+        assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
         assert EL_P == "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
         # Emacs ⌃K kill-line
         # macOS ⌃K into ⌘Z Undo
+
+    def kdo_tail_cut_n_column_minus(self) -> None:
+        """Cut the Tail of the Line, and also Lines Below"""
+
+        st = self.st
+
+        self.kdo_tail_cut_n_column_minus()
+
+        st.stwrite("\b")  # 00/08 Backspace (BS) \b ⌃H
+        assert BS == "\b"  # 00/08 Backspace ⌃H
+
+        # Vim ⇧D
+        # Vim D$
+
+    def kdo_tail_cut_n(self) -> None:
+        """Cut the Tail of the Line, and also Lines Below"""
+
+        kint = self.kint_pull(default=1)
+        if kint <= 0:
+            self.alarm_ring()  # 'negative repetition arg' for Vim ⇧D or Vim D$
+            return
+
+        ps_0 = 0  # writes Spaces ahead  # CSI K default Ps = 0
+        self.write_form_kint_if("\x1B" "[" "{}K", kint=ps_0, default=ps_0)
+
+        if kint > 1:
+            kint_minus = kint - 1
+            self.write_form_kint_if("\x1B" "[" "{}B", kint=1)  # down
+            self.write_form_kint_if("\x1B" "[" "{}M", kint=kint_minus)  # goodbye
+            self.write_form_kint_if("\x1B" "[" "{}A", kint=1)  # up
+
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+        assert EL_P == "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line
+        assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
     #
     # Move before Insert
@@ -4311,7 +4344,7 @@ class LineTerminal:
         # Vim C ⇧G
         # Vim C ⇧L
 
-    def kdo_dents_cut_n_ins_above(self) -> None:
+    def kdo_dents_cut_n_line_ins_above(self) -> None:
         """Cut N Lines here and below, and land past Dent"""
 
         self.kdo_dents_cut_n()
@@ -4323,6 +4356,19 @@ class LineTerminal:
 
         # Vim C C = Vim D D + Vim ⇧O
         # Vim ⇧S = Vim D D + Vim ⇧O
+
+    def kdo_tail_cut_n_ins_till(self) -> None:
+        """Cut N Lines here and below, and land past Dent"""
+
+        self.kdo_tail_cut_n()
+
+        kint_else = self.kint_peek_else(default=None)
+        assert kint_else is None, (kint_else,)
+
+        self.kdo_ins_n_till()
+
+        # Vim ⇧C = Vim ⇧D + Vim I
+        # Vim C$ = Vim D$ + Vim I
 
     #
     # Scroll Rows
@@ -4393,7 +4439,7 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⌃D": (LT.kdo_char_cut_right_n,),  # b'\x04'
     "⌃E": (LT.kdo_end_plus_n1,),  # b'\x05'
     "⌃F": (LT.kdo_char_plus_n,),  # b'\x06'
-    "⌃K": (LT.kdo_tail_cut_n,),  # b'\x0B'
+    "⌃K": (LT.kdo_tail_head_cut_n,),  # b'\x0B'
     "⌃N": (LT.kdo_line_plus_n,),  # b'\x0E'
     "⌃O": (LT.kdo_line_ins_ahead_n,),  # b'\x0B'
     "⌃P": (LT.kdo_line_minus_n,),  # b'\x10'
@@ -4441,6 +4487,8 @@ VI_KDO_CALL_BY_KCAP_STR = {
     #
     "⇧A": (LT.kdo_end_plus_ins_n_till,),  # b'A'
     "⇧B": (LT.kdo_bigword_minus_n,),  # b'B'
+    "⇧C": (LT.kdo_tail_cut_n_ins_till,),  # b'C'
+    "⇧D": (LT.kdo_tail_cut_n_column_minus,),  # b'D'
     "⇧E": (LT.kdo_bigword_plus_n_almost,),  # b'E'
     "⇧G": (LT.kdo_dent_line_n,),  # b'G'
     "⇧H": (LT.kdo_row_n_down,),  # b'H'
@@ -4448,7 +4496,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "⇧L": (LT.kdo_row_n_up,),  # b'L'
     "⇧O": (LT.kdo_line_ins_above_n,),  # b'O'
     "⇧R": (LT.kdo_replace_n_till,),  # b'R'
-    "⇧S": (LT.kdo_dents_cut_n_ins_above,),  # b'S'
+    "⇧S": (LT.kdo_dents_cut_n_line_ins_above,),  # b'S'
     "⇧W": (LT.kdo_bigword_plus_n,),  # b'W'
     "⇧X": (LT.kdo_char_cut_left_n,),  # b'X'
     "^": (LT.kdo_column_dent_beyond,),  # b'\x5E'
@@ -4456,9 +4504,11 @@ VI_KDO_CALL_BY_KCAP_STR = {
     #
     "A": (LT.kdo_column_plus_ins_n_till,),  # b'a'
     "B": (LT.kdo_lilword_minus_n,),  # b'b'
-    "C C": (LT.kdo_dents_cut_n_ins_above,),  # b'c' b'c'  # CC
+    "C $": (LT.kdo_tail_cut_n_ins_till,),  # b'c' b'$'  # C$
+    "C C": (LT.kdo_dents_cut_n_line_ins_above,),  # b'c' b'c'  # CC
     "C ⇧G": (LT.kdo_dents_cut_here_below_ins_till,),  # b'c' b'G'  # C⇧G
     "C ⇧L": (LT.kdo_dents_cut_here_below_ins_till,),  # b'c' b'L'  # C⇧L
+    "D $": (LT.kdo_tail_cut_n_column_minus,),  # b'd' b'$'  # D$
     "D D": (LT.kdo_dents_cut_n,),  # b'd' b'd'  # DD
     "D ⇧G": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'G'  # D⇧G
     "D ⇧L": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'L'  # D⇧L
@@ -4589,8 +4639,8 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 #   Vim  Return ⌃E ⌃J ⌃V ⌃Y ← ↓ ↑ →
 #   Vim  Spacebar $ + - 0 123456789 << >>
-#   Vim  ⇧A ⇧B ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
-#   Vim  A B CC C⇧G C⇧L DD D⇧G D⇧L E H I J K L O S W X | Delete
+#   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
+#   Vim  A B C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L E H I J K L O S W X | Delete
 #
 #   Pq ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
 #   Pq ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
@@ -4603,13 +4653,11 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # smallish todo's
 #
-#   Vim ⇧C C$ ⇧D D$
-#
-#   Vim Q Q @ Q etc
-#
 #   Repeats of ⇧I ⇧O ⇧R I O which include Return's & Delete's
 #
 #   Vim R
+#
+#   Vim Q Q @ Q etc
 #
 #   Vim I ⌃O
 #   Vim I ⌃O Calls of Insert/ Replace that don't move the Cursor Left
