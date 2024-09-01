@@ -2620,51 +2620,63 @@ class LineTerminal:
     def top_wrangle(self, ilines, kmap) -> list[str]:
         """Launch, and run till SystemExit"""
 
+        st = self.st
+
         # Load up Lines to edit
+
+        self.kmap = kmap  # K-Map Hint kept here, but never yet branched on
 
         olines = self.olines
         olines.extend(ilines)
 
-        self.kmap = kmap  # K-Map Hint kept here, but never yet branched on
-
         # Wrap around a StrTerminal wrapped around a ByteTerminal
 
-        with StrTerminal() as st:
-            self.st = st
+        st.__enter__()
+        try:
+            olines = self.top_wrangle_body()
+        finally:
+            st.__exit__()
 
-            bt = st.bt
-            bt.at_btflush(self.ltflush)
+        return olines
 
-            exists_by_name = dict()
-            exists_by_name[bt.klogger.logger.name] = bt.klogger.exists
-            exists_by_name[bt.slogger.logger.name] = bt.slogger.exists
-            exists_by_name[self.ltlogger.name] = self.pqlogger_exists
+    def top_wrangle_body(self) -> list[str]:
+        """Run within a StrTerminal within a BytesTerminal"""
 
-            # Tell the StrTerminal what to say at first
+        st = self.st
 
-            olines = self.olines
-            for oline in olines:
-                st.stprint(oline)
+        bt = st.bt
+        bt.at_btflush(self.ltflush)
 
-            if not all(exists_by_name.values()):
-                st.stprint()
+        exists_by_name = dict()
+        exists_by_name[bt.klogger.logger.name] = bt.klogger.exists
+        exists_by_name[bt.slogger.logger.name] = bt.slogger.exists
+        exists_by_name[self.ltlogger.name] = self.pqlogger_exists
 
-            for name, exists in exists_by_name.items():
-                if not exists:
-                    st.stprint("Logging into:  tail -F", name)
+        # Tell the StrTerminal what to say at first
 
-            self.help_quit()  # for .top_wrangle
+        olines = self.olines
+        for oline in olines:
+            st.stprint(oline)
 
-            try:
-                self.texts_vmode_wrangle("Replace", kint=1)  # as if Vim +:startreplace
-                self.verbs_wrangle()  # as if Vim +:stopinsert, not Vim +:startinsert
-            except SystemExit as exc:
-                if exc.code:
-                    raise
+        if not all(exists_by_name.values()):
+            st.stprint()
 
-            olines.clear()
+        for name, exists in exists_by_name.items():
+            if not exists:
+                st.stprint("Logging into:  tail -F", name)
 
-            return olines
+        self.help_quit()  # for .top_wrangle
+
+        try:
+            self.texts_vmode_wrangle("Replace", kint=1)  # as if Vim +:startreplace
+            self.verbs_wrangle()  # as if Vim +:stopinsert, not Vim +:startinsert
+        except SystemExit as exc:
+            if exc.code:
+                raise
+
+        olines.clear()
+
+        return olines
 
     def texts_vmode_wrangle(self, vmode, kint) -> str:
         """Enter Replace/ Insert V-Mode, Wrangle Texts, then exit V-Mode"""
@@ -3651,7 +3663,7 @@ class LineTerminal:
 
         kint = self.kint_pull(default=0)
         if kint < 0:  # Emacs says 'Wrong type argument: wholenump'
-            self.alarm_ring()  # 'negative repetition arg' for Emacs ⌥GTab ⎋GTab
+            self.alarm_ring()  # 'negative repetition arg' for Emacs ⎋GTab ⌥GTab
             return
 
         kint_plus = kint + 1
@@ -3662,7 +3674,7 @@ class LineTerminal:
 
         assert CHA_Y == "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
 
-        # Emacs ⌥G ⎋G Tab move-to-column
+        # Emacs ⎋GTab ⌥GTab move-to-column
 
     def kdo_column_1(self) -> None:
         """Jump to Left of Line"""
@@ -3671,6 +3683,8 @@ class LineTerminal:
 
         st = self.st
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
+
+        # Disassemble these StrTerminal Writes
 
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
         assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
@@ -3698,6 +3712,8 @@ class LineTerminal:
 
         st = self.st
         st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
+
+        # Disassemble these StrTerminal Writes
 
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
         assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
@@ -3744,6 +3760,8 @@ class LineTerminal:
         kint = self.kint_pull_positive(default=1)
         self.write_form_kint_if("\x1B" "[" "{}Z", kint=kint)
 
+        # Disassemble these StrTerminal Writes
+
         assert CBT_X == "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 
@@ -3755,6 +3773,8 @@ class LineTerminal:
         kint = self.kint_pull_positive(default=1)
         self.write_form_kint_if("\x1B" "[" "{}I", kint=kint)
         # st.stwrite(kint * "\t")  # 00/09
+
+        # Disassemble these StrTerminal Writes
 
         assert CHT_X == "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tab~
         assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
@@ -3769,27 +3789,14 @@ class LineTerminal:
     def kdo_dent_line_n(self) -> None:
         """Jump to a numbered Line, but land past the Dent"""
 
-        assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
+        self.kdo_line_n()  # Vim ⇧G is kin with Vim ⇧H ⇧M ⇧L for Screen
 
-        kint = self.kint_pull(default=32100)  # todo: more Rows
-        if not kint:
-            self.alarm_ring()  # todo: Pq G Zero Line Number
-            return
-        if kint < 0:
-            self.alarm_ring()  # todo: Pq G Negative Line Number
-            return
+        kint_else = self.kint_peek_else(default=None)
+        assert kint_else is None, (kint_else,)
 
-        #
+        self.kdo_column_dent_beyond()  # for Vim ⇧G
 
-        self.write_form_kint_if("\x1B" "[" "{}d", kint=kint)
-        self.kdo_column_dent_beyond()  # for Vim G
-
-        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
-
-        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
-        assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
-
-        # Vim G
+        # Vim ⇧G
 
     def kdo_dent_minus_n(self) -> None:
         """Jump back by one or more Lines, but land past the Dent"""
@@ -3861,6 +3868,8 @@ class LineTerminal:
         self.write_form_kint_if("\x1B" "[" "{}C", kint=32100)  # todo: more Columns
         self.write_form_kint_if("\x1B" "[" "{}D", kint=1)  # FIXME: not Replace/ Insert
 
+        # Disassemble these StrTerminal Writes
+
         assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
         assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
@@ -3869,34 +3878,17 @@ class LineTerminal:
         # Vim $
         # macOS ⌃E
 
-    def kdo_home_n(self) -> None:
-        """Jump to a numbered Line, and land at Left of Line"""
+    def kdo_home_line_n(self) -> None:
+        """Jump to a numbered Line, but land at Left of Line"""
 
-        assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
+        self.kdo_line_n()  # Emacs ⎋G⎋G is kin with Emacs ⌥R
 
-        kint = self.kint_pull(default=32100)  # todo: more Rows
+        kint_else = self.kint_peek_else(default=None)
+        assert kint_else is None, (kint_else,)
 
-        if not kint:
-            self.alarm_ring()  # todo: Pq ⎋G G Zero Row Number could be Middle
-            return
-        if kint < 0:
-            self.alarm_ring()  # todo: Pq ⎋G G Negative Row Number
-            return
+        self.kdo_column_1()  # for Emacs ⎋G⎋G Goto-Line
 
-        # Jump to Line and land at Left of Line
-
-        self.write_form_kint_if("\x1B" "[" "{}d", kint=kint)
-        self.kdo_column_1()  # for Emacs ⌥GG ⎋GG Goto-Line
-
-        # Disassemble these StrTerminal Writes
-
-        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
-
-        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
-        assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
-
-        # Emacs ⌥GG ⎋GG goto-line  # not zero-based
-        # Emacs ⌥G⌥G ⎋G⎋G goto-line  # not zero-based
+        # Emacs ⎋G⎋G ⎋GG ⌥G⌥G ⌥GG goto-line  # not zero-based
 
     def kdo_home_plus_n1(self) -> None:
         """Jump ahead by zero or more Lines, and land at Left of Line"""
@@ -3936,6 +3928,11 @@ class LineTerminal:
         # Emacs ⌃P previous-line
         # Vim K
 
+    def kdo_line_n(self) -> None:
+        """Jump to Line by number, but without changing the Column of the Cursor"""
+
+        self.kdo_row_n()  # todo: more Lines than Rows
+
     def kdo_line_plus_n(self) -> None:
         """Jump ahead by one or more Lines"""
 
@@ -3948,8 +3945,48 @@ class LineTerminal:
         # Vim ⌃J
         # Vim J
 
+    def kdo_row_middle(self) -> None:
+        """Jump to Middle of Screen"""
+
+        st = self.st
+        y_rows = st.y_rows
+
+        self.kint_pull(default=0)  # discarding .pull_int here
+
+        middle_row_y = y_rows // 2
+        self.kint_push(middle_row_y)
+        self.kdo_dent_line_n()
+
+        # Vim ⇧M
+
+    def kdo_row_n(self) -> None:
+        """Jump to Line by number, but without changing the Column of the Cursor"""
+
+        st = self.st
+
+        kint = self.kint_pull(default=st.y_rows)  # Emacs ⎋G⎋G defaults to interact
+
+        alt_kint = kint  # Emacs ⎋R counts down from 0, doesn't offer a Middle choice
+        if not kint:  # Emacs ⎋G⎋G shrugs off non-positive Arg
+            alt_kint = st.y_rows // 2
+        elif kint < 0:  # negative Vim ⇧G Arg could jump to last Line and jump up
+            alt_kint = st.y_rows + 1 + kint
+
+        next_row_y = min(max(1, alt_kint), st.y_rows)
+
+        # Jump to Row
+
+        self.write_form_kint_if("\x1B" "[" "{}d", kint=next_row_y)
+
+        # Disassemble these StrTerminal Writes
+
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+
+        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
+        assert CHA == "\x1B" "[" "G"  # 04/07 Cursor Character Absolute
+
     def kdo_row_n_down(self) -> None:
-        """Jump to Top of Screen, but ahead by zero or more Lines"""
+        """Jump near Top of Screen, but then down ahead by zero or more Lines"""
 
         kint = self.kint_pull_positive(default=1)
 
@@ -3958,14 +3995,46 @@ class LineTerminal:
             kint_minus = kint - 1
             self.write_form_kint_if("\x1B" "[" "{}B", kint=kint_minus)
 
+        # Disassemble these StrTerminal Writes
+
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
         assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
-        # Emacs ⌥R ⎋R move-to-window-line-top-bottom, with Zero-Based Positive K-Int
         # Vim ⇧H
 
+    def kdo_row_n_else_middle_top_bottom(self) -> None:
+        """Jump to Bottom from Top, else to Top from Middle, else jump to Middle"""
+
+        st = self.st
+        row_y = st.row_y
+        y_rows = st.y_rows
+
+        # Find Bottom from Top, else Top from Middle, else Middle
+
+        middle_row_y = st.y_rows // 2
+
+        if row_y == 1:
+            next_row_y = y_rows
+        elif row_y == middle_row_y:
+            next_row_y = 1
+        else:
+            next_row_y = middle_row_y  # could encode as the 0 Row of Emacs ⎋G⎋G
+
+        # Jump there, unless told where to jump
+
+        kint_else = self.kint_peek_else(default=None)
+        if kint_else is None:
+            self.kint_push_positive(next_row_y)
+        elif kint_else >= 0:
+            kint = self.kint_pull(default=0)
+            self.kint_push_positive(1 + kint)  # Emacs ⎋R is zero-based
+
+        self.kdo_home_line_n()
+
+        # Emacs ⎋R ⌥R move-to-window-line-top-bottom
+
     def kdo_row_n_up(self) -> None:
-        """Jump to Bottom of Screen, but back behind by zero or more Lines"""
+        """Jump near Bottom of Screen, but then up behind by zero or more Lines"""
 
         kint = self.kint_pull_positive(default=1)
 
@@ -3976,10 +4045,11 @@ class LineTerminal:
             kint_minus = kint - 1
             self.write_form_kint_if("\x1B" "[" "{}A", kint=kint_minus)
 
+        # Disassemble these StrTerminal Writes
+
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
-        # Emacs ⌥R ⎋R move-to-window-line-top-bottom, with Negative K-Int
         # Vim ⇧L
 
     #
@@ -3991,7 +4061,7 @@ class LineTerminal:
 
         self.kdo_tab_minus_n()
 
-        # Emacs ⌥B ⎋B backward-word, inside of superword-mode
+        # Emacs ⎋B ⌥B backward-word, inside of superword-mode
         # Vim ⇧B
 
     def kdo_bigword_plus_n(self) -> None:
@@ -3999,7 +4069,7 @@ class LineTerminal:
 
         self.kdo_tab_plus_n()
 
-        # Emacs ⌥F ⎋F forward-word, inside of superword-mode
+        # Emacs ⎋F ⌥F forward-word, inside of superword-mode
         # Vim ⇧W
 
     def kdo_bigword_plus_n_almost(self) -> None:
@@ -4029,7 +4099,7 @@ class LineTerminal:
 
         self.kdo_char_minus_n()
 
-        # Emacs ⌥B ⎋B backward-word, outside of superword-mode
+        # Emacs ⎋B ⌥B backward-word, outside of superword-mode
         # Vim B
 
     def kdo_lilword_plus_n(self) -> None:
@@ -4040,7 +4110,7 @@ class LineTerminal:
 
         self.kdo_char_plus_n()
 
-        # Emacs ⌥F ⎋F forward-word, outside of superword-mode
+        # Emacs ⎋F ⌥F forward-word, outside of superword-mode
         # Vim W
 
     def kdo_lilword_plus_n_almost(self) -> None:
@@ -4168,6 +4238,8 @@ class LineTerminal:
         self.write_form_kint_if("\x1B" "[" "{}A", kint=1)
         self.kdo_column_dent_beyond()
 
+        # Disassemble these StrTerminal Writes
+
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
@@ -4292,6 +4364,8 @@ class LineTerminal:
                 self.kdo_column_minus_n()
                 self.write_form_kint_if("\x1B" "[" "{}P", kint=tail_minus)
 
+        # Disassemble these StrTerminal Writes
+
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
@@ -4333,6 +4407,8 @@ class LineTerminal:
             self.write_form_kint_if("\x1B" "[" "{}A", kint=kint)  # up
 
         self.kdo_end_plus_n1()
+
+        # Disassemble these StrTerminal Writes
 
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
         assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
@@ -4395,6 +4471,8 @@ class LineTerminal:
         self.write_form_kint_if("\x1B" "[" "{}A", kint=-kint)  # up
         self.write_form_kint_if("\x1B" "[" "{}M", kint=-kint)  # goodbye
 
+        # Disassemble these StrTerminal Writes
+
         assert BS == "\b"  # 00/08 Backspace ⌃H
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
 
@@ -4435,6 +4513,8 @@ class LineTerminal:
             self.write_form_kint_if("\x1B" "[" "{}B", kint=1)  # down
             self.write_form_kint_if("\x1B" "[" "{}M", kint=kint_minus)  # goodbye
             self.write_form_kint_if("\x1B" "[" "{}A", kint=1)  # up
+
+        # Disassemble these StrTerminal Writes
 
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
         assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
@@ -4498,6 +4578,8 @@ class LineTerminal:
                 st.stwrite(ktext)  # for .kdo_line_ins_below_n Insert
                 self.write_form_kint_if("\x1B" "[" "{}D", kint=ktext_kint)
 
+        # Disassemble these StrTerminal Writes
+
         assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
 
@@ -4527,6 +4609,8 @@ class LineTerminal:
                 self.write_form_kint_if("\x1B" "[" "{}L", kint=ktext_kint)
                 st.stwrite(ktext)  # for .kdo_line_ins_below_n Insert
                 self.write_form_kint_if("\x1B" "[" "{}D", kint=ktext_kint)
+
+        # Disassemble these StrTerminal Writes
 
         assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
@@ -4575,6 +4659,8 @@ class LineTerminal:
         st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
 
         self.kdo_ins_n_till()
+
+        # Disassemble these StrTerminal Writes
 
         assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
@@ -4670,9 +4756,10 @@ INSERT_PQ_KDO_CALL_BY_KCAP_STR = {
 
 EM_KDO_CALL_BY_KCAP_STR = {
     #
-    "⎋G G": (LT.kdo_home_n,),
-    "⎋G ⎋G": (LT.kdo_home_n,),
+    "⎋G G": (LT.kdo_home_line_n,),
+    "⎋G ⎋G": (LT.kdo_home_line_n,),
     "⎋G Tab": (LT.kdo_column_plus,),
+    "⎋R": (LT.kdo_row_n_else_middle_top_bottom,),
     "⌃A": (LT.kdo_home_plus_n1,),  # b'\x01'
     "⌃B": (LT.kdo_char_minus_n,),  # b'\x02'
     "⌃D": (LT.kdo_char_cut_right_n,),  # b'\x04'
@@ -4690,9 +4777,10 @@ EM_KDO_CALL_BY_KCAP_STR = {
     #
     "⌥←": (LT.kdo_bigword_minus_n,),  # encoded as ⎋B  # can be from ⎋←
     "⌥→": (LT.kdo_bigword_plus_n,),  # encoded as ⎋F  # can be from ⎋→
-    "⌥G G": (LT.kdo_home_n,),
-    "⌥G ⌥G": (LT.kdo_home_n,),
+    "⌥G G": (LT.kdo_home_line_n,),
+    "⌥G ⌥G": (LT.kdo_home_line_n,),
     "⌥G Tab": (LT.kdo_column_plus,),
+    "⌥R": (LT.kdo_row_n_else_middle_top_bottom,),
     #
 }
 
@@ -4736,6 +4824,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "⇧H": (LT.kdo_row_n_down,),  # b'H'
     "⇧I": (LT.kdo_column_dent_beyond_ins_n_till,),  # b'I'
     "⇧L": (LT.kdo_row_n_up,),  # b'L'
+    "⇧M": (LT.kdo_row_middle,),  # b'M'
     "⇧O": (LT.kdo_line_ins_above_n,),  # b'O'
     "⇧R": (LT.kdo_replace_n_till,),  # b'R'
     "⇧S": (LT.kdo_dents_cut_n_line_ins_above,),  # b'S'
@@ -4878,10 +4967,10 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 # Demos up now
 #
-#   Emacs  ⎋GG ⎋GTab
+#   Emacs  ⎋G⎋G ⎋GG ⎋GTab
 #   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃O ⌃P ⌃Q ⌃U
 #   Emacs  ⎋← ⎋→ ⌥← ⌥→ aka ⎋B ⎋F
-#   Emacs  ⌥GG ⌥GTab
+#   Emacs  ⌥G⌥G ⌥GG ⌥GTab
 #
 #   Vim  Return ⌃E ⌃J ⌃V ⌃Y ← ↓ ↑ →
 #   Vim  Spacebar $ + - 0 123456789 << >>
@@ -4929,9 +5018,6 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
 #       Delete to Leftmost
 #
-#   Size the Screen
-#       ⇧M
-#
 #   Bounce Cursor to Tracer on Screen
 #       Trace the unicode.name while Replace/ Insert
 #       Delete the Message we last wrote, write the new, log Messages & lost Messages
@@ -4952,7 +5038,7 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 #
 #   Emacs ⌃R ⌃S Searches
 #
-#   More obscure Vim ⌃ and Emacs ⌃ and Emacs ⌥
+#   More obscure Vim ⌃ and Emacs ⌃ and Emacs ⎋ and Emacs ⎋ ⎋
 #   Vim :set cursorline, etc from my ~/.vimrc
 #   Emacs ideas from my ~/.emacs
 #   Emacs ⌃C ⌃X Name Spaces
