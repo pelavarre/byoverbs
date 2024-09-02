@@ -2435,20 +2435,34 @@ class StrTerminal:
         self.column_x_write_1()  # todo: Vim Shadow lands past Dent
 
     def column_x_write(self, column_x) -> None:
-        """Jump to Screen Column at left up from 1, else at right down from -1"""
+        """Jump to Screen Column at Left up from 1, else at Right down from -1"""
 
         assert column_x, (column_x,)
 
         x = min(column_x, self.x_columns)
         if column_x < 0:
-            x = self.x_columns + 1 + column_x
+            x = self.x_columns + 1 + column_x  # could code as Rightmost + Left
             x = max(x, 1)
 
+        self.column_x = x
         self.stwrite_form_int_if("\x1B" "[" "{}G", kint=x)
 
-        self.column_x = x
-
         assert CHA_Y == "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
+
+    def row_y_write(self, row_y) -> None:
+        """Jump to Screen Row at Top down from 1, else at Bottom up from -1"""
+
+        assert row_y, (row_y,)
+
+        y = min(row_y, self.y_rows)
+        if row_y < 0:
+            y = self.y_rows + 1 + row_y  # could code as Bottom + Up
+            y = max(y, 1)
+
+        self.row_y = y
+        self.stwrite_form_int_if("\x1B" "[" "{}d", kint=y)
+
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
     #
     # Write Screen Output Chars as Bytes
@@ -3190,39 +3204,48 @@ class LineTerminal:
 
         kdo_inverse_func_by = KDO_INVERSE_FUNC_BY
         kdo_only_positive_funcs = KDO_ONLY_POSITIVE_FUNCS
+        kdo_only_without_arg_funcs = KDO_ONLY_WITHOUT_ARG_FUNCS
 
-        # Quit without derailing a Positive or Missing K Int
+        # Quit without derailing a Missing K Int
 
         kint_else = self.kint_peek_else(default=None)
         if kint_else is None:
             return False
 
         kint = kint_else
-        if kint > 0:
-            return False
 
-        # Send the Negated Negative K Int to Inverse, if Inverse found
+        # Reject any explicit K Int for a few Funcs
 
-        if (kint < 0) and (kdo_func in kdo_inverse_func_by.keys()):
-            kdo_inverse_func = kdo_inverse_func_by[kdo_func]
-            fname = kdo_inverse_func.__name__
+        if kdo_func not in kdo_only_without_arg_funcs:
 
-            print(f"kint=-{kint} func={fname}", file=self.ltlogger)
+            # Else quit without derailing a Positive K Int
 
-            self.kint_pull(default=1)  # this Default can't much matter
-            self.kint_push_positive(-kint)
-            kdo_inverse_func(self)
+            if kint > 0:
+                return False
 
-            return True
+            # Send the Negated Negative K Int to Inverse, if Inverse found
 
-        # Quit without derailing a Func written for all K Int's
+            if (kint < 0) and (kdo_func in kdo_inverse_func_by.keys()):
+                kdo_inverse_func = kdo_inverse_func_by[kdo_func]
+                fname = kdo_inverse_func.__name__
 
-        if kdo_func not in kdo_only_positive_funcs:
-            return False
+                print(f"kint=-{kint} func={fname}", file=self.ltlogger)
+
+                self.kint_pull(default=1)  # this Default can't much matter
+                self.kint_push_positive(-kint)  # for .verb_eval_explicit_nonpositive_if
+                kdo_inverse_func(self)
+
+                return True
+
+            # Quit without derailing a Func written for all K Int's
+
+            if (kint == 0) and (kdo_func in kdo_inverse_func_by.keys()):
+                pass
+            elif kdo_func not in kdo_only_positive_funcs:
+                return False
 
         # Reject an explicitly negative or zero K Int, as if Key Cap unbound
 
-        print(f"kint=0 func={kdo_func.__name__}", file=self.ltlogger)
         self.kdo_kcap_alarm_write_n()  # def not found for explicitly zeroed K Int
 
         return True
@@ -3298,10 +3321,9 @@ class LineTerminal:
         kchars = kbytes.decode()  # may raise UnicodeDecodeError
 
         kint = self.kint_pull(default=1)
-        if not kint:
-            return ""
-        if kint < 0:
-            self.alarm_ring()  # 'negative repetition arg' for Replace/ Insert Text
+        if kint <= 0:
+            self.kint_push(kint)  # for .kdo_kcap_alarm_write_n
+            self.kdo_kcap_alarm_write_n()
             return ""
 
         ktext = kint * kchars
@@ -3319,6 +3341,8 @@ class LineTerminal:
 
         kint_else = self.kint_peek_else(default=None)
         kint = self.kint_pull(default=1)
+
+        print(f"kint_else={kint_else} func=kdo_kcap_alarm_write_n", file=self.ltlogger)
 
         if kint_else is not None:
             st.stbypass(str(kint))  # for .kdo_kcap_alarm_write_n
@@ -3588,7 +3612,7 @@ class LineTerminal:
         """Set up to call another Keyboard Chord Sequence, but only positively"""
 
         assert kint > 0, (kint,)
-        self.kint_push(kint)
+        self.kint_push(kint)  # for .kint_push_positive
 
     def kint_push(self, kint) -> None:
         """Fill the cleared Key-Cap Str Holds, as if Emacs ⌃U ..."""
@@ -3778,6 +3802,9 @@ class LineTerminal:
     def kdo_column_dent(self) -> None:
         """Jump to the first Column beyond the Dent"""
 
+        kint_else = self.kint_peek_else(default=None)
+        assert kint_else is None, (kint_else,)
+
         self.st.column_x_write_dent()  # for Vim ^
 
         # Vim ^
@@ -3785,26 +3812,13 @@ class LineTerminal:
     def kdo_column_n(self) -> None:
         """Jump to Column by number, but without changing the Line of the Cursor"""
 
-        st = self.st
+        kint = self.kint_pull(default=self.st.x_columns)  # Vim | defaults to Column 1
 
-        kint = self.kint_pull(default=st.x_columns)  # Emacs ⎋GTab defaults to interact
-
-        middle_column_x = st.x_columns // 2
-
-        if not kint:  # Emacs ⎋GTab rejects negative Arg
-            alt_kint = middle_column_x
-        elif kint < 0:  # negative Vim | Arg could jump to last Column and jump left
-            alt_kint = st.x_columns + 1 + kint
+        middle_column_x = self.st.x_columns // 2
+        if kint == 0:
+            self.st.column_x_write(middle_column_x)
         else:
-            alt_kint = kint  # Emacs ⎋GTab counts up from 0, doesn't offer Middle
-
-        next_column_x = min(max(1, alt_kint), st.x_columns)
-
-        # Jump to Row
-
-        self.write_form_kint_if("\x1B" "[" "{}G", kint=next_column_x)
-
-        assert CHA_Y == "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
+            self.st.column_x_write(kint)
 
         # Vim |
         # VsCode ⌃G {line}:{column}
@@ -3812,14 +3826,15 @@ class LineTerminal:
     def kdo_column_n_plus(self) -> None:
         """Jump to Column by +/- number, but count Columns up from Zero"""
 
+        middle_column_x = self.st.x_columns // 2
+
         kint_else = self.kint_peek_else(default=None)
         if kint_else is None:
-            self.kint_push(0)  # Emacs ⎋GTab defaults to interact  # Pq to Middle
-        elif kint_else >= 0:
+            self.kint_pull(default=0)
+            self.st.column_x_write(middle_column_x)
+        else:
             kint = self.kint_pull(default=0)
-            self.kint_push_positive(1 + kint)  # Pedantic Zero-Based Emacs ⎋GTab
-
-        self.kdo_column_n()
+            self.st.column_x_write(1 + kint)  # pedantic Zero-Based Emacs ⎋GTab
 
         # Emacs ⎋GTab ⌥GTab move-to-column
 
@@ -3870,10 +3885,6 @@ class LineTerminal:
         """Jump to a numbered Line, but land past the Dent"""
 
         self.kdo_line_n()  # Vim ⇧G is kin with Vim ⇧H ⇧M ⇧L for Screen
-
-        kint_else = self.kint_peek_else(default=None)
-        assert kint_else is None, (kint_else,)
-
         self.st.column_x_write_dent()  # for Vim ⇧G
 
         # Vim ⇧G
@@ -3939,11 +3950,7 @@ class LineTerminal:
     def kdo_home_line_n(self) -> None:
         """Jump to a numbered Line, but land at Left of Line"""
 
-        self.kdo_line_n()  # Emacs ⎋G⎋G is kin with Emacs ⌥R
-
-        kint_else = self.kint_peek_else(default=None)
-        assert kint_else is None, (kint_else,)
-
+        self.kdo_line_n()  # Emacs ⎋G⎋G is kin with Emacs ⎋R
         self.st.column_x_write_1()  # for Emacs ⎋G⎋G Goto-Line
 
         # Emacs ⎋G⎋G ⎋GG ⌥G⌥G ⌥GG goto-line  # not zero-based
@@ -3978,6 +3985,8 @@ class LineTerminal:
         """Jump to Line by number, but without changing the Column of the Cursor"""
 
         self.kdo_row_n()  # todo: more Lines than Rows
+
+        # common to Vim ⇧G and Emacs ⎋R and Emacs ⎋G⎋G ⎋GG ⌥G⌥G ⌥GG
 
     def kdo_line_plus_n(self) -> None:
         """Jump ahead by one or more Lines"""
@@ -4032,15 +4041,12 @@ class LineTerminal:
     def kdo_row_middle(self) -> None:
         """Jump to Middle of Screen"""
 
-        st = self.st
+        kint_else = self.kint_peek_else(default=None)
+        assert kint_else is None, (kint_else,)
 
-        self.kint_pull(default=0)  # discarding .pull_int here
-
-        middle_row_y = st.y_rows // 2
-        row_y = middle_row_y
-
-        self.kint_push(row_y)
-        self.kdo_dent_line_n()
+        middle_row_y = self.st.y_rows // 2
+        self.st.row_y_write(row_y=middle_row_y)
+        self.st.column_x_write_dent()  # for Vim ⇧M
 
         # Vim ⇧M
 
@@ -4050,6 +4056,10 @@ class LineTerminal:
         st = self.st
 
         kint = self.kint_pull(default=st.y_rows)  # Emacs ⎋G⎋G defaults to interact
+        if kint == 0:
+            self.st.row_y_write(st.y_rows // 2)
+        else:
+            self.st.row_y_write(kint)
 
         middle_row_y = st.y_rows // 2
 
@@ -4060,60 +4070,55 @@ class LineTerminal:
         else:
             alt_kint = kint  # Emacs ⎋R counts up from 0, doesn't offer a Middle choice
 
-        next_row_y = min(max(1, alt_kint), st.y_rows)
+        y = min(max(1, alt_kint), st.y_rows)
 
-        # Jump to Row
+        self.st.row_y_write(y)
 
-        self.write_form_kint_if("\x1B" "[" "{}d", kint=next_row_y)
-
-        # Disassemble these StrTerminal Writes
-
-        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+        # common to .kdo_line_n and Emacs ⎋R and Vim ⇧H ⇧M ⇧L  # FIXME
 
     def kdo_row_n_down(self) -> None:
         """Jump near Top of Screen, but then down ahead by zero or more Lines"""
 
         kint = self.kint_pull_positive()
-
-        self.write_form_kint_if("\x1B" "[" "{}d", kint=1)
-        if kint > 1:
-            kint_minus = kint - 1
-            self.write_form_kint_if("\x1B" "[" "{}B", kint=kint_minus)
-
-        # Disassemble these StrTerminal Writes
-
-        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
-        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+        self.st.row_y_write(row_y=kint)
+        self.st.column_x_write_dent()  # for Vim ⇧H
 
         # Vim ⇧H
 
     def kdo_row_n_else_middle_top_bottom(self) -> None:
-        """Jump to Bottom from Top, else to Top from Middle, else jump to Middle"""
+        """Jump to Middle, except Top from Middle, and Bottom from Top"""
 
         st = self.st
         row_y = st.row_y
-
-        # Find Bottom from Top, else Top from Middle, else Middle  # same as Emacs ⎋R
-
         middle_row_y = st.y_rows // 2
 
-        if row_y == 1:
-            next_row_y = st.y_rows
-        elif row_y == middle_row_y:
-            next_row_y = 1
-        else:
-            next_row_y = middle_row_y  # could encode as the 0 Row of Emacs ⎋G⎋G
-
-        # Jump there, unless told where to jump
+        # Jump to Row from Top or Bottom of Screen, if Arg given
 
         kint_else = self.kint_peek_else(default=None)
-        if kint_else is None:
-            self.kint_push_positive(next_row_y)
-        elif kint_else >= 0:
-            kint = self.kint_pull(default=0)
-            self.kint_push_positive(1 + kint)  # Pedantic Zero-Based Emacs ⎋R
+        if kint_else is not None:
+            kint = kint_else
 
-        self.kdo_home_line_n()
+            if kint < 0:
+                self.kdo_row_n()
+            else:
+                kint = self.kint_pull(default=0)
+                self.kint_push_positive(1 + kint)  # pedantic Zero-Based Emacs ⎋R
+                self.kdo_row_n()
+
+            self.st.column_x_write_1()
+            return
+
+        # Jump to Middle, except Top from Middle, and Bottom from Top
+
+        if row_y == 1:
+            y = -1
+        elif row_y == middle_row_y:
+            y = 1
+        else:
+            y = middle_row_y  # could encode as the 0 Row of Emacs ⎋G⎋G
+
+        st.row_y_write(y)
+        self.st.column_x_write_1()
 
         # Emacs ⎋R ⌥R move-to-window-line-top-bottom
 
@@ -4121,18 +4126,8 @@ class LineTerminal:
         """Jump near Bottom of Screen, but then up behind by zero or more Lines"""
 
         kint = self.kint_pull_positive()
-
-        assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
-
-        self.write_form_kint_if("\x1B" "[" "{}d", kint=32100)  # todo: more Rows
-        if kint > 1:
-            kint_minus = kint - 1
-            self.write_form_kint_if("\x1B" "[" "{}A", kint=kint_minus)
-
-        # Disassemble these StrTerminal Writes
-
-        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
-        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+        self.st.row_y_write(row_y=-kint)
+        self.st.column_x_write_dent()  # for Vim ⇧L
 
         # Vim ⇧L
 
@@ -4160,8 +4155,8 @@ class LineTerminal:
         """Step ahead by one or more Bigger Words, but land on end of Word"""
 
         kint = self.kint_pull_positive()
-        self.kint_push_positive(6 * kint)
 
+        self.kint_push_positive(6 * kint)
         self.kdo_char_plus_n()
 
         # Vim ⇧E
@@ -4170,8 +4165,8 @@ class LineTerminal:
         """Step back by one or more Little Words"""
 
         kint = self.kint_pull_positive()
-        self.kint_push_positive(4 * kint)
 
+        self.kint_push_positive(4 * kint)
         self.kdo_char_minus_n()
 
         # Emacs ⎋B ⌥B backward-word, outside of superword-mode
@@ -4181,8 +4176,8 @@ class LineTerminal:
         """Step ahead by one or more Little Words"""
 
         kint = self.kint_pull_positive()
-        self.kint_push_positive(4 * kint)
 
+        self.kint_push_positive(4 * kint)
         self.kdo_char_plus_n()
 
         # Emacs ⎋F ⌥F forward-word, outside of superword-mode
@@ -4192,8 +4187,8 @@ class LineTerminal:
         """Step ahead by one or more Little Words, but land on end of Word"""
 
         kint = self.kint_pull_positive()
-        self.kint_push_positive(3 * kint)
 
+        self.kint_push_positive(3 * kint)
         self.kdo_char_plus_n()
 
         # Vim E
@@ -4358,6 +4353,7 @@ class LineTerminal:
         if head:
             self.kint_push_positive(head)
             self.kdo_column_minus_n()  # Vim wraps I Delete left  # Emacs too
+
             self.write_form_kint_if("\x1B" "[" "{}P", kint=head)
 
         if not tail:
@@ -4369,6 +4365,7 @@ class LineTerminal:
             if mid:
                 self.kint_push_positive(mid)
                 self.kdo_line_minus_n()
+
                 self.write_form_kint_if("\x1B" "[" "{}M", kint=mid)
 
         else:
@@ -4378,6 +4375,7 @@ class LineTerminal:
             if mid:
                 self.kint_push_positive(mid)
                 self.kdo_line_minus_n()
+
                 self.write_form_kint_if("\x1B" "[" "{}M", kint=mid)
 
             self.kdo_line_minus_n()
@@ -4386,6 +4384,7 @@ class LineTerminal:
                 tail_minus = tail - 1
                 self.kint_push_positive(tail_minus)
                 self.kdo_column_minus_n()
+
                 self.write_form_kint_if("\x1B" "[" "{}P", kint=tail_minus)
 
         # Disassemble these StrTerminal Writes
@@ -5031,6 +5030,14 @@ for _K2 in KDO_ONLY_POSITIVE_FUNCS:
     assert _K2 not in KDO_INVERSE_FUNC_BY.keys(), (_K2,)
 
 
+# Run these K Do Func's with No Arg, else reject Arg
+
+KDO_ONLY_WITHOUT_ARG_FUNCS = [
+    LT.kdo_column_dent,  # Vim ^
+    LT.kdo_row_middle,  # Vim ⇧M
+]
+
+
 #
 # Demos up now
 #
@@ -5044,13 +5051,13 @@ for _K2 in KDO_ONLY_POSITIVE_FUNCS:
 #   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
 #   Vim  A B C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L E H I J K L O S W X | Delete
 #
-#   Pq ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
-#   Pq ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
-#   Pq I⌃D IReturn IDelete I⌃H
+#   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
+#   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
+#   Pq  I⌃D IReturn IDelete I⌃H
 #
-#   Option Mouse click moves Cursor via ← ↑ → ↓
+#   Option Mouse Click moves Cursor via ← ↑ → ↓
 #
-#   Log Files at:  tail -F .pqinfo/*.log
+#   Multiple Parallel Log Files in Sh at:  tail -F .pqinfo/*.log
 #
 
 #
@@ -5085,7 +5092,7 @@ for _K2 in KDO_ONLY_POSITIVE_FUNCS:
 #   Track the Cursor
 #       Delete to Leftmost in Emacs ⌃K etc
 #       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
-#       Emacs ⌃W even without ⌃Y
+#       Emacs ⌃W even without ⌃Y Paste Back and without the ⌃W Highlight
 #
 #   Bounce Cursor to a placed Status Row on Screen
 #       Trace the unicode.name while Replace/ Insert
