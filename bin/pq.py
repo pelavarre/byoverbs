@@ -2770,7 +2770,8 @@ class LineTerminal:
                 self.verb_eval(vmode)  # for .texts_wrangle untextuals
                 continue
 
-            # Take the printable K Chars as Text Input
+            # Take the printable K Chars as Text Input,
+            # sometimes amplified with a KInt from ⌃U -? [0-9]+ ⌃U
 
             assert textual, (textual,)
 
@@ -2782,38 +2783,33 @@ class LineTerminal:
     def kchars_are_textual(self, kchars, kcap_str, kstr_starts) -> bool:
         """Say to take the K Chars as Text, else not"""
 
-        kstarts_sorted_set = sorted(set(kstr_starts))
-        kstarts_closed = kstr_starts[1:][-1:] == ["⌃U"]
+        # Take Unprintable K Chars as a Verb
 
-        # Take the Unprintable K Chars as Verbs, not as Text
-
-        textual = kchars.isprintable()
-        if kstr_starts and not kstarts_closed:
-            textual = False
-
-        # Take Key Cap Sequences opened by K Starts as Verbs, not as Text
-        # Take the K Starts themselves as Verbs, not as Text, if started already
-
-        if kcap_str == "⌃U":
-            assert not textual, (textual, kchars)
-
-        if kcap_str == "-":
-            if kstarts_sorted_set in (["-"], ["-", "⌃U"], ["⌃U"]):  # not []
-                assert not textual, (textual, kchars)
-
-        if kcap_str in list("0123456789"):
-            if kstr_starts and not kstarts_closed:
-                assert not textual, (textual, kchars)
-
-        if not textual:
+        if not kchars.isprintable():
             return False
 
-        # Take the K Caps that call for Quoting Input as Verbs, not as Text
+        # Take a next K Start as a Verb continuing already open K Starts
+
+        kstarts_closed = kstr_starts[1:][-1:] == ["⌃U"]
+        if kstr_starts and not kstarts_closed:
+            if kcap_str in list("-0123456789"):
+                return False
+
+        # Take a not-so-textual K Start as a Verb opening or continuing K Starts
+
+        if len(kcap_str) == 2:  # todo: custom overrides of 'str.isprintable'
+            if kcap_str.startswith("⎋"):
+                if kcap_str[-1] in list("-0123456789"):
+                    return False
+
+                    # but don't do this for kcap_str.startswith("⌥")
+
+        # Take the K Cap Seqs that call for Quoting Input as Verbs
 
         if kcap_str in ["⌥[", "⎋["]:
             return False
 
-        # Else take the K Chars as Text (as the K Chars themselves, not as the K Caps)
+        # Else take the K Cap Seq as carrying K Chars as Text
 
         return True
 
@@ -2883,6 +2879,7 @@ class LineTerminal:
         """Read 1 Short Text, or Whole Control, Keyboard Chord Sequence"""
 
         kstr_starts = self.kstr_starts
+        kstr_stops = self.kstr_stops
 
         # Read the Head of the Sequence
 
@@ -2904,7 +2901,10 @@ class LineTerminal:
             kchars = kbytes.decode()  # may raise UnicodeDecodeError
             kcap_str = self.kcap_str
 
-        print(f"{kcap_str=} {kbytes=} {vmode=}", file=self.ltlogger)
+        print(
+            f"{kcap_str=} {kbytes=} {vmode=} {kstr_starts=} {kstr_stops=}",
+            file=self.ltlogger,
+        )
 
         return (kbytes, kchars, kcap_str)
 
@@ -2998,9 +2998,7 @@ class LineTerminal:
 
         kdo_call_kcap_strs = KDO_CALL_KCAP_STRS
 
-        assert (
-            KCAP_SEP == " "
-        )  # solves '⇧Tab' vs '⇧T a b'  # solves '⎋⇧FnX' vs '⎋⇧Fn X'
+        assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b' and '⎋⇧FnX' vs '⎋⇧Fn X'
         ksep = " "
 
         #
@@ -3017,7 +3015,7 @@ class LineTerminal:
         return finds
 
     def verb_eval(self, vmode) -> None:
-        """Take 1 Keyboard Chord Sequence as a Command to execute"""
+        """Take 1 Keyboard Chord Sequence as a Verb to eval"""
 
         kcap_str = self.kcap_str
         kstr_starts = self.kstr_starts
@@ -3075,10 +3073,13 @@ class LineTerminal:
             return (func, args, kwargs)
 
         if len(call) == 2:
-            return (func, call[-1], kwargs)
+            args = call[-1]
+            return (func, args, kwargs)
 
         assert len(call) == 3, (call,)
-        return tuple(call)
+
+        (func, args, kwargs) = call
+        return (func, args, kwargs)
 
     def kstarts_kstops_choose_after(self, kstr_starts_before, kcap_str) -> None:
         """Forget the K Start's and/or add one K Stop's, like when we should"""
@@ -3252,7 +3253,7 @@ class LineTerminal:
         # Pq for any undefined Keyboard Chord Sequence, printed without an alarming Beep
 
     def kdo_quote_kchars(self) -> None:
-        """Block till the next K Chord, but then take it as Text, not as Command"""
+        """Block till the next K Chord, but then take it as Text, not as Verb"""
 
         st = self.st
 
@@ -3279,9 +3280,6 @@ class LineTerminal:
             kcap_str = kcap_quote_by_str[kchord_str]
 
         ktext = kint * kcap_str
-        if False:  # jitter Sat 17/Aug
-            kchars = kbytes.decode()  # may raise UnicodeEncodeError
-            ktext = kint * kchars
 
         st.stwrite(ktext)  # for .kdo_quote_kchars
 
@@ -3411,24 +3409,24 @@ class LineTerminal:
         # Vim Digit 0 after 1 2 3 4 5 6 7 8 9
         # Vim 0
 
-    def kdo_hold_start_kstr(self, kcap_str) -> None:
+    def kdo_hold_start_kstr(self, argch) -> None:
         """Hold Key-Cap Str's till taken as Arg"""
+
+        assert argch in (["⌃U"] + list("-0123456789")), (argch,)
 
         kstr_starts = self.kstr_starts  # no .pull_int here
 
         kstr_starts_before = list(kstr_starts)
-        self.try_kdo_hold_start_kstr(kcap_str=kcap_str)
+        self.try_kdo_hold_start_kstr(argch=argch)
 
         assert kstr_starts != kstr_starts_before, (kstr_starts, kstr_starts_before)
 
-    def try_kdo_hold_start_kstr(self, kcap_str) -> None:
+    def try_kdo_hold_start_kstr(self, argch) -> None:
         """Hold Key-Cap Str's till taken as Arg"""
 
-        kstr_starts = self.kstr_starts  # no .pull_int here
-        kcap_str = self.kcap_str
+        assert argch in (["⌃U"] + list("-0123456789")), (argch,)
 
-        kcap_split = kcap_str.split()[-1]  # such as '3' from '⌃Q 3'
-        assert kcap_split in (["⌃U"] + list("-0123456789")), (kcap_split,)
+        kstr_starts = self.kstr_starts  # no .pull_int here
 
         # ⌃U+ vs [-]⌃U* vs [-][-]⌃U* vs [0123456789]+⌃U? vs [-][0123456789]+⌃U?
 
@@ -3442,7 +3440,7 @@ class LineTerminal:
 
         kstarts_closed = kstr_starts[1:][-1:] == ["⌃U"]
 
-        if kcap_split == "⌃U":
+        if argch == "⌃U":
             if kdigits and kstarts_closed:
                 kstr_starts.clear()  # for .hold_start_kstr ⌃U
             kstr_starts.append("⌃U")
@@ -3450,7 +3448,7 @@ class LineTerminal:
 
         # Take an odd or even count of Dash, until the first Digit
 
-        if kcap_split == "-":
+        if argch == "-":
             if not kdigits:
                 if kstr_starts != ["-"]:
                     kstr_starts.clear()  # for .hold_start_kstr -
@@ -3461,16 +3459,16 @@ class LineTerminal:
 
         # Hold the first Digit, or more Digits, after one Dash or none
 
-        if kcap_split in list("0123456789"):
+        if argch in list("0123456789"):
             if not kdigits:
                 negated = kstr_starts == ["-"]
                 kstr_starts.clear()  # for .hold_start_kstr 0123456789
                 if negated:
                     kstr_starts.append("-")
-                kstr_starts.append(kcap_split)
+                kstr_starts.append(argch)
                 return
             elif not kstarts_closed:
-                kstr_starts.append(kcap_split)
+                kstr_starts.append(argch)
                 return
 
             # else fall-thru
@@ -3479,7 +3477,7 @@ class LineTerminal:
 
         self.kdo_kcap_write_n()  # for .hold_start_kstr of Key Cap -0123456789
 
-        # Emacs '-', and Emacs 0 1 1 2 3 4 5 6 7 8 9, after Emacs ⌃U
+        # Emacs '-', and Emacs 0 1 2 3 4 5 6 7 8 9, after Emacs ⌃U
         # Pq Em/Vim Csi Sequences:  ⎋[m, ⎋[1m, ⎋[31m, ...
         # Vim 1 2 3 4 5 6 7 8 9, and Vim 0 thereafter
 
@@ -4810,6 +4808,17 @@ INSERT_PQ_KDO_CALL_BY_KCAP_STR = {
 
 EM_KDO_CALL_BY_KCAP_STR = {
     #
+    "⎋-": (LT.kdo_hold_start_kstr, ("-",)),
+    "⎋0": (LT.kdo_hold_start_kstr, ("0",)),
+    "⎋1": (LT.kdo_hold_start_kstr, ("1",)),
+    "⎋2": (LT.kdo_hold_start_kstr, ("2",)),
+    "⎋3": (LT.kdo_hold_start_kstr, ("3",)),
+    "⎋4": (LT.kdo_hold_start_kstr, ("4",)),
+    "⎋5": (LT.kdo_hold_start_kstr, ("5",)),
+    "⎋6": (LT.kdo_hold_start_kstr, ("6",)),
+    "⎋7": (LT.kdo_hold_start_kstr, ("7",)),
+    "⎋8": (LT.kdo_hold_start_kstr, ("8",)),
+    "⎋9": (LT.kdo_hold_start_kstr, ("9",)),
     "⎋<": (LT.kdo_line_first_tenths_n,),
     "⎋>": (LT.kdo_line_last_tenths_n,),
     "⎋G G": (LT.kdo_home_line_n,),
@@ -4826,13 +4835,24 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⌃O": (LT.kdo_line_ins_ahead_n,),  # b'\x0B'
     "⌃P": (LT.kdo_line_minus_n,),  # b'\x10'
     "⌃Q": (LT.kdo_quote_kchars,),  # b'\x11'
-    "⌃U": (LT.kdo_hold_start_kstr, tuple(["⌃U"])),  # b'\x15'
+    "⌃U": (LT.kdo_hold_start_kstr, ("⌃U",)),  # b'\x15'
     # "⌃X 8 Return": (LT.unicodedata_lookup,),  # Emacs insert-char
     "→": (LT.kdo_char_plus_n,),  # b'\x1B[C'  # Emacs wraps → like ⌃F
     "←": (LT.kdo_char_minus_n,),  # b'\x1B[D'  # Emacs wraps ← like ⌃B
     #
     "⌥←": (LT.kdo_bigword_minus_n,),  # encoded as ⎋B  # can be from ⎋←
     "⌥→": (LT.kdo_bigword_plus_n,),  # encoded as ⎋F  # can be from ⎋→
+    # "⌥-": (LT.kdo_hold_start_kstr, ("-",)),  # nope, because – En Dash
+    # "⌥0": (LT.kdo_hold_start_kstr, ("0",)),  # nope, because ¡ Inverted Exclamation M~
+    # "⌥1": (LT.kdo_hold_start_kstr, ("1",)),  # nope, because ™ Trade Mark Sign
+    # "⌥2": (LT.kdo_hold_start_kstr, ("2",)),  # nope, because £ Pound Sign
+    # "⌥3": (LT.kdo_hold_start_kstr, ("3",)),  # nope, because ¢ Cent Sign
+    # "⌥4": (LT.kdo_hold_start_kstr, ("4",)),  # nope, because ∞ Infinity
+    # "⌥5": (LT.kdo_hold_start_kstr, ("5",)),  # nope, because § Section Sign
+    # "⌥6": (LT.kdo_hold_start_kstr, ("6",)),  # nope, because ¶ Pilcrow Sign
+    # "⌥7": (LT.kdo_hold_start_kstr, ("7",)),  # nope, because • Bullet
+    # "⌥8": (LT.kdo_hold_start_kstr, ("8",)),  # nope, because ª Feminine Ordinal I~
+    # "⌥9": (LT.kdo_hold_start_kstr, ("9",)),  # nope, because º Masculine Ordinal I~
     "⌥<": (LT.kdo_line_first_tenths_n,),
     "⌥>": (LT.kdo_line_last_tenths_n,),
     "⌥G G": (LT.kdo_home_line_n,),
@@ -5074,19 +5094,22 @@ VI_KDO_INVERSE_FUNC_DEFAULT_BY_FUNC = {
 # Todo's that watch the Screen more closely
 #
 #   Track the Cursor
+#       Delete to Leftmost in Emacs ⌃K etc
 #       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
-#       Delete to Leftmost
+#       Emacs ⌃W even without ⌃Y
 #
-#   Bounce Cursor to Tracer on Screen
+#   Bounce Cursor to a placed Status Row on Screen
 #       Trace the unicode.name while Replace/ Insert
 #       Delete the Message we last wrote, write the new, log Messages & lost Messages
 #       Trace Y and X a la Vim :set ruler, cursorline, etc from my ~/.vimrc
 #
 #   Shadow the Screen
-#       Undo/Redo piercing the Shadow
-#       Emacs ⎋Z, Vim F T ⇧F ⇧T
 #       Vim jump to Dent, Emacs ⎋M jump to Dent
-#       Emacs ⌃T ⎋T and Emacs ⎋C ⎋L ⎋U
+#       Emacs ⎋Z, Vim F T ⇧F ⇧T
+#       Emacs ⎋C ⎋L ⎋U
+#       Undo/Redo piercing the Shadow
+#       Highlight for Search Found, for Selection, for Whitespace Codes in Selection
+#       Emacs ⌃T ⎋T
 #
 #   Files smaller than the Screen, with ⎋[m marks in them
 #
