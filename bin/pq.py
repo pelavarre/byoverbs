@@ -1886,7 +1886,7 @@ class BytesTerminal:
         # Sketch what's going on
 
         self.btprint(
-            "Press a Keyboard Chord to see it, thrice and more to write it".encode()
+            "Press a Key Chord to see it, thrice and more to write it".encode()
         )
         self.btprint(
             "Press some of ⎋ Fn ⌃ ⌥ ⇧ ⌘ and ← ↑ → ↓ ⏎ ⇥ ⇤ and so on and on".encode()
@@ -1990,7 +1990,7 @@ class BytesTerminal:
     #
 
     def read_kchord_bytes_if(self) -> bytes:
-        """Read the Bytes of 1 Incomplete/ Complete Keyboard Chord"""
+        """Read the Bytes of 1 Incomplete/ Complete Key Chord"""
 
         assert ESC == "\x1B"
         assert CSI == "\x1B" "["
@@ -2382,7 +2382,7 @@ class StrTerminal:
 
         # Sketch what's going on
 
-        self.stprint("Press a Keyboard Chord to see it, thrice and more to write it")
+        self.stprint("Press a Key Chord to see it, thrice and more to write it")
         self.stprint("Press some of ⎋ Fn ⌃ ⌥ ⇧ ⌘ and ← ↑ → ↓ ⏎ ⇥ ⇤ and so on and on")
 
         self.stprint("Press ⌃M ⌃J ⌃M ⌃J ⌃M to quit")
@@ -2520,7 +2520,7 @@ class StrTerminal:
         kpushes.append(kpush)
 
     def pull_one_kchord_bytes_str(self) -> tuple[bytes, str]:
-        """Revisit the input that was read ahead, else read the next Keyboard Chord"""
+        """Revisit the input that was read ahead, else read the next Key Chord"""
 
         bt = self.bt
         fd = bt.fd
@@ -2560,7 +2560,7 @@ class StrTerminal:
             self.y_rows = y_rows
             self.x_columns = x_columns
 
-        # Else read the next Keyboard Chord
+        # Else read the next Key Chord
 
         assert kpush[0], (kpush,)  # 1 or more Bytes always
         assert kpush[-1], (kpush,)  # 1 or more Chars always
@@ -2571,18 +2571,18 @@ class StrTerminal:
         return kpush
 
     def read_one_kchord_bytes_str(self) -> tuple[bytes, str]:
-        """Read 1 Keyboard Chord, as Bytes and Str"""
+        """Read 1 Key Chord, as Bytes and Str"""
 
         bt = self.bt
 
         kchord_str_by_kchars = KCHORD_STR_BY_KCHARS  # '\e\e[A' for ⎋↑
 
-        # Read the Bytes of 1 Keyboard Chord
+        # Read the Bytes of 1 Key Chord
 
         kchord_bytes = bt.read_kchord_bytes_if()  # may contain b' '
         kchars = kchord_bytes.decode()  # may raise UnicodeDecodeError
 
-        # Choose 1 Key Cap to speak of the Bytes of 1 Keyboard Chord
+        # Choose 1 Key Cap to speak of the Bytes of 1 Key Chord
 
         if kchars in kchord_str_by_kchars.keys():
             kchord_str = kchord_str_by_kchars[kchars]
@@ -2683,8 +2683,8 @@ class LineTerminal:
 
     olines: list[str]  # the Lines to sketch
 
-    kbytes: bytes  # the Bytes of the last Keyboard Chord
-    kcap_str: str  # the Str of the KeyCap Words of the last Keyboard Chord
+    kbytes: bytes  # the Bytes of the last Key Chord
+    kcap_str: str  # the Str of the KeyCap Words of the last Key Chord
 
     kstr_starts: list[str]  # []  # ['⌃U']  # ['⌃U', '-']  # ['⌃U', '⌃U']  # ['1', '2']
     kstr_stops: list[str]  # []  # ['⎋'] for any of ⌃C ⌃G ⎋ ⌃\
@@ -2837,7 +2837,7 @@ class LineTerminal:
 
             self.screen_print()
 
-            # Read 1 Short Text, or Whole Control, Keyboard Chord Sequence,
+            # Read 1 Short Text, or Whole Control, Key Chord Sequence,
             # or raise UnicodeDecodeError
 
             (kbytes, kchars, kcap_str) = self.text_else_verb_read(vmode)
@@ -2953,7 +2953,7 @@ class LineTerminal:
         self.vmode_stwrite(vmode)
 
     def screen_print(self) -> None:
-        """Speak after taking Keyboard Chord Sequences as Commands or Text"""
+        """Speak after taking Key Chord Sequences as Commands or Text"""
 
         pass  # todo: do more inside 'def screen_print'
 
@@ -2969,7 +2969,7 @@ class LineTerminal:
             self.verb_eval(vmode="")  # for .verbs_wrangle
 
     def text_else_verb_read(self, vmode) -> tuple[bytes, str, str]:
-        """Read 1 Short Text, or Whole Control, Keyboard Chord Sequence"""
+        """Read 1 Short Text, or Whole Control, Key Chord Sequence"""
 
         kstr_starts = self.kstr_starts
         kstr_stops = self.kstr_stops
@@ -3004,11 +3004,11 @@ class LineTerminal:
         # may raise UnicodeDecodeError
 
     def verb_read(self, vmode) -> None:
-        """Read 1 Keyboard Chord Sequence, as Bytes and Str"""
+        """Read 1 Key Chord Sequence, as Bytes and Str"""
 
         st = self.st
 
-        # Read the first Keyboard Chord of the Sequence
+        # Read the first Key Chord of the Sequence
 
         self.ltlogger.flush()
         (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
@@ -3108,7 +3108,7 @@ class LineTerminal:
         return finds
 
     def verb_eval(self, vmode) -> None:
-        """Take 1 Keyboard Chord Sequence as a Verb to eval"""
+        """Take 1 Key Chord Sequence as a Verb to eval"""
 
         kcap_str = self.kcap_str
         kstr_starts = self.kstr_starts
@@ -3117,7 +3117,7 @@ class LineTerminal:
         kdo_call_by_kcap_str = KDO_CALL_BY_KCAP_STR
         insert_pq_kdo_call_by_kcap_str = INSERT_PQ_KDO_CALL_BY_KCAP_STR
 
-        # Choose 1 Python Def to call, on behalf of 1 Keyboard Chord Sequence
+        # Choose 1 Python Def to call, on behalf of 1 Key Chord Sequence
 
         kdo_call: PY_CALL
 
@@ -3285,7 +3285,7 @@ class LineTerminal:
         # Vim ⌃C ⌃L ⇧Z ⇧Q quit-no-save  # Vim ⇧Z⇧Q
 
     def kdo_help_quit(self) -> None:
-        """Take a Keyboard Chord Sequence to mean say how to quit Vim"""
+        """Take a Key Chord Sequence to mean say how to quit Vim"""
 
         # no .kint_pull here
 
@@ -3314,7 +3314,7 @@ class LineTerminal:
     #
 
     def kdo_text_write_n(self) -> str:
-        """Take the Chars of 1 Keyboard Chord Sequence as Text to write to Screen"""
+        """Take the Chars of 1 Key Chord Sequence as Text to write to Screen"""
 
         st = self.st
         kbytes = self.kbytes
@@ -3334,7 +3334,7 @@ class LineTerminal:
         # Spacebar, printable US-Ascii, and printable Unicode
 
     def kdo_kcap_alarm_write_n(self) -> None:
-        """Take the Str of 1 Keyboard Chord Sequence as Chars to write to Screen"""
+        """Take the Str of 1 Key Chord Sequence as Chars to write to Screen"""
 
         st = self.st
         kcap_str = self.kcap_str
@@ -3355,7 +3355,7 @@ class LineTerminal:
         # Pq ⌃Q⌃V
         # Pq ⌃V⌃Q
 
-        # Pq for any undefined Keyboard Chord Sequence, printed without an alarming Beep
+        # Pq for any undefined Key Chord Sequence, printed without an alarming Beep
 
     def kdo_quote_kchars(self) -> None:
         """Block till the next K Chord, but then take it as Text, not as Verb"""
@@ -3455,7 +3455,7 @@ class LineTerminal:
         self.st.stwrite_form_int_if(form, kint=kint, default=default)
 
     #
-    # For context, remember some of the Keyboard Chord Sequences awhile
+    # For context, remember some of the Key Chord Sequences awhile
     #
 
     def kdo_kminus(self) -> None:
@@ -3605,11 +3605,11 @@ class LineTerminal:
         assert False, (self.kdo_assert_false,)
 
     #
-    # Boil our memory of Keyboard Chord Sequences down to one Int Value
+    # Take a Signed Int Arg from ⌃U+[-][0123456789]*⌃U* Key Chords
     #
 
     def kint_push_positive(self, kint) -> None:
-        """Set up to call another Keyboard Chord Sequence, but only positively"""
+        """Set up to call another Key Chord Sequence, but only positively"""
 
         assert kint > 0, (kint,)
         self.kint_push(kint)  # for .kint_push_positive
@@ -5119,7 +5119,7 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #   Emacs ⌃R ⌃S Searches
 #
 #   Vim presentations of :set cursorline, etc from my ~/.vimrc
-#   More obscure Keyboard Chord Sequences of Vim & Emacs
+#   More obscure Key Chord Sequences of Vim & Emacs
 #   Emacs ideas from my ~/.emacs, Vim ideas from my ~/.vimrc
 #   Emacs ⌃C A..Z Name Space, Emacs ⎋N ⎋O ⎋P Name Space, Vim \ A..Z Name Space
 #
