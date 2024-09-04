@@ -1238,10 +1238,10 @@ VIM_SCRAPS = """  # todo: migrate/ delete
 
     with open("/dev/tty", "rb") as ttyin:
         fd = ttyin.fileno()
-        size = os.get_terminal_size(fd)
+        (columns, rows) = os.get_terminal_size(fd)
 
-    assert size.columns >= 20  # vs Mac Sh Terminal Columns >= 20
-    assert size.lines >= 5  # vs Mac Sh Terminal Lines >= 5
+    assert columns >= 20  # vs Mac Sh Terminal Columns >= 20
+    assert rows >= 5  # vs Mac Sh Terminal Rows >= 5
 
     # todo: print the input that fits, to screen - even to last column & row
     # todo: shadow the print, then edit it
@@ -1714,6 +1714,11 @@ CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute
 VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
+CUP_1_1 = "\x1B" "[" "H"  # CSI 04/08 Cursor Position  # not much tested by us
+CUP_Y_1 = "\x1B" "[" "{}H"  # CSI 04/08 Cursor Position  # not much tested by us
+CUP_1_X = "\x1B" "[" ";{}H"  # CSI 04/08 Cursor Position  # not much tested by us
+CUP_Y_X = "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
+
 CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation
 CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
 
@@ -1838,19 +1843,6 @@ class BytesTerminal:
         after = self.after
 
         if tcgetattr_else is not None:
-
-            # Revert Screen Settings to Defaults
-            # todo: revert these only when we know we disrupted these
-
-            s0 = "\x1B" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
-            s1 = "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
-            after_bytes = (s0 + s1).encode()
-            self.btwrite(after_bytes)
-
-            assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
-            assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
-
-            # Start line-buffering Input, start replacing \n Output with \r\n, etc
 
             tcgetattr = tcgetattr_else
             self.tcgetattr_else = None
@@ -2321,24 +2313,26 @@ class StrTerminal:
 
     bt: BytesTerminal  # wrapped here
     kpushes: list[tuple[bytes, str]]  # cached here
-
-    row_y: int  # Row of Screen Cursor in last CPR, initially -1
-    column_x: int  # Column of Screen Cursor in last CPR, initially -1
+    vmode: str  # ''  # 'Replace'  # 'Insert'
 
     y_rows: int  # count Screen Rows, initially -1
     x_columns: int  # count of Screen Columns, initially -1
+
+    row_y: int  # Row of Screen Cursor in last CPR, initially -1
+    column_x: int  # Column of Screen Cursor in last CPR, initially -1
 
     def __init__(self) -> None:
         bt = BytesTerminal()
 
         self.bt = bt
         self.kpushes = list()
-
-        self.row_y = -1
-        self.column_x = -1
+        self.vmode = ""
 
         self.y_rows = -1
         self.x_columns = -1
+
+        self.row_y = -1
+        self.column_x = -1
 
     #
     # Enter, exit, breakpoint, & loopback
@@ -2356,6 +2350,17 @@ class StrTerminal:
         r"""Start line-buffering Input, start replacing \n Output with \r\n, etc"""
 
         bt = self.bt
+        tcgetattr_else = self.bt.tcgetattr_else
+
+        # Revert Screen Settings to Defaults
+        # todo: revert these only when we know we disrupted these
+
+        if tcgetattr_else is not None:
+            if self.vmode:
+                self.stwrite_vmode_clear()
+
+        # Start line-buffering Input, start replacing \n Output with \r\n, etc
+
         bt.__exit__(*exc_info)
 
     def stbreakpoint(self) -> None:
@@ -2418,6 +2423,44 @@ class StrTerminal:
         bt.btprint()
 
     #
+    # Step ahead, or step back, across the Chars of Ragged Lines
+    #
+
+    def index_yx_plus(self, distance) -> tuple[int, int]:
+        """Say which Y X is Distance away from present Y X"""
+
+        x_columns = self.x_columns
+        y_rows = self.y_rows
+
+        column_x = self.column_x
+        row_y = self.row_y
+        vmode = self.vmode
+
+        # Find the Terminal Cursor as a Char of Lines
+
+        assert x_columns >= 1, (x_columns,)
+        x_width = x_columns if vmode else (x_columns - 1)
+
+        assert row_y >= 1, (row_y,)
+        yx_index = ((row_y - 1) * x_width) + column_x
+
+        # Step the Cursor ahead or back, across Chars of Ragged Lines
+
+        alt_yx_index = yx_index + distance
+        alt_yx_index = max(alt_yx_index, 1)
+
+        alt_y = 1 + ((alt_yx_index - 1) // x_width)
+        if alt_y < y_rows:
+            alt_x = 1 + ((alt_yx_index - 1) % x_width)
+        else:
+            alt_y = y_rows
+            alt_x = x_width
+
+        # Succeed
+
+        return (alt_y, alt_x)
+
+    #
     # Write Control Sequences through Shadow to Screen
     #
 
@@ -2464,6 +2507,31 @@ class StrTerminal:
 
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
+    def row_y_column_x_write(self, row_y, column_x) -> None:
+        """Jump to Screen Row and Column"""
+
+        assert row_y, (row_y,)
+        assert column_x, (column_x,)
+
+        y = min(row_y, self.y_rows)  # todo: test large neg/pos 'row_y'
+        if row_y < 0:
+            y = self.y_rows + 1 + row_y  # could code as Bottom + Up
+            y = max(y, 1)
+
+        x = min(column_x, self.x_columns)  # todo: test large neg/pos 'x_columns'
+        if column_x < 0:
+            x = self.x_columns + 1 + column_x  # could code as Rightmost + Left
+            x = max(x, 1)
+
+        self.y_row = y
+        self.x_column = x
+
+        form = "\x1B" "[" "{};{}H"
+        schars = form.format(y, x)
+        self.stwrite(schars)
+
+        assert CUP_Y_X == "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position (CUP)
+
     #
     # Write Screen Output Chars as Bytes
     #
@@ -2471,7 +2539,62 @@ class StrTerminal:
     def stbypass(self, schars) -> None:
         """Write Chars to the Screen with Empty End "" and bypassing the Screen Shadow"""
 
-        self.stwrite(schars)
+        vmode = self.vmode
+        assert vmode in ("", "Insert", "Replace"), (vmode,)
+
+        if vmode != "Insert":
+            self.stwrite(schars)
+        else:
+            self.stwrite_vmode_clear()
+            self.stwrite(schars)
+            self.stwrite_vmode_insert()
+
+    def stwrite_vmode_clear(self) -> None:
+        """Shape the Cursor to say no Replace/ Insert in progress"""
+
+        vmode = self.vmode
+        assert vmode in ("", "Insert", "Replace"), (vmode,)
+
+        self.vmode = ""
+
+        if vmode == "Insert":
+            self.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
+        if vmode != "":
+            self.stwrite("\x1B" "[" " q")  # CSI 02/00 07/01  # No-Style Cursor
+
+        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
+        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
+
+    def stwrite_vmode_insert(self) -> None:
+        """Shape the Cursor to say no Replace/ Insert in progress"""
+
+        vmode = self.vmode
+        assert vmode in ("", "Insert", "Replace"), (vmode,)
+
+        self.vmode = "Insert"
+
+        if vmode != "Insert":
+            self.stwrite("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
+            self.stwrite("\x1B" "[" "6 q")  # CSI 02/00 07/01  # 6 Bar Cursor
+
+        assert SM_IRM == "\x1B" "[" "4h"  # CSI 06/08 Set Mode Insert/ Replace
+        assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
+
+    def stwrite_vmode_replace(self) -> None:
+        """Write a CSI Form to the Screen filled out by the Digits of the K Int"""
+
+        vmode = self.vmode
+        assert vmode in ("", "Insert", "Replace"), (vmode,)
+
+        self.vmode = "Replace"
+
+        if vmode == "Insert":
+            self.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
+        if vmode != "Replace":
+            self.stwrite("\x1B" "[" "4 q")  # CSI 02/00 07/01  # 4 Skid Cursor
+
+        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
+        assert DECSCUSR_SKID == "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
 
     def stwrite_form_int_if(self, form, kint, default=1) -> None:
         """Write a CSI Form to the Screen filled out by the Digits of the K Int"""
@@ -2919,28 +3042,16 @@ class LineTerminal:
     def vmode_stwrite(self, vmode) -> None:  # for .vmode_exit or .vmode_enter
         """Redefine StrTerminal Write as Replace or Insert, & choose a Cursor Style"""
 
-        st = self.st
-
         assert vmode in ("", "Insert", "Replace", "Replace1"), (vmode,)
         print(f"{vmode=}", file=self.ltlogger)
 
         if not vmode:
-            st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
-            st.stwrite("\x1B" "[" " q")  # CSI 02/00 07/01  # No-Style Cursor
+            self.st.stwrite_vmode_clear()
         elif vmode in "Insert":
-            st.stwrite("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
-            st.stwrite("\x1B" "[" "6 q")  # CSI 02/00 07/01  # 6 Bar Cursor
+            self.st.stwrite_vmode_insert()
         else:
             assert vmode in ("Replace", "Replace1"), (vmode,)
-            st.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
-            st.stwrite("\x1B" "[" "4 q")  # CSI 02/00 07/01  # 4 Skid Cursor
-
-        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
-        assert SM_IRM == "\x1B" "[" "4h"  # CSI 06/08 Set Mode Insert/ Replace
-
-        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
-        assert DECSCUSR_SKID == "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
-        assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
+            self.st.stwrite_vmode_replace()
 
     def vmode_exit(self) -> None:
         """Undo 'def vmode_enter'"""
@@ -3699,39 +3810,9 @@ class LineTerminal:
     def kdo_char_minus_n(self) -> None:
         """Step back by one or more Chars, into the Lines behind if need be"""
 
-        st = self.st
-
         kint = self.kint_pull_positive()
-
-        behind = (((st.row_y - 1) * st.x_columns) + st.column_x) - 1
-        kint_behind = min(behind, kint)
-
-        head = min(kint_behind, st.column_x - 1)
-        mid = (kint_behind - head) // st.x_columns
-        tail = (kint_behind - head) % st.x_columns
-
-        if not tail:
-            if head:
-                self.kint_push_positive(head)
-                self.kdo_column_minus_n()  # Vim wraps Delete ^H left  # Emacs wraps ⌃B ←
-
-                if self.ktext:
-                    self.ktext += "\b"  # Vim ⇧R Delete
-
-            if mid:
-                self.kint_push_positive(mid)
-                self.kdo_line_minus_n()
-
-        else:
-            self.kint_push_positive(st.x_columns)  # rightmost Column before next Row up
-            self.kdo_column_n()
-
-            self.kint_push_positive(mid + 1)
-            self.kdo_line_minus_n()
-
-            if tail > 1:
-                self.kint_push_positive(tail - 1)
-                self.kdo_column_minus_n()
+        (row_y, column_x) = self.st.index_yx_plus(-kint)
+        self.st.row_y_column_x_write(row_y, column_x=column_x)
 
         # Emacs ⌃B backward-char
         # Emacs ← left-char
@@ -3742,34 +3823,9 @@ class LineTerminal:
     def kdo_char_plus_n(self) -> None:
         """Step ahead by one or more Chars, into the Lines ahead if need be"""
 
-        st = self.st
-
         kint = self.kint_pull_positive()
-
-        ahead = ((st.y_rows - st.row_y) * st.x_columns) + (st.x_columns - st.column_x)
-        kint_ahead = min(ahead, kint)
-
-        head = min(kint_ahead, st.x_columns - st.column_x)
-        mid = (kint_ahead - head) // st.x_columns
-        tail = (kint_ahead - head) % st.x_columns
-
-        if not tail:
-            if head:
-                self.kint_push_positive(head)
-                self.kdo_column_plus_n()  # Vim wraps Spacebar right  # Emacs wraps ⌃F →
-            if mid:
-                self.kint_push_positive(mid)
-                self.kdo_line_plus_n()
-
-        else:
-            self.kint_push_positive(mid + 1)  # leftmost Column after next Row down
-            self.kdo_line_plus_n()
-
-            self.st.column_x_write_1()  # for wrap of Emacs ⌃F, Vim Spacebar, etc
-
-            if tail > 1:
-                self.kint_push_positive(tail - 1)
-                self.kdo_column_plus_n()
+        (row_y, column_x) = self.st.index_yx_plus(kint)
+        self.st.row_y_column_x_write(row_y, column_x=column_x)
 
         # Emacs ⌃F forward-char
         # Emacs → right-char
@@ -3927,15 +3983,19 @@ class LineTerminal:
     def kdo_end_plus_n1(self) -> None:
         """Jump ahead by zero or more Lines, and land on End of Line"""
 
+        vmodes = self.vmodes
+        vmode = vmodes[-1]
+
         assert X_32100 == 32100  # vs CUF_X "\x1B" "[" "{}C"
 
-        kint = self.kint_pull_positive()  # todo: Emacs ⌃E inverse of ⌃A, or no?
+        kint = self.kint_pull_positive()  # todo: Emacs ⌃E exact inverse of ⌃A?
         if kint > 1:
             kint_minus = kint - 1
             self.write_form_kint_if("\x1B" "[" "{}B", kint=kint_minus)
 
         self.write_form_kint_if("\x1B" "[" "{}C", kint=32100)  # todo: more Columns
-        self.write_form_kint_if("\x1B" "[" "{}D", kint=1)  # FIXME: not Replace/ Insert
+        if not vmode:
+            self.write_form_kint_if("\x1B" "[" "{}D", kint=1)
 
         # Disassemble these StrTerminal Writes
 
@@ -3958,7 +4018,7 @@ class LineTerminal:
     def kdo_home_plus_n1(self) -> None:
         """Jump ahead by zero or more Lines, and land at Left of Line"""
 
-        kint = self.kint_pull_positive()  # todo: Emacs ⌃A inverse of ⌃E, or no?
+        kint = self.kint_pull_positive()  # todo: Emacs ⌃A exact inverse of ⌃E?
         if kint > 1:
             kint_minus = kint - 1
             self.write_form_kint_if("\x1B" "[" "{}B", kint=kint_minus)
@@ -3986,7 +4046,7 @@ class LineTerminal:
 
         self.kdo_row_n()  # todo: more Lines than Rows
 
-        # common to Vim ⇧G and Emacs ⎋R and Emacs ⎋G⎋G ⎋GG ⌥G⌥G ⌥GG
+        # common to Vim ⇧G and Emacs ⎋G⎋G ⎋GG ⌥G⌥G ⌥GG
 
     def kdo_line_plus_n(self) -> None:
         """Jump ahead by one or more Lines"""
@@ -4074,7 +4134,7 @@ class LineTerminal:
 
         self.st.row_y_write(y)
 
-        # common to .kdo_line_n and Emacs ⎋R and Vim ⇧H ⇧M ⇧L  # FIXME
+        # common to Emacs ⎋R and Vim ⇧H ⇧M ⇧L
 
     def kdo_row_n_down(self) -> None:
         """Jump near Top of Screen, but then down ahead by zero or more Lines"""
@@ -5042,11 +5102,11 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 # Demos up now
 #
 #   Emacs  ⎋< ⎋> ⎋G⎋G ⎋GG ⎋GTab ⎋R
-#   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃O ⌃P ⌃Q ⌃U
+#   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃O ⌃P
 #   Emacs  ⎋← ⎋→ ⌥← ⌥→ aka ⎋B ⎋F
 #   Emacs  ⌥< ⌥> ⌥G⌥G ⌥GG ⌥GTab ⌥R
 #
-#   Vim  Return ⌃E ⌃J ⌃V ⌃Y ← ↓ ↑ →
+#   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
 #   Vim  Spacebar $ + - 0 123456789 << >>
 #   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
 #   Vim  A B C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L E H I J K L O S W X | Delete
@@ -5062,6 +5122,8 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 #
 # Todo's that take Keyboard Input
+#
+#   Unbound < > C D with following Key when not << >> C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L
 #
 #   Vim Q Q @ Q etc
 #
@@ -5089,6 +5151,9 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 # Todo's that watch the Screen more closely
 #
+#   <$ <⇧G <⇧L >$ >⇧G >⇧L
+#   <0 >0 C0 D0
+#
 #   Track the Cursor
 #       Delete to Leftmost in Emacs ⌃K etc
 #       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
@@ -5112,6 +5177,18 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 #
 # More Todo's:
+#
+#   Vim . to repeat Emacs ⌃D ⌃K ⌃O or Vim > < C D
+#
+#   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
+#   Vim  Spacebar $ + - 0 123456789 << >>
+#   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
+#   Vim  A B C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L E H I J K L O S W X | Delete
+#
+#   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
+#   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
+#   Pq  I⌃D IReturn IDelete I⌃H
+
 #
 #   Vim ⌃L Emacs ⌃L of Shadow Screen
 #   Emacs ⌃W ⌃Y Copy/Paste Buffer vs Os Copy/Paste Buffer
