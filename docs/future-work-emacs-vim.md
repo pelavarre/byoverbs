@@ -10,6 +10,7 @@ Vim doesn't give you ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃O ⌃P ⌥← ⌥→ 
 
 Emacs inside your Shell Input Rows doesn't give you the ⎋Z "zap-to-char".
 Vim gives it to you as as ⌃O D F.
+Pq gives it to your Emacs brain as ⎋Z and to your Vim Brain as ⌃Q ⌃O D F
 
 Vim often makes you wait when you press Esc to switch into Meta Mode.
 That Vim will let ⌃C cancel the wait,
