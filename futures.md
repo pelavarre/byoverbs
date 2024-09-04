@@ -882,6 +882,14 @@ pq emojis unicodedata
     <string>:94: SyntaxWarning: invalid escape sequence '\ '
     %
 
+vim -u /dev/null ~/.vimrc
+
+    demos zero latency Esc - so what is breaking mine?
+        it's not my own ~/.vimrc, it's the files outside
+
+what's up at macOS with
+
+    sudo su
 
 ## Copied from
 

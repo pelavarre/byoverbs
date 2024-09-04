@@ -5123,6 +5123,8 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 # Todo's that take Keyboard Input
 #
+#   Say "Meta" to mean the not-Insert not-Replace Mode
+#
 #   Unbound < > C D with following Key when not << >> C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L
 #
 #   Vim Q Q @ Q etc

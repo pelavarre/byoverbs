@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-usage: vi.py [--help] [-u VIMRC]
+usage: vim.py [--help] [-u VIMRC]
 
 todo
 
@@ -10,21 +10,21 @@ options:
   -u VIMRC    edit after running a file (default '~/.vimrc')
 
 quirks:
-  classic Vi rudely runs ahead and creates a new Scratchpad, when given no Parms
-  classic Vi rudely declines to quit when asked to ':n' past the last File
+  classic Vim rudely runs ahead and creates a new Scratchpad, when given no Parms
+  classic Vim rudely declines to quit when asked to ':n' past the last File
 
 examples:
 
-  vi.py  # show these examples and exit
-  vi.py --h  # show help lines and exit (more available than -h)
-  vi.py --  # do what's popular now
+  vim.py  # show these examples and exit
+  vim.py --h  # show help lines and exit (more available than -h)
+  vim.py --  # do what's popular now
 
   vim ~/.vimrc  # visit and run
   vim -u /dev/null ~/.vimrc  # visit, don't run
 
-  vi +$ Makefile  # open up at end of file, not start of file
-  vi +':set background=light' Makefile  # choose Light Mode, when they didn't
-  vi +':set background=dark' Makefile  # choose Dark Mode, when they didn't
+  vim +$ Makefile  # open up at end of file, not start of file
+  vim +':set background=light' Makefile  # choose Light Mode, when they didn't
+  vim +':set background=dark' Makefile  # choose Dark Mode, when they didn't
 """
 
 # todo: vim options akin to less -FIRX
@@ -47,7 +47,7 @@ byo.sys_exit()
 
 # solve
 #
-#    % bash -c vi </dev/null
+#    % bash -c vim </dev/null
 #    Vim: Warning: Input is not from a terminal
 #    :q%
 #    %
