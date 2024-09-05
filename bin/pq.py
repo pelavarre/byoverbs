@@ -2052,7 +2052,7 @@ class BytesTerminal:
         # doesn't raise UnicodeDecodeError
 
     def read_kchar_bytes_if(self) -> bytes:
-        """Read the Bytes of 1 Incomplete/ Complete Keyboard Char"""
+        """Read the Bytes of 1 Incomplete/ Complete Char from Keyboard"""
 
         def decodable(kbytes: bytes) -> bool:
             try:
@@ -2313,7 +2313,7 @@ class StrTerminal:
 
     bt: BytesTerminal  # wrapped here
     kpushes: list[tuple[bytes, str]]  # cached here
-    vmode: str  # ''  # 'Replace'  # 'Insert'
+    vmode: str  # 'Meta'  # 'Replace'  # 'Insert'
 
     y_rows: int  # count Screen Rows, initially -1
     x_columns: int  # count of Screen Columns, initially -1
@@ -2326,7 +2326,7 @@ class StrTerminal:
 
         self.bt = bt
         self.kpushes = list()
-        self.vmode = ""
+        self.vmode = "Meta"
 
         self.y_rows = -1
         self.x_columns = -1
@@ -2356,8 +2356,8 @@ class StrTerminal:
         # todo: revert these only when we know we disrupted these
 
         if tcgetattr_else is not None:
-            if self.vmode:
-                self.stwrite_vmode_clear()
+            if self.vmode != "Meta":
+                self.stwrite_vmode_meta()
 
         # Start line-buffering Input, start replacing \n Output with \r\n, etc
 
@@ -2439,7 +2439,7 @@ class StrTerminal:
         # Find the Terminal Cursor as a Char of Lines
 
         assert x_columns >= 1, (x_columns,)
-        x_width = x_columns if vmode else (x_columns - 1)
+        x_width = (x_columns - 1) if (vmode == "Meta") else x_columns
 
         assert row_y >= 1, (row_y,)
         yx_index = ((row_y - 1) * x_width) + column_x
@@ -2540,36 +2540,20 @@ class StrTerminal:
         """Write Chars to the Screen with Empty End "" and bypassing the Screen Shadow"""
 
         vmode = self.vmode
-        assert vmode in ("", "Insert", "Replace"), (vmode,)
+        assert vmode in ("Insert", "Meta", "Replace"), (vmode,)
 
         if vmode != "Insert":
             self.stwrite(schars)
         else:
-            self.stwrite_vmode_clear()
+            self.stwrite_vmode_meta()  # could be:  self.stwrite_vmode_replace()
             self.stwrite(schars)
             self.stwrite_vmode_insert()
-
-    def stwrite_vmode_clear(self) -> None:
-        """Shape the Cursor to say no Replace/ Insert in progress"""
-
-        vmode = self.vmode
-        assert vmode in ("", "Insert", "Replace"), (vmode,)
-
-        self.vmode = ""
-
-        if vmode == "Insert":
-            self.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
-        if vmode != "":
-            self.stwrite("\x1B" "[" " q")  # CSI 02/00 07/01  # No-Style Cursor
-
-        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
-        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
 
     def stwrite_vmode_insert(self) -> None:
         """Shape the Cursor to say no Replace/ Insert in progress"""
 
         vmode = self.vmode
-        assert vmode in ("", "Insert", "Replace"), (vmode,)
+        assert vmode in ("Insert", "Meta", "Replace"), (vmode,)
 
         self.vmode = "Insert"
 
@@ -2580,11 +2564,27 @@ class StrTerminal:
         assert SM_IRM == "\x1B" "[" "4h"  # CSI 06/08 Set Mode Insert/ Replace
         assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
 
+    def stwrite_vmode_meta(self) -> None:
+        """Shape the Cursor to say no Replace/ Insert in progress"""
+
+        vmode = self.vmode
+        assert vmode in ("Meta", "Insert", "Replace"), (vmode,)
+
+        self.vmode = "Meta"
+
+        if vmode == "Insert":
+            self.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
+        if vmode != "Meta":
+            self.stwrite("\x1B" "[" " q")  # CSI 02/00 07/01  # No-Style Cursor
+
+        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
+        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
+
     def stwrite_vmode_replace(self) -> None:
         """Write a CSI Form to the Screen filled out by the Digits of the K Int"""
 
         vmode = self.vmode
-        assert vmode in ("", "Insert", "Replace"), (vmode,)
+        assert vmode in ("Insert", "Meta", "Replace"), (vmode,)
 
         self.vmode = "Replace"
 
@@ -2728,7 +2728,7 @@ class StrTerminal:
         # '⎋A' from ⌥A while macOS Keyboard > Option as Meta Key
 
     def kch_to_kcap(self, ch) -> str:  # noqa C901
-        """Choose a Key Cap to speak of 1 Keyboard Char"""
+        """Choose a Key Cap to speak of 1 Char read from the Keyboard"""
 
         o = ord(ch)
 
@@ -2834,7 +2834,7 @@ class LineTerminal:
         self.ktext = ""  # .__init__
 
         self.kmap = ""
-        self.vmodes = [""]
+        self.vmodes = ["Meta"]
 
         # lots of empty happens only until first Keyboard Input
 
@@ -2918,9 +2918,6 @@ class LineTerminal:
 
         st = self.st
 
-        assert vmode in ("", "Insert", "Replace", "Replace1"), (vmode,)
-        assert vmode, (vmode,)
-
         self.vmode_enter(vmode)
 
         ktext = self.texts_wrangle()
@@ -2944,6 +2941,7 @@ class LineTerminal:
 
         vmode = self.vmodes[-1]
         assert vmode, (vmode,)
+        assert vmode in ("Insert", "Meta", "Replace", "Replace1"), (vmode,)
 
         # Replace till 'Replace1' Mode
 
@@ -3034,7 +3032,7 @@ class LineTerminal:
 
         vmodes = self.vmodes
 
-        assert vmode in ("", "Insert", "Replace", "Replace1"), (vmode,)
+        assert vmode in ("Insert", "Meta", "Replace", "Replace1"), (vmode,)
         vmodes.append(vmode)
 
         self.vmode_stwrite(vmode)
@@ -3042,11 +3040,11 @@ class LineTerminal:
     def vmode_stwrite(self, vmode) -> None:  # for .vmode_exit or .vmode_enter
         """Redefine StrTerminal Write as Replace or Insert, & choose a Cursor Style"""
 
-        assert vmode in ("", "Insert", "Replace", "Replace1"), (vmode,)
+        assert vmode in ("Insert", "Meta", "Replace", "Replace1"), (vmode,)
         print(f"{vmode=}", file=self.ltlogger)
 
-        if not vmode:
-            self.st.stwrite_vmode_clear()
+        if vmode == "Meta":
+            self.st.stwrite_vmode_meta()
         elif vmode in "Insert":
             self.st.stwrite_vmode_insert()
         else:
@@ -3072,12 +3070,12 @@ class LineTerminal:
         """Read & Eval & Print in a loop till SystemExit"""
 
         vmode = self.vmodes[-1]
-        assert not vmode, (vmode,)
+        assert vmode == "Meta", (vmode,)
 
         while True:
             self.screen_print()
-            self.verb_read(vmode="")  # for .verbs_wrangle
-            self.verb_eval(vmode="")  # for .verbs_wrangle
+            self.verb_read(vmode="Meta")  # for .verbs_wrangle
+            self.verb_eval(vmode="Meta")  # for .verbs_wrangle
 
     def text_else_verb_read(self, vmode) -> tuple[bytes, str, str]:
         """Read 1 Short Text, or Whole Control, Key Chord Sequence"""
@@ -3088,7 +3086,7 @@ class LineTerminal:
         # Read the Head of the Sequence
 
         if kstr_starts:
-            self.verb_read(vmode="")  # for .texts_wrangle while .kstr_starts
+            self.verb_read(vmode="Meta")  # for .texts_wrangle while .kstr_starts
         else:
             self.verb_read(vmode=vmode)  # for .texts_wrangle Replace/ Insert
 
@@ -3126,33 +3124,36 @@ class LineTerminal:
 
         # Take just 1 Chord as a complete Sequence, when taking Chords as Chars
 
-        if vmode:
+        if vmode != "Meta":
             self.kbytes = kchord_bytes
             self.kcap_str = kchord_str
             return
 
-        # Read zero or more Keyboard Chords to complete the Sequence of a Verb
+        # Read zero or more Key Chords to complete the Sequence of a Verb
 
         self.verb_tail_read(kbytes=kchord_bytes, kcap_str=kchord_str)
 
         # '⌃L'  # '⇧Z ⇧Z'
 
     def verb_tail_read(self, kbytes, kcap_str) -> None:
-        """Read zero or more Keyboard Chords to complete the Sequence"""
+        """Read zero or more Key Chords to complete the Sequence"""
 
         st = self.st
 
         assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
         ksep = " "
 
-        b = b""
-        s = ""
+        # Start up
+
+        b = b""  # piles up Bytes
+        s = ""  # piles up Chars as a Str
         eq_choice = (b, s)
         choices = list()
 
+        # For each Key Chord Sequence
+
         kb = kbytes
         ks = kcap_str
-
         while True:
             b += kb
             s += (ksep + ks) if s else ks
@@ -3160,13 +3161,13 @@ class LineTerminal:
             choice = (kb, ks)
             choices.append(choice)
 
-            # Remember the last exact Find
+            # Remember the longest Key Sequence matched with a Verb
 
             finds = self.kcap_str_findall(s)
             if s in finds:
                 eq_choice = (b, s)
 
-                # Succeed when one Func found
+                # Quit taking more Key Chords when exactly one Func found
 
                 if len(finds) == 1:
                     assert eq_choice[-1] == s, (eq_choice, s, finds)
@@ -3220,6 +3221,8 @@ class LineTerminal:
 
     def verb_eval(self, vmode) -> None:
         """Take 1 Key Chord Sequence as a Verb to eval"""
+
+        assert vmode in ("Insert", "Meta", "Replace", "Replace1"), (vmode,)
 
         kcap_str = self.kcap_str
         kstr_starts = self.kstr_starts
@@ -3371,7 +3374,7 @@ class LineTerminal:
         st = self.st
         bt = st.bt
 
-        self.vmode_enter(vmode="")
+        self.vmode_enter(vmode="Meta")
         bt.btstop()
         self.vmode_exit()
 
@@ -3986,6 +3989,7 @@ class LineTerminal:
         vmodes = self.vmodes
         vmode = vmodes[-1]
 
+        assert vmode in ("Insert", "Meta", "Replace", "Replace1"), (vmode,)
         assert X_32100 == 32100  # vs CUF_X "\x1B" "[" "{}C"
 
         kint = self.kint_pull_positive()  # todo: Emacs ⌃E exact inverse of ⌃A?
@@ -3994,7 +3998,7 @@ class LineTerminal:
             self.write_form_kint_if("\x1B" "[" "{}B", kint=kint_minus)
 
         self.write_form_kint_if("\x1B" "[" "{}C", kint=32100)  # todo: more Columns
-        if not vmode:
+        if vmode == "Meta":
             self.write_form_kint_if("\x1B" "[" "{}D", kint=1)
 
         # Disassemble these StrTerminal Writes
@@ -5122,9 +5126,7 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 #
 # Todo's that take Keyboard Input
-#
-#   Say "Meta" to mean the not-Insert not-Replace Mode
-#
+    #
 #   Unbound < > C D with following Key when not << >> C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L
 #
 #   Vim Q Q @ Q etc
