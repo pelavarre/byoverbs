@@ -1844,6 +1844,8 @@ class BytesTerminal:
 
         if tcgetattr_else is not None:
 
+            self.btflush()
+
             tcgetattr = tcgetattr_else
             self.tcgetattr_else = None
 
@@ -3158,7 +3160,7 @@ class LineTerminal:
             b += kb
             s += (ksep + ks) if s else ks
 
-            choice = (kb, ks)
+            choice = (b, s)
             choices.append(choice)
 
             # Remember the longest Key Sequence matched with a Verb
@@ -3179,24 +3181,29 @@ class LineTerminal:
             # Fall back to last exact Find, else to first Choice
 
             if not finds:
-                last_choice = eq_choice if eq_choice[-1] else choices[0]
-
-                index = choices.index(last_choice)
-                for choice in choices[(index + 1) :]:
-                    (kb, ks) = choice
-                    st.append_one_kchord_bytes_str(kb, kstr=ks)
-
+                if not eq_choice[-1]:
+                    last_choice = choice
+                else:
+                    last_choice = eq_choice
+                    index = choices.index(last_choice)
+                    for choice in choices[(index + 1) :]:
+                        (kb, ks) = choice
+                        st.append_one_kchord_bytes_str(kb, kstr=ks)
                 break
+
+            # Block till next Key Chord
 
             self.ltlogger.flush()
             (kb, ks) = st.pull_one_kchord_bytes_str()
 
         # Succeed
 
-        (kb, ks) = last_choice
+        (b, s) = last_choice
 
-        self.kbytes = kb
-        self.kcap_str = ks
+        self.kbytes = b
+        self.kcap_str = s
+
+        print(f"{b=} {s=}", file=self.ltlogger)
 
     def kcap_str_findall(self, kcap_str) -> list[str]:
         """List every matching LineTerminal Verb"""
@@ -3248,15 +3255,16 @@ class LineTerminal:
         # Call the 1 Python Def
 
         kstr_starts_before = list(kstr_starts)
+        kint_else = self.kint_peek_else(default=None)
+        print(f"{kstr_starts=} {kint_else=} {kcap_str=}", file=self.ltlogger)
 
         done = False
         if len(kdo_call) == 1:  # takes the Inverse Func when no Args and no KwArgs
             done = self.verb_eval_explicit_nonpositive_if(kdo_func)
         if not done:
-            kint_else = self.kint_peek_else(default=None)
-            print(f"kint={kint_else} func={kdo_func.__name__}", file=self.ltlogger)
-            (kdo_func, args, kwargs) = self.py_call_complete(kdo_call)
-            kdo_func(self, *args, **kwargs)
+            (alt_kdo_func, args, kwargs) = self.py_call_complete(kdo_call)
+            print(f"{kint_else=} func={alt_kdo_func.__name__}", file=self.ltlogger)
+            alt_kdo_func(self, *args, **kwargs)
 
         # Forget the K Start's, K Stop's, and/or K Text's when we should
 
@@ -3386,6 +3394,7 @@ class LineTerminal:
 
         _ = self.kint_pull(default=0)  # todo: 'returncode = ' inside 'kdo_quit_anyhow'
 
+        self.ltlogger.flush()
         sys.exit()
 
         # Emacs ⌃X ⌃S ⌃X ⌃C save-buffer save-buffers-kill-terminal  # Emacs ⌃X⌃S⌃X⌃C
@@ -3453,6 +3462,8 @@ class LineTerminal:
         st = self.st
         kcap_str = self.kcap_str
 
+        assert KCAP_SEP == " "
+
         kint_else = self.kint_peek_else(default=None)
         kint = self.kint_pull(default=1)
 
@@ -3461,7 +3472,7 @@ class LineTerminal:
         if kint_else is not None:
             st.stbypass(str(kint))  # for .kdo_kcap_alarm_write_n
 
-        ktext = kcap_str
+        ktext = kcap_str.replace(" ", "")
         st.stbypass(ktext)  # for .kdo_kcap_alarm_write_n
 
         # Emacs ⌃Q quoted-insert/ replace
@@ -5126,8 +5137,6 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 #
 # Todo's that take Keyboard Input
-    #
-#   Unbound < > C D with following Key when not << >> C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L
 #
 #   Vim Q Q @ Q etc
 #
@@ -5155,11 +5164,14 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 # Todo's that watch the Screen more closely
 #
-#   <$ <⇧G <⇧L >$ >⇧G >⇧L
-#   <0 >0 C0 D0
-#
 #   Track the Cursor
 #       Delete to Leftmost in Emacs ⌃K etc
+#       Delete to Topmost in C⇧H D⇧H
+#       <$ <⇧G <⇧L >$ >⇧G >⇧L
+#       <0 >0 C0 D0
+#
+#    Mark and Select
+#       Vim M M to create Mark, Vim ' ' to bounce back and forth, Vim ' M to jump to Mark
 #       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
 #       Emacs ⌃W even without ⌃Y Paste Back and without the ⌃W Highlight
 #
