@@ -14,28 +14,33 @@ but too many people never test these
 Vim gives it to you as as ⌃O D F.
 Pq gives it to your Emacs brain as ⎋Z and to your Vim Brain as ⌃Q ⌃O D F
 
-4 ) Vim often makes you wait when you press Esc to switch into Meta Mode.
-The Vim's of that kind will let ⌃C cancel the wait,
-but only if you give up asking for multiple copies of your input
+4 ) Vim doesn't let you click to move the Terminal Cursor,
+unless you think to press ⌥ Option/Alt while you click.
+If you tell it you don't want to press ⌥ Option/Alt,
+then it forces you to give up ⌘C after Drag to copy Text out
 
-5 ) Only Pq
+5 ) Too many Vim's make you wait when you press Esc to return to Meta Mode,
+and only let ⌃C cancel this silly wait
+if you give up asking for multiple copies of your input
 
-5.1 ) Gives more respect to the Keys you learned at Emacs or Vim,
+6 ) Only Pq
+
+6.1 ) Gives more respect to the Keys you learned at Emacs or Vim,
 without forcing you to speak only the one dialect or the other
 
-5.2 ) Shows you what Key Caps you pressed that it didn't understand
+6.2 ) Shows you what Key Caps you pressed that it didn't understand
 
-5.3 ) Nearly always holds back from shocking you with a loud audible beep
+6.3 ) Nearly always holds back from shocking you with a loud audible beep
 
-5.4 ) Runs well inside your Shell Input Rows,
+6.4 ) Runs well inside your Shell Input Rows,
 or whatever part of your Terminal Screen you give it,
 without needing to take over your whole Terminal Screen
 
-5.5 ) Edits Screen Rows & Columns after you print them, even though it didn't print them
+6.5 ) Edits Screen Rows & Columns after you print them, even though it didn't print them
 
-5.6 ) Let's you drag & drop Folders of Folders of Files to reconfigure it
+6.6 ) Let's you drag & drop Folders of Folders of Files to reconfigure it
 
-5.7 ) Lets you write Python to reconfigure it
+6.7 ) Lets you write Python to reconfigure it
 
 Nobody talks clearly of these ideas.
 Most Vim Docs speak of its ⎋ Meta Mode as "Normal Mode" or "Control Mode".

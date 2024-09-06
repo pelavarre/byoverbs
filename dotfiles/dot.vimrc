@@ -8,36 +8,38 @@
 
 " Lay out Spaces and Tabs
 
+:set softtabstop=0 shiftwidth=8 noexpandtab
 :set softtabstop=4 shiftwidth=4 expandtab
 :autocmd FileType cpp  set softtabstop=8 shiftwidth=8 noexpandtab
 :autocmd FileType cpp  set softtabstop=4 shiftwidth=4 expandtab
 
 
-" Choose colors
+" Choose colors, despite no ':set background=auto' found in macOS Vim
 
+:set background=light
 :set background=dark
 :set background=light
+
 :syntax off
 :syntax on  " such as for ':set syntax=.bash'
 
 
 " Don't redefine the conventional Mouse Clicks
 
-:set mouse=a
-:set mouse=  " Option+LeftClick moves Cursor
+:set mouse=a  " Click moves Cursor, but ⌘C after Drag doesn't Copy Text
+:set mouse=  " Option+Click moves Cursor
 
 
-" Say to more show what's going on
+" Say to show more of what's going on
 " Choose ':set showcmd' and ':set ruler' explicitly, apart from ':set ttyfast'
-" Shrug off macOS Vim leaving 'ttyfast' out of ':set'
 
 :set cursorline
 :set nocursorline
-:autocmd InsertEnter * set cul  " styles the Cursor Line to show Insert/ Replace/ not
+:autocmd InsertEnter * set cul  " styles the Cursor Row to show Replace/ Insert/ not
 :autocmd InsertLeave * set nocul
 
 :set noshowmode
-:set showmode  " says '-- INSERT --' in bottom line while you remain in Insert Mode
+:set showmode  " styles the Status Row to say '-- REPLACE --' or '-- INSERT --' then
 
 :set noshowcmd
 :set showcmd  " shows the first few Keys pressed while waiting for more
@@ -63,7 +65,8 @@
 :call matchadd('RedLight', '\s\+$')  " lights up Tabs and Spaces at end-of-line
 
 :startinsert
-:stopinsert  " starts in Normal View Mode, not in Insert Mode
+:startreplace  " starts in Replace Mode, not Insert Mode
+:stopinsert  " starts in Meta Mode, not Insert Mode
 
 
 "
@@ -73,11 +76,17 @@
 "
 
 
+" Accept ← ↑ → ↓ into non-repeated Replace/ Insert, without much delaying close by Esc
+" Lots of macOS & Linux give you ':set esckeys', but without correcting 'ttimeoutlen='
+:set noesckeys
+:set timeout timeoutlen=1000 ttimeoutlen=-1
+:set esckeys
+:set timeout timeoutlen=500 ttimeoutlen=10
+
 " Take macOS ⌥← Option Left-Arrow as alias of Vim ⇧B
 " Take macOS ⌥→ Option Right-Arrow take as alias of Vim ⇧W
 :nnoremap <Esc>b B
 :nnoremap <Esc>f W
-
 
 " \ \  => Gracefully do nothing
 :nnoremap <BSlash><BSlash> :<return>
