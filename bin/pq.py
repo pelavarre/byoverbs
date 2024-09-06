@@ -4964,6 +4964,9 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "J": (LT.kdo_line_plus_n,),  # b'j'
     "K": (LT.kdo_line_minus_n,),  # b'k'
     "L": (LT.kdo_column_plus_n,),  # b'l'
+    # "M M": (LT.kdo_mark_m_place_here,),  # b'mm'
+    # "' M": (LT.kdo_mark_m_jump_to,),  # b"'m"
+    # "' '": (LT.kdo_marks_swap_ish,),  # b"''"
     "O": (LT.kdo_line_ins_below_n,),  # b'o'
     "R": (LT.kdo_replace_n_once,),  # b'r'
     "S": (LT.kdo_char_cut_right_n_ins_till,),  # b's'
@@ -5171,6 +5174,7 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #       <0 >0 C0 D0
 #
 #    Mark and Select
+#       Vim ⌃O ⌃I to walk the List of Marks vs which Verbs make Marks
 #       Vim M M to create Mark, Vim ' ' to bounce back and forth, Vim ' M to jump to Mark
 #       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
 #       Emacs ⌃W even without ⌃Y Paste Back and without the ⌃W Highlight
