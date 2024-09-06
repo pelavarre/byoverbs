@@ -891,6 +891,13 @@ what's up at macOS with
 
     sudo su
 
+pq emojis unicodedata
+
+    % pq emojis unicodedata |grep -v .
+    <string>:94: SyntaxWarning: invalid escape sequence '\ '
+    %
+
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md

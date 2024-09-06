@@ -106,7 +106,7 @@ soon: black flake8 mypy shellcheck selftest
 # Restyle the commas, quotes, spaces, and tabs of the Python Source Files
 
 black:
-	~/.pyvenvs/black/bin/black ../byoverbs
+	~/.pyvenvs/black/bin/black --line-length=101 ../byoverbs
 	:
 
 
@@ -120,6 +120,8 @@ flake8:
 		../byoverbs
 	:
 
+# --max-line-length=999  # Black max line lengths over Flake8 max line lengths
+# --max-complexity 10  # limit how much McCabe Cyclomatic Complexity we accept
 # --ignore=E203  # Black '[ : ]' rules over E203 whitespace before ':'
 # --ignore=W503  # 2017 Pep 8 and Black over W503 line break before bin op
 
