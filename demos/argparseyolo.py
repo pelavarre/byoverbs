@@ -21,9 +21,7 @@ import textwrap
 doc = __main__.__doc__
 epilog = doc[doc.index("examples:") :].strip()
 
-parser = argparse.ArgumentParser(
-    epilog=epilog, formatter_class=argparse.RawTextHelpFormatter
-)
+parser = argparse.ArgumentParser(epilog=epilog, formatter_class=argparse.RawTextHelpFormatter)
 
 help_yolo = "run ahead with our freshest default choices, do damage as needed"
 parser.add_argument("--yolo", action="count", help=help_yolo)

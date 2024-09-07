@@ -233,8 +233,7 @@ def parse_ls_one_args(args) -> tuple[str, typing.Callable, dict]:
     stat_by_top = fetch_os_stat_by_top(tops)  # always called, sometimes needed
 
     isdirs = list(
-        (stat.S_ISDIR(s.st_mode) and not stat.S_ISLNK(s.st_mode))
-        for s in stat_by_top.values()
+        (stat.S_ISDIR(s.st_mode) and not stat.S_ISLNK(s.st_mode)) for s in stat_by_top.values()
     )
 
     func: typing.Callable
@@ -282,8 +281,7 @@ def parse_ls_ell_args(args) -> tuple[str, typing.Callable, dict]:
     stat_by_top = fetch_os_stat_by_top(tops)  # always called, sometimes needed
 
     isdirs = list(
-        (stat.S_ISDIR(s.st_mode) and not stat.S_ISLNK(s.st_mode))
-        for s in stat_by_top.values()
+        (stat.S_ISDIR(s.st_mode) and not stat.S_ISLNK(s.st_mode)) for s in stat_by_top.values()
     )
 
     func: typing.Callable

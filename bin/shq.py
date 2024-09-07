@@ -197,12 +197,8 @@ class PyExecQueryResult:
             assert all(_.startswith("import ") for _ in cgrafs[0]), (cgrafs[0],)
 
             cgrafs_1 = cgrafs[1]
-            bindices = list(
-                i for i, _ in enumerate(cgrafs_1) if _.startswith("ibytes = ")
-            )
-            tindices = list(
-                i for i, _ in enumerate(cgrafs_1) if _.startswith("itext = ")
-            )
+            bindices = list(i for i, _ in enumerate(cgrafs_1) if _.startswith("ibytes = "))
+            tindices = list(i for i, _ in enumerate(cgrafs_1) if _.startswith("itext = "))
             if tindices:
                 assert self.itext_else is not None, (self.itext_else, found_py_graf)
                 alt_locals["itext"] = self.itext_else
@@ -467,9 +463,7 @@ class PyExecQueryResult:
 
         (ipulls, opushes) = self.py_graf_to_i_pulls_o_pushes(py_graf)
 
-        complete_py_graf = self.py_graf_complete(
-            py_graf, ipulls=ipulls, opushes=opushes
-        )
+        complete_py_graf = self.py_graf_complete(py_graf, ipulls=ipulls, opushes=opushes)
 
         # Succeed
 
@@ -484,9 +478,7 @@ class PyExecQueryResult:
 
         # Compose more Py Code to run before and after
 
-        before_py_graf = self.form_before_py_graf(
-            py_graf, ipulls=ipulls, opushes=opushes
-        )
+        before_py_graf = self.form_before_py_graf(py_graf, ipulls=ipulls, opushes=opushes)
 
         after_py_graf = self.form_after_py_graf(py_graf, ipulls=ipulls, opushes=opushes)
 
@@ -1454,8 +1446,7 @@ def py_split(py_text) -> list[str]:
     """Split a Py Text into Py Words to search up"""
 
     py_words = list(
-        _.group(0)
-        for _ in re.finditer(r"[a-zA-Z][a-zA-Z0-9_]*|[-.+0-9Ee]|.", string=py_text)
+        _.group(0) for _ in re.finditer(r"[a-zA-Z][a-zA-Z0-9_]*|[-.+0-9Ee]|.", string=py_text)
     )
 
     return py_words
@@ -1513,9 +1504,7 @@ def list_assert_eq(a, b, occasion=None) -> None:
     strs_a = list(str(_) for _ in list_a)  # default to Str, not Repr,
     strs_b = list(str(_) for _ in list_b)  # although caller may send us Repr
 
-    diffs = list(
-        difflib.unified_diff(a=strs_a, b=strs_b, fromfile="a", tofile="b", lineterm="")
-    )
+    diffs = list(difflib.unified_diff(a=strs_a, b=strs_b, fromfile="a", tofile="b", lineterm=""))
 
     a_set = set(strs_a)
     b_set = set(strs_b)

@@ -281,9 +281,7 @@ class PyDef:
         result_type = self.result_type
 
         arg_indices = list(range(len(aname_by_int)))
-        arg_triples = list(
-            zip(arg_indices, aname_by_int.values(), type_by_int.values())
-        )
+        arg_triples = list(zip(arg_indices, aname_by_int.values(), type_by_int.values()))
 
         #
 

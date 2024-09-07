@@ -151,11 +151,7 @@ def run_fireplace():
     print("Beware of F11's toggle moving your Terminal Windows, try ⌥ F6 instead")
 
     print()
-    print(
-        "Type faster or slower to see more of {} colors:  {}".format(
-            len(COLORS), STR_COLORS
-        )
-    )
+    print("Type faster or slower to see more of {} colors:  {}".format(len(COLORS), STR_COLORS))
 
     print()
 

@@ -155,9 +155,7 @@ class ScreenEditor:
         _ = self.get_terminal_size()  # fails fast
 
         greeting = (  # ⌃ \N{Up Arrowhead}
-            "Press (⌃C and then) press Return (or ⌃M) three times to quit"
-            " (or ⌃C L 0 Z Q)"
-            "\r\n"
+            "Press (⌃C and then) press Return (or ⌃M) three times to quit" " (or ⌃C L 0 Z Q)" "\r\n"
         )
 
         self.write(greeting.encode())
@@ -289,9 +287,7 @@ class ScreenEditor:
 
         chars = status_chars
         if chars is None:
-            chars = '"/dev/tty" [Modified] {} lines {} columns   {},{}'.format(
-                lines, columns, y, x
-            )
+            chars = '"/dev/tty" [Modified] {} lines {} columns   {},{}'.format(lines, columns, y, x)
 
         # Write the Status Row and restore Cursor Position
 

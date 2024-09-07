@@ -483,9 +483,7 @@ class TicTacToeGame:
         after = "".join(reversed(before))
 
         def flip_up_down(chars):
-            alt = "".join(
-                (after[before.index(_)] if (_ in before) else _) for _ in chars
-            )
+            alt = "".join((after[before.index(_)] if (_ in before) else _) for _ in chars)
             return alt
 
         self.rewrite_game_by_func(func=flip_up_down)
@@ -551,9 +549,7 @@ class TicTacToeGame:
         after = "".join(reversed(before))
 
         def spin_left_right(chars):
-            alt = "".join(
-                (after[before.index(_)] if (_ in before) else _) for _ in chars
-            )
+            alt = "".join((after[before.index(_)] if (_ in before) else _) for _ in chars)
             return alt
 
         self.rewrite_game_by_func(func=spin_left_right)
@@ -565,9 +561,7 @@ class TicTacToeGame:
         after = "".join(reversed(before))
 
         def swap_x_o(chars):
-            alt = "".join(
-                (after[before.index(_)] if (_ in before) else _) for _ in chars
-            )
+            alt = "".join((after[before.index(_)] if (_ in before) else _) for _ in chars)
             return alt
 
         self.rewrite_game_by_func(func=swap_x_o)
@@ -582,9 +576,7 @@ class TicTacToeGame:
 
         self.turn = func(turn)
 
-        _ = board.board_tui_print(
-            tui, turn=self.turn, chords=chords, taken_as=self.taken_as
-        )
+        _ = board.board_tui_print(tui, turn=self.turn, chords=chords, taken_as=self.taken_as)
 
         self.chords_helps_whys_clear()
 
@@ -817,9 +809,7 @@ class TicTacToeGame:
 
         self.restart_game()
 
-        board.board_tui_print(
-            tui, turn=self.turn, chords=chords, taken_as=self.taken_as
-        )
+        board.board_tui_print(tui, turn=self.turn, chords=chords, taken_as=self.taken_as)
 
 
 def board_moves(board, ox):
@@ -1310,9 +1300,7 @@ class TicTacToeBoard:
 
                             if taker == turn:
                                 next_xys = list(
-                                    nxy
-                                    for nxy in streak
-                                    if cells[xys.index(nxy)] == "."
+                                    nxy for nxy in streak if cells[xys.index(nxy)] == "."
                                 )
                                 next_xys = list(nxy for nxy in next_xys if nxy != xy)
 

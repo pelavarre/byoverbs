@@ -390,12 +390,7 @@ def list_strip(items) -> list:
 
 
 SHLEX_COLD_CHARS = (
-    "%+,-./"
-    + string.digits
-    + ":=@"
-    + string.ascii_uppercase
-    + "_"
-    + string.ascii_lowercase
+    "%+,-./" + string.digits + ":=@" + string.ascii_uppercase + "_" + string.ascii_lowercase
 )
 
 SHLEX_COLD_CHARS = "".join(sorted(SHLEX_COLD_CHARS))  # already sorted

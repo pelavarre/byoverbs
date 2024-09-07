@@ -111,9 +111,7 @@ def parse_vi_py_args() -> argparse.Namespace:
     play_help = "file of bytes to write to screen"
 
     parser.add_argument("dev", metavar="DEV", help=dev_help)
-    parser.add_argument(
-        "--play", metavar="LOG", dest="plays", action="append", help=play_help
-    )
+    parser.add_argument("--play", metavar="LOG", dest="plays", action="append", help=play_help)
 
     args = parser.parse_args_else()  # often prints help & exits zero
     if args.dev != "/dev/tty":

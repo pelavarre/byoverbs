@@ -74,9 +74,7 @@ def main() -> None:
     shverb = inner_argv[0]
     which_shverb = "/usr/bin/{}".format(inner_argv[0])
     if not os.path.exists(which_shverb):
-        byo.sys_stderr_print(
-            "Command '{}' not found, but can be installed with:".format(shverb)
-        )
+        byo.sys_stderr_print("Command '{}' not found, but can be installed with:".format(shverb))
         byo.sys_stderr_print("sudo apt install ncal")
         byo.sys_stderr_print("sudo apt install bsdmainutils")
 
@@ -315,9 +313,7 @@ def parse_cal_when(str_when, now) -> dt.datetime:
 
     except Exception:
         byo.sys_stderr_print(
-            "cal.py: repair -H {!r} to look like one of: {}".format(
-                str_when, " ".join(examples)
-            )
+            "cal.py: repair -H {!r} to look like one of: {}".format(str_when, " ".join(examples))
         )
 
         sys.exit(1)
@@ -334,9 +330,7 @@ def compile_cal_py_argdoc_else() -> byo.ArgumentParser:
 
     parser = byo.ArgumentParser(add_help=False)
 
-    parser.add_argument(
-        "--help", action="count", help="show this help message and exit"
-    )
+    parser.add_argument("--help", action="count", help="show this help message and exit")
 
     parser.add_argument("-h", action="count", help="don't highlight today")
 

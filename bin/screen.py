@@ -27,9 +27,7 @@ assert sys.argv[1:]  # ["--"] etc
 
 shline = "screen -ls"
 sys.stderr.write("+ {}\n".format(shline))
-run = subprocess.run(
-    shlex.split(shline), stdout=subprocess.PIPE, stderr=subprocess.PIPE
-)
+run = subprocess.run(shlex.split(shline), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 stdout = run.stdout.decode()
 os.write(sys.stdout.fileno(), run.stdout)

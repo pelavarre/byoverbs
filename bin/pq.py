@@ -215,12 +215,8 @@ class PyExecQueryResult:
             assert all(_.startswith("import ") for _ in cgrafs[0]), (cgrafs[0],)
 
             cgrafs_1 = cgrafs[1]
-            bindices = list(
-                i for i, _ in enumerate(cgrafs_1) if _.startswith("ibytes = ")
-            )
-            tindices = list(
-                i for i, _ in enumerate(cgrafs_1) if _.startswith("itext = ")
-            )
+            bindices = list(i for i, _ in enumerate(cgrafs_1) if _.startswith("ibytes = "))
+            tindices = list(i for i, _ in enumerate(cgrafs_1) if _.startswith("itext = "))
             if tindices:
                 assert self.itext_else is not None, (self.itext_else, found_py_graf)
                 alt_locals["itext"] = self.itext_else
@@ -487,9 +483,7 @@ class PyExecQueryResult:
 
         (ipulls, opushes) = self.py_graf_to_i_pulls_o_pushes(py_graf)
 
-        complete_py_graf = self.py_graf_complete(
-            py_graf, ipulls=ipulls, opushes=opushes
-        )
+        complete_py_graf = self.py_graf_complete(py_graf, ipulls=ipulls, opushes=opushes)
 
         # Succeed
 
@@ -504,9 +498,7 @@ class PyExecQueryResult:
 
         # Compose more Py Code to run before and after
 
-        before_py_graf = self.form_before_py_graf(
-            py_graf, ipulls=ipulls, opushes=opushes
-        )
+        before_py_graf = self.form_before_py_graf(py_graf, ipulls=ipulls, opushes=opushes)
 
         after_py_graf = self.form_after_py_graf(py_graf, ipulls=ipulls, opushes=opushes)
 
@@ -1490,8 +1482,7 @@ def py_split(py_text) -> list[str]:
     """Split a Py Text into Py Words to search up"""
 
     py_words = list(
-        _.group(0)
-        for _ in re.finditer(r"[a-zA-Z][a-zA-Z0-9_]*|[-.+0-9Ee]|.", string=py_text)
+        _.group(0) for _ in re.finditer(r"[a-zA-Z][a-zA-Z0-9_]*|[-.+0-9Ee]|.", string=py_text)
     )
 
     return py_words
@@ -1556,9 +1547,7 @@ def list_assert_eq(a, b, occasion=None) -> None:
     strs_a = list(str(_) for _ in list_a)  # default to Str, not Repr,
     strs_b = list(str(_) for _ in list_b)  # although caller may send us Repr
 
-    diffs = list(
-        difflib.unified_diff(a=strs_a, b=strs_b, fromfile="a", tofile="b", lineterm="")
-    )
+    diffs = list(difflib.unified_diff(a=strs_a, b=strs_b, fromfile="a", tofile="b", lineterm=""))
 
     a_set = set(strs_a)
     b_set = set(strs_b)
@@ -1879,12 +1868,8 @@ class BytesTerminal:
 
         # Sketch what's going on
 
-        self.btprint(
-            "Press a Key Chord to see it, thrice and more to write it".encode()
-        )
-        self.btprint(
-            "Press some of ⎋ Fn ⌃ ⌥ ⇧ ⌘ and ← ↑ → ↓ ⏎ ⇥ ⇤ and so on and on".encode()
-        )
+        self.btprint("Press a Key Chord to see it, thrice and more to write it".encode())
+        self.btprint("Press some of ⎋ Fn ⌃ ⌥ ⇧ ⌘ and ← ↑ → ↓ ⏎ ⇥ ⇤ and so on and on".encode())
 
         self.btprint("Press ⌃M ⌃J ⌃M ⌃J ⌃M to quit".encode())
 
@@ -2792,9 +2777,7 @@ class StrTerminal:
 
 
 PY_CALL = (
-    tuple[typing.Callable]
-    | tuple[typing.Callable, tuple]
-    | tuple[typing.Callable, tuple, dict]
+    tuple[typing.Callable] | tuple[typing.Callable, tuple] | tuple[typing.Callable, tuple, dict]
 )
 
 
@@ -2965,9 +2948,7 @@ class LineTerminal:
 
             (kbytes, kchars, kcap_str) = self.text_else_verb_read(vmode)
 
-            textual = self.kchars_are_textual(
-                kchars, kcap_str=kcap_str, kstr_starts=kstr_starts
-            )
+            textual = self.kchars_are_textual(kchars, kcap_str=kcap_str, kstr_starts=kstr_starts)
 
             # Exit Replace/ Insert Mode on request
 
@@ -3423,8 +3404,7 @@ class LineTerminal:
         st = self.st
         st.stprint()
         st.stprint(
-            "To quit, press one of"
-            " ⌃C⇧Z⇧Q ⌃C⇧Z⇧Z ⌃G⌃X⌃C ⌃C⌃L:Q!Return ⌃G⌃X⌃S⌃X⌃C ⌃C⌃L:WQ!Return"
+            "To quit, press one of" " ⌃C⇧Z⇧Q ⌃C⇧Z⇧Z ⌃G⌃X⌃C ⌃C⌃L:Q!Return ⌃G⌃X⌃S⌃X⌃C ⌃C⌃L:WQ!Return"
         )
 
         # todo: Emacs doesn't bind '⌃C R' to (revert-buffer 'ignoreAuto 'noConfirm)

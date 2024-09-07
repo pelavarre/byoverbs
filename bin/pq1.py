@@ -228,9 +228,7 @@ class PyQueryVm:
             sys.stdout.write(ochars)
         else:
             sys.stderr.write("+ ... |pbcopy\n")
-            subprocess.run(
-                "pbcopy".split(), input=ochars, errors="surrogateescape", check=True
-            )
+            subprocess.run("pbcopy".split(), input=ochars, errors="surrogateescape", check=True)
 
         return None
 
@@ -298,9 +296,7 @@ def pq_word_to_func(word) -> typing.Callable:
     casefold = join.casefold()
     if casefold != join:
         if casefold in FUNC_BY_WORD.keys():
-            sys.stderr.write(
-                "pq.py: you wrote {!r}, but did you mean:  {}\n".format(join, casefold)
-            )
+            sys.stderr.write("pq.py: you wrote {!r}, but did you mean:  {}\n".format(join, casefold))
             sys.exit(2)  # exit 2 for wrong args
 
     assert join in FUNC_BY_WORD.keys(), (word, join, FUNC_BY_WORD.keys())

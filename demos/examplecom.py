@@ -46,9 +46,7 @@ def main() -> None:
     if not otty:
         pathlib.Path("/dev/stdout").write_text(ostr, errors="surrogateescape")
     else:  # 'pbcopy' commonly available at macOS
-        subprocess.run(
-            "pbcopy".split(), input=ostr, errors="surrogateescape", check=True
-        )
+        subprocess.run("pbcopy".split(), input=ostr, errors="surrogateescape", check=True)
 
 
 def str_to_str(istr) -> str:

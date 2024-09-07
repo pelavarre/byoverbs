@@ -657,9 +657,7 @@ class CharTerminal:
         chords_by_bytes = CHORDS_BY_BYTES
 
         matches = list(
-            _
-            for _ in chords_by_bytes.keys()
-            if (_.startswith(bytes_) or bytes_.startswith(_))
+            _ for _ in chords_by_bytes.keys() if (_.startswith(bytes_) or bytes_.startswith(_))
         )
 
         if not matches:

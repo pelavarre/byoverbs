@@ -207,9 +207,7 @@ def pull_in() -> bytes:
 def subprocess_run_stdout_bytes(argv) -> bytes:
     """Run the ArgV and capture its Stdout"""
 
-    run = subprocess.run(
-        argv, stdin=None, stderr=subprocess.PIPE, stdout=subprocess.PIPE
-    )
+    run = subprocess.run(argv, stdin=None, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
     assert run.returncode == 0, (run.returncode,)
     stdout = run.stdout
@@ -227,9 +225,7 @@ def push_out(obytes) -> None:
 
     if args.ofile == "pbcopy":  # 'pbcopy' first found at macOS
         argv = shlex.split("pbcopy")
-        run = subprocess.run(
-            argv, input=obytes, stderr=subprocess.PIPE, stdout=subprocess.PIPE
-        )
+        run = subprocess.run(argv, input=obytes, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
         assert run.returncode == 0, (run.returncode,)
         assert not run.stdout, (run.stdout,)
