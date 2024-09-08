@@ -1,5 +1,5 @@
 # ~/.gitconfig
-# far away from:  .git/config
+# far away from:  .git/config, .git/COMMIT_EDITMSG, etc
 
 
 [user]
