@@ -12,6 +12,16 @@ elif [[ "$SHLVL" == 2 ]]; then
 fi
 
 
+# Bold the Sh Input
+
+if [ -t 2 ]; then
+    export PS1="$PS1%B"
+    function preexec_style () { printf '\e[m'; }
+    preexec_functions+=(preexec_style)
+    trap -- 'preexec_style' EXIT
+fi
+
+
 # Keep copies of the Sh Input lines indefinitely, in the order given
 
 if ! type -f precmd >/dev/null; then  # a la Bash $PROMPT_COMMAND
@@ -25,8 +35,12 @@ fi
 # to duck out of 'failed to load module' 'symbol not found in flat namespace'
 
 zmodload zsh/deltochar  # not yet found in Bash
-bindkey "\ez" zap-to-char  # ⌥Z for Zsh, like in Emacs
+bindkey "\ez" zap-to-char  # ⌥Z for Zsh, like Emacs, but ignores case and keeps char
 
+
+# Look out mainly here for Bots jumping in to edit the Dot Files in your Home
+
+:
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot-zshrc

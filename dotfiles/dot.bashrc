@@ -22,15 +22,30 @@ elif [[ "$SHLVL" == 2 ]]; then
 fi
 
 
+# Bold the Sh Input
+
+if ! :; then  # [ -t 2 ]; then
+    export PS1="\e[m$PS1\e[1m"
+    function preexec_style () { printf '\e[m'; }  # as if in Zsh preexec_functions
+    trap -- 'preexec_style' DEBUG
+    trap -- 'preexec_style' EXIT
+fi
+
+
 # Keep copies of the Sh Input lines indefinitely, in the order given
 
-function precmd () {  # a la Zsh 'function precmd'
+function precmd () {  # a la Zsh 'function precmd', run before each "$PS1"
     local xs=$?
     HISTTIMEFORMAT='' history 1 |cut -c8- >>~/.stdin.log  # no Pwd, no Time, no Exit
     return $xs
 }
 
 PROMPT_COMMAND="precmd;$PROMPT_COMMAND"
+
+
+# Look out mainly here for Bots jumping in to edit the Dot Files in your Home
+
+:
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.bashrc

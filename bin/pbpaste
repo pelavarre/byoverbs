@@ -1,5 +1,7 @@
+#!/bin/sh
+
 D=$(dirname "$0")
-if [[ -e /usr/bin/pbpaste ]]; then
+if [ -e /usr/bin/pbpaste ]; then
     set -xe /usr/bin/pbpaste "$@"
 else
     "$D"/pbuffer.py "$0" "$@"

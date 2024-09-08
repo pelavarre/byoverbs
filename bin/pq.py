@@ -230,7 +230,12 @@ class PyExecQueryResult:
 
         # alt_locals["dirpath"] = None  # todo: doesn't help
         # globals()["dirpath"] = None  # todo: doesn't help
-        exec(py_text, globals(), alt_locals)  # because "i'm feeling lucky"
+
+        try:
+            exec(py_text, globals(), alt_locals)  # because "i'm feeling lucky"
+        except Exception:
+            print((3 * "\n") + py_text + (2 * "\n"), file=sys.stderr)
+            raise
 
         # sys.stdout.flush()  # todo: to flush the Stdout, or not
 
@@ -5097,7 +5102,7 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 
 #
-# Demos up now
+# Demo's of:  pq em vi
 #
 #   Emacs  ⎋< ⎋> ⎋G⎋G ⎋GG ⎋GTab ⎋R
 #   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃O ⌃P
@@ -5116,6 +5121,51 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #   Option Mouse Click moves Cursor via ← ↑ → ↓
 #
 #   Multiple Parallel Log Files in Sh at:  tail -F .pqinfo/*.log
+#
+
+#
+# Todo's that watch the Screen more closely
+#
+#   Bold & Auth/ Cancel via:  pq xeditline $FILE
+#
+#   Work the Mouse
+#       Delete/ Change up to the Mouse Click
+#       Edit while Mouse-Scrolling, and doc this
+#
+#   Track the Cursor
+#       Delete to Leftmost in Emacs ⌃K etc
+#       Delete to Topmost in C⇧H D⇧H
+#       <$ <⇧G <⇧L >$ >⇧G >⇧L
+#       <0 >0 C0 D0
+#
+#    Mark and Select
+#       Vim ⌃O ⌃I to walk the List of Marks vs which Verbs make Marks
+#           Vim :jumps :clearjumps vs G G, ⇧G, { }
+#           Like maybe Mouse Jump should make a Mark
+#           Vim M ' makes a Mark, but maybe the other M should likewise
+#       Vim M M to create Mark, Vim ' ' to bounce back and forth, Vim ' M to jump to Mark
+#       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
+#       Emacs ⌃W even without ⌃Y Paste Back and without the ⌃W Highlight
+#
+#   Bounce Cursor to a placed Status Row on Screen
+#       Trace the unicode.name while Replace/ Insert
+#       Delete the Message we last wrote, write the new, log Messages & lost Messages
+#       Trace Y and X a la Vim :set ruler, cursorline, etc from my ~/.vimrc
+#
+#   Relaunch
+#       Vim : E ! Return
+#
+#   Shadow the Screen
+#       Edit via:  pq xeditline $FILE
+#       Vim ⌃L Emacs ⌃L of Shadow Screen - mostly to redraw the Screen as shadowed
+#       Vim jump to Dent, Emacs ⎋M jump to Dent
+#       Emacs ⎋Z, Vim F T ⇧F ⇧T
+#       Emacs ⎋C ⎋L ⎋U
+#       Undo/Redo piercing the Shadow
+#       Highlight for Search Found, for Selection, for Whitespace Codes in Selection
+#       Emacs ⌃T ⎋T
+#
+#   Files smaller than the Screen, with ⎋[m marks in them
 #
 
 #
@@ -5145,52 +5195,27 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 
 #
-# Todo's that watch the Screen more closely
-#
-#   Track the Cursor
-#       Delete to Leftmost in Emacs ⌃K etc
-#       Delete to Topmost in C⇧H D⇧H
-#       <$ <⇧G <⇧L >$ >⇧G >⇧L
-#       <0 >0 C0 D0
-#
-#    Mark and Select
-#       Vim ⌃O ⌃I to walk the List of Marks vs which Verbs make Marks
-#       Vim M M to create Mark, Vim ' ' to bounce back and forth, Vim ' M to jump to Mark
-#       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
-#       Emacs ⌃W even without ⌃Y Paste Back and without the ⌃W Highlight
-#
-#   Bounce Cursor to a placed Status Row on Screen
-#       Trace the unicode.name while Replace/ Insert
-#       Delete the Message we last wrote, write the new, log Messages & lost Messages
-#       Trace Y and X a la Vim :set ruler, cursorline, etc from my ~/.vimrc
-#
-#   Shadow the Screen
-#       Vim jump to Dent, Emacs ⎋M jump to Dent
-#       Emacs ⎋Z, Vim F T ⇧F ⇧T
-#       Emacs ⎋C ⎋L ⎋U
-#       Undo/Redo piercing the Shadow
-#       Highlight for Search Found, for Selection, for Whitespace Codes in Selection
-#       Emacs ⌃T ⎋T
-#
-#   Files smaller than the Screen, with ⎋[m marks in them
-#
-
-#
 # More Todo's:
+#
+#   Vim GG alias of 1⇧G
+#
+#   Python Decorators to build Keymap's, guarantee Positive Int Arg, etc
 #
 #   Vim . to repeat Emacs ⌃D ⌃K ⌃O or Vim > < C D
 #
-#   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
-#   Vim  Spacebar $ + - 0 123456789 << >>
-#   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
-#   Vim  A B C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L E H I J K L O S W X | Delete
+#   Go through these and retire what we've got
 #
-#   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
-#   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
-#   Pq  I⌃D IReturn IDelete I⌃H
+#       Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
+#       Vim  Spacebar $ + - 0 123456789 << >>
+#       Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
+#       Vim  A B C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L E H I J K L O S W X | Delete
+#
+#       Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
+#       Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
+#       Pq  I⌃D IReturn IDelete I⌃H
+#
 
 #
-#   Vim ⌃L Emacs ⌃L of Shadow Screen
 #   Emacs ⌃W ⌃Y Copy/Paste Buffer vs Os Copy/Paste Buffer
 #
 #   Emacs ⌃R ⌃S Searches
@@ -5424,7 +5449,7 @@ CUED_PY_LINES_TEXT = r"""
 
     olines = pq.ex_macros(ilines)  # em em  # ema  # emac  # emacs
 
-    olines = pq.visual_ex(ilines)  # vi  # vim
+    olines = pq.visual_ex(ilines)  # vi  # vim  # em vi
 
 
     oobject = "".join(chr(_) for _ in range(0x100))  # chr range
