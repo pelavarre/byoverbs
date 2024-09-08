@@ -3298,15 +3298,15 @@ class LineTerminal:
         # Call the 1 Python Def
 
         kstr_starts_before = list(kstr_starts)
-        kint_else = self.kint_peek_else(default=None)
-        print(f"{kstr_starts=} {kint_else=} {kcap_str=}", file=self.ltlogger)
+        peek_else = self.kint_peek_else(default=None)
+        print(f"{kstr_starts=} {peek_else=} {kcap_str=}", file=self.ltlogger)
 
         done = False
         if len(kdo_call) == 1:  # takes the Inverse Func when no Args and no KwArgs
             done = self.verb_eval_explicit_nonpositive_if(kdo_func)
         if not done:
             (alt_kdo_func, args, kwargs) = self.py_call_complete(kdo_call)
-            print(f"{kint_else=} func={alt_kdo_func.__name__}", file=self.ltlogger)
+            print(f"{peek_else=} func={alt_kdo_func.__name__}", file=self.ltlogger)
             alt_kdo_func(self, *args, **kwargs)
 
         # Forget the K Start's, K Stop's, and/or K Text's when we should
@@ -3373,11 +3373,11 @@ class LineTerminal:
 
         # Quit without derailing a Missing K Int
 
-        kint_else = self.kint_peek_else(default=None)
-        if kint_else is None:
+        peek_else = self.kint_peek_else(default=None)
+        if peek_else is None:
             return False
 
-        kint = kint_else
+        kint = peek_else
 
         # Reject any explicit K Int for a few Funcs
 
@@ -3518,12 +3518,12 @@ class LineTerminal:
 
         assert KCAP_SEP == " "
 
-        kint_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else(default=None)
         kint = self.kint_pull(default=1)
 
-        print(f"kint_else={kint_else} func=kdo_kcap_alarm_write_n", file=self.ltlogger)
+        print(f"peek_else={peek_else} func=kdo_kcap_alarm_write_n", file=self.ltlogger)
 
-        if kint_else is not None:
+        if peek_else is not None:
             st.stbypass(str(kint))  # for .kdo_kcap_alarm_write_n
 
         ktext = kcap_str.replace(" ", "")
@@ -3828,9 +3828,9 @@ class LineTerminal:
 
         assert default is not None
 
-        kint_else = self.kint_peek_else(default)
-        assert kint_else is not None, (kint_else, default)
-        kint = kint_else
+        peek_else = self.kint_peek_else(default)
+        assert peek_else is not None, (peek_else, default)
+        kint = peek_else
 
         return kint
 
@@ -3926,8 +3926,8 @@ class LineTerminal:
     def kdo_column_dent(self) -> None:
         """Jump to the first Column beyond the Dent"""
 
-        kint_else = self.kint_peek_else(default=None)
-        assert kint_else is None, (kint_else,)
+        peek_else = self.kint_peek_else(default=None)
+        assert peek_else is None, (peek_else,)
 
         self.st.column_x_write_dent()  # for Vim ^
 
@@ -3952,8 +3952,8 @@ class LineTerminal:
 
         middle_column_x = self.st.x_columns // 2
 
-        kint_else = self.kint_peek_else(default=None)
-        if kint_else is None:
+        peek_else = self.kint_peek_else(default=None)
+        if peek_else is None:
             self.kint_pull(default=0)
             self.st.column_x_write(middle_column_x)
         else:
@@ -4005,10 +4005,21 @@ class LineTerminal:
     # Move the Screen Cursor to Row, at Left or at Dent, relatively or absolutely
     #
 
-    def kdo_dent_line_n(self) -> None:
-        """Jump to a numbered Line, but land past the Dent"""
+    def kdo_dent_line_n_else_first(self) -> None:
+        """Jump to a numbered Line, else First Line, but land past the Dent"""
 
-        self.kdo_line_n()  # Vim ⇧G is kin with Vim ⇧H ⇧M ⇧L for Screen
+        peek_else = self.kint_peek_else(default=None)
+        if peek_else is None:
+            self.kint_push_positive(1)
+
+        self.kdo_dent_line_n_else_last()  # for Vim G G
+
+        # Vim G G
+
+    def kdo_dent_line_n_else_last(self) -> None:
+        """Jump to a numbered Line, else Last Line, but land past the Dent"""
+
+        self.kdo_line_n_else_last()  # Vim ⇧G is kin with Vim ⇧H ⇧M ⇧L for Screen
         self.st.column_x_write_dent()  # for Vim ⇧G
 
         # Vim ⇧G
@@ -4079,7 +4090,7 @@ class LineTerminal:
     def kdo_home_line_n(self) -> None:
         """Jump to a numbered Line, but land at Left of Line"""
 
-        self.kdo_line_n()  # Emacs ⎋G⎋G is kin with Emacs ⎋R
+        self.kdo_line_n_else_last()  # Emacs ⎋G⎋G is kin with Emacs ⎋R
         self.st.column_x_write_1()  # for Emacs ⎋G⎋G Goto-Line
 
         # Emacs ⎋G⎋G ⎋GG ⌥G⌥G ⌥GG goto-line  # not zero-based
@@ -4110,10 +4121,10 @@ class LineTerminal:
         # Emacs ⌃P previous-line
         # Vim K
 
-    def kdo_line_n(self) -> None:
+    def kdo_line_n_else_last(self) -> None:
         """Jump to Line by number, but without changing the Column of the Cursor"""
 
-        self.kdo_row_n()  # todo: more Lines than Rows
+        self.kdo_row_n_else_last()  # todo: more Lines than Rows
 
         # common to Vim ⇧G and Emacs ⎋G⎋G ⎋GG ⌥G⌥G ⌥GG
 
@@ -4170,8 +4181,8 @@ class LineTerminal:
     def kdo_row_middle(self) -> None:
         """Jump to Middle of Screen"""
 
-        kint_else = self.kint_peek_else(default=None)
-        assert kint_else is None, (kint_else,)
+        peek_else = self.kint_peek_else(default=None)
+        assert peek_else is None, (peek_else,)
 
         middle_row_y = self.st.y_rows // 2
         self.st.row_y_write(row_y=middle_row_y)
@@ -4179,7 +4190,7 @@ class LineTerminal:
 
         # Vim ⇧M
 
-    def kdo_row_n(self) -> None:
+    def kdo_row_n_else_last(self) -> None:
         """Jump to Line by number, but without changing the Column of the Cursor"""
 
         st = self.st
@@ -4214,7 +4225,7 @@ class LineTerminal:
 
         # Vim ⇧H
 
-    def kdo_row_n_else_middle_top_bottom(self) -> None:
+    def kdo_row_n_else_middle_first_last(self) -> None:
         """Jump to Middle, except Top from Middle, and Bottom from Top"""
 
         st = self.st
@@ -4223,16 +4234,16 @@ class LineTerminal:
 
         # Jump to Row from Top or Bottom of Screen, if Arg given
 
-        kint_else = self.kint_peek_else(default=None)
-        if kint_else is not None:
-            kint = kint_else
+        peek_else = self.kint_peek_else(default=None)
+        if peek_else is not None:
+            kint = peek_else
 
             if kint < 0:
-                self.kdo_row_n()
+                self.kdo_row_n_else_last()
             else:
                 kint = self.kint_pull(default=0)
                 self.kint_push_positive(1 + kint)  # pedantic Zero-Based Emacs ⎋R
-                self.kdo_row_n()
+                self.kdo_row_n_else_last()
 
             self.st.column_x_write_1()
             return
@@ -4402,8 +4413,8 @@ class LineTerminal:
     def kdo_dents_cut_here_below_dent_above(self) -> None:
         """Cut Lines here and below, and land at Dent of Line Above"""
 
-        kint_else = self.kint_peek_else(default=None)
-        if kint_else is not None:
+        peek_else = self.kint_peek_else(default=None)
+        if peek_else is not None:
             self.alarm_ring()  # 'repetition arg' for C ⇧G, C ⇧L, D ⇧G, D ⇧L
             return
 
@@ -4591,15 +4602,15 @@ class LineTerminal:
 
         st = self.st
 
-        kint_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else(default=None)
         self.kint_pull(default=0)
 
         ps_0 = 0  # writes Spaces ahead
-        if kint_else is None:
+        if peek_else is None:
             self.write_form_kint_if("\x1B" "[" "{}K", kint=ps_0, default=ps_0)
             return
 
-        kint = kint_else
+        kint = peek_else
 
         if kint >= 1:  # Emacs splits, doesn't delete left
             st.stwrite("\r")  # 00/13  # "\x0D"  # "\x1B" "[" "G"
@@ -4773,8 +4784,8 @@ class LineTerminal:
 
         self.kdo_char_cut_left_n()
 
-        kint_else = self.kint_peek_else(default=None)
-        assert kint_else is None, (kint_else,)
+        peek_else = self.kint_peek_else(default=None)
+        assert peek_else is None, (peek_else,)
 
         self.kdo_ins_n_till()
 
@@ -4785,8 +4796,8 @@ class LineTerminal:
 
         self.kdo_char_cut_right_n()
 
-        kint_else = self.kint_peek_else(default=None)
-        assert kint_else is None, (kint_else,)
+        peek_else = self.kint_peek_else(default=None)
+        assert peek_else is None, (peek_else,)
 
         self.kdo_ins_n_till()
 
@@ -4816,8 +4827,8 @@ class LineTerminal:
 
         self.kdo_dents_cut_n()
 
-        kint_else = self.kint_peek_else(default=None)
-        assert kint_else is None, (kint_else,)
+        peek_else = self.kint_peek_else(default=None)
+        assert peek_else is None, (peek_else,)
 
         self.kdo_line_ins_above_n()
 
@@ -4829,8 +4840,8 @@ class LineTerminal:
 
         self.kdo_tail_cut_n()
 
-        kint_else = self.kint_peek_else(default=None)
-        assert kint_else is None, (kint_else,)
+        peek_else = self.kint_peek_else(default=None)
+        assert peek_else is None, (peek_else,)
 
         self.kdo_ins_n_till()
 
@@ -4841,7 +4852,7 @@ class LineTerminal:
     # Scroll Rows
     #
 
-    def kdo_add_bottom_row(self) -> None:
+    def kdo_add_last_row(self) -> None:
         """Insert new Bottom Rows, and move Cursor Up by that much"""
 
         kint = self.kint_pull_positive()
@@ -4915,7 +4926,7 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⎋G G": (LT.kdo_home_line_n,),
     "⎋G ⎋G": (LT.kdo_home_line_n,),
     "⎋G Tab": (LT.kdo_column_n_plus,),
-    "⎋R": (LT.kdo_row_n_else_middle_top_bottom,),
+    "⎋R": (LT.kdo_row_n_else_middle_first_last,),
     "⌃A": (LT.kdo_home_plus_n1,),  # b'\x01'
     "⌃B": (LT.kdo_char_minus_n,),  # b'\x02'
     "⌃D": (LT.kdo_char_cut_right_n,),  # b'\x04'
@@ -4949,7 +4960,7 @@ EM_KDO_CALL_BY_KCAP_STR = {
     "⌥G G": (LT.kdo_home_line_n,),
     "⌥G ⌥G": (LT.kdo_home_line_n,),
     "⌥G Tab": (LT.kdo_column_n_plus,),
-    "⌥R": (LT.kdo_row_n_else_middle_top_bottom,),
+    "⌥R": (LT.kdo_row_n_else_middle_first_last,),
     #
 }
 
@@ -4957,7 +4968,7 @@ EM_KDO_CALL_BY_KCAP_STR = {
 VI_KDO_CALL_BY_KCAP_STR = {
     #
     "Return": (LT.kdo_dent_plus_n,),  # b'\x0D'  # b'\r'
-    "⌃E": (LT.kdo_add_bottom_row,),  # b'\x05'
+    "⌃E": (LT.kdo_add_last_row,),  # b'\x05'
     "⌃H": (LT.kdo_char_minus_n,),  # b'\x08'
     "⌃J": (LT.kdo_line_plus_n,),  # b'\x0A'  # b'\n'
     "⌃V": (LT.kdo_quote_kchars,),  # b'\x16'
@@ -4989,7 +5000,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "⇧C": (LT.kdo_tail_cut_n_ins_till,),  # b'C'
     "⇧D": (LT.kdo_tail_cut_n_column_minus,),  # b'D'
     "⇧E": (LT.kdo_bigword_plus_n_almost,),  # b'E'
-    "⇧G": (LT.kdo_dent_line_n,),  # b'G'
+    "⇧G": (LT.kdo_dent_line_n_else_last,),  # b'G'
     "⇧H": (LT.kdo_row_n_down,),  # b'H'
     "⇧I": (LT.kdo_column_dent_ins_n_till,),  # b'I'
     "⇧L": (LT.kdo_row_n_up,),  # b'L'
@@ -5013,6 +5024,7 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "D ⇧G": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'G'  # D⇧G
     "D ⇧L": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'L'  # D⇧L
     "E": (LT.kdo_lilword_plus_n_almost,),  # b'e'
+    "G G": (LT.kdo_dent_line_n_else_first,),  # b'GG'
     "H": (LT.kdo_column_minus_n,),  # b'h'
     "I": (LT.kdo_ins_n_till,),  # b'i'
     "J": (LT.kdo_line_plus_n,),  # b'j'
@@ -5108,8 +5120,8 @@ KDO_CALL_KCAP_STRS = sorted(KDO_CALL_BY_KCAP_STR.keys())
 #   as paired when called with negative Arg, and as nothing when called with zeroed Arg
 
 KDO_INVERSE_FUNC_BY = {
-    LT.kdo_add_bottom_row: LT.kdo_add_top_row,  # Vim ⌃E
-    LT.kdo_add_top_row: LT.kdo_add_bottom_row,  # Vim ⌃Y
+    LT.kdo_add_last_row: LT.kdo_add_top_row,  # Vim ⌃E
+    LT.kdo_add_top_row: LT.kdo_add_last_row,  # Vim ⌃Y
     LT.kdo_bigword_minus_n: LT.kdo_bigword_plus_n,  # Vim ⇧B  # Emacs ⌥→
     LT.kdo_bigword_plus_n: LT.kdo_bigword_minus_n,  # Vim ⇧W  # Emacs ⌥→
     LT.kdo_char_cut_left_n: LT.kdo_char_cut_right_n,  # Vim I Delete
@@ -5239,6 +5251,8 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 # Todo's that take Keyboard Input
 #
+#   Logo Turtle Ascii-Graphics
+#
 #   Vim Q Q @ Q etc
 #
 #   Pq I ⌃Q ⌃O Escape
@@ -5265,22 +5279,34 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 # More Todo's:
 #
-#   Vim GG alias of 1⇧G
+#   Vim . to repeat Emacs ⌃D ⌃K ⌃O or Vim > < C D
+#
+#   More friction vs quitting without calling ⎋⇧L to keep the lower Rows of the Screen
+#
+
+#
+# Python ToDo's
+#
+#   More convergence between 'pq xeditline' and 'pq em vi'
+#   More divergence between 'pq vi' and 'pq em'
+#
+#   Python Hook for entry/ exit into waiting for Keyboard Input
+#       vs .at_btflush now hooking only entry, not also exit
 #
 #   Python Decorators to build Keymap's, guarantee Positive Int Arg, etc
 #
-#   Vim . to repeat Emacs ⌃D ⌃K ⌃O or Vim > < C D
+
 #
-#   Go through these and retire what we've got
+# Review these and retire what we've got
 #
-#       Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
-#       Vim  Spacebar $ + - 0 123456789 << >>
-#       Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
-#       Vim  A B C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L E H I J K L O S W X | Delete
+#   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
+#   Vim  Spacebar $ + - 0 123456789 << >>
+#   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
+#   Vim  A B C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L E H I J K L O S W X | Delete
 #
-#       Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
-#       Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
-#       Pq  I⌃D IReturn IDelete I⌃H
+#   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
+#   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
+#   Pq  I⌃D IReturn IDelete I⌃H
 #
 
 #
