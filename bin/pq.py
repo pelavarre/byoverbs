@@ -1657,8 +1657,14 @@ def xeditline() -> list[str]:
 def ex_macros(ilines) -> list[str]:
     """Edit in the way of Emacs"""
 
+    alt_ilines = list(ilines)
+    alt_ilines.append("")  # todo: auto-closing the last Line of Input for Emacs
+
     lt = LineTerminal()
-    olines = lt.top_wrangle(ilines, kmap="Emacs")
+    olines = lt.top_wrangle(alt_ilines, kmap="Emacs")
+
+    if alt_ilines != olines:
+        print("quit-no-save")
 
     return olines
 
@@ -1666,8 +1672,14 @@ def ex_macros(ilines) -> list[str]:
 def visual_ex(ilines) -> list[str]:
     """Edit in the way of Ex Vim"""
 
+    alt_ilines = list(ilines)
+    alt_ilines.append("")  # todo: auto-closing the last Line of Input for Vim
+
     lt = LineTerminal()
-    olines = lt.top_wrangle(ilines, kmap="Vim")
+    olines = lt.top_wrangle(alt_ilines, kmap="Vim")
+
+    if alt_ilines != olines:
+        print("quit-no-save")
 
     return olines
 
@@ -2932,7 +2944,7 @@ class LineTerminal:
         bt.at_btflush(self.ltflush)
 
         olines = self.olines
-        st.stprint("\n".join(olines), end="")
+        st.stprint("\r\n".join(olines), end="")
 
         # Push out some help at launch, or don't
 
@@ -5231,6 +5243,7 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #       Trace the unicode.name while Replace/ Insert
 #       Delete the Message we last wrote, write the new, log Messages & lost Messages
 #       Trace Y and X a la Vim :set ruler, cursorline, etc from my ~/.vimrc
+#       Collapse repeated Keys into repetition count of Key, like for Turtle Graphics
 #
 #   Relaunch
 #       Vim : E ! Return
