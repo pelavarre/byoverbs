@@ -187,7 +187,12 @@ class PyExecQueryResult:
 
         ns = self.parse_pq_args_else(shargs)  # often prints help & exits zero
 
-        self.pq_words = ns.words or list()
+        pq_words = ns.words or list()
+        if ns.words:
+            if ns.words[0] == "xeditline":
+                pq_words = ["xeditline"]
+
+        self.pq_words = pq_words
         self.py = ns.py or 0
         self.quiet = min(3, ns.quiet or 0)
 
@@ -1600,6 +1605,55 @@ def pathlib_create_pbpaste_bin() -> None:
 #
 
 
+def xeditline() -> list[str]:
+    """Edit in the way of Zsh/ Bash Command-Line Editor"""
+
+    assert len(sys.argv) == 3, (len(sys.argv), sys.argv)
+    assert sys.argv[1] == "xeditline", (sys.argv[1], sys.argv)
+
+    # Fetch a copy of the Command Line spelled out but not auth'ed
+
+    pathname = sys.argv[2]
+    path = pathlib.Path(pathname)
+    ilines = path.read_text().splitlines()  # not the 'pbpaste'
+
+    # Guess what $PS1 printed by the Zsh/Bash $EDITOR ⌃X⌃E Api before calling us
+
+    env_shell = os.environ["SHELL"]
+    bashing = os.path.basename(env_shell) == "bash"
+
+    if bashing:
+        print("\x1B[A\x1B[M\r$ \x1B[1m", end="")
+    else:
+        print("\r% \x1B[1m", end="")
+
+    # Print & edit the input
+
+    path.write_text("")
+
+    lt = LineTerminal()
+    print(f"{pathname=}", file=lt.ltlogger)
+    olines = lt.top_wrangle(ilines, kmap="Emacs")
+
+    if olines:
+        otext = "\n".join(olines) + "\n"
+        path.write_text(otext)
+
+    if not bashing:
+        print("\x1B[m", end="")
+        sys.stdout.flush()
+    else:
+        if not olines:
+            print("\r# \n\x1B[m", end="")
+        else:
+            print("\n\x1B[m# ", end="")
+        sys.stdout.flush()
+
+    # Succeed
+
+    return olines
+
+
 def ex_macros(ilines) -> list[str]:
     """Edit in the way of Emacs"""
 
@@ -2858,39 +2912,46 @@ class LineTerminal:
 
         st.__enter__()
         try:
-            olines = self.top_wrangle_body()
+            self.top_wrangle_body()
+        except SystemExit:
+            pass
         finally:
             st.__exit__()
 
         return olines
 
-    def top_wrangle_body(self) -> list[str]:
+    def top_wrangle_body(self) -> None:
         """Run within a StrTerminal within a BytesTerminal"""
 
         st = self.st
 
         bt = st.bt
+
+        # Start up
+
         bt.at_btflush(self.ltflush)
+
+        olines = self.olines
+        st.stprint("\n".join(olines), end="")
+
+        # Push out some help at launch, or don't
 
         exists_by_name = dict()
         exists_by_name[bt.klogger.logger.name] = bt.klogger.exists
         exists_by_name[bt.slogger.logger.name] = bt.slogger.exists
         exists_by_name[self.ltlogger.name] = self.pqlogger_exists
 
-        # Tell the StrTerminal what to say at first
+        if False:
+            if not all(exists_by_name.values()):
+                st.stprint()
 
-        olines = self.olines
-        for oline in olines:
-            st.stprint(oline)
+            for name, exists in exists_by_name.items():
+                if not exists:
+                    st.stprint("Logging into:  tail -F", name)
 
-        if not all(exists_by_name.values()):
-            st.stprint()
+            self.help_quit()  # for .top_wrangle
 
-        for name, exists in exists_by_name.items():
-            if not exists:
-                st.stprint("Logging into:  tail -F", name)
-
-        self.help_quit()  # for .top_wrangle
+        # Loopback Input to Output till SystemExit
 
         try:
             self.texts_vmode_wrangle("Replace", kint=1)  # as if Vim +:startreplace
@@ -2898,10 +2959,6 @@ class LineTerminal:
         except SystemExit as exc:
             if exc.code:
                 raise
-
-        olines.clear()
-
-        return olines
 
     def texts_vmode_wrangle(self, vmode, kint) -> str:
         """Enter Replace/ Insert V-Mode, Wrangle Texts, then exit V-Mode"""
@@ -3362,37 +3419,6 @@ class LineTerminal:
     # Pause or Quit
     #
 
-    def kdo_terminal_stop(self) -> None:
-        """Suspend and resume this Screen/ Keyboard Terminal"""
-
-        st = self.st
-        bt = st.bt
-
-        self.vmode_enter(vmode="Meta")
-        bt.btstop()
-        self.vmode_exit()
-
-        # Emacs ⌃Z suspend-frame
-        # Vim ⌃Z
-
-    def kdo_quit_anyhow(self) -> None:
-        """Revert changes to the O Lines, and quit this Linux Process"""
-
-        _ = self.kint_pull(default=0)  # todo: 'returncode = ' inside 'kdo_quit_anyhow'
-
-        self.ltlogger.flush()
-        sys.exit()
-
-        # Emacs ⌃X ⌃S ⌃X ⌃C save-buffer save-buffers-kill-terminal  # Emacs ⌃X⌃S⌃X⌃C
-        # Vim ⌃C ⌃L : W Q Return save-quit  # Vim ⌃C⌃L :WQ Return
-        # Vim ⌃C ⌃L : W Q ! Return save-quit  # Vim ⌃C⌃L :WQ! Return
-        # Vim ⌃C ⌃L ⇧Z ⇧Z save-quit  # Vim ⇧Z⇧Z
-
-        # Emacs ⌃X ⌃C save-buffers-kill-terminal  # Emacs ⌃X⌃C
-        # Vim ⌃C ⌃L : Q Return quit-no-save  # Vim ⌃C⌃L :Q Return
-        # Vim ⌃C ⌃L : Q ! Return quit-no-save  # Vim ⌃C⌃L :Q! Return
-        # Vim ⌃C ⌃L ⇧Z ⇧Q quit-no-save  # Vim ⇧Z⇧Q
-
     def kdo_help_quit(self) -> None:
         """Take a Key Chord Sequence to mean say how to quit Vim"""
 
@@ -3416,6 +3442,49 @@ class LineTerminal:
         # todo: Emacs freaks if you delete the ⌃X⌃S File before calling ⌃X⌃S
 
         # Emacs/ Vim famously leave how-to-quit nearly never mentioned
+
+    def kdo_quit_no_save(self) -> None:
+        """Revert changes to the Output Lines, and quit this Linux Process"""
+
+        olines = self.olines
+
+        _ = self.kint_pull(default=0)  # todo: 'returncode = ' inside 'kdo_quit_no_save'
+
+        olines.clear()
+
+        self.ltlogger.flush()
+        sys.exit()
+
+        # Emacs ⌃X ⌃C save-buffers-kill-terminal  # Emacs ⌃X⌃C
+        # Vim ⌃C ⌃L : Q Return quit-no-save  # Vim ⌃C⌃L :Q Return
+        # Vim ⌃C ⌃L : Q ! Return quit-no-save  # Vim ⌃C⌃L :Q! Return
+        # Vim ⌃C ⌃L ⇧Z ⇧Q quit-no-save  # Vim ⇧Z⇧Q
+
+    def kdo_save_quit(self) -> None:
+        """Revert changes to the Output Lines, and quit this Linux Process"""
+
+        _ = self.kint_pull(default=0)  # todo: 'returncode = ' inside 'kdo_quit_no_save'
+
+        self.ltlogger.flush()
+        sys.exit()
+
+        # Emacs ⌃X ⌃S ⌃X ⌃C save-buffer save-buffers-kill-terminal  # Emacs ⌃X⌃S⌃X⌃C
+        # Vim ⌃C ⌃L : W Q Return save-quit  # Vim ⌃C⌃L :WQ Return
+        # Vim ⌃C ⌃L : W Q ! Return save-quit  # Vim ⌃C⌃L :WQ! Return
+        # Vim ⌃C ⌃L ⇧Z ⇧Z save-quit  # Vim ⇧Z⇧Z
+
+    def kdo_terminal_stop(self) -> None:
+        """Suspend and resume this Screen/ Keyboard Terminal"""
+
+        st = self.st
+        bt = st.bt
+
+        self.vmode_enter(vmode="Meta")
+        bt.btstop()
+        self.vmode_exit()
+
+        # Emacs ⌃Z suspend-frame
+        # Vim ⌃Z
 
     #
     # Quote
@@ -4976,27 +5045,27 @@ PQ_KDO_CALL_BY_KCAP_STR = {
     "⌃H": (LT.kdo_kcap_alarm_write_n,),  # b'\x08'  # till Pq ⌃H Help like Emacs
     "Tab": (LT.kdo_tab_plus_n,),  # b'\x09'  # b'\t'
     "⌃L": (LT.kdo_hold_stop_kstr,),  # b'\x07'
-    "⌃L : Q Return": (LT.kdo_quit_anyhow,),  # b'\x0C...
-    "⌃L : Q ! Return": (LT.kdo_quit_anyhow,),  # b'\x0C...
-    "⌃L : W Q Return": (LT.kdo_quit_anyhow,),  # b'\x0C...
-    "⌃L : W Q ! Return": (LT.kdo_quit_anyhow,),  # b'\x0C...
-    "⌃L ⇧Z ⇧Q": (LT.kdo_quit_anyhow,),  # b'\x0C...
-    "⌃L ⇧Z ⇧Z": (LT.kdo_quit_anyhow,),  # b'\x0C...
+    "⌃L : Q Return": (LT.kdo_quit_no_save,),  # b'\x0C...
+    "⌃L : Q ! Return": (LT.kdo_quit_no_save,),  # b'\x0C...
+    "⌃L : W Q Return": (LT.kdo_save_quit,),  # b'\x0C...
+    "⌃L : W Q ! Return": (LT.kdo_save_quit,),  # b'\x0C...
+    "⌃L ⇧Z ⇧Q": (LT.kdo_save_quit,),  # b'\x0C...
+    "⌃L ⇧Z ⇧Z": (LT.kdo_save_quit,),  # b'\x0C...
     # "⌃Q ⌃Q": (LT.kdo_quote_kchars,),  # b'\x11...  # no, go with ⌃V ⌃Q
     # "⌃V ⌃V": (LT.kdo_quote_kchars,),  # b'\x16...  # no, go with ⌃Q ⌃V
-    "⌃X ⌃C": (LT.kdo_quit_anyhow,),  # b'\x18...
-    "⌃X ⌃S ⌃X ⌃C": (LT.kdo_quit_anyhow,),  # b'\x18...
+    "⌃X ⌃C": (LT.kdo_quit_no_save,),  # b'\x18...
+    "⌃X ⌃S": (LT.kdo_save_quit,),  # b'\x18...  # "⌃X ⌃S ⌃X ⌃C":
     "⌃Z": (LT.kdo_terminal_stop,),  # b'\x1A'  # SIGTSTP
     "⇧Tab": (LT.kdo_tab_minus_n,),  # b'\x1B[Z'
     "⌃\\": (LT.kdo_hold_stop_kstr,),  # ⌃\  # b'\x1C'
     #
-    ": Q Return": (LT.kdo_quit_anyhow,),  # b':q\r'
-    ": Q ! Return": (LT.kdo_quit_anyhow,),  # b':q!\r'
-    ": W Q Return": (LT.kdo_quit_anyhow,),  # b':wq\r'
-    ": W Q ! Return": (LT.kdo_quit_anyhow,),  # b':wq!\r'
+    ": Q Return": (LT.kdo_quit_no_save,),  # b':q\r'
+    ": Q ! Return": (LT.kdo_quit_no_save,),  # b':q!\r'
+    ": W Q Return": (LT.kdo_save_quit,),  # b':wq\r'
+    ": W Q ! Return": (LT.kdo_save_quit,),  # b':wq!\r'
     "⇧Q V I Return": (LT.kdo_help_quit,),  # b'Qvi\r'
-    "⇧Z ⇧Q": (LT.kdo_quit_anyhow,),  # b'ZQ'
-    "⇧Z ⇧Z": (LT.kdo_quit_anyhow,),  # b'ZZ'
+    "⇧Z ⇧Q": (LT.kdo_quit_no_save,),  # b'ZQ'
+    "⇧Z ⇧Z": (LT.kdo_save_quit,),  # b'ZZ'
     "[": (LT.kdo_quote_csi_kstrs_n,),  # b'\x5B'
     #
     "⌥[": (LT.kdo_quote_csi_kstrs_n,),  # b'\xE2\x80\x9C'  # Option [
@@ -5126,14 +5195,13 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 # Todo's that watch the Screen more closely
 #
-#   Bold & Auth/ Cancel via:  pq xeditline $FILE
-#
 #   Work the Mouse
 #       Delete/ Change up to the Mouse Click
 #       Edit while Mouse-Scrolling, and doc this
 #
 #   Track the Cursor
-#       Delete to Leftmost in Emacs ⌃K etc
+#       Second ⌃K from first Column, now that it's empty
+#       Delete to Leftmost in Emacs ⌃U - ⌃K etc
 #       Delete to Topmost in C⇧H D⇧H
 #       <$ <⇧G <⇧L >$ >⇧G >⇧L
 #       <0 >0 C0 D0
@@ -5450,6 +5518,8 @@ CUED_PY_LINES_TEXT = r"""
     olines = pq.ex_macros(ilines)  # em em  # ema  # emac  # emacs
 
     olines = pq.visual_ex(ilines)  # vi  # vim  # em vi
+
+    olines = pq.xeditline()  # xeditline
 
 
     oobject = "".join(chr(_) for _ in range(0x100))  # chr range
