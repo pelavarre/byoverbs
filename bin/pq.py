@@ -1657,14 +1657,7 @@ def xeditline() -> list[str]:
 def ex_macros(ilines) -> list[str]:
     """Edit in the way of Emacs"""
 
-    alt_ilines = list(ilines)
-    alt_ilines.append("")  # todo: auto-closing the last Line of Input for Emacs
-
-    lt = LineTerminal()
-    olines = lt.top_wrangle(alt_ilines, kmap="Emacs")
-
-    if alt_ilines != olines:
-        print("quit-no-save")
+    olines = kmap_lt_top_wrangle(ilines, kmap="Emacs")
 
     return olines
 
@@ -1672,13 +1665,23 @@ def ex_macros(ilines) -> list[str]:
 def visual_ex(ilines) -> list[str]:
     """Edit in the way of Ex Vim"""
 
+    olines = kmap_lt_top_wrangle(ilines, kmap="Vim")
+
+    return olines
+
+
+def kmap_lt_top_wrangle(ilines, kmap) -> list[str]:
+    """Edit in the way of Emacs or Vim"""
+
     alt_ilines = list(ilines)
-    alt_ilines.append("")  # todo: auto-closing the last Line of Input for Vim
+    alt_ilines.append("")  # todo: auto-closing the last Line of Input for Emacs
 
     lt = LineTerminal()
-    olines = lt.top_wrangle(alt_ilines, kmap="Vim")
+    olines = lt.top_wrangle(alt_ilines, kmap="Emacs")
 
-    if alt_ilines != olines:
+    if alt_ilines == olines:
+        print("save-quit")
+    else:
         print("quit-no-save")
 
     return olines
@@ -2371,6 +2374,7 @@ class StrTerminal:
 
     bt: BytesTerminal  # wrapped here
     kpushes: list[tuple[bytes, str]]  # cached here
+    kpulls: list[tuple[bytes, str]]  # traced here
     vmode: str  # 'Meta'  # 'Replace'  # 'Insert'
 
     y_rows: int  # count Screen Rows, initially -1
@@ -2384,6 +2388,7 @@ class StrTerminal:
 
         self.bt = bt
         self.kpushes = list()
+        self.kpulls = list()
         self.vmode = "Meta"
 
         self.y_rows = -1
@@ -2697,13 +2702,29 @@ class StrTerminal:
     def append_one_kchord_bytes_str(self, kbytes, kstr) -> None:
         """Say to read a Bytes/Str pair again, as if read too far ahead"""
 
+        kpulls = self.kpulls
         kpushes = self.kpushes
 
         kpush = (kbytes, kstr)
+        assert kpulls[-1] == kpush, (kpulls[-1], kpush, len(kpulls))
+
+        kpulls.pop()
         kpushes.append(kpush)
 
+        # todo: test Append a K Push, like for bound Key Chord prefixing another
+
     def pull_one_kchord_bytes_str(self) -> tuple[bytes, str]:
-        """Revisit the input that was read ahead, else read the next Key Chord"""
+        """Read the next Pushed Chord, or Key Chord, or next Cursor Position Report"""
+
+        kpulls = self.kpulls
+
+        kpull = self.pull_one_kchord_bytes_str_()
+        kpulls.append(kpull)
+
+        return kpull
+
+    def pull_one_kchord_bytes_str_(self) -> tuple[bytes, str]:
+        """Read the next Pushed Chord, or Key Chord, or next Cursor Position Report"""
 
         bt = self.bt
         fd = bt.fd
@@ -2716,7 +2737,8 @@ class StrTerminal:
             kpush = kpushes.pop(0)
             return kpush
 
-        # Look to find the Terminal Cursor
+        # Read the next Key Chord,
+        # except sometimes digress to track the Terminal Cursor
 
         self.stwrite("\x1B" "[" "6" "n")
         while True:
@@ -2743,7 +2765,7 @@ class StrTerminal:
             self.y_rows = y_rows
             self.x_columns = x_columns
 
-        # Else read the next Key Chord
+        # Succeed
 
         assert kpush[0], (kpush,)  # 1 or more Bytes always
         assert kpush[-1], (kpush,)  # 1 or more Chars always
@@ -4653,7 +4675,8 @@ class LineTerminal:
 
         kint = self.kint_pull_positive()
 
-        st.stwrite("\r\n")  # 00/13 00/10  # "\x0D\x0A"
+        if st.column_x != 1:
+            st.stwrite("\r\n")  # 00/13 00/10  # "\x0D\x0A"
         st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=kint)
 
         self.ktext += "\r\n"  # Vim I Return
@@ -4669,25 +4692,42 @@ class LineTerminal:
 
         st = self.st
 
-        peek_else = self.kint_peek_else(default=None)
-        self.kint_pull(default=0)
+        kpulls = st.kpulls
 
-        ps_0 = 0  # writes Spaces ahead
+        peek_else = self.kint_peek_else(default=None)
+        kint = self.kint_pull(default=0)
+
+        ps_0 = 0  # EL_P CSI K writes Spaces ahead for Ps=0
+
+        # Emacs ⌃K, without Arg
+
         if peek_else is None:
+
+            if st.column_x == 1:
+                if len(kpulls) >= 2:
+                    if (kpulls[-2][-1], kpulls[-1][-1]) == ("⌃K", "⌃K"):
+                        st.stwrite("\r")  # 00/13  # "\x0D"
+                        st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=1)  # goodbye
+                        return
+
+                        # todo: Cope when ⌃K is not .kdo_tail_head_cut_n
+                        # todo: Cope when .kdo_tail_head_cut_n is repeated but not ⌃K
+                        # todo: Tell each .kdo_ when it's being repeated by whatever Key Chords
+
             st.stwrite_form_or_form_pn("\x1B" "[" "{}K", pn=ps_0, default=ps_0)
             return
 
-        kint = peek_else
+        # Emacs ⌃K, with Arg
 
-        if kint >= 1:  # Emacs splits, doesn't delete left
+        if kint > 0:  # Emacs splits, doesn't delete left
             st.stwrite("\r")  # 00/13  # "\x0D"
             st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=kint)  # goodbye
             return
 
-        ps_1 = 1  # writes Spaces at & behind  # Emacs deletes, doesn't just wipe
-        st.stwrite("\b")  # 00/08 Backspace (BS) \b ⌃H
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}K", pn=ps_1, default=ps_0)
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}C", pn=1)
+        pn = st.column_x - 1
+        if pn:
+            st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=pn)
+            st.stwrite_form_or_form_pn("\x1B" "[" "{}P", pn=pn)
 
         if not kint:
             return
@@ -4697,11 +4737,11 @@ class LineTerminal:
 
         # Disassemble these StrTerminal Writes
 
-        assert BS == "\b"  # 00/08 Backspace ⌃H
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
 
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-        assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
+        assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
+        assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
         assert EL_P == "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
@@ -5287,12 +5327,11 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #       Edit while Mouse-Scrolling, and doc this
 #
 #   Track the Cursor
-#       Insert Return from first Column, differently than from later Columns
-#       Second ⌃K from first Column, now that it's empty
-#       Delete to Leftmost in Emacs ⌃U - ⌃K etc
+#       Delete to Leftmost in C0 D0
 #       Delete to Topmost in C⇧H D⇧H
-#       <$ <⇧G <⇧L >$ >⇧G >⇧L
-#       <0 >0 C0 D0
+#       Delete up or down for C⇧M D⇧M
+#       <⇧G <⇧H <⇧L >⇧G >⇧H >⇧L
+#       <0 >0 <$ >$
 #
 #    Mark and Select
 #       Vim ⌃O ⌃I to walk the List of Marks vs which Verbs make Marks
@@ -5300,7 +5339,6 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #           Like maybe Mouse Jump should make a Mark
 #           Vim M ' makes a Mark, but maybe the other M should likewise
 #       Vim M M to create Mark, Vim ' ' to bounce back and forth, Vim ' M to jump to Mark
-#       <x >x Cx Dx for Movement X, such as C⇧H D⇧H
 #       Emacs ⌃W even without ⌃Y Paste Back and without the ⌃W Highlight
 #
 #   Bounce Cursor to a placed Status Row on Screen
@@ -5327,6 +5365,9 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 #
 # Todo's that take Keyboard Input
+#
+#   <x >x Cx Dx for Movement X
+#   Multiply with Digits in the Movement and/or before < > C D
 #
 #   Logo Turtle Ascii-Graphics
 #
