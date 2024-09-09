@@ -4644,6 +4644,19 @@ class LineTerminal:
         # Pq I ⌃D
         # macOS ⌃D into ⌘Z Undo
 
+    def kdo_home_cut(self) -> None:
+        """Cut the Head of the Line"""
+
+        st = self.st
+
+        pn = st.column_x - 1
+        if pn:
+            st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=pn)
+            st.stwrite_form_or_form_pn("\x1B" "[" "{}P", pn=pn)
+
+        # part of Vim C0
+        # Vim D0
+
     def kdo_line_ins_ahead_n(self) -> None:
         """Insert 0 or more Empty Lines ahead, and land at Left before the First"""
 
@@ -4916,7 +4929,7 @@ class LineTerminal:
         # Vim S = Vim X + Vim I
 
     def kdo_dents_cut_here_below_ins_till(self) -> None:
-        """Cut Lines here and below, and Insert here"""
+        """Cut Lines here and below, and then Insert"""
 
         st = self.st
 
@@ -4934,7 +4947,7 @@ class LineTerminal:
         # Vim C ⇧L
 
     def kdo_dents_cut_n_line_ins_above(self) -> None:
-        """Cut N Lines here and below, and land past Dent"""
+        """Cut N Lines here and below, land past Dent, and then Insert"""
 
         self.kdo_dents_cut_n()
 
@@ -4946,8 +4959,16 @@ class LineTerminal:
         # Vim C C = Vim D D + Vim ⇧O
         # Vim ⇧S = Vim D D + Vim ⇧O
 
+    def kdo_home_cut_ins_till(self) -> None:
+        """Cut the Head of the Line, and then Insert"""
+
+        self.kdo_home_cut()
+        self.kdo_ins_n_till()
+
+        # Vim C0
+
     def kdo_tail_cut_n_ins_till(self) -> None:
-        """Cut N Lines here and below, and land past Dent"""
+        """Cut N Lines here and below, land past Dent, and then Insert"""
 
         self.kdo_tail_cut_n()
 
@@ -5131,10 +5152,12 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "A": (LT.kdo_column_plus_ins_n_till,),  # b'a'
     "B": (LT.kdo_lilword_minus_n,),  # b'b'
     "C $": (LT.kdo_tail_cut_n_ins_till,),  # b'c' b'$'  # C$
+    "C 0": (LT.kdo_home_cut_ins_till,),  # b'c' b'0'  # C0
     "C C": (LT.kdo_dents_cut_n_line_ins_above,),  # b'c' b'c'  # CC
     "C ⇧G": (LT.kdo_dents_cut_here_below_ins_till,),  # b'c' b'G'  # C⇧G
     "C ⇧L": (LT.kdo_dents_cut_here_below_ins_till,),  # b'c' b'L'  # C⇧L
     "D $": (LT.kdo_tail_cut_n_column_minus,),  # b'd' b'$'  # D$
+    "D 0": (LT.kdo_home_cut,),  # b'd' b'0'  # D0
     "D D": (LT.kdo_dents_cut_n,),  # b'd' b'd'  # DD
     "D ⇧G": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'G'  # D⇧G
     "D ⇧L": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'L'  # D⇧L
@@ -5327,7 +5350,6 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #       Edit while Mouse-Scrolling, and doc this
 #
 #   Track the Cursor
-#       Delete to Leftmost in C0 D0
 #       Delete to Topmost in C⇧H D⇧H
 #       Delete up or down for C⇧M D⇧M
 #       <⇧G <⇧H <⇧L >⇧G >⇧H >⇧L
