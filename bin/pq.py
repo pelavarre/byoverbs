@@ -5711,7 +5711,7 @@ CUED_PY_LINES_TEXT = r"""
 
     oobject = len(itext.splitlines())  # lines len  # |wc -l  # wc l  # wcl
 
-    oobject = math.e  # e e e e e e e
+    oobject = math.e  # math.e
 
     oobject = math.pi  # pi
 
@@ -5765,9 +5765,40 @@ CUED_PY_GRAFS_TEXT = r"""
     iwords = iline.split()
     oline = iwords[-1] if iwords else ""
 
+    # b b b
+    # d d d d d d d d
+    # e e e e
+    # g g
+    # i i i i i i i i i i
+    # j j
+    # k
+    # l l l l l l l
+    # m m m
+    # o o o o o o
+    # p p p p p p
+    # q
+    # r r r r r r r r r
+    # v v
+    # w w w w
+    # y
+    # z
+    sys.stderr.write("Pq today defines a, c, f, h, n, s, t, u, x\n")
+    sys.stderr.write("Pq today doesn't define b, d, e, g, i, j, k, l, m, o, p, q, r, v, w, y, z\n")
+    olines = ilines[0:0]
+    sys.exit(1)
+
     # bytes range
     obytes = ibytes  # todo: say this without ibytes
     obytes = b"".join(bytes([_]) for _ in range(0x100))
+
+    # c c c c  # cat cat
+    otext = itext
+    sys.stderr.write("Press Return ⌃D, or ⌃C, to quit\n")
+    try:
+        pathlib.Path("/dev/tty").read_bytes()
+    except KeyboardInterrupt:
+        sys.stderr.write("\nKeyboardInterrupt\n")
+    otext = ""
 
     # cat n expand  # |cat -n |expand  # enum 1  # n n n n
     olines = list(f"{n:6d}  {i}" for (n, i) in enumerate(ilines, start=1))
@@ -5775,7 +5806,7 @@ CUED_PY_GRAFS_TEXT = r"""
     # closed # close  # ends last line with "\n"
     otext = itext if itext.endswith("\n") else (itext + "\n")
 
-    # collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen
+    # collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen  # u
     olines = list(dict((_, _) for _ in ilines).keys())  # unsort  # unsorted  # dedupe
 
     # decomment  # |sed 's,#.*,,' |sed 's, *$,,'  # |grep .
@@ -5839,7 +5870,7 @@ CUED_PY_GRAFS_TEXT = r"""
     otext = "\n".join(olines) + "\n"
 
     # head head  # h h h h h h
-    olines = ilines[:10]
+    olines = ilines[:10]  # could be (Terminal Lines // 3)
 
     # head tail  # h t  # h t  # h t  # h t  # h t  # ht ht
     ipairs = list(enumerate(ilines, start=1))
@@ -5875,7 +5906,7 @@ CUED_PY_GRAFS_TEXT = r"""
     olines = itext.split()
 
     # tail tail  # t t t t t t t t t
-    olines = ilines[-10:]
+    olines = ilines[-10:]  # could be (Terminal Lines // 3)
 
     # ts  # |ts
     while True:
