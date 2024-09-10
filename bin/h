@@ -1,5 +1,5 @@
 set -e
-if [[ $(stty size) == "0 0" ]]; then
+if [[ $(stty size </dev/tty) == "0 0" ]]; then
     LINES=24
 else
     LINES=$(stty size </dev/tty |cut -d' ' -f1)

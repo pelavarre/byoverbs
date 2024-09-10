@@ -1,13 +1,8 @@
 set -e
-if [[ $(stty size) == "0 0" ]]; then
-    LINES=24
-else
-    LINES=$(stty size </dev/tty |cut -d' ' -f1)
-fi
 if [ ! -t 1 ]; then
     set -xe
     git log --oneline --no-decorate "$@"
 else
     set -xe
-    git log --oneline --no-decorate "-$((2 * LINES / 3))" "$@"
+    git log --oneline --no-decorate -15 "$@"
 fi
