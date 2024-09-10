@@ -1619,13 +1619,30 @@ def xeditline() -> list[str]:
 
     # Guess what $PS1 printed by the Zsh/Bash $EDITOR ⌃X⌃E Api before calling us
 
+    ps1 = "$ " if os.getuid() else "# "
+    ps4 = "+ "
+
     env_shell = os.environ["SHELL"]
     bashing = os.path.basename(env_shell) == "bash"
 
-    if bashing:
-        print("\x1B[A\x1B[M\r$ \x1B[1m", end="")
-    else:
-        print("\r% \x1B[1m", end="")
+    def xedit_at_ltlaunch_lt_func(lt) -> None:
+
+        olines = lt.olines
+        st = lt.st
+
+        rn_otext = "\r\n".join(olines)
+
+        if bashing:
+            st.stwrite("\x1B[A" + ps1 + "# " + "\r\n")
+            st.stwrite(ps1)
+        else:
+            pn = len(rn_otext)
+            st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=pn)
+
+        st.stwrite("\x1B[1m")
+        st.stwrite(rn_otext)
+
+        assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 
     # Print & edit the input
 
@@ -1633,21 +1650,19 @@ def xeditline() -> list[str]:
 
     lt = LineTerminal()
     print(f"{pathname=}", file=lt.ltlogger)
-    olines = lt.top_wrangle(ilines, kmap="Emacs")
+    olines = lt.run_till_quit(ilines, kmap="Pq", at_ltlaunch_lt_func=xedit_at_ltlaunch_lt_func)
 
     if olines:
         otext = "\n".join(olines) + "\n"
         path.write_text(otext)
 
-    if not bashing:
-        print("\x1B[m", end="")
-        sys.stdout.flush()
-    else:
+    sys.stdout.write("\x1B[m")
+    if bashing:
         if not olines:
-            print("\r# \n\x1B[m", end="")
+            sys.stdout.write("\r" + ps1 + "\x1B[K" + "\r\n")
         else:
-            print("\n\x1B[m# ", end="")
-        sys.stdout.flush()
+            sys.stdout.write("\r\n" + ps4)
+    sys.stdout.flush()
 
     # Succeed
 
@@ -1657,7 +1672,7 @@ def xeditline() -> list[str]:
 def ex_macros(ilines) -> list[str]:
     """Edit in the way of Emacs"""
 
-    olines = kmap_lt_top_wrangle(ilines, kmap="Emacs")
+    olines = kmap_lt_run_till_quit(ilines, kmap="Emacs")
 
     return olines
 
@@ -1665,19 +1680,26 @@ def ex_macros(ilines) -> list[str]:
 def visual_ex(ilines) -> list[str]:
     """Edit in the way of Ex Vim"""
 
-    olines = kmap_lt_top_wrangle(ilines, kmap="Vim")
+    olines = kmap_lt_run_till_quit(ilines, kmap="Vim")
 
     return olines
 
 
-def kmap_lt_top_wrangle(ilines, kmap) -> list[str]:
+def kmap_lt_run_till_quit(ilines, kmap) -> list[str]:
     """Edit in the way of Emacs or Vim"""
 
     alt_ilines = list(ilines)
     alt_ilines.append("")  # todo: auto-closing the last Line of Input for Emacs
 
+    def kmap_at_ltlaunch_lt_func(lt) -> None:
+
+        olines = lt.olines
+        st = lt.st
+
+        st.stwrite("\r\n".join(olines))
+
     lt = LineTerminal()
-    olines = lt.top_wrangle(alt_ilines, kmap="Emacs")
+    olines = lt.run_till_quit(alt_ilines, kmap="Emacs", at_ltlaunch_lt_func=kmap_at_ltlaunch_lt_func)
 
     if alt_ilines == olines:
         print("save-quit")
@@ -1836,14 +1858,13 @@ class BytesTerminal:
 
     stdio: typing.TextIO  # sys.stderr
     fd: int  # 2
-    kholds: bytearray  # empty till lookahead reads too many Bytes
 
     before: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Entry
     tcgetattr_else: list[int | list[bytes | int]] | None  # sampled at Entry
+    at_btflush_func_else: typing.Callable | None  # runs before blocking to read Input
     kinterrupts: int  # count of ⌃C's  # counted between Entry and Exit
     after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Exit
 
-    at_btflush_funcs: list[typing.Callable]  # runs before blocking to read Input
     klogger: ReprLogger  # logs Keyboard Bytes In
     slogger: ReprLogger  # logs Screen Bytes Out
 
@@ -1857,14 +1878,13 @@ class BytesTerminal:
 
         self.stdio = stdio
         self.fd = fd
-        self.kholds = bytearray()  # todo: reads too many Bytes sometimes
 
         self.before = before
         self.tcgetattr_else = None  # is None after Exit and before Entry
+        self.at_btflush_func_else = None
         self.kinterrupts = 0
         self.after = after  # todo: need Tcsa Flush on large Paste crashing us
 
-        self.at_btflush_funcs = list()
         self.klogger = klogger
         self.slogger = slogger
 
@@ -1907,7 +1927,7 @@ class BytesTerminal:
 
         if tcgetattr_else is not None:
 
-            self.btflush()
+            self.btflush()  # for '__exit__'
 
             tcgetattr = tcgetattr_else
             self.tcgetattr_else = None
@@ -1974,20 +1994,14 @@ class BytesTerminal:
 
         self.btprint()
 
-    def at_btflush(self, func) -> None:
-        """Register to run just before blocking to wait for Keyboard Input"""
-
-        at_btflush_funcs = self.at_btflush_funcs
-        at_btflush_funcs.insert(0, func)
-
     def btflush(self) -> None:
         """Run just before blocking to wait for Keyboard Input"""
 
-        at_btflush_funcs = self.at_btflush_funcs
+        at_btflush_func_else = self.at_btflush_func_else
         stdio = self.stdio
 
-        for at_btflush_func in at_btflush_funcs:
-            at_btflush_func()
+        if at_btflush_func_else is not None:
+            at_btflush_func_else()
 
         self.slogger.logger.flush()  # plus ~0.050 ms
         self.klogger.logger.flush()  # plus ~0.050 ms
@@ -2051,7 +2065,7 @@ class BytesTerminal:
 
         # Block to fetch at least 1 Byte
 
-        read_0 = self.read_kchar_bytes_if()  # often returns with the .kholds empty
+        read_0 = self.read_kchar_bytes_if()
 
         kchord_bytes = read_0
         if read_0 != b"\x1B":
@@ -2149,17 +2163,9 @@ class BytesTerminal:
         assert self.tcgetattr_else
         klogger = self.klogger
 
-        # Read 1 Keyboard Byte from Held Bytes
-
-        kholds = self.kholds
-        if kholds:
-            kbytes = bytes(kholds[:1])
-            kholds.pop()
-            return kbytes
-
         # Else block to read 1 Keyboard Byte from Keyboard
 
-        self.btflush()
+        self.btflush()  # 'readkbyte'
 
         kbytes = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
         klogger.rlprint(kbytes)  # logs In after Read
@@ -2379,9 +2385,9 @@ class StrTerminal:
 
     y_rows: int  # count Screen Rows, initially -1
     x_columns: int  # count of Screen Columns, initially -1
-
     row_y: int  # Row of Screen Cursor in last CPR, initially -1
     column_x: int  # Column of Screen Cursor in last CPR, initially -1
+    at_stlaunch_func_else: typing.Callable | None  # runs when Terminal Cursor first found
 
     def __init__(self) -> None:
         bt = BytesTerminal()
@@ -2393,9 +2399,9 @@ class StrTerminal:
 
         self.y_rows = -1
         self.x_columns = -1
-
         self.row_y = -1
         self.column_x = -1
+        self.at_stlaunch_func_else = None
 
     #
     # Enter, exit, breakpoint, & loopback
@@ -2760,6 +2766,15 @@ class StrTerminal:
             assert y_rows >= 5, (y_rows,)  # macOS Terminal min 5 Rows
             assert x_columns >= 20, (x_columns,)  # macOS Terminal min 20 Columns
 
+            if self.row_y == -1:
+                assert self.column_x == -1, (self.column_x,)
+                assert self.y_rows == -1, (self.y_rows,)
+                assert self.x_columns == -1, (self.x_columns,)
+
+                at_stlaunch_func_else = self.at_stlaunch_func_else
+                if at_stlaunch_func_else is not None:
+                    at_stlaunch_func_else()
+
             self.row_y = row_y
             self.column_x = column_x
             self.y_rows = y_rows
@@ -2913,7 +2928,7 @@ class LineTerminal:
         self.kstr_stops = list()
         self.ktext = ""  # .__init__
 
-        self.kmap = ""
+        self.kmap = "Pq"
         self.vmodes = ["Meta"]
 
         # lots of empty happens only until first Keyboard Input
@@ -2932,13 +2947,25 @@ class LineTerminal:
 
         self.ltlogger.flush()
 
-    def top_wrangle(self, ilines, kmap) -> list[str]:
-        """Launch, and run till SystemExit"""
+    def run_till_quit(self, ilines, kmap, at_ltlaunch_lt_func) -> list[str]:
+        """Run till SystemExit, and then return the edited Lines"""
 
         st = self.st
 
+        # Register Callback to print Input Text, when Terminal Size & Cursor first found
+
+        assert at_ltlaunch_lt_func is not None
+        lt = self
+
+        def lt_at_stlaunch_func() -> None:
+            at_ltlaunch_lt_func(lt)
+
+        assert st.at_stlaunch_func_else is None, (st.at_stlaunch_func_else,)
+        st.at_stlaunch_func_else = lt_at_stlaunch_func
+
         # Load up Lines to edit
 
+        assert kmap in ("Emacs", "Pq", "Vim"), (kmap,)
         self.kmap = kmap  # K-Map Hint kept here, but never yet branched on
 
         olines = self.olines
@@ -2948,7 +2975,7 @@ class LineTerminal:
 
         st.__enter__()
         try:
-            self.top_wrangle_body()
+            self.run_while_true()
         except SystemExit:
             pass
         finally:
@@ -2956,36 +2983,16 @@ class LineTerminal:
 
         return olines
 
-    def top_wrangle_body(self) -> None:
-        """Run within a StrTerminal within a BytesTerminal"""
+    def run_while_true(self) -> None:
+        """Run in a StrTerminal on a BytesTerminal, till SystemExit"""
 
         st = self.st
-
         bt = st.bt
 
-        # Start up
+        # Register Callback to flush Logs before blocking for Input
 
-        bt.at_btflush(self.ltflush)
-
-        olines = self.olines
-        st.stprint("\r\n".join(olines), end="")
-
-        # Push out some help at launch, or don't
-
-        exists_by_name = dict()
-        exists_by_name[bt.klogger.logger.name] = bt.klogger.exists
-        exists_by_name[bt.slogger.logger.name] = bt.slogger.exists
-        exists_by_name[self.ltlogger.name] = self.pqlogger_exists
-
-        if False:
-            if not all(exists_by_name.values()):
-                st.stprint()
-
-            for name, exists in exists_by_name.items():
-                if not exists:
-                    st.stprint("Logging into:  tail -F", name)
-
-            self.help_quit()  # for .top_wrangle
+        assert bt.at_btflush_func_else is None, bt.at_btflush_func_else
+        bt.at_btflush_func_else = self.ltflush
 
         # Loopback Input to Output till SystemExit
 
@@ -5331,7 +5338,7 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
 #   Vim  Spacebar $ + - 0 123456789 << >>
 #   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
-#   Vim  A B C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L E H I J K L O S W X | Delete
+#   Vim  A B C$ C0 CC C⇧G C⇧L D$ D0 DD D⇧G D⇧L E H I J K L O S W X | Delete
 #
 #   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
 #   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
@@ -5345,15 +5352,15 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 # Todo's that watch the Screen more closely
 #
-#   Work the Mouse
-#       Delete/ Change up to the Mouse Click
-#       Edit while Mouse-Scrolling, and doc this
-#
 #   Track the Cursor
 #       Delete to Topmost in C⇧H D⇧H
 #       Delete up or down for C⇧M D⇧M
 #       <⇧G <⇧H <⇧L >⇧G >⇧H >⇧L
 #       <0 >0 <$ >$
+#
+#   Work the Mouse
+#       Delete/ Change up to the Mouse Click
+#       Edit while Mouse-Scrolling, and doc this
 #
 #    Mark and Select
 #       Vim ⌃O ⌃I to walk the List of Marks vs which Verbs make Marks
@@ -5364,12 +5371,14 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #       Emacs ⌃W even without ⌃Y Paste Back and without the ⌃W Highlight
 #
 #   Bounce Cursor to a placed Status Row on Screen
-#       Trace the unicode.name while Replace/ Insert
+#       Trace the UnicodeData.Name while Replace/ Insert
 #       Delete the Message we last wrote, write the new, log Messages & lost Messages
 #       Trace Y and X a la Vim :set ruler, cursorline, etc from my ~/.vimrc
 #       Collapse repeated Keys into repetition count of Key, like for Turtle Graphics
+#       Show the Line Marks
 #
 #   Relaunch
+#       Emacs ⌃X X G 'revert-buffer-quick
 #       Vim : E ! Return
 #
 #   Shadow the Screen
@@ -5380,7 +5389,8 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #       Emacs ⎋C ⎋L ⎋U
 #       Undo/Redo piercing the Shadow
 #       Highlight for Search Found, for Selection, for Whitespace Codes in Selection
-#       Emacs ⌃T ⎋T
+#       Emacs ⌃T ⎋T and ⎋T for larger Words such as Last Two Sh Args
+#       Pipe through Vim !
 #
 #   Files smaller than the Screen, with ⎋[m marks in them
 #
@@ -5420,9 +5430,11 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 # More Todo's:
 #
 #   Vim . to repeat Emacs ⌃D ⌃K ⌃O or Vim > < C D
-#   Vim . could learn to repeat @ Q, and the other @ x
+#   Vim . could learn to repeat @ Q, and the other @ x, while ⌃Q . more faithful to legacy
+#   Arg for Vim . could multiply
 #
 #   More friction vs quitting without calling ⎋⇧L to keep the lower Rows of the Screen
+#   Surprise of ⌃X ⌃S moving on already inside ⌃X ⌃E, not waiting for ⌃X ⌃S ⌃X ⌃C
 #
 
 #
