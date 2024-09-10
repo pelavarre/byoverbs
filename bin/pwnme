@@ -1,5 +1,8 @@
-set -xeu
-set -xeuo pipefail 2>/dev/null  # some Linux 'dash' choke over '-o pipefail'
+if sh -c 'set -o pipefail' 2>/dev/null; then
+    set -xeuo pipefail
+else
+    set -xeu  # some Linux 'dash' choke over '-o pipefail'
+fi
 
 D=$(dirname "$0")/..
 
