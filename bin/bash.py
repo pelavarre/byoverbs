@@ -27,6 +27,9 @@ bash ~/.bash_profile  # screen for:  bind: warning: line editing not enabled
 : Aug/2004 Bash 2  # major release date
 : Oct/2006 Bash 3.2  # minor release date
 : : Nov/2014 Bash 3.2.57  # micro release date
+: Jan/2019 Bash 5  # minor release date
+: : Jan/2022 Bash 5.1.16  # micro release date
+
 
 """
 
