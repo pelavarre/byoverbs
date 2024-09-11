@@ -4497,6 +4497,29 @@ class LineTerminal:
         # Vim D D  # Vim DD
         # VsCode ⌘X
 
+    def kdo_dents_cut_here_above_dent(self) -> None:
+        """Cut Lines here and below, and land at Dent of Line Above"""
+
+        st = self.st
+        row_y = st.row_y
+
+        peek_else = self.kint_peek_else(default=None)
+        if peek_else is not None:
+            self.alarm_ring()  # 'repetition arg' for D ⇧H
+            return
+
+        st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=row_y)
+        st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=row_y)
+
+        st.column_x_write_dent()  # for D ⇧H
+
+        # Disassemble these StrTerminal Writes
+
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+        assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
+
+        # Vim D ⇧H
+
     def kdo_dents_cut_here_below_dent_above(self) -> None:
         """Cut Lines here and below, and land at Dent of Line Above"""
 
@@ -4861,7 +4884,7 @@ class LineTerminal:
         for _ in range(kint - 1):
             st.stwrite("\r\n")  # 00/13 00/10  # "\x0D\x0A"
             ktext_kint = len(ktext.splitlines())
-            if ktext_kint:  # FIXME kint=1 for the "{}D" ?
+            if ktext_kint:  # FIXME kint=1 for the "{}D" of Vim ⇧O?
                 st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=ktext_kint)
                 st.stwrite(ktext)  # for .kdo_line_ins_above_n Insert
                 st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=ktext_kint)
@@ -4891,7 +4914,7 @@ class LineTerminal:
         for _ in range(kint - 1):
             st.stwrite("\r\n")  # 00/13 00/10  # "\x0D\x0A"
             ktext_kint = len(ktext.splitlines())
-            if ktext_kint:  # FIXME kint=1 for the "{}D" ?
+            if ktext_kint:  # FIXME kint=1 for the "{}D" of Vim O ?
                 st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=ktext_kint)
                 st.stwrite(ktext)  # for .kdo_line_ins_below_n Insert
                 st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=ktext_kint)
@@ -4934,6 +4957,20 @@ class LineTerminal:
         self.kdo_ins_n_till()
 
         # Vim S = Vim X + Vim I
+
+    def kdo_dents_cut_here_above_but_below_ins_till(self) -> None:
+
+        st = self.st
+
+        self.kdo_dents_cut_here_above_dent()
+
+        st.column_x_write_1()  # for C ⇧H
+        st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=1)
+        self.kdo_ins_n_till()
+
+        assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
+
+        # Vim C ⇧H = Vim D ⇧H + Vim ⇧O
 
     def kdo_dents_cut_here_below_ins_till(self) -> None:
         """Cut Lines here and below, and then Insert"""
@@ -5162,11 +5199,13 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "C 0": (LT.kdo_home_cut_ins_till,),  # b'c' b'0'  # C0
     "C C": (LT.kdo_dents_cut_n_line_ins_above,),  # b'c' b'c'  # CC
     "C ⇧G": (LT.kdo_dents_cut_here_below_ins_till,),  # b'c' b'G'  # C⇧G
+    "C ⇧H": (LT.kdo_dents_cut_here_above_but_below_ins_till,),  # b'c' b'H'  # C⇧H
     "C ⇧L": (LT.kdo_dents_cut_here_below_ins_till,),  # b'c' b'L'  # C⇧L
     "D $": (LT.kdo_tail_cut_n_column_minus,),  # b'd' b'$'  # D$
     "D 0": (LT.kdo_home_cut,),  # b'd' b'0'  # D0
     "D D": (LT.kdo_dents_cut_n,),  # b'd' b'd'  # DD
     "D ⇧G": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'G'  # D⇧G
+    "D ⇧H": (LT.kdo_dents_cut_here_above_dent,),  # b'd' b'H'  # D⇧H
     "D ⇧L": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'L'  # D⇧L
     "E": (LT.kdo_lilword_plus_n_almost,),  # b'e'
     "G G": (LT.kdo_dent_line_n_else_first,),  # b'GG'
@@ -5338,7 +5377,7 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
 #   Vim  Spacebar $ + - 0 123456789 << >>
 #   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
-#   Vim  A B C$ C0 CC C⇧G C⇧L D$ D0 DD D⇧G D⇧L E H I J K L O S W X | Delete
+#   Vim  A B C$ C0 CC C⇧G C⇧H C⇧L D$ D0 DD D⇧G D⇧H D⇧L E H I J K L O S W X | Delete
 #
 #   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
 #   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
@@ -5353,7 +5392,7 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 # Todo's that watch the Screen more closely
 #
 #   Track the Cursor
-#       Delete to Topmost in C⇧H D⇧H
+#       D H, D J, D K, D L and C H, C J, C K, C L
 #       Delete up or down for C⇧M D⇧M
 #       <⇧G <⇧H <⇧L >⇧G >⇧H >⇧L
 #       <0 >0 <$ >$
