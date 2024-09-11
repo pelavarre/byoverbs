@@ -795,7 +795,9 @@ with a more complete workaround of
 
 histogram of McCabe Complexity - weirdly piled up against 11 - 1, maybe?
 
-cal.py option to call for more than two months, such as three!
+cal.py way to show 3 months (or more?)
+    maybe start with 1 or 2 as now, to give us the +/- 15d
+        but then press Return to get the next month's calendar, till ⌃C
 
 column: line too long
 
@@ -812,7 +814,7 @@ pq
 pq em/vi
     frame and deframe
     y:x Arg to do jump Cursor
-    run inside C-x C-e 'edit-command-line
+    run inside C-x C-e 'edit-command-line and save changes
     run inside Esc Z for 'zap-to-char
 
 ### 11 - Eleventh Traunch

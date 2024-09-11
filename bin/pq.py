@@ -6007,6 +6007,12 @@ ITEXT_PY_GRAFS_TEXT = """
     )
     oline = osplits.geturl()
 
+    # wviewpage
+    iosplits = urllib.parse.urlsplit(iline)
+    assert iosplits.path == "/pages/viewpreviousversions.action"
+    iosplits = iosplits._replace(path="/pages/viewpage.action")
+    oline = iosplits.geturl()
+
     # chill
     assert iline.startswith("http")  # "https", "http", etc
     assert " " not in iline
@@ -6032,6 +6038,9 @@ ITEXT_PY_GRAFS_TEXT = """
 #
 # jkey to:  PROJ-12345
 # jlink to:  https://jira.example.com/browse/PROJ-12345
+#
+# wviewpage to: https://wiki.example.com/pages/viewpage.action?pageId=12345
+# wviewpage from: https://wiki.example.com/pages/viewpreviousversions.action?pageId=12345
 #
 # chill to:  https :// twitter . com /pelavarre/status/1647691634329686016
 # warm to:  https://twitter.com/pelavarre/status/1647691634329686016
