@@ -2708,43 +2708,44 @@ class StrTerminal:
     def append_one_kchord_bytes_str(self, kbytes, kstr) -> None:
         """Say to read a Bytes/Str pair again, as if read too far ahead"""
 
-        kpulls = self.kpulls
         kpushes = self.kpushes
 
-        kpush = (kbytes, kstr)
-        assert kpulls[-1] == kpush, (kpulls[-1], kpush, len(kpulls))
+        assert kbytes, (kbytes, kstr)
+        assert kstr, (kstr, kbytes)
 
-        kpulls.pop()
+        kpush = (kbytes, kstr)
         kpushes.append(kpush)
 
         # todo: test Append a K Push, like for bound Key Chord prefixing another
 
     def pull_one_kchord_bytes_str(self) -> tuple[bytes, str]:
-        """Read the next Pushed Chord, or Key Chord, or next Cursor Position Report"""
+        """Read the next Pushed Key Chord, else the next Key Chord from the Keyboard"""
 
         kpulls = self.kpulls
+        kpushes = self.kpushes
 
-        kpull = self.pull_one_kchord_bytes_str_()
+        if not kpushes:
+            self.pull_cursor_always_and_keyboard_maybe()
+            if not kpushes:  # todo: log when reading Keyboard in place of Cursor
+                (kbytes, kstr) = self.read_one_kchord_bytes_str()
+                self.append_one_kchord_bytes_str(kbytes, kstr=kstr)
+                assert kpushes == [(kbytes, kstr)], (kpushes, (kbytes, kstr))
+
+        kpush = kpushes.pop(0)
+
+        kpull = kpush
         kpulls.append(kpull)
 
-        return kpull
+        return kpush
 
-    def pull_one_kchord_bytes_str_(self) -> tuple[bytes, str]:
-        """Read the next Pushed Chord, or Key Chord, or next Cursor Position Report"""
+    def pull_cursor_always_and_keyboard_maybe(self) -> None:
+        """Write Device-Status-Report (DSR), read Cursor-Position-Report (CPR)"""
 
         bt = self.bt
         fd = bt.fd
 
-        kpushes = self.kpushes
-
-        # Revisit the input that was read ahead
-
-        if kpushes:
-            kpush = kpushes.pop(0)
-            return kpush
-
-        # Read the next Key Chord,
-        # except sometimes digress to track the Terminal Cursor
+        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
+        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
 
         self.stwrite("\x1B" "[" "6" "n")
         while True:
@@ -2753,42 +2754,35 @@ class StrTerminal:
             pattern = r"^\x1B\[([0-9]+);([0-9]+)R$".encode()
             m = re.match(pattern, string=kbytes)
             if not m:
-                break
+                self.append_one_kchord_bytes_str(kbytes, kstr=kstr)
+                continue
 
-            (by, bx) = m.groups()
-            row_y = int(by)
-            column_x = int(bx)
+            break
 
-            (x_columns, y_rows) = os.get_terminal_size(fd)
+        (by, bx) = m.groups()
+        row_y = int(by)
+        column_x = int(bx)
 
-            assert 1 <= row_y <= y_rows, (row_y, y_rows)
-            assert 1 <= column_x <= x_columns, (column_x, x_columns)
-            assert y_rows >= 5, (y_rows,)  # macOS Terminal min 5 Rows
-            assert x_columns >= 20, (x_columns,)  # macOS Terminal min 20 Columns
+        (x_columns, y_rows) = os.get_terminal_size(fd)
 
-            if self.row_y == -1:
-                assert self.column_x == -1, (self.column_x,)
-                assert self.y_rows == -1, (self.y_rows,)
-                assert self.x_columns == -1, (self.x_columns,)
+        assert 1 <= row_y <= y_rows, (row_y, y_rows)
+        assert 1 <= column_x <= x_columns, (column_x, x_columns)
+        assert y_rows >= 5, (y_rows,)  # macOS Terminal min 5 Rows
+        assert x_columns >= 20, (x_columns,)  # macOS Terminal min 20 Columns
 
-                at_stlaunch_func_else = self.at_stlaunch_func_else
-                if at_stlaunch_func_else is not None:
-                    at_stlaunch_func_else()
+        if self.row_y == -1:
+            assert self.column_x == -1, (self.column_x,)
+            assert self.y_rows == -1, (self.y_rows,)
+            assert self.x_columns == -1, (self.x_columns,)
 
-            self.row_y = row_y
-            self.column_x = column_x
-            self.y_rows = y_rows
-            self.x_columns = x_columns
+            at_stlaunch_func_else = self.at_stlaunch_func_else
+            if at_stlaunch_func_else is not None:
+                at_stlaunch_func_else()
 
-        # Succeed
-
-        assert kpush[0], (kpush,)  # 1 or more Bytes always
-        assert kpush[-1], (kpush,)  # 1 or more Chars always
-
-        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
-        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
-
-        return kpush
+        self.row_y = row_y
+        self.column_x = column_x
+        self.y_rows = y_rows
+        self.x_columns = x_columns
 
     def read_one_kchord_bytes_str(self) -> tuple[bytes, str]:
         """Read 1 Key Chord, as Bytes and Str"""
@@ -2911,6 +2905,10 @@ class LineTerminal:
     kmap: str  # ''  # 'Emacs'  # 'Vim'
     vmodes: list[str]  # ''  # 'Replace'  # 'Insert'
 
+    #
+    # Init, breakpoint, flush, and run till quit
+    #
+
     def __init__(self) -> None:
 
         pqlogger = ReprLogger(".pqinfo/pq.log")
@@ -3003,8 +3001,15 @@ class LineTerminal:
             if exc.code:
                 raise
 
+    #
+    # Wrangle Text
+    #
+
     def texts_vmode_wrangle(self, vmode, kint) -> str:
         """Enter Replace/ Insert V-Mode, Wrangle Texts, then exit V-Mode"""
+
+        assert vmode in ("Insert", "Meta", "Replace", "Replace1"), (vmode,)
+        assert vmode != "Meta", (vmode,)
 
         st = self.st
 
@@ -3024,7 +3029,7 @@ class LineTerminal:
         # returns just 1 copy of the .ktext  # not a catenated .kint * .ktext
 
     def texts_wrangle(self) -> str:
-        """Take Input as Replace Text or Insert Text, till ⎋ or ⌃C or 'Replace1' Mode"""
+        """Take Input as Replace Text or Insert Text, till ⌃C, or ⎋, etc, or 'Replace1' Mode"""
 
         kstr_starts = self.kstr_starts
         kstr_stops = self.kstr_stops
@@ -3032,6 +3037,7 @@ class LineTerminal:
         vmode = self.vmodes[-1]
         assert vmode, (vmode,)
         assert vmode in ("Insert", "Meta", "Replace", "Replace1"), (vmode,)
+        assert vmode != "Meta", (vmode,)
 
         # Replace till 'Replace1' Mode
 
@@ -3051,7 +3057,7 @@ class LineTerminal:
             # Read 1 Short Text, or Whole Control, Key Chord Sequence,
             # or raise UnicodeDecodeError
 
-            (kbytes, kchars, kcap_str) = self.text_else_verb_read(vmode)
+            (kbytes, kchars, kcap_str) = self.one_else_some_kchords_read(vmode)
 
             textual = self.kchars_are_textual(kchars, kcap_str=kcap_str, kstr_starts=kstr_starts)
 
@@ -3069,7 +3075,7 @@ class LineTerminal:
             # and sometimes take - 0 1 2 3 4 5 6 7 8 9 as more K Start's
 
             if not textual:
-                self.verb_eval(vmode)  # for .texts_wrangle untextuals
+                self.kchords_eval(vmode)  # for .texts_wrangle untextuals
                 continue
 
             # Take the printable K Chars as Text Input,
@@ -3116,7 +3122,7 @@ class LineTerminal:
         return True
 
     def vmode_enter(self, vmode) -> None:
-        """Take Input as Replace Text or Insert Text, till Exit"""
+        """Take Input as Replace Text or Insert Text or Meta, till Exit"""
 
         vmodes = self.vmodes
 
@@ -3151,10 +3157,9 @@ class LineTerminal:
 
         self.vmode_stwrite(vmode)
 
-    def screen_print(self) -> None:
-        """Speak after taking Key Chord Sequences as Commands or Text"""
-
-        pass  # todo: do more inside 'def screen_print'
+    #
+    # Wrangle Verbs
+    #
 
     def verbs_wrangle(self) -> list[str]:
         """Read & Eval & Print in a loop till SystemExit"""
@@ -3164,21 +3169,30 @@ class LineTerminal:
 
         while True:
             self.screen_print()
-            self.verb_read(vmode="Meta")  # for .verbs_wrangle
-            self.verb_eval(vmode="Meta")  # for .verbs_wrangle
+            self.some_kchords_read()  # for .verbs_wrangle
+            self.kchords_eval(vmode="Meta")  # for .verbs_wrangle
 
-    def text_else_verb_read(self, vmode) -> tuple[bytes, str, str]:
-        """Read 1 Short Text, or Whole Control, Key Chord Sequence"""
+    def screen_print(self) -> None:
+        """Speak after taking Key Chord Sequences as Commands or Text"""
+
+        pass  # todo: do more inside 'def screen_print'
+
+    #
+    # Read KChords
+    #
+
+    def one_else_some_kchords_read(self, vmode) -> tuple[bytes, str, str]:
+        """Read 1 KChord of Text, else a Whole KChord Sequence of 1 or more KChords"""
 
         kstr_starts = self.kstr_starts
         kstr_stops = self.kstr_stops
 
         # Read the Head of the Sequence
 
-        if kstr_starts:
-            self.verb_read(vmode="Meta")  # for .texts_wrangle while .kstr_starts
+        if not kstr_starts:
+            self.one_kchord_read()  # for .texts_wrangle Replace/ Insert
         else:
-            self.verb_read(vmode=vmode)  # for .texts_wrangle Replace/ Insert
+            self.some_kchords_read()  # for .texts_wrangle while .kstr_starts
 
         kbytes = self.kbytes
         kchars = kbytes.decode()  # may raise UnicodeDecodeError
@@ -3187,7 +3201,7 @@ class LineTerminal:
         # Read the Tail of the Sequence when the Head isn't printable
 
         if not kchars.isprintable():
-            self.verb_tail_read(kbytes, kcap_str=kcap_str)
+            self.tail_kchords_read(kbytes, kcap_str=kcap_str)
 
             kbytes = self.kbytes
             kchars = kbytes.decode()  # may raise UnicodeDecodeError
@@ -3202,30 +3216,71 @@ class LineTerminal:
 
         # may raise UnicodeDecodeError
 
-    def verb_read(self, vmode) -> None:
-        """Read 1 Key Chord Sequence, as Bytes and Str"""
+    def one_kchord_read(self) -> None:
+        """Read 1 Key Chord, as Bytes and Str"""
 
         st = self.st
-
-        # Read the first Key Chord of the Sequence
 
         self.ltlogger.flush()
         (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
 
-        # Take just 1 Chord as a complete Sequence, when taking Chords as Chars
+        self.kbytes = kchord_bytes
+        self.kcap_str = kchord_str
 
-        if vmode != "Meta":
-            self.kbytes = kchord_bytes
-            self.kcap_str = kchord_str
-            return
+        # '⇧Z'
 
-        # Read zero or more Key Chords to complete the Sequence of a Verb
+    def kphrase_read(self) -> None:
+        """Read one or some KChords, again and again, till Verb plus Arg complete"""
 
-        self.verb_tail_read(kbytes=kchord_bytes, kcap_str=kchord_str)
+        kdo_call_by_kcap_str = KDO_CALL_BY_KCAP_STR
+
+        # Pull 1st Arg, read enough KCHords to choose a Verb, pull 2nd Arg
+
+        early_peek_else = self.kint_peek_else()
+        early_kint = self.kint_pull(default=-1)
+
+        while True:
+            self.some_kchords_read()
+            kcap_str = self.kcap_str
+            if kcap_str in kdo_call_by_kcap_str.keys():
+                kdo_call = kdo_call_by_kcap_str[kcap_str]
+
+                kdo_func = kdo_call[0]
+                if kdo_func == LineTerminal.kdo_hold_start_kstr:
+                    self.kchords_eval(vmode="Meta")  # for .kphrase_read
+                    print(f"{self.kstr_starts=} kphrase_read", file=self.ltlogger)
+                    continue
+
+            break
+
+        # Multiply the Args if both present, else push the one, else push none
+
+        late_peek_else = self.kint_peek_else()
+
+        if early_peek_else is None:
+            print("kphrase_read", file=self.ltlogger)
+        else:
+            if late_peek_else is None:
+                print(f"{early_kint=} kphrase_read", file=self.ltlogger)
+                self.kint_push(early_kint)
+            else:
+                late_kint = self.kint_pull(default=-1)
+
+                print(f"{early_kint=} {late_kint=} kphrase_read", file=self.ltlogger)
+                self.kint_push(early_kint * late_kint)
+
+    def some_kchords_read(self) -> None:
+        """Read 1 Key Chord Sequence, as Bytes and Str"""
+
+        st = self.st
+
+        self.ltlogger.flush()
+        (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
+        self.tail_kchords_read(kbytes=kchord_bytes, kcap_str=kchord_str)
 
         # '⌃L'  # '⇧Z ⇧Z'
 
-    def verb_tail_read(self, kbytes, kcap_str) -> None:
+    def tail_kchords_read(self, kbytes, kcap_str) -> None:
         """Read zero or more Key Chords to complete the Sequence"""
 
         st = self.st
@@ -3314,7 +3369,11 @@ class LineTerminal:
 
         return finds
 
-    def verb_eval(self, vmode) -> None:
+    #
+    # Eval KChords
+    #
+
+    def kchords_eval(self, vmode) -> None:
         """Take 1 Key Chord Sequence as a Verb to eval"""
 
         assert vmode in ("Insert", "Meta", "Replace", "Replace1"), (vmode,)
@@ -3343,7 +3402,7 @@ class LineTerminal:
         # Call the 1 Python Def
 
         kstr_starts_before = list(kstr_starts)
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         print(f"{kstr_starts=} {peek_else=} {kcap_str=}", file=self.ltlogger)
 
         done = False
@@ -3360,7 +3419,7 @@ class LineTerminal:
         if ktext == self.ktext:
             if ktext:
                 print(f"{ktext=} cleared", file=self.ltlogger)
-            self.ktext = ""  # .verb_eval when .ktext unchanged
+            self.ktext = ""  # .kchords_eval when .ktext unchanged
 
     def py_call_complete(self, call) -> tuple[typing.Callable, tuple, dict]:
         """Complete the Python Call with Args and KwArgs"""
@@ -3418,7 +3477,7 @@ class LineTerminal:
 
         # Quit without derailing a Missing K Int
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         if peek_else is None:
             return False
 
@@ -3565,7 +3624,7 @@ class LineTerminal:
 
         assert KCAP_SEP == " "
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         kint = self.kint_pull(default=1)
 
         print(f"peek_else={peek_else} func=kdo_kcap_alarm_write_n", file=self.ltlogger)
@@ -3700,8 +3759,8 @@ class LineTerminal:
         if not done:
             kdo_func(self)
 
-        # Emacs Digit - after ⌃U
-        # Vim Digit -
+        # Emacs - after ⌃U
+        # Vim -
 
     def kdo_kzero(self) -> None:
         """Hold another Digit, else jump to First Column"""
@@ -3876,7 +3935,7 @@ class LineTerminal:
 
         return kint
 
-    def kint_peek_else(self, default) -> int | None:
+    def kint_peek_else(self, default=None) -> int | None:
         """Fetch the Key-Cap Str Holds, without adding or removing them"""
 
         kstr_starts = self.kstr_starts
@@ -3978,7 +4037,7 @@ class LineTerminal:
 
         st = self.st
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         assert peek_else is None, (peek_else,)
 
         st.column_x_write_dent()  # for Vim ^
@@ -4008,7 +4067,7 @@ class LineTerminal:
 
         middle_column_x = self.st.x_columns // 2
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         if peek_else is None:
             self.kint_pull(default=0)
             st.column_x_write(middle_column_x)
@@ -4067,7 +4126,7 @@ class LineTerminal:
     def kdo_dent_line_n_else_first(self) -> None:
         """Jump to a numbered Line, else First Line, but land past the Dent"""
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         if peek_else is None:
             self.kint_push_positive(1)
 
@@ -4260,7 +4319,7 @@ class LineTerminal:
 
         st = self.st
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         assert peek_else is None, (peek_else,)
 
         middle_row_y = self.st.y_rows // 2
@@ -4315,7 +4374,7 @@ class LineTerminal:
 
         # Jump to Row from Top or Bottom of Screen, if Arg given
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         if peek_else is not None:
             kint = peek_else
 
@@ -4489,67 +4548,20 @@ class LineTerminal:
 
         kint = self.kint_pull_positive()
 
-        st.column_x_write_1()  # for Vim D D, VsCode ⌘X
         st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=kint)
+        st.column_x_write_dent()  # for Vim D D, VsCode ⌘X
 
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
         # Vim D D  # Vim DD
         # VsCode ⌘X
 
-    def kdo_dents_cut_here_above_dent(self) -> None:
-        """Cut Lines here and below, and land at Dent of Line Above"""
-
-        st = self.st
-        row_y = st.row_y
-
-        peek_else = self.kint_peek_else(default=None)
-        if peek_else is not None:
-            self.alarm_ring()  # 'repetition arg' for D ⇧H
-            return
-
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=row_y)
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=row_y)
-
-        st.column_x_write_dent()  # for D ⇧H
-
-        # Disassemble these StrTerminal Writes
-
-        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-        assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
-
-        # Vim D ⇧H
-
-    def kdo_dents_cut_here_below_dent_above(self) -> None:
-        """Cut Lines here and below, and land at Dent of Line Above"""
-
-        st = self.st
-
-        peek_else = self.kint_peek_else(default=None)
-        if peek_else is not None:
-            self.alarm_ring()  # 'repetition arg' for C ⇧G, C ⇧L, D ⇧G, D ⇧L
-            return
-
-        assert Y_32100 == 32100  # vs VPA_Y "\x1B" "[" "{}d"
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=32100)
-
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=1)
-        st.column_x_write_dent()  # for C ⇧G, C ⇧L, D ⇧G, D ⇧L
-
-        # Disassemble these StrTerminal Writes
-
-        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-        assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
-
-        # Vim D ⇧G
-        # Vim D ⇧L
-
     #
     # Visit Replace or Insert to change/ drop/ add Text Chars/ Lines/ Heads/ Tails
     #
 
     def kdo_ins_n_till(self) -> str:
-        """Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
+        """Insert Text Sequences till ⌃C, or ⎋, etc, except for ⌃O and Control Sequences"""
 
         st = self.st
 
@@ -4566,7 +4578,7 @@ class LineTerminal:
         # Pq I repeats even when ⌃C quits I, not ⌃G ⎋ ⌃\  # Vim I doesn't
 
     def kdo_replace_n_till(self) -> None:
-        """Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences"""
+        """Replace Text Sequences till ⌃C, or ⎋, etc, except for ⌃O and Control Sequences"""
 
         st = self.st
 
@@ -4674,19 +4686,6 @@ class LineTerminal:
         # Pq I ⌃D
         # macOS ⌃D into ⌘Z Undo
 
-    def kdo_home_cut(self) -> None:
-        """Cut the Head of the Line"""
-
-        st = self.st
-
-        pn = st.column_x - 1
-        if pn:
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=pn)
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}P", pn=pn)
-
-        # part of Vim C0
-        # Vim D0
-
     def kdo_line_ins_ahead_n(self) -> None:
         """Insert 0 or more Empty Lines ahead, and land at Left before the First"""
 
@@ -4737,7 +4736,7 @@ class LineTerminal:
 
         kpulls = st.kpulls
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         kint = self.kint_pull(default=0)
 
         ps_0 = 0  # EL_P CSI K writes Spaces ahead for Ps=0
@@ -4939,7 +4938,7 @@ class LineTerminal:
 
         self.kdo_char_cut_left_n()
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         assert peek_else is None, (peek_else,)
 
         self.kdo_ins_n_till()
@@ -4951,78 +4950,146 @@ class LineTerminal:
 
         self.kdo_char_cut_right_n()
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         assert peek_else is None, (peek_else,)
 
         self.kdo_ins_n_till()
 
         # Vim S = Vim X + Vim I
 
-    def kdo_dents_cut_here_above_but_below_ins_till(self) -> None:
-
-        st = self.st
-
-        self.kdo_dents_cut_here_above_dent()
-
-        st.column_x_write_1()  # for C ⇧H
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=1)
-        self.kdo_ins_n_till()
-
-        assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
-
-        # Vim C ⇧H = Vim D ⇧H + Vim ⇧O
-
-    def kdo_dents_cut_here_below_ins_till(self) -> None:
-        """Cut Lines here and below, and then Insert"""
-
-        st = self.st
-
-        self.kdo_dents_cut_here_below_dent_above()
-        st.stwrite("\r\n")  # 00/13 00/10  # "\x0D\x0A"
-
-        self.kdo_ins_n_till()
-
-        # Disassemble these StrTerminal Writes
-
-        assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
-        assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
-
-        # Vim C ⇧G
-        # Vim C ⇧L
-
     def kdo_dents_cut_n_line_ins_above(self) -> None:
         """Cut N Lines here and below, land past Dent, and then Insert"""
 
         self.kdo_dents_cut_n()
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         assert peek_else is None, (peek_else,)
 
         self.kdo_line_ins_above_n()
 
-        # Vim C C = Vim D D + Vim ⇧O
         # Vim ⇧S = Vim D D + Vim ⇧O
-
-    def kdo_home_cut_ins_till(self) -> None:
-        """Cut the Head of the Line, and then Insert"""
-
-        self.kdo_home_cut()
-        self.kdo_ins_n_till()
-
-        # Vim C0
 
     def kdo_tail_cut_n_ins_till(self) -> None:
         """Cut N Lines here and below, land past Dent, and then Insert"""
 
         self.kdo_tail_cut_n()
 
-        peek_else = self.kint_peek_else(default=None)
+        peek_else = self.kint_peek_else()
         assert peek_else is None, (peek_else,)
 
         self.kdo_ins_n_till()
 
         # Vim ⇧C = Vim ⇧D + Vim I
-        # Vim C$ = Vim D$ + Vim I
+
+    def kdo_cut_to_read_eval_ins_till(self) -> None:
+        """Cut like Vim D would, then Insert 1 Empty Line above, then Insert Till"""
+
+        st = self.st
+        (y_cuts, x_cuts) = self.kdo_cut_to_read_eval()
+
+        peek_else = self.kint_peek_else()
+        assert peek_else is None, (peek_else,)
+
+        if y_cuts:
+            st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=1)
+
+        self.kdo_ins_n_till()
+
+        assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
+
+        # Vim C  # Vim CC
+
+    def kdo_cut_to_read_eval(self) -> tuple[int, int]:  # noqa C901
+        """Read & eval the next Verb, but cut the Lines or Columns involved"""
+
+        kcap_str = self.kcap_str
+
+        st = self.st
+        column_x = st.column_x
+        row_y = st.row_y
+
+        # Take the next Move from the Keyboard,
+        # except when already implied, like by << >> CC DD
+
+        adverbs = ("<", ">", "C", "D")  # todo: more arbitrary Key Maps of Adverbs
+        assert kcap_str in adverbs, (kcap_str,)
+
+        self.kphrase_read()  # for .kdo_cut_to_read_eval
+
+        if self.kcap_str != kcap_str:
+
+            if self.kcap_str in adverbs:
+                self.kdo_kcap_alarm_write_n()  # Adverb of Adverb
+                self.alarm_ring()  # Adverb of Adverb   # Vim <, Vim >, Vim C, Vim D
+                return (0, 0)
+
+            self.kchords_eval(vmode="Meta")  # for .kdo_cut_to_read_eval
+            st.pull_cursor_always_and_keyboard_maybe()  # resamples Cursor, after Eval
+
+            # Vim D and Vim C accept : Q ! Return etc, but reject ⇧Z ⇧Q etc
+
+        # Cut zero or more Columns within 1 Line
+
+        if self.kcap_str != kcap_str:
+
+            if st.row_y == row_y:
+                x_cuts = 0
+                if st.column_x != column_x:
+
+                    if st.column_x > column_x:  # if gone right
+                        x_cuts = st.column_x - column_x
+
+                        self.kint_push_positive(x_cuts)
+                        self.kdo_char_cut_left_n()
+
+                    else:  # if gone left
+                        assert st.column_x < column_x, (column_x, st.column_x)
+                        x_cuts = column_x - st.column_x
+
+                        print(file=self.ltlogger)
+                        self.kint_push_positive(x_cuts)
+                        self.kdo_char_cut_right_n()
+
+                return (0, x_cuts)
+
+        # Move up or down, if so asked  # Vim DD  # Vim CC
+
+        kint = self.kint_pull(default=1)
+        if not kint:
+            return (0, 0)
+
+        if kint != 1:
+            if kint < 0:
+                self.kint_push(-kint)
+                self.kdo_line_minus_n()
+                st.pull_cursor_always_and_keyboard_maybe()  # resamples Cursor, after Eval
+            elif kint < 2:
+                assert False, (kint,)
+            elif kint > 1:
+                self.kint_push(kint - 1)
+                self.kdo_line_plus_n()
+                st.pull_cursor_always_and_keyboard_maybe()  # resamples Cursor, after Eval
+
+        # Cut the first Line, the last Line, and any Lines in between
+
+        if st.row_y < row_y:  # if gone up
+            y_cuts = row_y - st.row_y + 1
+        else:  # if gone down, or if not gone up/down
+            assert st.row_y >= row_y, (row_y, st.row_y)
+            y_cuts = st.row_y - row_y + 1
+
+            if y_cuts > 1:
+                y_cuts_minus = y_cuts - 1
+                st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=y_cuts_minus)
+
+        self.kint_push_positive(y_cuts)
+        self.kdo_dents_cut_n()
+
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+
+        return (y_cuts, 0)
+
+        # Vim D
 
     #
     # Scroll Rows
@@ -5195,18 +5262,8 @@ VI_KDO_CALL_BY_KCAP_STR = {
     #
     "A": (LT.kdo_column_plus_ins_n_till,),  # b'a'
     "B": (LT.kdo_lilword_minus_n,),  # b'b'
-    "C $": (LT.kdo_tail_cut_n_ins_till,),  # b'c' b'$'  # C$
-    "C 0": (LT.kdo_home_cut_ins_till,),  # b'c' b'0'  # C0
-    "C C": (LT.kdo_dents_cut_n_line_ins_above,),  # b'c' b'c'  # CC
-    "C ⇧G": (LT.kdo_dents_cut_here_below_ins_till,),  # b'c' b'G'  # C⇧G
-    "C ⇧H": (LT.kdo_dents_cut_here_above_but_below_ins_till,),  # b'c' b'H'  # C⇧H
-    "C ⇧L": (LT.kdo_dents_cut_here_below_ins_till,),  # b'c' b'L'  # C⇧L
-    "D $": (LT.kdo_tail_cut_n_column_minus,),  # b'd' b'$'  # D$
-    "D 0": (LT.kdo_home_cut,),  # b'd' b'0'  # D0
-    "D D": (LT.kdo_dents_cut_n,),  # b'd' b'd'  # DD
-    "D ⇧G": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'G'  # D⇧G
-    "D ⇧H": (LT.kdo_dents_cut_here_above_dent,),  # b'd' b'H'  # D⇧H
-    "D ⇧L": (LT.kdo_dents_cut_here_below_dent_above,),  # b'd' b'L'  # D⇧L
+    "C": (LT.kdo_cut_to_read_eval_ins_till,),  # b'c'
+    "D": (LT.kdo_cut_to_read_eval,),  # b'd' b'd'
     "E": (LT.kdo_lilword_plus_n_almost,),  # b'e'
     "G G": (LT.kdo_dent_line_n_else_first,),  # b'GG'
     "H": (LT.kdo_column_minus_n,),  # b'h'
@@ -5342,7 +5399,7 @@ KDO_ONLY_POSITIVE_FUNCS = [
     LT.kdo_bigword_plus_n_almost,  # Vim ⇧E
     LT.kdo_column_dent_ins_n_till,  # Vim ⇧I
     LT.kdo_dent_plus_n1,  # Vim _
-    LT.kdo_dents_cut_n,  # Vim D D, VsCode ⌘X
+    LT.kdo_dents_cut_n,  # (not bound lately)
     LT.kdo_ins_n_till,  # Vim I
     LT.kdo_lilword_plus_n_almost,  # Vim E
     LT.kdo_line_ins_above_n,  # Vim ⇧O
@@ -5375,9 +5432,10 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #   Emacs  ⌥< ⌥> ⌥G⌥G ⌥GG ⌥GTab ⌥R
 #
 #   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
-#   Vim  Spacebar $ + - 0 123456789 << >>
+#   Vim  Spacebar $ + - 0 123456789
 #   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
-#   Vim  A B C$ C0 CC C⇧G C⇧H C⇧L D$ D0 DD D⇧G D⇧H D⇧L E H I J K L O S W X | Delete
+#   Vim  A B E H I J K L O S W X | Delete
+#   Vim  < > C D as adverbs:  DD D0 D$ DJ DK CC C0 C$ CJ CK etc etc
 #
 #   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
 #   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
@@ -5392,8 +5450,6 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 # Todo's that watch the Screen more closely
 #
 #   Track the Cursor
-#       D H, D J, D K, D L and C H, C J, C K, C L
-#       Delete up or down for C⇧M D⇧M
 #       <⇧G <⇧H <⇧L >⇧G >⇧H >⇧L
 #       <0 >0 <$ >$
 #

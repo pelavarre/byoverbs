@@ -900,6 +900,13 @@ pq emojis unicodedata
     %
 
 
+### 12 - Twelfth Traunch
+
+Tool to backport .py to .py38 by commenting out the type declarations
+
+Pause/ resume a Process launched by Cron
+
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md
