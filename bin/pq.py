@@ -3483,40 +3483,45 @@ class LineTerminal:
 
         kint = peek_else
 
-        # Reject any explicit K Int for a few Funcs
+        # Reject an explicit K Int, as if Def not found, for some Funcs
 
-        if kdo_func not in kdo_only_without_arg_funcs:
+        if kdo_func in kdo_only_without_arg_funcs:
+            self.kdo_kcap_alarm_write_n()  # as if Def not found, for .kdo_only_without_arg_funcs
+            return True
 
-            # Else quit without derailing a Positive K Int
+        # Forward a Positive K Int, for some Funcs
 
-            if kint > 0:
-                return False
+        if kint > 0:
+            return False
 
-            # Send the Negated Negative K Int to Inverse, if Inverse found
+        # Negate the negative K Int and call the Inverse, for some Funcs
 
-            if (kint < 0) and (kdo_func in kdo_inverse_func_by.keys()):
-                kdo_inverse_func = kdo_inverse_func_by[kdo_func]
-                fname = kdo_inverse_func.__name__
+        if (kint < 0) and (kdo_func in kdo_inverse_func_by.keys()):
+            kdo_inverse_func = kdo_inverse_func_by[kdo_func]
+            fname = kdo_inverse_func.__name__
 
-                print(f"kint=-{kint} func={fname}", file=self.ltlogger)
+            print(f"kint=-{kint} func={fname}", file=self.ltlogger)
 
-                self.kint_pull(default=1)  # this Default can't much matter
-                self.kint_push_positive(-kint)  # for .verb_eval_explicit_nonpositive_if
-                kdo_inverse_func(self)
+            self.kint_pull(default=1)  # this Default can't much matter
+            self.kint_push_positive(-kint)  # for .verb_eval_explicit_nonpositive_if
+            kdo_inverse_func(self)
 
-                return True
+            return True
 
-            # Quit without derailing a Func written for all K Int's
+        # Reject a zeroed K Int, for some Funcs
 
-            if (kint == 0) and (kdo_func in kdo_inverse_func_by.keys()):
-                pass
-            elif kdo_func not in kdo_only_positive_funcs:
-                return False
+        if (kint == 0) and (kdo_func in kdo_inverse_func_by.keys()):
+            self.kdo_kcap_alarm_write_n()  # as if Def not found, for .kdo_inverse_func_by
+            return True
 
-        # Reject an explicitly negative or zero K Int, as if Key Cap unbound
+        # Forward a Negative K Int, for some Funcs
+
+        if kdo_func not in kdo_only_positive_funcs:
+            return False
+
+        # Reject a negative K Int, for some Funcs
 
         self.kdo_kcap_alarm_write_n()  # def not found for explicitly zeroed K Int
-
         return True
 
     #
@@ -3653,7 +3658,7 @@ class LineTerminal:
 
         kint = self.kint_pull(default=1)
         if kint < 0:
-            self.alarm_ring()  # 'negative repetition arg' for Texts_Wrangle etc
+            self.kdo_kcap_alarm_write_n()  # 'negative repetition arg' for Texts_Wrangle etc
             return
 
         #
@@ -4810,7 +4815,8 @@ class LineTerminal:
 
         kint = self.kint_pull(default=1)
         if kint <= 0:
-            self.alarm_ring()  # 'negative repetition arg' for Vim ⇧D or Vim D$
+            self.kint_push(kint)
+            self.kdo_kcap_alarm_write_n()  # 'negative repetition arg' for Vim ⇧D, Vim ⇧C
             return
 
         ps_0 = 0  # writes Spaces ahead  # CSI K default Ps = 0
@@ -4829,7 +4835,7 @@ class LineTerminal:
         assert EL_P == "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 
-        # common to Vim ⇧C, Vim ⇧D, Vim C $, Vim D $
+        # common to Vim ⇧C, Vim ⇧D
 
     #
     # Move before Insert
@@ -5019,8 +5025,11 @@ class LineTerminal:
         if self.kcap_str != kcap_str:
 
             if self.kcap_str in adverbs:
-                self.kdo_kcap_alarm_write_n()  # Adverb of Adverb
-                self.alarm_ring()  # Adverb of Adverb   # Vim <, Vim >, Vim C, Vim D
+                late_kcap_str = self.kcap_str
+                self.kcap_str = kcap_str
+                self.kdo_kcap_alarm_write_n()  # Adverb of Adverb   # Vim <, Vim >, Vim C, Vim D
+                self.kcap_str = late_kcap_str
+                self.kdo_kcap_alarm_write_n()  # Adverb of Adverb   # Vim <, Vim >, Vim C, Vim D
                 return (0, 0)
 
             self.kchords_eval(vmode="Meta")  # for .kdo_cut_to_read_eval
@@ -5450,8 +5459,11 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 # Todo's that watch the Screen more closely
 #
 #   Track the Cursor
+#       < > Adverbs now in the way of C D Adverbs
 #       <⇧G <⇧H <⇧L >⇧G >⇧H >⇧L
 #       <0 >0 <$ >$
+#       Factor out the C901 from Cx Dx
+#       Test such sad corners as ⌃U - C >
 #
 #   Work the Mouse
 #       Delete/ Change up to the Mouse Click
@@ -5493,8 +5505,8 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 # Todo's that take Keyboard Input
 #
-#   <x >x Cx Dx for Movement X
-#   Multiply with Digits in the Movement and/or before < > C D
+#   <x >x for Movement X
+#   Multiply with Digits in the Movement and/or before < >
 #
 #   Logo Turtle Ascii-Graphics
 #
