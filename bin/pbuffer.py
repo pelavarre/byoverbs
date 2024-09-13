@@ -3,24 +3,24 @@
 r"""
 usage: pbuffer.py [-h] [SHVERB]
 
-emulate macOS PBCopy & PBPaste at ~/cv
+emulate macOS PBCopy & PBPaste at ~/pbuffer.bin
 
 positional arguments:
-  SHVERB      'pbpaste' to read ~/cv, 'pbpaste' to write ~/cv
+  SHVERB      'pbpaste' to read, 'pbpaste' to write ~/pbuffer.bin
 
 options:
   -h, --help  show this help message and exit
 
 quirks:
-  not yet tested with:  chmod go-rwx ~/cv
-  not yet tested with:  rm -fr ~/cv && ln -s ... ~/cv
+  not yet tested with:  chmod go-rwx ~/pbuffer.bin
+  not yet tested with:  rm -fr ~/pbuffer.bin && ln -s ... ~/pbuffer.bin
   defaults to 'pbpaste' copy to Stdout, if Stdin is Tty,
   else defaults to 'pbcopy' copy from Stdin, if Stdout is Tty,
   else defaults to 'tee >(pbcopy)' forward and capture Stdin
 
 examples:
-  bin/pbcopy  # copies Stdin to ~/cv
-  bin/pbpaste  # copies ~/cv to Stdout
+  bin/pbcopy  # copies Stdin to ~/pbuffer.bin
+  bin/pbpaste  # copies ~/pbuffer.bin to Stdout
 """
 
 # code reviewed by People, Black, Flake8, & MyPy
@@ -76,7 +76,7 @@ def main() -> None:
         if pbpaste_dir == argv_0_dir:
             pbpaste_else = None
 
-    # 2 ) Copy Stdin to ~/cv, or ~/cv to Stdout, or Stdin to Stdout and to ~/cv
+    # 2 ) Copy from Stdin, or to Stdout, or from Stdin to Stdout but tee
 
     pbverb = args.pbverb
     if pbverb == "pbpaste":
@@ -105,7 +105,7 @@ def parse_pbuffer_py_args() -> PBufferArgs:
     # Doc the Sh Args & take them in
 
     parser = byo.ArgumentParser()
-    shverb_help = "'pbpaste' to read ~/cv, 'pbpaste' to write ~/cv"
+    shverb_help = "'pbpaste' to read, 'pbpaste' to write ~/pbuffer.bin"
     parser.add_argument("shverb", metavar="SHVERB", nargs="?", help=shverb_help)
 
     ns = parser.parse_args_else()  # often prints help & exits zero
@@ -131,7 +131,7 @@ def parse_pbuffer_py_args() -> PBufferArgs:
 
 
 def do_pbpaste(pbpaste_else) -> None:
-    """Copy ~/cv to Stdout"""
+    """Copy ~/pbuffer.bin to Stdout"""
 
     # Fall back to the Os Copy-Paste Buffer of Bytes
 
@@ -145,16 +145,16 @@ def do_pbpaste(pbpaste_else) -> None:
 
     ofd = sys.stdout.fileno()
 
-    cv_path = pathlib.Path.home() / "cv"
-    if not cv_path.exists():
-        cv_path.write_bytes(b"")
+    bin_path = pathlib.Path.home() / "pbuffer.bin"
+    if not bin_path.exists():
+        bin_path.write_bytes(b"")
 
-    cv_bytes = cv_path.read_bytes()  # sponges
-    os.write(ofd, cv_bytes)
+    bin_bytes = bin_path.read_bytes()  # sponges
+    os.write(ofd, bin_bytes)
 
 
 def do_pbcopy(pbcopy_else) -> None:
-    """Copy Stdin to ~/cv"""
+    """Copy Stdin to ~/pbuffer.bin"""
 
     # Fall back to the Os Copy-Paste Buffer of Bytes
 
@@ -166,18 +166,18 @@ def do_pbcopy(pbcopy_else) -> None:
 
     # Substitute Emulation of Load Buffer from Stdin
 
-    cv_path = pathlib.Path.home() / "cv"
-    if not cv_path.exists():
-        cv_path.write_bytes(b"")
+    bin_path = pathlib.Path.home() / "pbuffer.bin"
+    if not bin_path.exists():
+        bin_path.write_bytes(b"")
 
     ipath = pathlib.Path("/dev/stdin")
     ibytes = ipath.read_bytes()  # sponges
 
-    cv_path.write_bytes(ibytes)
+    bin_path.write_bytes(ibytes)
 
 
 def do_tee_pbcopy(pbcopy_else) -> None:
-    """Copy Stdin to Stdout and to ~/cv"""
+    """Copy Stdin to Stdout and to ~/pbuffer.bin"""
 
     # Fall back to the Os Copy-Paste Buffer of Bytes
 
@@ -191,14 +191,14 @@ def do_tee_pbcopy(pbcopy_else) -> None:
 
     ofd = sys.stdout.fileno()
 
-    cv_path = pathlib.Path.home() / "cv"
-    if not cv_path.exists():
-        cv_path.write_bytes(b"")
+    bin_path = pathlib.Path.home() / "pbuffer.bin"
+    if not bin_path.exists():
+        bin_path.write_bytes(b"")
 
     ipath = pathlib.Path("/dev/stdin")
     ibytes = ipath.read_bytes()  # sponges
 
-    cv_path.write_bytes(ibytes)  # todo: consider Stdout before Cv_Path
+    bin_path.write_bytes(ibytes)  # todo: File before Stdout, or Stdout before File?
     os.write(ofd, ibytes)
 
 
