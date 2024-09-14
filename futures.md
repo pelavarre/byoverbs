@@ -899,6 +899,20 @@ pq emojis unicodedata
     <string>:94: SyntaxWarning: invalid escape sequence '\ '
     %
 
+pq chr
+
+    somehow not the unprintables to the tty
+
+pq chill
+
+    - https :// social . vivaldi . net/home
+    + https :// social . vivaldi . net /home
+
+bin/pq.py
+
+    self-tests somehow didn't show need for:  # + + +
+        i had to add the test:  bin/pq.py +
+
 
 ### 12 - Twelfth Traunch
 

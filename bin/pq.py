@@ -16,11 +16,16 @@ options:
 
 words and phrases of the Pq Programming Language:
   ascii, casefold, eval, lower, lstrip, repr, rstrip, strip, title, upper,
-  close, dedent, dent, end, reverse, shuffle, sort, spong, undent,
+  close, dedent, dent, end, reverse, shuffle, sort, sponge, undent,
   deframe, dumps, frame, json, join, loads, split,
   expand, md5sum, sha256, tail -r, tac, unexpand,
-  a, em, jq ., s, u, wc c, wc m, wc w, wc l,  wc c, wc m, wc w, wc l, vi, x, xn1
-  len bytes, len text, len words, len lines, text set,
+  len bytes, len text, len words, len lines, text set
+
+intense cryptic abbreviations:
+  xn1
+  wc c, wc m, wc w, wc l, wc c, wc m, wc w, wc l
+  em, jq, vi
+  -, a, c, f, h, n, s, t, u, x
   ...
 
 meanings found when no words chosen:
@@ -41,8 +46,6 @@ examples:
   pq --help  # show this help message and exit
   pq --yolo  # do what's popular now  # like parse the Paste & guess what to do
   pq  # end every Line of the Os Copy/Paste Clipboard Buffer
-  pq |cat -  # show the Os Copy/Paste Clipboard Buffer
-  cat - |pq  # type into the Os Copy/Paste Clipboard Buffer
   pq dent  # insert 4 Spaces at the left of each Line
   pq dedent  # remove the leading Blank Columns from the Lines
   pq len lines  # count Lines
@@ -87,8 +90,10 @@ import tty  # unhappy at Windows
 import typing
 import unicodedata
 
-... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
 
+_: object  # '_: object' gets MyPy to let us run fail-fast tests
+
+... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
 ... == json, time  # type: ignore   # PyLance ReportUnusedExpression
 
 
@@ -322,7 +327,11 @@ class PyExecQueryResult:
         """Fetch the Cued Multi-Line Paragraphs"""
 
         mgrafs0 = text_to_grafs(CUED_PY_GRAFS_TEXT)
-        list_assert_eq(mgrafs0, b=sorted(mgrafs0))  # CUED_PY_GRAFS_TEXT sorted
+        if mgrafs0 != sorted(mgrafs0):
+            try:
+                list_assert_eq(mgrafs0, b=sorted(mgrafs0))  # CUED_PY_GRAFS_TEXT sorted
+            except Exception:
+                sys.exit(1)
 
         mgrafs1 = text_to_grafs(ITEXT_PY_GRAFS_TEXT)  # ordered, not sorted
 
@@ -362,11 +371,11 @@ class PyExecQueryResult:
         (ipulls, opushes) = self.py_graf_to_i_pulls_o_pushes(py_graf)
 
         if ipulls == ["iolines"]:  # pq reverse  # pq sort
-            assert not opushes, (ipulls, opushes)
+            assert not opushes, (ipulls, opushes, py_graf)
         elif ipulls == ["print"]:  # pq reverse  # pq sort
-            assert not opushes, (ipulls, opushes)
+            assert not opushes, (ipulls, opushes, py_graf)
         elif ipulls == ["print", "stdin", "stdout"]:  # pq ts
-            assert not opushes, (ipulls, opushes)
+            assert not opushes, (ipulls, opushes, py_graf)
 
         elif (not ipulls) and (opushes == ["olines"]):  # pq ls
             pass
@@ -374,8 +383,8 @@ class PyExecQueryResult:
             pass
 
         else:
-            assert len(ipulls) == 1, (ipulls, opushes)
-            assert len(opushes) == 1, (ipulls, opushes)
+            assert len(ipulls) == 1, (ipulls, opushes, py_graf)
+            assert len(opushes) == 1, (ipulls, opushes, py_graf)
 
     def py_graf_to_i_pulls_o_pushes(self, py_graf) -> tuple[list[str], list[str]]:
         """Pick out the one Sh Pipe Input and one Sh Pipe Output from the Py Graf"""
@@ -413,6 +422,8 @@ class PyExecQueryResult:
                     cues = tuple(shlex.split(cues_py.replace("|", "")))
                     if cues == (len(cues) * cues[:1]):
                         cues = cues[:1]
+                    if not cues:
+                        cues = (cues_py,)  # such as ('|',) as the Cues built from '# |'
 
                     if cues not in cues_list:
                         cues_list.append(cues)
@@ -449,11 +460,18 @@ class PyExecQueryResult:
             else:  # 'pq' or '... |pq |...' means step the Pipe Data forward
                 py_graf = self.read_ibytes_to_one_py_graf(verbose=True)
 
-            # falls back to ending each Text Line, else ending each Byte Line
+        # Define the minimal Positional Arg
 
         if not py_graf:
-            if pq_words == ["-"]:  # 'pq -' means 'pbpaste |pbcopy'
-                py_graf = ["obytes = ibytes"]
+            if pq_words == ["-"]:
+                if stdin_isatty:  # pq -  # pq - |
+                    pq_words = "cat -".split()  # mutates
+                else:
+                    if not stdout_isatty:  # |pq - |
+                        pq_words = "tee >(pbcopy) | sponge".split()  # mutates
+                    else:  # |pq -
+                        pq_words = "olines = ilines".split()  # mutates
+                        self.stdout_isatty = False  # mutates  # todo: ick, ugh, yuck
 
         # Search for one Py Graf matching the Cues (but reject many if found)
 
@@ -461,6 +479,7 @@ class PyExecQueryResult:
             py_graf = self.cues_to_one_py_graf_if(cues=pq_words)  # often exits nonzero
 
         # Take Cues as fragments of Python, if no match found
+        # todo: think more about how we temporarily lost:  pq 'olines = ilines', pq 'otext = itext'
 
         if not py_graf:
             if any((" " in _) for _ in pq_words):
@@ -5768,12 +5787,12 @@ CUED_PY_LINES_TEXT = r"""
 
     iolines.reverse()  # reverse  # reversed  # |tac  # |tail -r  # tail r
 
-    iolines.sort()  # sort  # sorted sorted  # s s s s s s s
+    iolines.sort()  # sort  # sorted sorted  # s s s s s s s s s s
 
 
     obytes = b"\n".join(ibytes.splitlines()) + b"\n"  # bytes ended
 
-    obytes = ibytes  # sponged  # sponge
+    obytes = ibytes  # sponged  # sponge  # obytes = ibytes
 
     obytes = ibytes; pq.BytesTerminal().btloopback()  # bt loopback  # bt loop
 
@@ -5799,7 +5818,7 @@ CUED_PY_LINES_TEXT = r"""
     oline = str(ast.literal_eval(iline))  # eval  # undo 'ascii' or 'repr'
 
 
-    olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
+    olines = ilines  # olines = ilines  # olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
 
     olines = pq.ex_macros(ilines)  # em em  # ema  # emac  # emacs
 
@@ -5865,16 +5884,16 @@ CUED_PY_LINES_TEXT = r"""
 
 
 # todo: reject single-line snippets that don't have comments to name them
+# todo: test  |pq '#'
 
 CUED_PY_GRAFS_TEXT = r"""
 
-    # awk  # |awk '{print $NF}'  # a a a a
-    iwords = iline.split()
-    oline = iwords[-1] if iwords else ""
-
+    # !  # "  # $  # %  # &  # '  # (  # )  # *  # + + +  # ,  # - - -  # . . . . . . .  # /
+    # 0  # 1 1  # 2 2  # 3 3  # 4  # 5 5  # 6 6  # 7  # 8  # 9  # :  # ;  # <  # =  # >  # ?
+    # @
     # b b b
     # d d d d d d d d
-    # e e e e
+    # e e e e e e
     # g g
     # i i i i i i i i i i
     # j j
@@ -5887,25 +5906,30 @@ CUED_PY_GRAFS_TEXT = r"""
     # r r r r r r r r r
     # v v
     # w w w w
-    # y
+    # y y y
     # z
-    sys.stderr.write("Pq today defines a, c, f, h, n, s, t, u, x\n")
+    # {  # | |  # }  # ~
+    sys.stderr.write("Pq today defines a, c, f, h, n, s, t, u, x\n")  # and also '-'
     sys.stderr.write("Pq today doesn't define b, d, e, g, i, j, k, l, m, o, p, q, r, v, w, y, z\n")
     olines = ilines[0:0]
     sys.exit(1)
+
+    # awk  # |awk '{print $NF}'  # a a a a
+    iwords = iline.split()
+    oline = iwords[-1] if iwords else ""
 
     # bytes range
     obytes = ibytes  # todo: say this without ibytes
     obytes = b"".join(bytes([_]) for _ in range(0x100))
 
-    # c c c c  # cat cat
-    otext = itext
-    sys.stderr.write("Press Return ⌃D, or ⌃C, to quit\n")
+    # c c c c  # cat cat  # cat - >/dev/null
+    _ = itext
+    sys.stderr.write("Press ⌃C, or Return ⌃D, to quit\n")
     try:
-        pathlib.Path("/dev/tty").read_bytes()
+        otext = pathlib.Path("/dev/tty").read_text()
     except KeyboardInterrupt:
         sys.stderr.write("\nKeyboardInterrupt\n")
-    otext = ""
+        otext = ""
 
     # cat n expand  # |cat -n |expand  # enum 1  # n n n n
     olines = list(f"{n:6d}  {i}" for (n, i) in enumerate(ilines, start=1))
@@ -5976,10 +6000,10 @@ CUED_PY_GRAFS_TEXT = r"""
     olines.extend(2 * [""])  # bottom margin
     otext = "\n".join(olines) + "\n"
 
-    # head head  # h h h h h h
+    # head head  # h h h h h h h h h
     olines = ilines[:10]  # could be (Terminal Lines // 3)
 
-    # head tail  # h t  # h t  # h t  # h t  # h t  # ht ht
+    # head tail  # h t  # h t  # h t  # h t  # h t  # h t  # h t  # h t  # ht ht
     ipairs = list(enumerate(ilines, start=1))
     plines = list(f"{_[0]:6}  {_[-1]}" for _ in ipairs[:3])
     plines.append("...")
@@ -6012,7 +6036,7 @@ CUED_PY_GRAFS_TEXT = r"""
     # |xargs -n 1  # xargs n 1  # xn1
     olines = itext.split()
 
-    # tail tail  # t t t t t t t t t
+    # tail tail  # t t t t t t t t t t t t t t t t t t
     olines = ilines[-10:]  # could be (Terminal Lines // 3)
 
     # ts  # |ts
@@ -6024,6 +6048,11 @@ CUED_PY_GRAFS_TEXT = r"""
         ts = dt.datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S.%f %z")
         print(f"{ts}  {iline}", file=stdout)
         stdout.flush()
+
+    # |tee >(pbcopy) |sponge
+    olines = ilines  # todo: also Sponge Ended Bytes? not only Ended Chars?
+    input_ = "\n".join(ilines) + "\n"
+    subprocess.run(["pbcopy"], input=input_, text=True, check=True)
 
 """
 
