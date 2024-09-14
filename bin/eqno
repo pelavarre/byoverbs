@@ -5,7 +5,7 @@ if ! which emacs >/dev/null; then
     emacs=/opt/homebrew/bin/emacs
 fi
 
-if [[ $(git rev-parse --show-toplevel) == "$PWD" ]]; then
+if [ "$(git rev-parse --show-toplevel)" = "$PWD" ]; then
     set -xe
     # shellcheck disable=SC2046  # Quote this to prevent word splitting
     $emacs -nw --no-splash --eval '(menu-bar-mode -1)' $($qno "$@")

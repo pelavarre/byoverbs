@@ -1,6 +1,6 @@
 (set -xe; git commit --all --amend "$@")
 xs=$?
-if [[ $xs != 0 ]]; then
+if [ $xs -ne 0 ]; then
     echo "+ exit $xs" >&2
     (set -xe; cat .git/COMMIT_EDITMSG)
     exit $xs

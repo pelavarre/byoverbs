@@ -1,4 +1,4 @@
-if [[ $# != 0 ]]; then
+if [ $# -ne 0 ]; then
     echo "$0: ERROR: unrecognized arguments:" "$@"
     exit 2  # exit 2 for wrong args
 fi

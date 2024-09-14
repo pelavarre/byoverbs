@@ -4,15 +4,20 @@ if ! git diff "$@" >/dev/null 2>&1; then
     git checkout >/dev/null
 fi
 
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
     set -xe
     git diff --color-moved HEAD~1
-elif [[ "$1" =~ ^[0-9]$ ]]; then
-    arg1=HEAD~$1
-    shift
-    set -xe
-    git diff --color-moved "$arg1" "$@"
 else
-    set -xe
-    git diff --color-moved HEAD~1 "$@"
+    case "$1" in
+        [0-9]*)
+            arg1=HEAD~$1
+            shift
+            set -xe
+            git diff --color-moved "$arg1" "$@"
+            ;;
+        *)
+            set -xe
+            git diff --color-moved HEAD~1 "$@"
+            ;;
+    esac
 fi

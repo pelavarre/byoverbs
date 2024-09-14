@@ -1,10 +1,10 @@
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
     set -xe
     awk '{print $NF}'  # last word per line
 else
     index=$1
     shift
-    if [[ $index -lt 0 ]]; then
+    if [ "$index" -lt 0 ]; then
         set -xe
         awk "$@" '{print $(NF + 1 + '"$index"')}'  # word -1, -2, etc
     else

@@ -40,7 +40,7 @@ done
 
 # Forward the Args, or the one Py File, to run as Python 3
 
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
     set -xe
     python3 $py
 else

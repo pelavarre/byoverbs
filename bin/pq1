@@ -1,7 +1,7 @@
 #!/bin/bash
 
 D=$(dirname "$0")
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
     python3 "$D"/pq1.py -- && pbpaste
 else
     python3 "$D"/pq1.py "$@"

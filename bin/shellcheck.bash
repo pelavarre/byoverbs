@@ -29,7 +29,7 @@ set -e
 #
 
 
-if [[ "$*" == "-o all --exclude=..." ]]; then
+if [ "$*" = "-o all --exclude=..." ]; then
     "$0" -o all --exclude=SC2230,SC2244,SC2248,SC2250
     exit
 fi
@@ -73,7 +73,7 @@ fi
 #
 
 
-if [[ $# != 0 ]]; then
+if [ $# -ne 0 ]; then
     echo "calling with Sh Args:  shellcheck" "$@"
 fi
 
@@ -94,9 +94,9 @@ cd bin/ || exit 1
 for SHFILE in *; do
     if [[ -d "$SHFILE" ]]; then  # skips, if dir
         :
-    elif [[ "$SHFILE" == bash_profile ]]; then
+    elif [ "$SHFILE" = bash_profile ]; then
        (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
-    elif [[ "$SHFILE" == zprofile ]]; then
+    elif [ "$SHFILE" = zprofile ]; then
        (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
     elif [[ "$SHFILE" =~ ^[^.]*$ ]]; then  # checks, if not hidden and no file ext
         (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")

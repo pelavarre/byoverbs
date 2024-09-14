@@ -1,4 +1,4 @@
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
     set -xe
     git commit --all -m wip
 else

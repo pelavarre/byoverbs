@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 r"""
-usage: pbuffer.py [-h] [SHVERB]
+usage: pbuffer.py [-h] [--verbose] [SHVERB]
 
 emulate macOS PBCopy & PBPaste at ~/pbuffer.bin
 
@@ -10,6 +10,7 @@ positional arguments:
 
 options:
   -h, --help  show this help message and exit
+  --verbose   say more
 
 quirks:
   not yet tested with:  chmod go-rwx ~/pbuffer.bin
@@ -25,6 +26,7 @@ examples:
 
 # code reviewed by People, Black, Flake8, & MyPy
 
+
 import argparse
 import dataclasses
 import os
@@ -36,8 +38,8 @@ import sys
 
 import byotools as byo
 
-... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
-... == byo  # type: ignore
+_: object  # '_: object' gets MyPy to let us run fail-fast tests
+_ = dict[str, int] | None  # new since Oct/2021 Python 3.10
 
 
 #
@@ -51,6 +53,8 @@ class PBufferArgs:
 
     shverb: str | None
     pbverb: str
+
+    verbose: int | None
 
 
 def main() -> None:
@@ -105,14 +109,18 @@ def parse_pbuffer_py_args() -> PBufferArgs:
     # Doc the Sh Args & take them in
 
     parser = byo.ArgumentParser()
+
     shverb_help = "'pbpaste' to read, 'pbpaste' to write ~/pbuffer.bin"
+    verbose_help = "say more"
+
     parser.add_argument("shverb", metavar="SHVERB", nargs="?", help=shverb_help)
+    parser.add_argument("--verbose", action="count", help=verbose_help)
 
     ns = parser.parse_args_else()  # often prints help & exits zero
 
     # Auto-correct the Sh Args
 
-    shverb = ns.shverb
+    shverb = os.path.basename(ns.shverb)
     if shverb in ("pbpaste", "pbcopy"):
         pbverb = shverb
     else:
@@ -121,6 +129,8 @@ def parse_pbuffer_py_args() -> PBufferArgs:
     # Succeed
 
     args = PBufferArgs(**vars(ns), pbverb=pbverb)
+    if args.verbose:
+        print(f"{args=}", file=sys.stderr)
 
     return args
 

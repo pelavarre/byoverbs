@@ -3,6 +3,8 @@
 
 # Calm the Sh Prompt
 
+OLDPS1=$PS1
+
 if [[ "$SHLVL" == 1 ]]; then
     export PS1='%% '
 elif [[ "$SHLVL" == 2 ]]; then
@@ -14,6 +16,7 @@ fi
 
 # Bold the Sh Input
 
+# if ! :; then
 if [ -t 2 ]; then
     export PS1="$PS1%B"
     function preexec_style () { printf '\e[m'; }

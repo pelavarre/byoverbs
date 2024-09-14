@@ -13,6 +13,8 @@ fi
 
 # Calm the Sh Prompt
 
+OLDPS1=$PS1
+
 if [[ "$SHLVL" == 1 ]]; then
     export PS1='\$ '
 elif [[ "$SHLVL" == 2 ]]; then
@@ -24,8 +26,9 @@ fi
 
 # Bold the Sh Input
 
-if ! :; then  # [ -t 2 ]; then
-    export PS1="\e[m$PS1\e[1m"
+# if ! :; then
+if [ -t 2 ]; then
+    export PS1="\[\e[m\]$PS1\[\e[1m\]"
     function preexec_style () { printf '\e[m'; }  # as if in Zsh preexec_functions
     trap -- 'preexec_style' DEBUG
     trap -- 'preexec_style' EXIT

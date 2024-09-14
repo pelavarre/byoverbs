@@ -1,5 +1,5 @@
 set -xe
-if [[ $(stty size) == "0 0" ]]; then
+if [ "$(stty size)" = "0 0" ]; then
     printf '\e[8;24;999t'  # 24 Rows
 else
     printf '\e[8;%s;999t' "$(stty size |cut -d' ' -f1)"

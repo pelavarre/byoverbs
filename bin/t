@@ -1,12 +1,7 @@
 set -e
-if [[ $(stty size </dev/tty) == "0 0" ]]; then
-    LINES=24
-else
-    LINES=$(stty size </dev/tty |cut -d' ' -f1)
-fi
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
     set -xe
-    tail -$((LINES / 3))
+    tail -10
 else
     set -xe
     tail "$@"

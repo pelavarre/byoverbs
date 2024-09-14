@@ -3,7 +3,7 @@ if ! which emacs >/dev/null; then
     emacs=/opt/homebrew/bin/emacs
 fi
 
-if [[ $# != 0 ]]; then
+if [ $# -ne 0 ]; then
     set -xe
     $emacs -nw --no-splash --eval '(menu-bar-mode -1)' "$@"
 else

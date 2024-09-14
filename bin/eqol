@@ -6,7 +6,7 @@
 # shellcheck disable=SC2145  # Argument mixes string and array. Use * or separate ...
 #
 
-if [[ $# == 1 ]]; then
+if [ $# -eq 1 ]; then
     echo '+ e $(qol' "$@"")" +'"'/$1'"' >&2
     # shellcheck disable=SC2046  # Quote this to prevent word splitting
     e $(qol "$@") +"/$1"

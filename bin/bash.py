@@ -30,6 +30,9 @@ bash ~/.bash_profile  # screen for:  bind: warning: line editing not enabled
 : Jan/2019 Bash 5  # minor release date
 : : Jan/2022 Bash 5.1.16  # micro release date
 
+export HISTSIZE=-1  # Perplexity·Ai says these remove these limits?
+export HISTFILESIZE=-1  # vs common defaults of =1000, =2000
+# but that unlimiting HISTSIZE will raise your Bash Process Memory Size? significantly?
 
 """
 

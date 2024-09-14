@@ -1,6 +1,6 @@
 # shellcheck disable=SC2154  # ALTPWDS is referenced but not assigned
 
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
 
     echo '+ git ls-files' "${ALTPWDS[@]}" >&2
     git ls-files "${ALTPWDS[@]}"
@@ -9,7 +9,7 @@ else
 
     index=0
     unset parms
-    while [[ $# != 0 ]]; do
+    while [ $# -ne 0 ]; do
 
         if ! [[ "$1" =~ ^[-] ]]; then
             index=$((index + 1))

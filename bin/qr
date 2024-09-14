@@ -1,5 +1,5 @@
 set -xe
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
     git revert HEAD
 else
     git revert "$@"

@@ -1,10 +1,10 @@
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
     set -- -brpu a b "$@"
 else
-    if [[ $# == 1 ]]; then
+    if [ $# -eq 1 ]; then
         set -- -brpu a "$@"
     else
-        if [[ $# == 2 ]]; then
+        if [ $# -eq 2 ]; then
             set -- -brpu "$@"
         fi
     fi

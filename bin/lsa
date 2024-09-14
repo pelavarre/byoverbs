@@ -1,7 +1,7 @@
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
     echo + ls -hlAF -rt >&2
     ls -hlAF -rt
-elif [[ $# == 1 ]]; then
+elif [ $# -eq 1 ]; then
     echo + ls -hlAF -rt "$1" >&2
     ls -hlAF -rt "$1"
 else

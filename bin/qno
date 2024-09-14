@@ -1,4 +1,4 @@
-if [[ $# != 0 ]]; then
+if [ $# -ne 0 ]; then
     set -xe
     git show --pretty= --name-only "$@" |sed 's,%,%%,g' |xargs -I% printf %\\n
 else

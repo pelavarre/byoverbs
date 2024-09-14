@@ -9,7 +9,7 @@ if [[ "$STY" ]]; then
     fi
 fi
 
-if [[ $# != 0 ]]; then
+if [ $# -ne 0 ]; then
     set -xe
     vim "$@"
 else

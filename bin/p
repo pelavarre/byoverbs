@@ -39,7 +39,7 @@
 #
 
 
-if [[ $# != 0 ]]; then
+if [ $# -ne 0 ]; then
     set -xe
     python3.bash "$@"
     exit

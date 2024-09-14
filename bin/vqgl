@@ -1,5 +1,5 @@
 qgl=$(dirname "$0")/qgl
-if [[ $# == 1 ]]; then
+if [ $# -eq 1 ]; then
     set -xe
     # shellcheck disable=SC2046  # Quote this to prevent word splitting
     vim $($qgl "$@") +"/$1"

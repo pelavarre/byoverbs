@@ -1,4 +1,4 @@
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
     set -xe
     git show --color-moved ":1:$0" && : 1 Base, 2 Theirs, 3 Ours
 else

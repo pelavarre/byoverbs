@@ -1,3 +1,5 @@
+# shellcheck disable=SC3040  # Posix Sh rejects 'set -o pipefail'
+
 if sh -c 'set -o pipefail' 2>/dev/null; then
     set -xeuo pipefail
 else
@@ -7,7 +9,7 @@ fi
 D=$(dirname "$0")/..
 
 cd "$D"/
-dirs -p |tail -1
+pwd |sed "s,^$HOME$,~,; s,^$HOME/,~/,"  # as if Bash:  dirs -p |tail -1
 
 git log --oneline --no-decorate -3
 

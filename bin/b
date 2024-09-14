@@ -1,5 +1,5 @@
 D=$(dirname "$0")
-if [[ $# == 0 ]]; then
+if [ $# -eq 0 ]; then
     set -xe
     make soon
 else
