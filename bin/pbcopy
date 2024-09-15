@@ -1,3 +1,5 @@
+#!/bin/bash
+
 D=$(dirname "$0")
 if [ -e /usr/bin/pbcopy ]; then
     set -xe /usr/bin/pbcopy "$@"
