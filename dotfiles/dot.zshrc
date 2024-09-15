@@ -3,16 +3,9 @@
 
 # Calm the Sh Prompt
 
-OLDPS1=$PS1
-
-if [[ "$SHLVL" == 1 ]]; then
-    export PS1=$OLDPS1
-    export PS1='%% '
-elif [[ "$SHLVL" == 2 ]]; then
-    if [[ "$PS1" == '\$ ' ]]; then
-        export PS1=$OLDPS1
-        export PS1='%% '
-    fi
+if [ "$OLDPS1" != "$PS1" ]; then
+    export OLDPS1=$PS1
+    PS1='%% '
 fi
 
 
@@ -23,6 +16,14 @@ if [ -t 2 ]; then
     PS1="$PS1%B"
     POSTEDIT=$'\e[m'  # '%b' to turn off '%B' doesn't work here
 fi
+
+function ps1 () {
+    if [ "$PS1" != '%% %B' ]; then
+        PS1='%% %B'
+    else
+        PS1=$OLDPS1
+    fi
+}
 
 
 # Keep copies of the Sh Input lines indefinitely, in the order given
