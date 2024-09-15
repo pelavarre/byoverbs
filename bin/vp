@@ -4,12 +4,12 @@ F=p.py
 if [ -e $F ]; then
     echo "+ mv -i $F{,~$(date -r $F +%m%djqd%H%M)~}" >&2
     ext=~$(date -r "$F" +%m%djqd%H%M)~
-    mv -i "$F"{,"$ext"}
+    mv -i "$F" "$F$ext"
     echo "+ ls -AhlF -rt $F~*" >&2
     ls -AhlF -rt "$F"~*
 fi
 
-if [[ "$STY" ]]; then
+if [ "$STY" -ne "" ]; then
     if [ "$(uname)" = Darwin ]; then
         echo + unset TERM >&2
         unset TERM

@@ -2,7 +2,7 @@
 
 set -x
 
-if [[ "$STY" ]]; then
+if [ "$STY" -ne "" ]; then
     if [ "$(uname)" = Darwin ]; then
         echo '+ unset TERM' >&2
         unset TERM

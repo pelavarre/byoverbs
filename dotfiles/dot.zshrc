@@ -4,6 +4,7 @@
 # Calm the Sh Prompt
 
 OLDPS1=$PS1
+_=$OLDPS1
 
 if [[ "$SHLVL" == 1 ]]; then
     export PS1='%% '
@@ -21,6 +22,7 @@ if [ -t 2 ]; then
     export PS1="$PS1%B"
     function preexec_style () { printf '\e[m'; }
     preexec_functions+=(preexec_style)
+    trap - EXIT
     trap -- 'preexec_style' EXIT
 fi
 

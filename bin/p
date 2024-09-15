@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # kept up by
 #
 #   F=demos/lazy_import.py && cp -ip bin/p $F && vi $F

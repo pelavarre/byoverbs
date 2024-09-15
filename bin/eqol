@@ -1,4 +1,7 @@
-# to do: more elegantly resolve
+#!/bin/bash
+
+#
+# to do: more elegantly resolve, and in Posix Sh, not Bash
 #
 # shellcheck disable=SC2016  # Expressions don't expand in single quotes, use double ...
 # shellcheck disable=SC2046  # Quote this to prevent word splitting
