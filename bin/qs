@@ -1,9 +1,12 @@
-if [[ "$1" =~ ^[0-9]$ ]]; then
-    arg1=HEAD~$1
-    shift
-    set -xe
-    git show --color-moved "$arg1" "$@"
-else
-    set -xe
-    git show --color-moved "$@"
-fi
+case "$1" in
+    [0-9]*)
+        arg1=HEAD~$1
+        shift
+        set -xe
+        git show --color-moved "$arg1" "$@"
+        ;;
+    *)
+        set -xe
+        git show --color-moved "$@"
+        ;;
+esac

@@ -98,8 +98,10 @@ for SHFILE in *; do
        (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
     elif [ "$SHFILE" = zprofile ]; then
        (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
-    elif [[ "$SHFILE" =~ ^[^.]*$ ]]; then  # checks, if not hidden and no file ext
+    elif [[ "$SHFILE" =~ ^qo[^.]*$ ]]; then  # our 'qo*' work with $ALTPWD Bash Array
         (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
+    elif [[ "$SHFILE" =~ ^[^.]*$ ]]; then  # checks, if not hidden and no file ext
+        (set -xe; shellcheck --norc --shell=sh "$@" -- "$SHFILE")
     elif [[ "$SHFILE" =~ [.]bash$ ]]; then  # checks, if explicitly Bash
         (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
     else
