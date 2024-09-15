@@ -4,12 +4,13 @@
 # Calm the Sh Prompt
 
 OLDPS1=$PS1
-_=$OLDPS1
 
 if [[ "$SHLVL" == 1 ]]; then
+    export PS1=$OLDPS1
     export PS1='%% '
 elif [[ "$SHLVL" == 2 ]]; then
     if [[ "$PS1" == '\$ ' ]]; then
+        export PS1=$OLDPS1
         export PS1='%% '
     fi
 fi
@@ -19,11 +20,8 @@ fi
 
 # if ! :; then
 if [ -t 2 ]; then
-    export PS1="$PS1%B"
-    function preexec_style () { printf '\e[m'; }
-    preexec_functions+=(preexec_style)
-    trap - EXIT
-    trap -- 'preexec_style' EXIT
+    PS1="$PS1%B"
+    POSTEDIT=$'\e[m'  # '%b' to turn off '%B' doesn't work here
 fi
 
 

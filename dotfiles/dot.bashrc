@@ -14,12 +14,13 @@ fi
 # Calm the Sh Prompt
 
 OLDPS1=$PS1
-_=$OLDPS1
 
 if [[ "$SHLVL" == 1 ]]; then
+    export PS1=$OLDPS1
     export PS1='\$ '
 elif [[ "$SHLVL" == 2 ]]; then
     if [[ "$PS1" == '%% ' ]]; then
+        export PS1=$OLDPS1
         export PS1='\$ '
     fi
 fi
@@ -29,12 +30,11 @@ fi
 
 # if ! :; then
 if [ -t 2 ]; then
-    export PS1="\[\e[m\]$PS1\[\e[1m\]"
-    function preexec_style () { printf '\e[m'; }  # as if in Zsh preexec_functions
-    trap - DEBUG
-    trap -- 'preexec_style' DEBUG
+    export PS0='\e[m'
+    export PS1='\[\e[m\]'"$PS1"'\[\e[1m\]'
+    function exit_style () { printf '\e[m'; }
     trap - EXIT
-    trap -- 'preexec_style' EXIT
+    trap -- 'exit_style' EXIT
 fi
 
 
