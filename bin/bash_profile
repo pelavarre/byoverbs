@@ -1,4 +1,4 @@
-# bin/bash_profile
+#!/bin/bash
 
 # usage: diff -brpu dotfiles/dot.bash_profile bin/bash_profile |less -FIRX
 

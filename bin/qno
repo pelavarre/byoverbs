@@ -3,7 +3,7 @@ if [ $# -ne 0 ]; then
     git show --pretty= --name-only "$@" |sed 's,%,%%,g' |xargs -I% printf %\\n
 else
     diffs=$(git diff --name-only)
-    if [[ "$diffs" ]]; then
+    if [ "$diffs" = '' ]; then
         set -xe
         git diff --name-only |sed 's,%,%%,g' |xargs -I% printf %\\n
     else

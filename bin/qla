@@ -1,17 +1,22 @@
-unset authors
+set -e
 
-authors=()
+shline='git log --pretty=fuller --no-decorate --color-moved'
+
+if [ $# -eq 0 ]; then
+    shline="$shline --author=$(git config user.email)"
+fi
+
 while [ $# -ne 0 ]; do
-    if [[ "$1" =~ ^-.*$ ]]; then
-        break
-    fi
-    authors+=("--author=$1")
+    case "$1" in
+        -*)
+            shline="$shline $1"
+            ;;
+        *)
+            shline="$shline --author=$1"
+            ;;
+    esac
     shift
 done
 
-if [[ ${#authors[@]} == 0 ]]; then
-    authors+=("--author=$(git config user.email)")
-fi
-
 set -xe
-git log --pretty=fuller --no-decorate "${authors[@]}" --color-moved "$@"
+$shline

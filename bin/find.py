@@ -4,6 +4,8 @@
 # find -size +1001k 2>/dev/null
 # ls -hlAF -rt -rS $(find . -size +1001k 2>/dev/null)
 
+# find . -maxdepth 1 -not -perm -111 -not -type d
+# find . -maxdepth 1 -perm -111 -not -type d
 # find . -not -type d -not -path './.git/*'
 # git ls-files
 

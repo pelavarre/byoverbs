@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 r"""
 usage: byotty.py [-h]
 

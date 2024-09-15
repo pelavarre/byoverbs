@@ -1,4 +1,4 @@
-# bin/zprofile
+#!/bin/bash
 
 # shellcheck disable=SC1090  # Can't follow non-constant source
 # shellcheck disable=SC1091  # Not following, Does not exist, No such file
