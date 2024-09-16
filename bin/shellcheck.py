@@ -33,8 +33,11 @@
 
 
 #
+# https://www.shellcheck.net/wiki/SC2025 etc
+#
 # SC1090:  # Can't follow non-constant source
 # SC1091:  # Not following, Does not exist, No such file
+#
 # SC2002:  # Explicit Cat
 # SC2012:  # Use Find instead of Ls to better handle non-alphanum...
 # SC2016:  # Expressions don't expand in single quotes, use double ...

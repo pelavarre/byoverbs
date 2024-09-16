@@ -102,6 +102,7 @@ for SHFILE in *; do
         (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
     elif [[ "$SHFILE" =~ ^[^.]*$ ]]; then  # checks, if not hidden and no file ext
         (set -xe; shellcheck --norc --shell=sh "$@" -- "$SHFILE")
+        (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
     elif [[ "$SHFILE" =~ [.]bash$ ]]; then  # checks, if explicitly Bash
         (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
     else
