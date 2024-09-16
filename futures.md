@@ -920,9 +920,6 @@ Tool to backport .py to .py38 by commenting out the type declarations
 
 Pause/ resume a Process launched by Cron
 
-pq em vi
-    insert from column in middle of line
-
 pq patch - could mean pq >pq.patch && git apply -v pq.patch
 
 

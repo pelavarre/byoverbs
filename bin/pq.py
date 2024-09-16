@@ -4913,8 +4913,9 @@ class LineTerminal:
         ktext = self.kdo_ins_n_till()
         for _ in range(kint - 1):
             st.stwrite("\r\n")  # 00/13 00/10  # "\x0D\x0A"
+
             ktext_kint = len(ktext.splitlines())
-            if ktext_kint:  # FIXME kint=1 for the "{}D" of Vim ⇧O?
+            if ktext_kint:
                 st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=ktext_kint)
                 st.stwrite(ktext)  # for .kdo_line_ins_above_n Insert
                 st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=ktext_kint)
@@ -4943,8 +4944,9 @@ class LineTerminal:
         ktext = self.kdo_ins_n_till()
         for _ in range(kint - 1):
             st.stwrite("\r\n")  # 00/13 00/10  # "\x0D\x0A"
+
             ktext_kint = len(ktext.splitlines())
-            if ktext_kint:  # FIXME kint=1 for the "{}D" of Vim O ?
+            if ktext_kint:
                 st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=ktext_kint)
                 st.stwrite(ktext)  # for .kdo_line_ins_below_n Insert
                 st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=ktext_kint)
@@ -5041,11 +5043,13 @@ class LineTerminal:
         # Vim C
         # Vim C C  # Vim CC
 
-    def kdo_cut_to_read_eval(self) -> tuple[int, int] | None:
+    def kdo_cut_to_read_eval(self) -> tuple[int, int] | None:  # noqa C901 too complex
         """Read & eval the next Verb, but cut the Lines or Columns involved"""
 
+        kcap_str = self.kcap_str
         st = self.st
 
+        assert BS == "\b"  # 00/08 Backspace ⌃H
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
         # Decide to do, or not to do
@@ -5057,10 +5061,37 @@ class LineTerminal:
         yxjumps = yxjumps_else
         (yjump, xjump) = yxjumps
 
-        # Cut zero or more Chars inside one Line
-
         peek_else = self.kint_peek_else()
         assert peek_else is None, (peek_else,)
+
+        # Patch in the irregular definitions of repeated Vim D $ and Vim C $
+
+        if yjump < -1:
+            if self.kcap_str in ("⌃E", "$"):
+
+                if xjump < 0:
+                    self.kint_push_positive(-xjump)
+                    self.kdo_char_minus_n()
+                elif xjump > 0:
+                    self.kint_push_positive(xjump)
+                    self.kdo_char_plus_n()
+
+                self.kint_push_positive((-yjump) - 1)
+                self.kdo_line_minus_n()
+
+                self.kint_push_positive(-yjump)
+                self.kdo_tail_cut_n()
+
+                if kcap_str == "D":
+                    st.stwrite("\b")  # 00/08 Backspace (BS) \b ⌃H
+
+                    # todo: more flexible keymaps of Vim D $ vs Vim C $
+
+                return (yjump, xjump)
+
+            # todo: more flexible keymaps of Pq ⌃E and Vim D $ vs Vim C $
+
+        # Cut zero or more Chars inside one Line
 
         if yjump == 0:
             if xjump < 0:  # if gone right
@@ -5069,6 +5100,14 @@ class LineTerminal:
             elif xjump > 0:  # if gone left
                 self.kint_push_positive(xjump)
                 self.kdo_char_cut_right_n()
+
+            if xjump > 0:
+                if self.kcap_str in ("⌃E", "$"):
+                    if kcap_str == "D":
+                        st.stwrite("\b")  # 00/08 Backspace (BS) \b ⌃H
+
+                        # todo: more flexible keymaps of Pq ⌃E and Vim D $ vs Vim C $
+
             return (yjump, xjump)
 
         # Else cut one or more Lines
@@ -5104,6 +5143,7 @@ class LineTerminal:
         self.kphrase_read()  # for .read_eval_to_gaps
         # Vim D and Vim C accept : Q ! Return etc, but reject ⇧Z ⇧Q etc
 
+        xjump = 0
         if self.kcap_str != kcap_str:
 
             if self.kcap_str in adverbs:
@@ -5119,14 +5159,19 @@ class LineTerminal:
 
             # Mark zero or more Columns within 1 Line
 
+            xjump = column_x - st.column_x
             if st.row_y == row_y:
-                xjump = column_x - st.column_x
+                print(f"yjump=0 {xjump=}", file=self.ltlogger)
                 return (0, xjump)
+
+            peek_else = self.kint_peek_else()
+            assert peek_else is None, (peek_else,)
 
         # Move up or down, if so asked  # Vim DD  # Vim CC  # Vim <<  # Vim >>
 
         kint = self.kint_pull(default=1)
         if not kint:
+            print("yjump=0 xjump=0", file=self.ltlogger)
             return (0, 0)
 
         if kint != 1:
@@ -5150,7 +5195,8 @@ class LineTerminal:
             yjump = st.row_y - row_y + 1
             yjump = -yjump
 
-        return (yjump, 0)
+        print(f"{yjump=} {xjump=}", file=self.ltlogger)
+        return (yjump, xjump)
 
     #
     # Scroll Rows
@@ -5510,12 +5556,14 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 # Todo's that watch the Screen more closely
 #
-#   Track the Cursor
-#       Patch up the FixMe's
+#   Vim . to repeat Emacs ⌃D ⌃K ⌃O or Vim > < C D
+#   Vim . with Arg to repeat more than once
 #
 #   Work the Mouse
 #       Delete/ Change up to the Mouse Click
 #       Edit while Mouse-Scrolling, and doc this
+#
+#   Lines larger than the Screen
 #
 #    Mark and Select
 #       Vim ⌃O ⌃I to walk the List of Marks vs which Verbs make Marks
@@ -5537,28 +5585,57 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #       Vim : E ! Return
 #
 #   Shadow the Screen
-#       Edit via:  pq xeditline $FILE
+#
+#       Insert Return from Columns between Home and End of the Line
+#
 #       Vim ⌃L Emacs ⌃L of Shadow Screen - mostly to redraw the Screen as shadowed
-#       Vim jump to Dent, Emacs ⎋M jump to Dent
-#       Emacs ⎋Z, Vim F T ⇧F ⇧T
-#       Emacs ⎋C ⎋L ⎋U
+#       Vim many many jump to Dent, Emacs ⎋M jump to Dent a la Vim ^
+#
+#       Edit via:  pq xeditline $FILE
+#       Emacs ⎋Z for like Vim D F, Vim F T ⇧F ⇧T for jump to, or jump to before
+#       Emacs ⎋C ⎋L ⎋U for Title/ Lower/ Upper
+#       Emacs ⌃T ⎋T and ⎋T for larger Words such as Last Two Sh Args
+#
 #       Undo/Redo piercing the Shadow
 #       Highlight for Search Found, for Selection, for Whitespace Codes in Selection
-#       Emacs ⌃T ⎋T and ⎋T for larger Words such as Last Two Sh Args
 #       Pipe through Vim !
+#       Vim D A B and such, the Vim Motions that aren't Top Level Vim Motions
 #
 #   Files smaller than the Screen, with ⎋[m marks in them
 #
 
 #
-# Todo's that take Keyboard Input
+# Pq Fixes:
 #
-#   <x >x for Movement X
-#   Multiply with Digits in the Movement and/or before < >
+#   More friction vs quitting without calling ⎋⇧M or ⎋⇧L K etc to keep the lower Rows of the Screen
+#
+#   Surprise of ⌃X ⌃S moving on already inside ⌃X ⌃E, not waiting for ⌃X ⌃S ⌃X ⌃C
+#
+#   ⌃X ⌃E Launch irretrievably confused by Zsh placing the Cursor in any Column of Input?
+#
+
+#
+# More Todo's:
+#
+#   Emacs ⌃W ⌃Y Copy/Paste Buffer vs Os Copy/Paste Buffer
+#
+#   Emacs ⌃R ⌃S Searches
+#
+#   Vim presentations of :set cursorline, etc from my ~/.vimrc
+#   More obscure Key Chord Sequences of Vim & Emacs
+#   Emacs ideas from my ~/.emacs, Vim ideas from my ~/.vimrc
+#   Emacs ⌃C A..Z Name Space, Emacs ⎋N ⎋O ⎋P Name Space, Vim \ A..Z Name Space
+#
+#   Screens of Files
+#
+
+#
+# Todo's that take Keyboard Input
 #
 #   Logo Turtle Ascii-Graphics
 #
-#   Vim Q Q @ Q etc
+#   Vim Q Q @ Q etc, with repetition of @ Q
+#   Vim . could learn to repeat @ Q, and the other @ x, while ⌃Q . more faithful to legacy
 #
 #   Pq I ⌃Q ⌃O Escape
 #   Pq I ⌃Q ⌃O Calls of Insert/ Replace that don't move the Cursor Left
@@ -5582,29 +5659,6 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 
 #
-# More Todo's:
-#
-#   Vim . to repeat Emacs ⌃D ⌃K ⌃O or Vim > < C D
-#   Vim . could learn to repeat @ Q, and the other @ x, while ⌃Q . more faithful to legacy
-#   Arg for Vim . could multiply
-#
-#   More friction vs quitting without calling ⎋⇧L to keep the lower Rows of the Screen
-#   Surprise of ⌃X ⌃S moving on already inside ⌃X ⌃E, not waiting for ⌃X ⌃S ⌃X ⌃C
-#
-
-#
-# Python ToDo's
-#
-#   More convergence between 'pq xeditline' and 'pq em vi'
-#   More divergence between 'pq vi' and 'pq em'
-#
-#   Python Hook for entry/ exit into waiting for Keyboard Input
-#       vs .at_btflush now hooking only entry, not also exit
-#
-#   Python Decorators to build Keymap's, guarantee Positive Int Arg, etc
-#
-
-#
 # Review these and retire what we've got
 #
 #   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
@@ -5618,16 +5672,23 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 
 #
-#   Emacs ⌃W ⌃Y Copy/Paste Buffer vs Os Copy/Paste Buffer
+# Python ToDo's
 #
-#   Emacs ⌃R ⌃S Searches
+#   Refactor to solve the various No-Q-A C901 Too-Complex
 #
-#   Vim presentations of :set cursorline, etc from my ~/.vimrc
-#   More obscure Key Chord Sequences of Vim & Emacs
-#   Emacs ideas from my ~/.emacs, Vim ideas from my ~/.vimrc
-#   Emacs ⌃C A..Z Name Space, Emacs ⎋N ⎋O ⎋P Name Space, Vim \ A..Z Name Space
+#   Asserts for Terminal Encoding to top of Def, never ducked by conditional Return
 #
-#   Screens of Files
+#   Define present work in terms of y_line, x_char,
+#       no longer only in terms of y_row, x_column,
+#           even while today's y_row == y_line, and today's x_column == x_char
+#
+#   More convergence between 'pq xeditline' and 'pq em vi'
+#   More divergence between 'pq vi' and 'pq em'
+#
+#   Python Hook for entry/ exit into waiting for Keyboard Input
+#       vs .at_btflush now hooking only entry, not also exit
+#
+#   Python Decorators to build Keymap's, guarantee Positive Int Arg, etc
 #
 
 
