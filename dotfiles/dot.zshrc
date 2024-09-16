@@ -15,6 +15,7 @@ fi
 if [ -t 2 ]; then
     PS1="$PS1%B"
     POSTEDIT=$'\e[m'  # '%b' to turn off '%B' doesn't work here
+    _=$POSTEDIT
 fi
 
 function ps1 () {
