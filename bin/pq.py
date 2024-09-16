@@ -3265,7 +3265,14 @@ class LineTerminal:
                 kdo_call = kdo_call_by_kcap_str[kcap_str]
 
                 kdo_func = kdo_call[0]
-                if kdo_func == LineTerminal.kdo_hold_start_kstr:
+                phrasing = kdo_func == LineTerminal.kdo_hold_start_kstr
+                if self.kstr_starts:
+                    if kcap_str in ("-", "0"):
+                        phrasing = True
+
+                    # todo: more arbitrary Key Maps of '-' '0' Arg Chars
+
+                if phrasing:
                     self.kchords_eval(vmode="Meta")  # for .kphrase_read
                     print(f"{self.kstr_starts=} kphrase_read", file=self.ltlogger)
                     continue
@@ -5010,22 +5017,76 @@ class LineTerminal:
         """Cut like Vim D would, then Insert 1 Empty Line above, then Insert Till"""
 
         st = self.st
-        (y_cuts, x_cuts) = self.kdo_cut_to_read_eval()
+
+        assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
+
+        #
+
+        yxjumps_else = self.kdo_cut_to_read_eval()
+        if yxjumps_else is None:
+            return
+
+        yxjumps = yxjumps_else
+        (yjump, xjump) = yxjumps
+
+        #
 
         peek_else = self.kint_peek_else()
         assert peek_else is None, (peek_else,)
 
-        if y_cuts:
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=1)
-
-        self.kdo_ins_n_till()
-
-        assert IL_Y == "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
+        if yjump >= 0:
+            if yjump:
+                st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=1)
+            self.kdo_ins_n_till()
 
         # Vim C  # Vim CC
 
-    def kdo_cut_to_read_eval(self) -> tuple[int, int]:  # noqa C901
+    def kdo_cut_to_read_eval(self) -> tuple[int, int] | None:
         """Read & eval the next Verb, but cut the Lines or Columns involved"""
+
+        st = self.st
+
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+
+        # Decide to do, or not to do
+
+        yxjumps_else = self.read_eval_to_yxjumps_else()
+        if yxjumps_else is None:
+            return None
+
+        yxjumps = yxjumps_else
+        (yjump, xjump) = yxjumps
+
+        # Cut zero or more Chars inside one Line
+
+        peek_else = self.kint_peek_else()
+        assert peek_else is None, (peek_else,)
+
+        if yjump == 0:
+            if xjump < 0:  # if gone right
+                self.kint_push_positive(-xjump)
+                self.kdo_char_cut_left_n()
+            elif xjump > 0:  # if gone left
+                self.kint_push_positive(xjump)
+                self.kdo_char_cut_right_n()
+            return (yjump, xjump)
+
+        # Else cut one or more Lines
+
+        if yjump < -1:
+            yjump_minus = (-yjump) - 1
+            st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=yjump_minus)
+
+        self.kint_push_positive(abs(yjump))
+        self.kdo_dents_cut_n()
+
+        return (yjump, xjump)
+
+        # Vim D  # Vim DD
+        # part of Vim C
+
+    def read_eval_to_yxjumps_else(self) -> tuple[int, int] | None:
+        """Read & eval the next Verb, but also count the Lines or Columns involved"""
 
         kcap_str = self.kcap_str
 
@@ -5039,7 +5100,8 @@ class LineTerminal:
         adverbs = ("<", ">", "C", "D")  # todo: more arbitrary Key Maps of Adverbs
         assert kcap_str in adverbs, (kcap_str,)
 
-        self.kphrase_read()  # for .kdo_cut_to_read_eval
+        self.kphrase_read()  # for .read_eval_to_gaps
+        # Vim D and Vim C accept : Q ! Return etc, but reject ⇧Z ⇧Q etc
 
         if self.kcap_str != kcap_str:
 
@@ -5049,38 +5111,18 @@ class LineTerminal:
                 self.kdo_kcap_alarm_write_n()  # Adverb of Adverb   # Vim <, Vim >, Vim C, Vim D
                 self.kcap_str = late_kcap_str
                 self.kdo_kcap_alarm_write_n()  # Adverb of Adverb   # Vim <, Vim >, Vim C, Vim D
-                return (0, 0)
+                return None
 
             self.kchords_eval(vmode="Meta")  # for .kdo_cut_to_read_eval
             st.pull_cursor_always_and_keyboard_maybe()  # resamples Cursor, after Eval
 
-            # Vim D and Vim C accept : Q ! Return etc, but reject ⇧Z ⇧Q etc
-
-        # Cut zero or more Columns within 1 Line
-
-        if self.kcap_str != kcap_str:
+            # Mark zero or more Columns within 1 Line
 
             if st.row_y == row_y:
-                x_cuts = 0
-                if st.column_x != column_x:
+                xjump = column_x - st.column_x
+                return (0, xjump)
 
-                    if st.column_x > column_x:  # if gone right
-                        x_cuts = st.column_x - column_x
-
-                        self.kint_push_positive(x_cuts)
-                        self.kdo_char_cut_left_n()
-
-                    else:  # if gone left
-                        assert st.column_x < column_x, (column_x, st.column_x)
-                        x_cuts = column_x - st.column_x
-
-                        print(file=self.ltlogger)
-                        self.kint_push_positive(x_cuts)
-                        self.kdo_char_cut_right_n()
-
-                return (0, x_cuts)
-
-        # Move up or down, if so asked  # Vim DD  # Vim CC
+        # Move up or down, if so asked  # Vim DD  # Vim CC  # Vim <<  # Vim >>
 
         kint = self.kint_pull(default=1)
         if not kint:
@@ -5098,26 +5140,16 @@ class LineTerminal:
                 self.kdo_line_plus_n()
                 st.pull_cursor_always_and_keyboard_maybe()  # resamples Cursor, after Eval
 
-        # Cut the first Line, the last Line, and any Lines in between
+        # Mark one or more Lines: the first Line, the last Line, and any Lines in between
 
         if st.row_y < row_y:  # if gone up
-            y_cuts = row_y - st.row_y + 1
+            yjump = row_y - st.row_y + 1
         else:  # if gone down, or if not gone up/down
             assert st.row_y >= row_y, (row_y, st.row_y)
-            y_cuts = st.row_y - row_y + 1
+            yjump = st.row_y - row_y + 1
+            yjump = -yjump
 
-            if y_cuts > 1:
-                y_cuts_minus = y_cuts - 1
-                st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=y_cuts_minus)
-
-        self.kint_push_positive(y_cuts)
-        self.kdo_dents_cut_n()
-
-        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-
-        return (y_cuts, 0)
-
-        # Vim D
+        return (yjump, 0)
 
     #
     # Scroll Rows
@@ -5478,11 +5510,12 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 # Todo's that watch the Screen more closely
 #
 #   Track the Cursor
-#       < > Adverbs now in the way of C D Adverbs
+#       Also now the < > Adverbs now, in the way of the C D Adverbs
 #       <⇧G <⇧H <⇧L >⇧G >⇧H >⇧L
 #       <0 >0 <$ >$
 #       Factor out the C901 from Cx Dx
-#       Test such sad corners as ⌃U - C >
+#       Test such sad corners as ⌃U C > after
+#       Patch up the FixMe's
 #
 #   Work the Mouse
 #       Delete/ Change up to the Mouse Click
