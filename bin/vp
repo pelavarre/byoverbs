@@ -9,7 +9,7 @@ if [ -e $F ]; then
     ls -AhlF -rt "$F"~*
 fi
 
-if [ "$STY" -ne "" ]; then
+if [ "$STY" != '' ]; then
     if [ "$(uname)" = Darwin ]; then
         echo + unset TERM >&2
         unset TERM

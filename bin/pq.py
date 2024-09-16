@@ -4513,60 +4513,60 @@ class LineTerminal:
     def kdo_lines_dedent_n(self) -> None:
         """Remove Blank Space from the Left of one or more Lines"""
 
-        st = self.st
-        kint = self.kint_pull_positive()
-
-        # Delete 4 Columns at Left of Line, then climb back up
-        # todo: Vim deletes only Blank Space
-
-        st.column_x_write_1()  # for Vim <<
-
-        for i in range(kint):
-            st.stwrite("\x1B" "[" "4" "P")  # CSI 05/00
-            if i < (kint - 1):
-                st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
-
-        kint_minus = kint - 1
-        if kint_minus:
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=kint_minus)
-
-        st.column_x_write_dent()  # for Vim <<
-
-        # Disassemble these StrTerminal Writes
-
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
-        assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
-        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
+        self.kdo_line_form_to_read_eval("\x1B" "[" "{}P")
+
+        # Vim <
         # Vim < <  # Vim <<
 
     def kdo_lines_dent_n(self) -> None:
         """Insert 1 Dent of Blank Space into the Left of one or more Lines"""
 
-        st = self.st
-        kint = self.kint_pull_positive()
-
-        # Insert 4 Columns at Left of Line, then climb back up
-
-        for i in range(kint):
-            st.column_x_write_1()  # for Vim >>
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}@", pn=4)
-            if i < (kint - 1):
-                st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
-
-        kint_minus = kint - 1
-        if kint_minus:
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=kint_minus)
-
-        st.column_x_write_dent()  # for Vim >>
-
-        # Disassemble these StrTerminal Writes
-
         assert ICH_X == "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
-        assert LF == "\n"  # 00/10 Line Feed (LF) ⌃J
-        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
+        self.kdo_line_form_to_read_eval("\x1B" "[" "{}@")
+
+        # Vim >
         # Vim > >  # Vim >>
+
+    def kdo_line_form_to_read_eval(self, form) -> None:
+        """Work at the Left of one or more Lines"""
+
+        st = self.st
+
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+
+        # Decide to do, or not to do
+
+        yxjumps_else = self.read_eval_to_yxjumps_else()
+        if yxjumps_else is None:
+            return None
+
+        yxjumps = yxjumps_else
+        (alt_yjump, xjump) = yxjumps
+
+        yjump = alt_yjump if alt_yjump else -1  # grow mark in Line into mark of Line
+
+        # Start here, or there below, and work up by Line to land in the Top Line
+
+        DENT = 4
+        assert DENT == 4  # as if ~/.vimrc said :set softtabstop=4 shiftwidth=4 expandtab
+
+        st.column_x_write_1()  # Vim <<  # Vim >>
+
+        if yjump > 1:
+            yjump_minus = yjump - 1
+            st.stwrite_form_or_form_pn("\x1B" "[" "{}B", pn=yjump_minus)
+
+        for y in range(abs(yjump)):
+            if y:
+                st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=1)
+            st.stwrite_form_or_form_pn(form, pn=4)  # DENT == 4
+
+        # part of Vim >
+        # part of Vim >
 
     #
     # Delete the Lines at and below the Screen Cursor
@@ -4831,8 +4831,7 @@ class LineTerminal:
         st.stwrite("\b")  # 00/08 Backspace (BS) \b ⌃H
         assert BS == "\b"  # 00/08 Backspace ⌃H
 
-        # Vim ⇧D
-        # Vim D$
+        # Vim ⇧D  # same effect as Vim D $
 
     def kdo_tail_cut_n(self) -> None:
         """Cut the Tail of the Line, and also Lines Below"""
@@ -5011,7 +5010,7 @@ class LineTerminal:
 
         self.kdo_ins_n_till()
 
-        # Vim ⇧C = Vim ⇧D + Vim I
+        # Vim ⇧C = Vim ⇧D + Vim I  # same effect as Vim C $
 
     def kdo_cut_to_read_eval_ins_till(self) -> None:
         """Cut like Vim D would, then Insert 1 Empty Line above, then Insert Till"""
@@ -5039,7 +5038,8 @@ class LineTerminal:
                 st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=1)
             self.kdo_ins_n_till()
 
-        # Vim C  # Vim CC
+        # Vim C
+        # Vim C C  # Vim CC
 
     def kdo_cut_to_read_eval(self) -> tuple[int, int] | None:
         """Read & eval the next Verb, but cut the Lines or Columns involved"""
@@ -5082,7 +5082,8 @@ class LineTerminal:
 
         return (yjump, xjump)
 
-        # Vim D  # Vim DD
+        # Vim D
+        # Vim D D  # Vim DD
         # part of Vim C
 
     def read_eval_to_yxjumps_else(self) -> tuple[int, int] | None:
@@ -5299,8 +5300,8 @@ VI_KDO_CALL_BY_KCAP_STR = {
     "7": (LT.kdo_hold_start_kstr, ("7",)),
     "8": (LT.kdo_hold_start_kstr, ("8",)),
     "9": (LT.kdo_hold_start_kstr, ("9",)),
-    "< <": (LT.kdo_lines_dedent_n,),  # b'<' b'<'  # <<
-    "> >": (LT.kdo_lines_dent_n,),  # b'>' b'>'  # >>
+    "<": (LT.kdo_lines_dedent_n,),  # b'<'  # <
+    ">": (LT.kdo_lines_dent_n,),  # b'>'  # >
     #
     "⇧A": (LT.kdo_end_plus_ins_n_till,),  # b'A'
     "⇧B": (LT.kdo_bigword_minus_n,),  # b'B'
@@ -5495,7 +5496,7 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #   Vim  Spacebar $ + - 0 123456789
 #   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
 #   Vim  A B E H I J K L O S W X | Delete
-#   Vim  < > C D as adverbs:  DD D0 D$ DJ DK CC C0 C$ CJ CK etc etc
+#   Vim  < > C D as adverbs:  << >> CC DD  C0 D0  C$ D$  <J >J CJ DJ  <K >K CK DK  etc
 #
 #   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
 #   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
@@ -5510,11 +5511,6 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 # Todo's that watch the Screen more closely
 #
 #   Track the Cursor
-#       Also now the < > Adverbs now, in the way of the C D Adverbs
-#       <⇧G <⇧H <⇧L >⇧G >⇧H >⇧L
-#       <0 >0 <$ >$
-#       Factor out the C901 from Cx Dx
-#       Test such sad corners as ⌃U C > after
 #       Patch up the FixMe's
 #
 #   Work the Mouse
