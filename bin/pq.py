@@ -1624,6 +1624,168 @@ def pathlib_create_pbpaste_bin() -> None:
 #
 
 
+#
+# Demo's of:  pq em vi
+#
+#   Emacs  ⎋< ⎋> ⎋G⎋G ⎋GG ⎋GTab ⎋R
+#   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃O ⌃P
+#   Emacs  ⎋← ⎋→ ⌥← ⌥→ aka ⎋B ⎋F
+#   Emacs  ⌥< ⌥> ⌥G⌥G ⌥GG ⌥GTab ⌥R
+#
+#   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
+#   Vim  Spacebar $ + - 0 123456789
+#   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
+#   Vim  A B E H I J K L O S W X | Delete
+#   Vim  < > C D as adverbs:  << >> CC DD  C0 D0  C$ D$  <J >J CJ DJ  <K >K CK DK  etc
+#
+#   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
+#   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
+#   Pq  I⌃D IReturn IDelete I⌃H
+#
+#   Option Mouse Click moves Cursor via ← ↑ → ↓
+#
+#   Multiple Parallel Log Files in Sh at:  tail -F .pqinfo/*.log
+#
+
+#
+# Todo's that watch the Screen more closely
+#
+#   Vim . to repeat Emacs ⌃D ⌃K ⌃O or Vim > < C D
+#   Vim . with Arg to repeat more than once
+#
+#   Work the Mouse
+#       Delete/ Change up to the Mouse Click
+#       Edit while Mouse-Scrolling, and doc this
+#
+#   Lines larger than the Screen
+#
+#    Mark and Select
+#       Vim ⌃O ⌃I to walk the List of Marks vs which Verbs make Marks
+#           Vim :jumps :clearjumps vs G G, ⇧G, { }
+#           Like maybe Mouse Jump should make a Mark
+#           Vim M ' makes a Mark, but maybe the other M should likewise
+#       Vim M M to create Mark, Vim ' ' to bounce back and forth, Vim ' M to jump to Mark
+#       Emacs ⌃W even without ⌃Y Paste Back and without the ⌃W Highlight
+#
+#   Bounce Cursor to a placed Status Row on Screen
+#       Trace the UnicodeData.Name while Replace/ Insert
+#       Delete the Message we last wrote, write the new, log Messages & lost Messages
+#       Trace Y and X a la Vim :set ruler, cursorline, etc from my ~/.vimrc
+#       Collapse repeated Keys into repetition count of Key, like for Turtle Graphics
+#       Show the Line Marks
+#
+#   Relaunch
+#       Emacs ⌃X X G 'revert-buffer-quick
+#       Vim : E ! Return
+#
+#   Shadow the Screen
+#
+#       Insert Return from Columns between Home and End of the Line
+#
+#       Vim ⌃L Emacs ⌃L of Shadow Screen - mostly to redraw the Screen as shadowed
+#       Vim many many jump to Dent, Emacs ⎋M jump to Dent a la Vim ^
+#
+#       Edit via:  pq xeditline $FILE
+#       Emacs ⎋Z for like Vim D F, Vim F T ⇧F ⇧T for jump to, or jump to before
+#       Emacs ⎋C ⎋L ⎋U for Title/ Lower/ Upper
+#       Emacs ⌃T ⎋T and ⎋T for larger Words such as Last Two Sh Args
+#
+#       Undo/Redo piercing the Shadow
+#       Highlight for Search Found, for Selection, for Whitespace Codes in Selection
+#       Pipe through Vim !
+#       Vim D A B and such, the Vim Motions that aren't Top Level Vim Motions
+#
+#   Files smaller than the Screen, with ⎋[m marks in them
+#
+
+#
+# Pq Fixes:
+#
+#   More friction vs quitting without calling ⎋⇧M or ⎋⇧L K etc to keep the lower Rows of the Screen
+#
+#   Surprise of ⌃X ⌃S moving on already inside ⌃X ⌃E, not waiting for ⌃X ⌃S ⌃X ⌃C
+#
+#   ⌃X ⌃E Launch irretrievably confused by Zsh placing the Cursor in any Column of Input?
+#
+
+#
+# More Todo's:
+#
+#   Emacs ⌃W ⌃Y Copy/Paste Buffer vs Os Copy/Paste Buffer
+#
+#   Emacs ⌃R ⌃S Searches
+#
+#   Vim presentations of :set cursorline, etc from my ~/.vimrc
+#   More obscure Key Chord Sequences of Vim & Emacs
+#   Emacs ideas from my ~/.emacs, Vim ideas from my ~/.vimrc
+#   Emacs ⌃C A..Z Name Space, Emacs ⎋N ⎋O ⎋P Name Space, Vim \ A..Z Name Space
+#
+#   Screens of Files
+#
+
+#
+# Todo's that take Keyboard Input
+#
+#   Logo Turtle Ascii-Graphics
+#
+#   Vim Q Q @ Q etc, with repetition of @ Q
+#   Vim . could learn to repeat @ Q, and the other @ x, while ⌃Q . more faithful to legacy
+#
+#   Pq I ⌃Q ⌃O Escape
+#   Pq I ⌃Q ⌃O Calls of Insert/ Replace that don't move the Cursor Left
+#   Pq I ⌃Q ⌃O ⌃O and Pq I ⌃Q ⌃O ⌃I Cursor Histories
+#
+#   Pq ⌃Q escape to Vim ⌃D ⌃G ⌃L etc
+#   Pq ⌃V escape to Emacs ⌃L ⌃V ⌃W ⌃Y etc
+#
+#   Emacs insert-char of Py unicodedata.lookup
+#
+#   Chose ⌃H⌃K inside Texts/ Verbs
+#       Refactor Texts_Wrangle & Verb_Eval to form a (KBytes, KCap_Str, Py_Call)
+#       Print ⌃H⌃K as all three of (KBytes, KCap_Str, Py_Call)
+#
+#   Revert to Ex Mode to do ⌃H⌃A
+#       Take a line of input as literal ignoring case
+#           but "..." or '...' to respect case, except auto-close the " or '
+#           and take r"...' or r'...' to do Py RegEx for which to hit
+#       Do the reverse-lookup to find (KBytes, KCap_Str, Py_Call)
+#           not only Py Func
+#
+
+#
+# Review these and retire what we've got
+#
+#   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
+#   Vim  Spacebar $ + - 0 123456789 << >>
+#   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
+#   Vim  A B C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L E H I J K L O S W X | Delete
+#
+#   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
+#   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
+#   Pq  I⌃D IReturn IDelete I⌃H
+#
+
+#
+# Python ToDo's
+#
+#   Refactor to solve the various No-Q-A C901 Too-Complex
+#
+#   Asserts for Terminal Encoding to top of Def, never ducked by conditional Return
+#
+#   Define present work in terms of y_line, x_char,
+#       no longer only in terms of y_row, x_column,
+#           even while today's y_row == y_line, and today's x_column == x_char
+#
+#   More convergence between 'pq xeditline' and 'pq em vi'
+#   More divergence between 'pq vi' and 'pq em'
+#
+#   Python Hook for entry/ exit into waiting for Keyboard Input
+#       vs .at_btflush now hooking only entry, not also exit
+#
+#   Python Decorators to build Keymap's, guarantee Positive Int Arg, etc
+#
+
+
 def xeditline() -> list[str]:
     """Edit in the way of Zsh/ Bash Command-Line Editor"""
 
@@ -5528,168 +5690,6 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
     LT.kdo_column_dent,  # Vim ^
     LT.kdo_row_middle,  # Vim ⇧M
 ]
-
-
-#
-# Demo's of:  pq em vi
-#
-#   Emacs  ⎋< ⎋> ⎋G⎋G ⎋GG ⎋GTab ⎋R
-#   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃O ⌃P
-#   Emacs  ⎋← ⎋→ ⌥← ⌥→ aka ⎋B ⎋F
-#   Emacs  ⌥< ⌥> ⌥G⌥G ⌥GG ⌥GTab ⌥R
-#
-#   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
-#   Vim  Spacebar $ + - 0 123456789
-#   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
-#   Vim  A B E H I J K L O S W X | Delete
-#   Vim  < > C D as adverbs:  << >> CC DD  C0 D0  C$ D$  <J >J CJ DJ  <K >K CK DK  etc
-#
-#   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
-#   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
-#   Pq  I⌃D IReturn IDelete I⌃H
-#
-#   Option Mouse Click moves Cursor via ← ↑ → ↓
-#
-#   Multiple Parallel Log Files in Sh at:  tail -F .pqinfo/*.log
-#
-
-#
-# Todo's that watch the Screen more closely
-#
-#   Vim . to repeat Emacs ⌃D ⌃K ⌃O or Vim > < C D
-#   Vim . with Arg to repeat more than once
-#
-#   Work the Mouse
-#       Delete/ Change up to the Mouse Click
-#       Edit while Mouse-Scrolling, and doc this
-#
-#   Lines larger than the Screen
-#
-#    Mark and Select
-#       Vim ⌃O ⌃I to walk the List of Marks vs which Verbs make Marks
-#           Vim :jumps :clearjumps vs G G, ⇧G, { }
-#           Like maybe Mouse Jump should make a Mark
-#           Vim M ' makes a Mark, but maybe the other M should likewise
-#       Vim M M to create Mark, Vim ' ' to bounce back and forth, Vim ' M to jump to Mark
-#       Emacs ⌃W even without ⌃Y Paste Back and without the ⌃W Highlight
-#
-#   Bounce Cursor to a placed Status Row on Screen
-#       Trace the UnicodeData.Name while Replace/ Insert
-#       Delete the Message we last wrote, write the new, log Messages & lost Messages
-#       Trace Y and X a la Vim :set ruler, cursorline, etc from my ~/.vimrc
-#       Collapse repeated Keys into repetition count of Key, like for Turtle Graphics
-#       Show the Line Marks
-#
-#   Relaunch
-#       Emacs ⌃X X G 'revert-buffer-quick
-#       Vim : E ! Return
-#
-#   Shadow the Screen
-#
-#       Insert Return from Columns between Home and End of the Line
-#
-#       Vim ⌃L Emacs ⌃L of Shadow Screen - mostly to redraw the Screen as shadowed
-#       Vim many many jump to Dent, Emacs ⎋M jump to Dent a la Vim ^
-#
-#       Edit via:  pq xeditline $FILE
-#       Emacs ⎋Z for like Vim D F, Vim F T ⇧F ⇧T for jump to, or jump to before
-#       Emacs ⎋C ⎋L ⎋U for Title/ Lower/ Upper
-#       Emacs ⌃T ⎋T and ⎋T for larger Words such as Last Two Sh Args
-#
-#       Undo/Redo piercing the Shadow
-#       Highlight for Search Found, for Selection, for Whitespace Codes in Selection
-#       Pipe through Vim !
-#       Vim D A B and such, the Vim Motions that aren't Top Level Vim Motions
-#
-#   Files smaller than the Screen, with ⎋[m marks in them
-#
-
-#
-# Pq Fixes:
-#
-#   More friction vs quitting without calling ⎋⇧M or ⎋⇧L K etc to keep the lower Rows of the Screen
-#
-#   Surprise of ⌃X ⌃S moving on already inside ⌃X ⌃E, not waiting for ⌃X ⌃S ⌃X ⌃C
-#
-#   ⌃X ⌃E Launch irretrievably confused by Zsh placing the Cursor in any Column of Input?
-#
-
-#
-# More Todo's:
-#
-#   Emacs ⌃W ⌃Y Copy/Paste Buffer vs Os Copy/Paste Buffer
-#
-#   Emacs ⌃R ⌃S Searches
-#
-#   Vim presentations of :set cursorline, etc from my ~/.vimrc
-#   More obscure Key Chord Sequences of Vim & Emacs
-#   Emacs ideas from my ~/.emacs, Vim ideas from my ~/.vimrc
-#   Emacs ⌃C A..Z Name Space, Emacs ⎋N ⎋O ⎋P Name Space, Vim \ A..Z Name Space
-#
-#   Screens of Files
-#
-
-#
-# Todo's that take Keyboard Input
-#
-#   Logo Turtle Ascii-Graphics
-#
-#   Vim Q Q @ Q etc, with repetition of @ Q
-#   Vim . could learn to repeat @ Q, and the other @ x, while ⌃Q . more faithful to legacy
-#
-#   Pq I ⌃Q ⌃O Escape
-#   Pq I ⌃Q ⌃O Calls of Insert/ Replace that don't move the Cursor Left
-#   Pq I ⌃Q ⌃O ⌃O and Pq I ⌃Q ⌃O ⌃I Cursor Histories
-#
-#   Pq ⌃Q escape to Vim ⌃D ⌃G ⌃L etc
-#   Pq ⌃V escape to Emacs ⌃L ⌃V ⌃W ⌃Y etc
-#
-#   Emacs insert-char of Py unicodedata.lookup
-#
-#   Chose ⌃H⌃K inside Texts/ Verbs
-#       Refactor Texts_Wrangle & Verb_Eval to form a (KBytes, KCap_Str, Py_Call)
-#       Print ⌃H⌃K as all three of (KBytes, KCap_Str, Py_Call)
-#
-#   Revert to Ex Mode to do ⌃H⌃A
-#       Take a line of input as literal ignoring case
-#           but "..." or '...' to respect case, except auto-close the " or '
-#           and take r"...' or r'...' to do Py RegEx for which to hit
-#       Do the reverse-lookup to find (KBytes, KCap_Str, Py_Call)
-#           not only Py Func
-#
-
-#
-# Review these and retire what we've got
-#
-#   Vim  Return ⌃E ⌃J ⌃Y ← ↓ ↑ →
-#   Vim  Spacebar $ + - 0 123456789 << >>
-#   Vim  ⇧A ⇧B ⇧C ⇧D ⇧E ⇧G ⇧H ⇧I ⇧L ⇧O ⇧R ⇧S ⇧X ⇧W ^ _
-#   Vim  A B C$ CC C⇧G C⇧L D$ DD D⇧G D⇧L E H I J K L O S W X | Delete
-#
-#   Pq  ⎋⎋ ⎋[ Tab ⇧Tab ⌃Q⌃V ⌃V⌃Q [ ⌥⎋ ⌥[
-#   Pq  ⎋ ⌃C ⌃D ⌃G ⌃Z ⌃\ ⌃L⌃C:Q!Return ⌃X⌃C ⌃X⌃S⌃X⌃C ⇧QVIReturn ⇧Z⇧Q ⇧Z⇧Z
-#   Pq  I⌃D IReturn IDelete I⌃H
-#
-
-#
-# Python ToDo's
-#
-#   Refactor to solve the various No-Q-A C901 Too-Complex
-#
-#   Asserts for Terminal Encoding to top of Def, never ducked by conditional Return
-#
-#   Define present work in terms of y_line, x_char,
-#       no longer only in terms of y_row, x_column,
-#           even while today's y_row == y_line, and today's x_column == x_char
-#
-#   More convergence between 'pq xeditline' and 'pq em vi'
-#   More divergence between 'pq vi' and 'pq em'
-#
-#   Python Hook for entry/ exit into waiting for Keyboard Input
-#       vs .at_btflush now hooking only entry, not also exit
-#
-#   Python Decorators to build Keymap's, guarantee Positive Int Arg, etc
-#
 
 
 #
