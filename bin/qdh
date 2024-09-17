@@ -9,7 +9,7 @@ if [ $# -eq 0 ]; then
     git diff --color-moved HEAD~1
 else
     case "$1" in
-        [0-9]*)
+        [0-9])
             arg1=HEAD~$1
             shift
             set -xe
