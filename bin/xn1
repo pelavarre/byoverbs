@@ -1,2 +1,2 @@
 set -xe
-xargs -n 1 "$@"
+tr \\\'\" ' ' |xargs -n 1 "$@"

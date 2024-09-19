@@ -10,6 +10,7 @@
 
 import os
 import pdb  # pdb.pm(), etc
+import random
 import re
 import shlex
 import subprocess
@@ -72,6 +73,7 @@ print()
 print("choose one, while sorted from most to least fresh:")
 print()
 
+shlines = list()
 for line in lines[1:-1]:
     splits = line.split("\t")
     assert len(splits) in (3, 4), (splits, line)
@@ -80,9 +82,26 @@ for line in lines[1:-1]:
     assert splits[-1] == "(Detached)", repr(splits[-1])
 
     sessionpath = splits[1]
-    print("screen -r {}".format(shlex.quote(sessionpath)))
 
-print()
+    shline = "screen -r {}".format(shlex.quote(sessionpath))
+    print(shline)
+
+    shlines.append(shline)
+
+if shlines:
+
+    print()
+    print("so very helpfully now, i'll go ahead and choose one for you, at random")
+    print()
+
+    shline = random.choice(shlines)
+    print(f"+ {shline}")
+
+    argv = shlex.split(shline)
+    run = subprocess.run(argv)  # mutate Sys Std In/ Out/ Err
+    if run.returncode:
+        print(f"+ exit {run.returncode}")
+        sys.exit(run.returncode)
 
 
 ... == r"""

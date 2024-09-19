@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""
+r"""
 bash --noprofile --norc
 
 alias -p
@@ -13,9 +13,8 @@ diff -brpu <(export) <(set) |sort |grep -v '[ +]'  # shows Export's listed as Se
 
 bind 'set enable-bracketed-paste off' 2>/dev/null; unset zle_bracketed_paste
 
-echo a
-echo b
-echo c
+echo \\\'\" \"\'\\n  # the \\ sometimes means \ and sometimes doesn't
+V1=\"\'\\r; printf '%s\n' $V1
 
 export PS1="$PS1\n\\$ "
 

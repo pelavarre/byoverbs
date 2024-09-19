@@ -23,6 +23,10 @@ examples:
 
   echo "+ exit $?"  # reads-and-clears last process returncode exit status
   echo -n '⌃ ⌥ ⇧ ⌘ ← → ↓ ↑ ⎋' |hexdump -C
+
+  echo \\\'\" \"\'\\n  # the \\ sometimes means \ and sometimes doesn't
+  V1=\"\'\\r; printf '%s\n' $V1
+
   printf '\e[34mB \e[31mR \e[35mM \e[33mY \e[32mG \e[36mT \e[37mW \e[m\n'  # Plain
   printf '\e[94mB \e[91mR \e[95mM \e[93mY \e[92mG \e[96mT \e[97mW \e[m\n'  # Bright
 

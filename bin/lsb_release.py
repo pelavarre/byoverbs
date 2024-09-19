@@ -12,9 +12,12 @@ options:
 quirks:
   presumes you know LSB = Linux Standard Base, and LTS = Long-Term Stable
   classic Lsb_Release dumps Key-Value Pairs, when given no Parms
-  goes well with:  Linux Lsb_Release A, Mac Sw_Vers, UName
+  goes well with:  Linux Lsb_Release, Mac Sw_Vers, UName A
 
 examples:
+
+  cat /etc/os-release |cat -tv
+  cat /etc/lsb-release |cat -tv
 
   lsb_release.py  # show these examples and exit
   lsb_release.py --h  # show help lines and exit
