@@ -1779,8 +1779,8 @@ def pathlib_create_pbpaste_bin() -> None:
 #   More convergence between 'pq xeditline' and 'pq em vi'
 #   More divergence between 'pq vi' and 'pq em'
 #
-#   Python Hook for entry/ exit into waiting for Keyboard Input
-#       vs .at_btflush now hooking only entry, not also exit
+#   Python Callback Hook for entry/ exit into waiting for Keyboard Input
+#       Clean up my tangle involving:  kmap_at_ltlaunch_lt_func
 #
 #   Python Decorators to build Keymap's, guarantee Positive Int Arg, etc
 #
@@ -1814,14 +1814,14 @@ def xeditline() -> list[str]:
         rn_otext = "\r\n".join(olines)
 
         if bashing:
-            st.stwrite("\x1B[A" + ps1 + "# " + "\r\n")
-            st.stwrite(ps1)
+            st.str_write("\x1B[A" + ps1 + "# " + "\r\n")
+            st.str_write(ps1)
         else:
             pn = len(rn_otext)
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=pn)
+            st.str_write_form_or_form_pn("\x1B" "[" "{}D", pn=pn)
 
-        st.stwrite("\x1B[1m")
-        st.stwrite(rn_otext)
+        st.str_write("\x1B[1m")
+        st.str_write(rn_otext)
 
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 
@@ -1830,7 +1830,7 @@ def xeditline() -> list[str]:
     path.write_text("")
 
     lt = LineTerminal()
-    print(f"{pathname=}", file=lt.ltlogger)
+    lt.pqprint(f"{pathname=}")
     olines = lt.run_till_quit(ilines, kmap="Pq", at_ltlaunch_lt_func=xedit_at_ltlaunch_lt_func)
 
     if olines:
@@ -1877,10 +1877,16 @@ def kmap_lt_run_till_quit(ilines, kmap) -> list[str]:
         olines = lt.olines
         st = lt.st
 
-        st.stwrite("\r\n".join(olines))
+        st.str_write("\r\n".join(olines))
+
+        st.str_print()
+        if kmap == "Emacs":
+            st.str_print("Press ⌃G ⌃X ⌃C to quit")
+        else:
+            st.str_print("Press ⌃C ⇧Z ⇧Q to quit")
 
     lt = LineTerminal()
-    olines = lt.run_till_quit(alt_ilines, kmap="Emacs", at_ltlaunch_lt_func=kmap_at_ltlaunch_lt_func)
+    olines = lt.run_till_quit(alt_ilines, kmap=kmap, at_ltlaunch_lt_func=kmap_at_ltlaunch_lt_func)
 
     if alt_ilines == olines:
         print("save-quit")
@@ -1888,6 +1894,24 @@ def kmap_lt_run_till_quit(ilines, kmap) -> list[str]:
         print("quit-no-save")
 
     return olines
+
+
+def bytes_terminal_loopback(ibytes) -> bytes:  # bt loopback
+    """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
+
+    with BytesTerminal() as bt:
+        bt.bytes_loopback()
+
+    return b""
+
+
+def str_terminal_loopback(itext) -> str:  # st loopback
+    """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
+
+    with StrTerminal() as st:
+        st.str_loopback()
+
+    return ""
 
 
 @dataclasses.dataclass
@@ -2018,62 +2042,70 @@ DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 Device Status Report  # Ps 6 for CPR
 CPR_Y_X_REGEX = r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 Active [Cursor] Pos Rep (CPR)
 
 
+#
+# terminal interventions
+#
+#   tput clear && printf '\e[3J'  # clears Screen plus Terminal Scrollback Line Buffer
+#
+#   echo "POSTEDIT='$POSTEDIT'" |hexdump -C && echo "PS1='$PS1'"  # says if Zsh is bolding Input
+#   echo "PS0='$PSO'" && echo "PS1='$PS1'" && trap  # says if Bash is bolding Input
+#
+#   macOS > Terminal > Settings > Profiles > Keyboard > Use Option as Meta Key
+#
+
+
+#
+# lots of docs
+#
+#   https://unicode.org/charts/PDF/U0000.pdf
+#   https://unicode.org/charts/PDF/U0080.pdf
+#   https://en.wikipedia.org/wiki/ANSI_escape_code
+#   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+#
+#   https://www.ecma-international.org/publications-and-standards/standards/ecma-48
+#     /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+#
+#   termios.TCSADRAIN doesn't drop Queued Input but blocks till Queued Output gone
+#   termios.TCSAFLUSH drops Queued Input and blocks till Queued Output gone
+#
+
+
 @dataclasses.dataclass
 class BytesTerminal:
     """Write/ Read Bytes at Screen/ Keyboard of the Terminal"""
-
-    #
-    # lots of docs:
-    #
-    #   https://unicode.org/charts/PDF/U0000.pdf
-    #   https://unicode.org/charts/PDF/U0080.pdf
-    #   https://en.wikipedia.org/wiki/ANSI_escape_code
-    #   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
-    #
-    #   https://www.ecma-international.org/publications-and-standards/standards/ecma-48
-    #     /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
-    #
-    #   termios.TCSADRAIN doesn't drop Queued Input but blocks till Queued Output gone
-    #   termios.TCSAFLUSH drops Queued Input and blocks till Queued Output gone
-    #
 
     stdio: typing.TextIO  # sys.stderr
     fd: int  # 2
 
     before: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Entry
     tcgetattr_else: list[int | list[bytes | int]] | None  # sampled at Entry
-    at_btflush_func_else: typing.Callable | None  # runs before blocking to read Input
     kinterrupts: int  # count of ⌃C's  # counted between Entry and Exit
     after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Exit
 
-    klogger: ReprLogger  # logs Keyboard Bytes In
-    slogger: ReprLogger  # logs Screen Bytes Out
+    kbytes_list: list[bytes]  # Record of Input, an In-Memory KeyLogger
+    sbytes_list: list[bytes]  # Record of Output, an In-Memory ScreenLogger
+
+    #
+    # Init, enter, exit, breakpoint, flush, stop, and loopback
+    #
 
     def __init__(self, before=termios.TCSADRAIN, after=termios.TCSADRAIN) -> None:
 
         stdio = sys.stderr
         fd = stdio.fileno()
 
-        klogger = ReprLogger(".pqinfo/keylog.log")
-        slogger = ReprLogger(".pqinfo/screenlog.log")
-
         self.stdio = stdio
         self.fd = fd
 
         self.before = before
         self.tcgetattr_else = None  # is None after Exit and before Entry
-        self.at_btflush_func_else = None
         self.kinterrupts = 0
         self.after = after  # todo: need Tcsa Flush on large Paste crashing us
 
-        self.klogger = klogger
-        self.slogger = slogger
+        self.kbytes_list = list()
+        self.sbytes_list = list()
 
         # termios.TCSAFLUSH destroys Input, like for when Paste crashes Code
-
-    #
-    # Enter, exit, breakpoint, loopback, flush, & stop (till resumed by Sh Fg)
-    #
 
     def __enter__(self) -> "BytesTerminal":  # -> typing.Self:
         r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
@@ -2108,7 +2140,7 @@ class BytesTerminal:
 
         if tcgetattr_else is not None:
 
-            self.btflush()  # for '__exit__'
+            self.bytes_flush()  # for '__exit__'
 
             tcgetattr = tcgetattr_else
             self.tcgetattr_else = None
@@ -2119,45 +2151,57 @@ class BytesTerminal:
 
         return None
 
-    def btbreakpoint(self) -> None:
+    def bytes_breakpoint(self) -> None:
         r"""Breakpoint with line-buffered Input and \n Output taken to mean \r\n, etc"""
 
         self.__exit__()
         breakpoint()  # to step up the call stack:  u
         self.__enter__()
 
-    def btloopback(self) -> None:
+    def bytes_flush(self) -> None:
+        """Flush Screen Output, like just before blocking to wait for Keyboard Input"""
+
+        stdio = self.stdio
+        stdio.flush()
+
+    def bytes_stop(self) -> None:
+        """Suspend and resume this Screen/ Keyboard Terminal Process"""
+
+        pid = os.getpid()
+
+        self.__exit__()
+
+        print("Pq Terminal Stop: ⌃Z F G Return")
+        print("macOS ⌃C might stop working till you close Window")  # even past:  reset
+        print("Linux might freak lots more than that")
+        os.kill(pid, signal.SIGTSTP)  # a la 'sh kill $pid -STOP' before 'sh kill $pid -CONT'
+
+        self.__enter__()
+
+        assert os.getpid() == pid, (os.getpid(), pid)
+
+        # a la Emacs ⌃Z suspend-frame, Vim ⌃Z
+
+    def bytes_loopback(self) -> None:
         """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
         fd = self.fd
+        kbytes_list = self.kbytes_list
+        assert self.tcgetattr_else, (self.tcgetattr_else,)
 
-        # Enter before and exit after, if called before Entry
+        # Sketch this Loop
 
-        if not self.tcgetattr_else:
-            self.__enter__()
-            try:
-                self.btloopback()
-            finally:
-                self.__exit__(*sys.exc_info())
-            return
+        self.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
+        self.str_print("Press a Chord once or twice to print its Key Caps and Bytes")
+        self.str_print("Press the Chord again to write its Bytes")
+        self.str_print("Press ⌃C ⇧Z ⇧Q to quit")
 
-        # Sketch what's going on
-
-        self.btprint("Press a Key Chord to see it, thrice and more to write it".encode())
-        self.btprint("Press some of ⎋ Fn ⌃ ⌥ ⇧ ⌘ and ← ↑ → ↓ ⏎ ⇥ ⇤ and so on and on".encode())
-
-        self.btprint("Press ⌃M ⌃J ⌃M ⌃J ⌃M to quit".encode())
-
-        # Loopback till ⌃M ⌃J ⌃M ⌃J ⌃M
-        # Print Repr Bytes once and twice and thrice, but write the Bytes thereafter
+        # Run this Loop
 
         count_by: dict[bytes, int]
-
         count_by = collections.defaultdict(int)
-        kbytes_list = list()
 
         while True:
-
             kbytes = self.read_kchord_bytes_if()
             kbytes_list.append(kbytes)
 
@@ -2168,64 +2212,41 @@ class BytesTerminal:
             else:
                 sep = b" "
                 rep = repr(kbytes).encode()
-                self.btwrite(sep + rep)
+                self.bytes_write(sep + rep)
 
-            if kbytes_list[-5:] == [b"\r", b"\n", b"\r", b"\n", b"\r"]:
+            if kbytes_list[-2:] == [b"Z", b"Q"]:  # ⇧Z ⇧Q
                 break
 
-        self.btprint()
-
-    def btflush(self) -> None:
-        """Run just before blocking to wait for Keyboard Input"""
-
-        at_btflush_func_else = self.at_btflush_func_else
-        stdio = self.stdio
-
-        if at_btflush_func_else is not None:
-            at_btflush_func_else()
-
-        self.slogger.logger.flush()  # plus ~0.050 ms
-        self.klogger.logger.flush()  # plus ~0.050 ms
-
-        stdio.flush()
-
-    def btstop(self) -> None:
-        """Suspend and resume this Screen/ Keyboard Terminal Process"""
-
-        pid = os.getpid()
-
-        self.__exit__()
-
-        print("Pq Terminal Stop: ⌃Z F G Return")
-        print("macOS ⌃C might stop working till you close Window")  # even past:  reset
-        print("Linux might freak lots more than that")
-        os.kill(pid, signal.SIGTSTP)
-
-        self.__enter__()
-
-        assert os.getpid() == pid, (os.getpid(), pid)
+        self.bytes_print()
 
     #
     # Write Screen Output Bytes
     #
 
-    def btwrite(self, sbytes) -> None:
+    def str_print(self, schars) -> None:
+        """Write Chars to the Screen as one or more Ended Lines"""
+
+        sbytes = schars.encode()
+        self.bytes_print(sbytes)
+
+    def bytes_write(self, sbytes) -> None:
         """Write Bytes to the Screen, but without implicitly also writing a Line-End"""
 
-        self.btprint(sbytes, end=b"")
+        self.bytes_print(sbytes, end=b"")
 
-    def btprint(self, *args, end=b"\r\n") -> None:
+    def bytes_print(self, *args, end=b"\r\n") -> None:
         """Write Bytes to the Screen as one or more Ended Lines"""
 
         fd = self.fd
+        sbytes_list = self.sbytes_list
+
         assert self.tcgetattr_else
-        slogger = self.slogger
 
         sep = b" "
         join = sep.join(args)
         sbytes = join + end
 
-        slogger.rlprint(sbytes)  # logs Out before Write
+        sbytes_list.append(sbytes)
         os.write(fd, sbytes)
 
         # doesn't raise UnicodeEncodeError
@@ -2236,6 +2257,16 @@ class BytesTerminal:
     # Read Key Chords
     # Encode each Chord as >= 1 Input Bytes
     #
+
+    def pull_kchord_bytes_if(self) -> bytes:
+        """Read the Bytes of 1 Incomplete/ Complete Key Chord"""
+
+        kbytes_list = self.kbytes_list
+
+        kbytes = self.read_kchord_bytes_if()
+        kbytes_list.append(kbytes)
+
+        return kbytes
 
     def read_kchord_bytes_if(self) -> bytes:
         """Read the Bytes of 1 Incomplete/ Complete Key Chord"""
@@ -2342,14 +2373,12 @@ class BytesTerminal:
 
         fd = self.fd
         assert self.tcgetattr_else
-        klogger = self.klogger
 
         # Else block to read 1 Keyboard Byte from Keyboard
 
-        self.btflush()  # 'readkbyte'
+        self.bytes_flush()  # 'readkbyte'
 
         kbytes = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
-        klogger.rlprint(kbytes)  # logs In after Read
 
         if kbytes != b"\x03":  # ⌃C
             self.kinterrupts = 0
@@ -2408,7 +2437,7 @@ KCHORD_STR_BY_KCHARS = {
     "\x1B" "\x04": "⌥⇧Fn→",  # ⎋⇧Fn→   # coded with ⌃D
     "\x1B" "\x0B": "⌥⇧Fn↑",  # ⎋⇧Fn↑   # coded with ⌃K
     "\x1B" "\x0C": "⌥⇧Fn↓",  # ⎋⇧Fn↓  # coded with ⌃L
-    "\x1B" "\x10": "⎋⇧Fn",  # ⎋ Meta ⇧ Shift of of F1..F12  # not ⌥⇧Fn  # coded with ⌃P
+    "\x1B" "\x10": "⎋⇧Fn",  # ⎋ Meta ⇧ Shift of Fn F1..F12  # not ⌥⇧Fn  # coded with ⌃P
     "\x1B" "\x1B": "⎋⎋",  # Meta Esc  # not ⌥⎋
     "\x1B" "\x1B" "[" "3;5~": "⎋⌃FnDelete",  # ⌥⌃FnDelete  # LS1R
     "\x1B" "\x1B" "[" "A": "⎋↑",  # CSI 04/01 Cursor Up (CUU)  # not ⌥↑
@@ -2562,7 +2591,7 @@ class StrTerminal:
     bt: BytesTerminal  # wrapped here
     kpushes: list[tuple[bytes, str]]  # cached here
     kpulls: list[tuple[bytes, str]]  # traced here
-    vmode: str  # 'Meta'  # 'Replace'  # 'Insert'
+    tmode: str  # 'Meta'  # 'Replace'  # 'Insert'
 
     y_rows: int  # count Screen Rows, initially -1
     x_columns: int  # count of Screen Columns, initially -1
@@ -2570,13 +2599,19 @@ class StrTerminal:
     column_x: int  # Column of Screen Cursor in last CPR, initially -1
     at_stlaunch_func_else: typing.Callable | None  # runs when Terminal Cursor first found
 
+    kchord_str_list: list[str]  # Record of Input, an In-Memory ScreenLogger of Key Caps
+
+    #
+    # Init, enter, exit, breakpoint, & loopback
+    #
+
     def __init__(self) -> None:
         bt = BytesTerminal()
 
         self.bt = bt
         self.kpushes = list()
         self.kpulls = list()
-        self.vmode = "Meta"
+        self.tmode = "Meta"
 
         self.y_rows = -1
         self.x_columns = -1
@@ -2584,16 +2619,12 @@ class StrTerminal:
         self.column_x = -1
         self.at_stlaunch_func_else = None
 
-    #
-    # Enter, exit, breakpoint, & loopback
-    #
+        self.kchord_str_list = list()
 
     def __enter__(self) -> "StrTerminal":  # -> typing.Self:
         r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
 
-        bt = self.bt
-        bt.__enter__()
-
+        self.bt.__enter__()
         return self
 
     def __exit__(self, *exc_info) -> None:
@@ -2603,122 +2634,79 @@ class StrTerminal:
         tcgetattr_else = self.bt.tcgetattr_else
 
         # Revert Screen Settings to Defaults
-        # todo: revert these only when we know we disrupted these
 
         if tcgetattr_else is not None:
-            if self.vmode != "Meta":
-                self.stwrite_vmode_meta()
+            if self.tmode != "Meta":
+                self.str_write_tmode_meta()
 
         # Start line-buffering Input, start replacing \n Output with \r\n, etc
 
         bt.__exit__(*exc_info)
 
-    def stbreakpoint(self) -> None:
+    def str_breakpoint(self) -> None:
         r"""Breakpoint with line-buffered Input and \n Output taken to mean \r\n, etc"""
 
         self.__exit__()
         breakpoint()  # to step up the call stack:  u
         self.__enter__()
 
-    def stloopback(self) -> None:
+    def str_flush(self) -> None:
+        """Flush Screen Output, like just before blocking to wait for Keyboard Input"""
+
+        self.bt.bytes_flush()
+
+    def str_stop(self) -> None:
+        """Suspend and resume this Screen/ Keyboard Terminal Process"""
+
+        self.bt.bytes_stop()
+
+    def str_loopback(self) -> None:
         """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
-        bt = self.bt
+        kchord_str_list = self.kchord_str_list
+        assert self.bt.tcgetattr_else, (self.bt.tcgetattr_else,)
 
-        # Enter before and exit after, if called before Entry
+        # Sketch this Loop
 
-        if not self.bt.tcgetattr_else:
-            self.__enter__()
-            try:
-                self.stloopback()
-            finally:
-                self.__exit__(*sys.exc_info())
-            return
+        self.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
+        self.str_print("Press a Chord once or twice to print its Key Caps and Bytes")
+        self.str_print("Press the Chord again to write its Bytes")
+        self.str_print("Press ⌃C ⇧Z ⇧Q to quit")
 
-        # Sketch what's going on
-
-        self.stprint("Press a Key Chord to see it, thrice and more to write it")
-        self.stprint("Press some of ⎋ Fn ⌃ ⌥ ⇧ ⌘ and ← ↑ → ↓ ⏎ ⇥ ⇤ and so on and on")
-
-        self.stprint("Press ⌃M ⌃J ⌃M ⌃J ⌃M to quit")
-
-        # Loopback till ⌃M ⌃J ⌃M ⌃J ⌃M
-        # Print Repr Bytes once and twice and thrice, but write the Bytes thereafter
+        # Run this Loop
 
         count_by: dict[bytes, int]
-
         count_by = collections.defaultdict(int)
-        kbytes_list = list()
 
         while True:
-
-            (kbytes, kchord_str) = self.pull_one_kchord_bytes_str()
-            kbytes_list.append(kbytes)
+            (kbytes, kchord_str) = self.read_one_kchord_bytes_str()
 
             count_by[kbytes] += 1
 
             if count_by[kbytes] >= 3:
-                bt.btwrite(kbytes)
+                self.str_write(kbytes.decode())
             else:
-                bigsep = b"  "
-                kb = repr(kbytes).encode()
-                lilsep = b" "
-                ks = repr(kchord_str).encode()
+                bigsep = "  "
+                kb = repr(kbytes)
+                lilsep = " "
+                ks = repr(kchord_str)
 
-                bt.btwrite(bigsep + kb + lilsep + ks)
+                self.str_write(bigsep + kb + lilsep + ks)
 
-            if kbytes_list[-5:] == [b"\r", b"\n", b"\r", b"\n", b"\r"]:
+            if kchord_str_list[-2:] == ["⇧Z", "⇧Q"]:
                 break
 
-        bt.btprint()
+        self.str_print()
 
     #
-    # Step ahead, or step back, across the Chars of Ragged Lines
-    #
-
-    def index_yx_plus(self, distance) -> tuple[int, int]:
-        """Say which Y X is Distance away from present Y X"""
-
-        x_columns = self.x_columns
-        y_rows = self.y_rows
-
-        column_x = self.column_x
-        row_y = self.row_y
-        vmode = self.vmode
-
-        # Find the Terminal Cursor as a Char of Lines
-
-        assert x_columns >= 1, (x_columns,)
-        x_width = (x_columns - 1) if (vmode == "Meta") else x_columns
-
-        assert row_y >= 1, (row_y,)
-        yx_index = ((row_y - 1) * x_width) + column_x
-
-        # Step the Cursor ahead or back, across Chars of Ragged Lines
-
-        alt_yx_index = yx_index + distance
-        alt_yx_index = max(alt_yx_index, 1)
-
-        alt_y = 1 + ((alt_yx_index - 1) // x_width)
-        if alt_y < y_rows:
-            alt_x = 1 + ((alt_yx_index - 1) % x_width)
-        else:
-            alt_y = y_rows
-            alt_x = x_width
-
-        # Succeed
-
-        return (alt_y, alt_x)
-
-    #
-    # Write Control Sequences through Shadow to Screen
+    # Jump the Cursor to chosen Columns and Rows of the Screen
     #
 
     def column_x_write_1(self) -> None:
         """Jump to Leftmost Screen Column"""
 
         self.column_x = 1
-        self.stwrite("\r")  # 00/13  # "\x0D"
+        self.str_write("\r")  # 00/13  # "\x0D"
 
         assert CR == "\r"  # 00/13 Carriage Return (CR) ⌃M
 
@@ -2738,7 +2726,7 @@ class StrTerminal:
             x = max(x, 1)
 
         self.column_x = x
-        self.stwrite_form_or_form_pn("\x1B" "[" "{}G", pn=x)
+        self.str_write_form_or_form_pn("\x1B" "[" "{}G", pn=x)
 
         assert CHA_Y == "\x1B" "[" "{}G"  # 04/07 Cursor Character Absolute
 
@@ -2753,7 +2741,7 @@ class StrTerminal:
             y = max(y, 1)
 
         self.row_y = y
-        self.stwrite_form_or_form_pn("\x1B" "[" "{}d", pn=y)
+        self.str_write_form_or_form_pn("\x1B" "[" "{}d", pn=y)
 
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
@@ -2778,75 +2766,131 @@ class StrTerminal:
 
         form = "\x1B" "[" "{};{}H"
         schars = form.format(y, x)
-        self.stwrite(schars)
+        self.str_write(schars)
 
         assert CUP_Y_X == "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position (CUP)
+
+    #
+    # Jump the Screen Cursor ahead, or back, across the Chars of Ragged Lines
+    #
+
+    def index_yx_plus(self, distance) -> tuple[int, int]:
+        """Say which Y X is at the chosen Distance away from present Y X"""
+
+        x_columns = self.x_columns
+        y_rows = self.y_rows
+
+        column_x = self.column_x
+        row_y = self.row_y
+        tmode = self.tmode
+
+        # Measure the width of each Line
+
+        assert x_columns >= 1, (x_columns,)
+        x_width = (x_columns - 1) if (tmode == "Meta") else x_columns
+
+        # Find the Terminal Cursor as a Char of Lines
+
+        assert row_y >= 1, (row_y,)
+        yx_index = ((row_y - 1) * x_width) + column_x
+
+        # Step the Cursor ahead or back, across Chars of Ragged Lines
+
+        alt_yx_index = yx_index + distance
+        alt_yx_index = max(alt_yx_index, 1)
+
+        alt_y = 1 + ((alt_yx_index - 1) // x_width)
+        if alt_y <= y_rows:
+            alt_x = 1 + ((alt_yx_index - 1) % x_width)
+        else:
+            alt_y = y_rows
+            alt_x = x_width
+
+        # Succeed
+
+        return (alt_y, alt_x)
+
+    #
+    # Switch between Replace/ Insert/ Neither
+    #
+
+    def str_meta_write(self, schars) -> None:
+        """Write Chars to the Screen, but don't shadow them, and don't insert them"""
+
+        tmode = self.tmode
+
+        self.str_tmode_write("Meta")  # not "Insert"
+        self.str_write(schars)
+        self.str_tmode_write(tmode)
+
+    def str_tmode_write(self, tmode) -> None:
+        """Choose Replace/ Insert/ Neither in progress, and shape the Cursor to match"""
+
+        assert tmode in ("Insert", "Meta", "Replace"), (tmode,)
+
+        if tmode == self.tmode:
+            return
+
+        if tmode == "Insert":
+            self.str_write_tmode_insert()
+        elif tmode == "Replace":
+            self.str_write_tmode_replace()
+        else:
+            assert tmode == "Meta", (tmode,)
+            self.str_write_tmode_meta()
+
+    def str_write_tmode_insert(self) -> None:
+        """Shape the Cursor to say Insert in progress"""
+
+        tmode = self.tmode
+        assert tmode in ("Insert", "Meta", "Replace"), (tmode,)
+
+        self.tmode = "Insert"
+
+        if tmode != "Insert":
+            self.str_write("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
+            self.str_write("\x1B" "[" "6 q")  # CSI 02/00 07/01  # 6 Bar Cursor
+
+        assert SM_IRM == "\x1B" "[" "4h"  # CSI 06/08 Set Mode Insert/ Replace
+        assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
+
+    def str_write_tmode_meta(self) -> None:
+        """Shape the Cursor to say no Replace/ Insert in progress"""
+
+        tmode = self.tmode
+        assert tmode in ("Meta", "Insert", "Replace"), (tmode,)
+
+        self.tmode = "Meta"
+
+        if tmode == "Insert":
+            self.str_write("\x1B" "[" "4l")  # CSI 06/12 Replace
+        if tmode != "Meta":
+            self.str_write("\x1B" "[" " q")  # CSI 02/00 07/01  # No-Style Cursor
+
+        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
+        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
+
+    def str_write_tmode_replace(self) -> None:
+        """Shape the Cursor to say Replace in progress"""
+
+        tmode = self.tmode
+        assert tmode in ("Insert", "Meta", "Replace"), (tmode,)
+
+        self.tmode = "Replace"
+
+        if tmode == "Insert":
+            self.str_write("\x1B" "[" "4l")  # CSI 06/12 Replace
+        if tmode != "Replace":
+            self.str_write("\x1B" "[" "4 q")  # CSI 02/00 07/01  # 4 Skid Cursor
+
+        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
+        assert DECSCUSR_SKID == "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
 
     #
     # Write Screen Output Chars as Bytes
     #
 
-    def stbypass(self, schars) -> None:
-        """Write Chars to the Screen with Empty End "" and bypassing the Screen Shadow"""
-
-        vmode = self.vmode
-        assert vmode in ("Insert", "Meta", "Replace"), (vmode,)
-
-        if vmode != "Insert":
-            self.stwrite(schars)
-        else:
-            self.stwrite_vmode_meta()  # could be:  self.stwrite_vmode_replace()
-            self.stwrite(schars)
-            self.stwrite_vmode_insert()
-
-    def stwrite_vmode_insert(self) -> None:
-        """Shape the Cursor to say no Replace/ Insert in progress"""
-
-        vmode = self.vmode
-        assert vmode in ("Insert", "Meta", "Replace"), (vmode,)
-
-        self.vmode = "Insert"
-
-        if vmode != "Insert":
-            self.stwrite("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
-            self.stwrite("\x1B" "[" "6 q")  # CSI 02/00 07/01  # 6 Bar Cursor
-
-        assert SM_IRM == "\x1B" "[" "4h"  # CSI 06/08 Set Mode Insert/ Replace
-        assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
-
-    def stwrite_vmode_meta(self) -> None:
-        """Shape the Cursor to say no Replace/ Insert in progress"""
-
-        vmode = self.vmode
-        assert vmode in ("Meta", "Insert", "Replace"), (vmode,)
-
-        self.vmode = "Meta"
-
-        if vmode == "Insert":
-            self.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
-        if vmode != "Meta":
-            self.stwrite("\x1B" "[" " q")  # CSI 02/00 07/01  # No-Style Cursor
-
-        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
-        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
-
-    def stwrite_vmode_replace(self) -> None:
-        """Write a CSI Form to the Screen filled out by the Digits of the K Int"""
-
-        vmode = self.vmode
-        assert vmode in ("Insert", "Meta", "Replace"), (vmode,)
-
-        self.vmode = "Replace"
-
-        if vmode == "Insert":
-            self.stwrite("\x1B" "[" "4l")  # CSI 06/12 Replace
-        if vmode != "Replace":
-            self.stwrite("\x1B" "[" "4 q")  # CSI 02/00 07/01  # 4 Skid Cursor
-
-        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
-        assert DECSCUSR_SKID == "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
-
-    def stwrite_form_or_form_pn(self, form, pn, default=1) -> None:
+    def str_write_form_or_form_pn(self, form, pn, default=1) -> None:
         """Write a CSI Form to the Screen filled out by the Digits of the K Int"""
 
         assert "{}" in form, (form,)
@@ -2858,16 +2902,16 @@ class StrTerminal:
         else:
             schars = form.format(pn)
 
-        self.stwrite(schars)  # for .stwrite_form_or_form_pn
+        self.str_write(schars)  # for .str_write_form_or_form_pn
 
-    def stwrite(self, schars) -> None:
+    def str_write(self, schars) -> None:
         """Write Chars to the Screen, but without implicitly also writing a Line-End"""
 
-        self.stprint(schars, end="")
+        self.str_print(schars, end="")
 
-        # 'st.stwrite("\r\n")' and 'st.stprint()' write the same Bytes
+        # 'st.str_write("\r\n")' and 'st.str_print()' write the same Bytes
 
-    def stprint(self, *args, end="\r\n") -> None:
+    def str_print(self, *args, end="\r\n") -> None:
         """Write Chars to the Screen as one or more Ended Lines"""
 
         bt = self.bt
@@ -2878,7 +2922,7 @@ class StrTerminal:
         sbytes = join.encode()
         ebytes = end.encode()
 
-        bt.btprint(sbytes, end=ebytes)
+        bt.bytes_print(sbytes, end=ebytes)
 
     #
     # Read Key Chords
@@ -2928,7 +2972,7 @@ class StrTerminal:
         assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
         assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
 
-        self.stwrite("\x1B" "[" "6" "n")
+        self.str_write("\x1B" "[" "6" "n")
         while True:
             kpush = self.read_one_kchord_bytes_str()
             kbytes, kstr = kpush
@@ -2969,6 +3013,7 @@ class StrTerminal:
         """Read 1 Key Chord, as Bytes and Str"""
 
         bt = self.bt
+        kchord_str_list = self.kchord_str_list
 
         kchord_str_by_kchars = KCHORD_STR_BY_KCHARS  # '\e\e[A' for ⎋↑
 
@@ -2993,6 +3038,8 @@ class StrTerminal:
 
         assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
         assert " " not in kchord_str, (kchord_str,)
+
+        kchord_str_list.append(kchord_str)
 
         return (kchord_bytes, kchord_str)
 
@@ -3070,9 +3117,9 @@ PY_CALL = (
 class LineTerminal:
     """React to Sequences of Key Chords by laying Chars of Lines over the Screen"""
 
+    pqlogger: ReprLogger  # wrapped here  # '.pqinfo/pq.log'  # logfmt
+
     st: StrTerminal  # wrapped here
-    ltlogger: typing.TextIO  # wrapped here  # '.pqinfo/pq.log'  # logfmt
-    pqlogger_exists: bool  # created by earlier processes
 
     olines: list[str]  # the Lines to sketch
 
@@ -3092,11 +3139,9 @@ class LineTerminal:
 
     def __init__(self) -> None:
 
-        pqlogger = ReprLogger(".pqinfo/pq.log")
+        self.pqlogger = ReprLogger(".pqinfo/pq.log")
 
         self.st = StrTerminal()
-        self.ltlogger = pqlogger.logger
-        self.pqlogger_exists = pqlogger.exists
 
         self.olines = list()
 
@@ -3112,19 +3157,25 @@ class LineTerminal:
 
         # lots of empty happens only until first Keyboard Input
 
-    def ltbreakpoint(self) -> None:
+    def pqprint(self, *args, **kwargs) -> None:
+        """Print to the PQ Logger, and to the Screen"""
+
+        print(*args, **kwargs, file=self.pqlogger.logger)
+
+    def line_breakpoint(self) -> None:
         r"""Breakpoint with line-buffered Input and \n Output taken to mean \r\n, etc"""
 
-        st = self.st
+        self.line_flush()
 
-        st.__exit__()
+        self.st.__exit__()
         breakpoint()  # to step up the call stack:  u
-        st.__enter__()
+        self.st.__enter__()
 
-    def ltflush(self) -> None:
+    def line_flush(self) -> None:
         """Run just before blocking to wait for Keyboard Input"""
 
-        self.ltlogger.flush()
+        self.pqlogger.logger.flush()  # todo: skipped by uncaught Exception's
+        self.st.str_flush()
 
     def run_till_quit(self, ilines, kmap, at_ltlaunch_lt_func) -> list[str]:
         """Run till SystemExit, and then return the edited Lines"""
@@ -3165,16 +3216,6 @@ class LineTerminal:
     def run_while_true(self) -> None:
         """Run in a StrTerminal on a BytesTerminal, till SystemExit"""
 
-        st = self.st
-        bt = st.bt
-
-        # Register Callback to flush Logs before blocking for Input
-
-        assert bt.at_btflush_func_else is None, bt.at_btflush_func_else
-        bt.at_btflush_func_else = self.ltflush
-
-        # Loopback Input to Output till SystemExit
-
         try:
             self.texts_vmode_wrangle("Replace", kint=1)  # as if Vim +:startreplace
             self.verbs_wrangle()  # as if Vim +:stopinsert, not Vim +:startinsert
@@ -3197,11 +3238,11 @@ class LineTerminal:
         self.vmode_enter(vmode)
 
         ktext = self.texts_wrangle()
-        print(f"{ktext=}", file=self.ltlogger)
+        self.pqprint(f"{ktext=}")
 
         if kint > 1:
             kint_minus = kint - 1
-            st.stwrite(kint_minus * ktext)  # for .texts_vmode_wrangle Replace/ Insert
+            st.str_write(kint_minus * ktext)  # for .texts_vmode_wrangle Replace/ Insert
 
         self.vmode_exit()
 
@@ -3310,23 +3351,7 @@ class LineTerminal:
         assert vmode in ("Insert", "Meta", "Replace", "Replace1"), (vmode,)
         vmodes.append(vmode)
 
-        self.vmode_stwrite(vmode)
-
-    def vmode_stwrite(self, vmode) -> None:  # for .vmode_exit or .vmode_enter
-        """Redefine StrTerminal Write as Replace or Insert, & choose a Cursor Style"""
-
-        st = self.st
-
-        assert vmode in ("Insert", "Meta", "Replace", "Replace1"), (vmode,)
-        print(f"{vmode=}", file=self.ltlogger)
-
-        if vmode == "Meta":
-            st.stwrite_vmode_meta()
-        elif vmode in "Insert":
-            st.stwrite_vmode_insert()
-        else:
-            assert vmode in ("Replace", "Replace1"), (vmode,)
-            st.stwrite_vmode_replace()
+        self.vmode_write(vmode)
 
     def vmode_exit(self) -> None:
         """Undo 'def vmode_enter'"""
@@ -3336,7 +3361,20 @@ class LineTerminal:
         vmodes.pop()
         vmode = vmodes[-1]
 
-        self.vmode_stwrite(vmode)
+        self.vmode_write(vmode)
+
+    def vmode_write(self, vmode) -> None:  # for .vmode_exit or .vmode_enter
+        """Redefine StrTerminal Write as Replace or Insert, & choose a Cursor Style"""
+
+        st = self.st
+
+        assert vmode in ("Insert", "Meta", "Replace", "Replace1"), (vmode,)
+        self.pqprint(f"{vmode=}")
+
+        if vmode == "Replace1":
+            st.str_tmode_write("Replace")
+        else:
+            st.str_tmode_write(tmode=vmode)
 
     #
     # Wrangle Verbs
@@ -3388,10 +3426,7 @@ class LineTerminal:
             kchars = kbytes.decode()  # may raise UnicodeDecodeError
             kcap_str = self.kcap_str
 
-        print(
-            f"{kcap_str=} {kbytes=} {vmode=} {kstr_starts=} {kstr_stops=}",
-            file=self.ltlogger,
-        )
+        self.pqprint(f"{kcap_str=} {kbytes=} {vmode=} {kstr_starts=} {kstr_stops=}")
 
         return (kbytes, kchars, kcap_str)
 
@@ -3400,11 +3435,7 @@ class LineTerminal:
     def one_kchord_read(self) -> None:
         """Read 1 Key Chord, as Bytes and Str"""
 
-        st = self.st
-
-        self.ltlogger.flush()
-        (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
-
+        (kchord_bytes, kchord_str) = self.st_pull_one_kchord_bytes_str()
         self.kbytes = kchord_bytes
         self.kcap_str = kchord_str
 
@@ -3436,7 +3467,7 @@ class LineTerminal:
 
                 if phrasing:
                     self.kchords_eval(vmode="Meta")  # for .kphrase_read
-                    print(f"{self.kstr_starts=} kphrase_read", file=self.ltlogger)
+                    self.pqprint(f"{self.kstr_starts=} kphrase_read")
                     continue
 
             break
@@ -3446,24 +3477,21 @@ class LineTerminal:
         late_peek_else = self.kint_peek_else()
 
         if early_peek_else is None:
-            print("kphrase_read", file=self.ltlogger)
+            self.pqprint("kphrase_read")
         else:
             if late_peek_else is None:
-                print(f"{early_kint=} kphrase_read", file=self.ltlogger)
+                self.pqprint(f"{early_kint=} kphrase_read")
                 self.kint_push(early_kint)
             else:
                 late_kint = self.kint_pull(default=-1)
 
-                print(f"{early_kint=} {late_kint=} kphrase_read", file=self.ltlogger)
+                self.pqprint(f"{early_kint=} {late_kint=} kphrase_read")
                 self.kint_push(early_kint * late_kint)
 
     def some_kchords_read(self) -> None:
         """Read 1 Key Chord Sequence, as Bytes and Str"""
 
-        st = self.st
-
-        self.ltlogger.flush()
-        (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
+        (kchord_bytes, kchord_str) = self.st_pull_one_kchord_bytes_str()
         self.tail_kchords_read(kbytes=kchord_bytes, kcap_str=kchord_str)
 
         # '⌃L'  # '⇧Z ⇧Z'
@@ -3524,8 +3552,7 @@ class LineTerminal:
 
             # Block till next Key Chord
 
-            self.ltlogger.flush()
-            (kb, ks) = st.pull_one_kchord_bytes_str()
+            (kb, ks) = self.st_pull_one_kchord_bytes_str()
 
         # Succeed
 
@@ -3534,7 +3561,7 @@ class LineTerminal:
         self.kbytes = b
         self.kcap_str = s
 
-        print(f"{b=} {s=}", file=self.ltlogger)
+        self.pqprint(f"{b=} {s=}")
 
     def kcap_str_findall(self, kcap_str) -> list[str]:
         """List every matching LineTerminal Verb"""
@@ -3556,6 +3583,20 @@ class LineTerminal:
         finds = eq_finds + startswith_finds
 
         return finds
+
+    def st_pull_one_kchord_bytes_str(self) -> tuple[bytes, str]:
+        """Read 1 Key Chord, as Bytes and Str"""
+
+        self.line_flush()
+
+        kchord = self.st.pull_one_kchord_bytes_str()
+        return kchord
+
+    def st_pull_cursor_always_and_keyboard_maybe(self) -> None:
+
+        self.line_flush()
+
+        self.st.pull_cursor_always_and_keyboard_maybe()
 
     #
     # Eval KChords
@@ -3591,14 +3632,14 @@ class LineTerminal:
 
         kstr_starts_before = list(kstr_starts)
         peek_else = self.kint_peek_else()
-        print(f"{kstr_starts=} {peek_else=} {kcap_str=}", file=self.ltlogger)
+        self.pqprint(f"{kstr_starts=} {peek_else=} {kcap_str=}")
 
         done = False
         if len(kdo_call) == 1:  # takes the Inverse Func when no Args and no KwArgs
             done = self.verb_eval_explicit_nonpositive_if(kdo_func)
         if not done:
             (alt_kdo_func, args, kwargs) = self.py_call_complete(kdo_call)
-            print(f"{peek_else=} func={alt_kdo_func.__name__}", file=self.ltlogger)
+            self.pqprint(f"{peek_else=} func={alt_kdo_func.__name__}")
             alt_kdo_func(self, *args, **kwargs)
 
         # Forget the K Start's, K Stop's, and/or K Text's when we should
@@ -3606,7 +3647,7 @@ class LineTerminal:
         self.kstarts_kstops_choose_after(kstr_starts_before, kcap_str=kcap_str)
         if ktext == self.ktext:
             if ktext:
-                print(f"{ktext=} cleared", file=self.ltlogger)
+                self.pqprint(f"{ktext=} cleared")
             self.ktext = ""  # .kchords_eval when .ktext unchanged
 
     def py_call_complete(self, call) -> tuple[typing.Callable, tuple, dict]:
@@ -3641,7 +3682,7 @@ class LineTerminal:
 
         if kstr_starts == kstr_starts_before:
             if kstr_starts:
-                print(f"{kstr_starts=} cleared", file=self.ltlogger)
+                self.pqprint(f"{kstr_starts=} cleared")
             kstr_starts.clear()  # for .kstarts_kstops_forget_if
 
         # Forget the K Stop's, but then do hold onto the latest K Stop if present
@@ -3649,7 +3690,7 @@ class LineTerminal:
         assert STOP_KCAP_STRS == ("⌃C", "⌃G", "⌃L", "⎋", "⌃\\")
 
         if kstr_stops:
-            print(f"{kstr_stops=} cleared", file=self.ltlogger)
+            self.pqprint(f"{kstr_stops=} cleared")
         kstr_stops.clear()
 
         stopped = self.kcap_str in ("⌃C", "⌃G", "⌃L", "⎋", "⌃\\")
@@ -3688,7 +3729,7 @@ class LineTerminal:
             kdo_inverse_func = kdo_inverse_func_by[kdo_func]
             fname = kdo_inverse_func.__name__
 
-            print(f"kint=-{kint} func={fname}", file=self.ltlogger)
+            self.pqprint(f"kint=-{kint} func={fname}")
 
             self.kint_pull(default=1)  # this Default can't much matter
             self.kint_push_positive(-kint)  # for .verb_eval_explicit_nonpositive_if
@@ -3730,8 +3771,8 @@ class LineTerminal:
         """Say how to quit Vim"""
 
         st = self.st
-        st.stprint()
-        st.stprint(
+        st.str_print()
+        st.str_print(
             "To quit, press one of" " ⌃C⇧Z⇧Q ⌃C⇧Z⇧Z ⌃G⌃X⌃C ⌃C⌃L:Q!Return ⌃G⌃X⌃S⌃X⌃C ⌃C⌃L:WQ!Return"
         )
 
@@ -3751,7 +3792,7 @@ class LineTerminal:
 
         olines.clear()
 
-        self.ltlogger.flush()
+        self.line_flush()
         sys.exit()
 
         # Emacs ⌃X ⌃C save-buffers-kill-terminal  # Emacs ⌃X⌃C
@@ -3764,7 +3805,7 @@ class LineTerminal:
 
         _ = self.kint_pull(default=0)  # todo: 'returncode = ' inside 'kdo_quit_no_save'
 
-        self.ltlogger.flush()
+        self.line_flush()
         sys.exit()
 
         # Emacs ⌃X ⌃S ⌃X ⌃C save-buffer save-buffers-kill-terminal  # Emacs ⌃X⌃S⌃X⌃C
@@ -3779,7 +3820,7 @@ class LineTerminal:
         bt = st.bt
 
         self.vmode_enter(vmode="Meta")
-        bt.btstop()
+        bt.bytes_stop()
         self.vmode_exit()
 
         # Emacs ⌃Z suspend-frame
@@ -3803,7 +3844,7 @@ class LineTerminal:
             return ""
 
         ktext = kint * kchars
-        st.stwrite(ktext)  # for .kdo_text_write_n
+        st.str_write(ktext)  # for .kdo_text_write_n
 
         return ktext
 
@@ -3820,13 +3861,13 @@ class LineTerminal:
         peek_else = self.kint_peek_else()
         kint = self.kint_pull(default=1)
 
-        print(f"peek_else={peek_else} func=kdo_kcap_alarm_write_n", file=self.ltlogger)
+        self.pqprint(f"peek_else={peek_else} func=kdo_kcap_alarm_write_n")
 
         if peek_else is not None:
-            st.stbypass(str(kint))  # for .kdo_kcap_alarm_write_n
+            st.str_meta_write(str(kint))
 
         ktext = kcap_str.replace(" ", "")
-        st.stbypass(ktext)  # for .kdo_kcap_alarm_write_n
+        st.str_meta_write(ktext)
 
         # Emacs ⌃Q quoted-insert/ replace
         # Vim ⌃V
@@ -3851,8 +3892,7 @@ class LineTerminal:
 
         #
 
-        self.ltlogger.flush()
-        (kbytes, kchord_str) = st.pull_one_kchord_bytes_str()
+        (kbytes, kchord_str) = self.st_pull_one_kchord_bytes_str()
         if not kint:
             return
 
@@ -3864,7 +3904,7 @@ class LineTerminal:
 
         ktext = kint * kcap_str
 
-        st.stwrite(ktext)  # for .kdo_quote_kchars
+        st.str_write(ktext)  # for .kdo_quote_kchars
 
     def kdo_quote_csi_kstrs_n(self) -> None:
         """Block till CSI Sequence complete, then take it as Text"""
@@ -3889,8 +3929,7 @@ class LineTerminal:
         kcap_str = "⎋ ["
 
         while True:
-            self.ltlogger.flush()
-            (kchord_bytes, kchord_str) = st.pull_one_kchord_bytes_str()
+            (kchord_bytes, kchord_str) = self.st_pull_one_kchord_bytes_str()
 
             kbytes += kchord_bytes
 
@@ -3913,7 +3952,7 @@ class LineTerminal:
         kint = self.kint_pull(default=1)
         kchars = kbytes.decode()  # may raise UnicodeDecodeError
         ktext = kint * kchars
-        st.stwrite(ktext)  # for .kdo_quote_csi_kstrs_n
+        st.str_write(ktext)  # for .kdo_quote_csi_kstrs_n
 
         # Pq [ quote.csi.kstrs  # missing from Emacs, Vim, VsCode
         # unlike Vim [ Key Map
@@ -3922,7 +3961,7 @@ class LineTerminal:
         """Ring the Bell"""
 
         st = self.st
-        st.stwrite("\a")
+        st.str_write("\a")
 
         # 00/07 Bell (BEL)
 
@@ -4166,7 +4205,7 @@ class LineTerminal:
         # raises ValueError if ever '.kstr_starts' isn't Cancelled or an Int Literal
 
     #
-    # Move the Screen Cursor to a Column, relatively or absolutely
+    # Jump the Screen Cursor ahead, or back, across the Chars of Ragged Lines
     #
 
     def kdo_char_minus_n(self) -> None:
@@ -4198,6 +4237,10 @@ class LineTerminal:
         # Vim Spacebar
         # macOS ⌃F
 
+    #
+    # Jump the Screen Cursor to a Column
+    #
+
     def kdo_column_1(self) -> None:
         """Jump to Left of Line"""
 
@@ -4215,7 +4258,7 @@ class LineTerminal:
         st = self.st
 
         kint = self.kint_pull_positive()
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}D", pn=kint)
 
         # 00/08 Backspace (BS) \b ⌃H
         # 07/15 Delete (DEL) \x7F ⌃? 'Eliminated Control Function'
@@ -4275,7 +4318,7 @@ class LineTerminal:
 
         st = self.st
         kint = self.kint_pull_positive()
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}C", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}C", pn=kint)
 
         assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
 
@@ -4288,7 +4331,7 @@ class LineTerminal:
         st = self.st
 
         kint = self.kint_pull_positive()
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}Z", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}Z", pn=kint)
 
         # Disassemble these StrTerminal Writes
 
@@ -4303,7 +4346,7 @@ class LineTerminal:
         st = self.st
 
         kint = self.kint_pull_positive()
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}I", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}I", pn=kint)
 
         # Disassemble these StrTerminal Writes
 
@@ -4370,7 +4413,7 @@ class LineTerminal:
         kint = self.kint_pull_positive()
         if kint > 1:
             kint_minus = kint - 1
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}B", pn=kint_minus)
+            st.str_write_form_or_form_pn("\x1B" "[" "{}B", pn=kint_minus)
 
         st.column_x_write_dent()  # for Vim _
 
@@ -4392,11 +4435,11 @@ class LineTerminal:
         kint = self.kint_pull_positive()  # todo: Emacs ⌃E exact inverse of ⌃A?
         if kint > 1:
             kint_minus = kint - 1
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}B", pn=kint_minus)
+            st.str_write_form_or_form_pn("\x1B" "[" "{}B", pn=kint_minus)
 
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}C", pn=32100)  # todo: more Columns
+        st.str_write_form_or_form_pn("\x1B" "[" "{}C", pn=32100)  # todo: more Columns
         if vmode == "Meta":
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=1)
+            st.str_write_form_or_form_pn("\x1B" "[" "{}D", pn=1)
 
         # Disassemble these StrTerminal Writes
 
@@ -4426,7 +4469,7 @@ class LineTerminal:
         kint = self.kint_pull_positive()  # todo: Emacs ⌃A exact inverse of ⌃E?
         if kint > 1:
             kint_minus = kint - 1
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}B", pn=kint_minus)
+            st.str_write_form_or_form_pn("\x1B" "[" "{}B", pn=kint_minus)
 
         st.column_x_write_1()  # for Emacs ⌃A, macOS ⌃A
 
@@ -4441,7 +4484,7 @@ class LineTerminal:
         st = self.st
 
         kint = self.kint_pull_positive()
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}A", pn=kint)
 
         assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
@@ -4461,7 +4504,7 @@ class LineTerminal:
         st = self.st
 
         kint = self.kint_pull_positive()
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}B", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}B", pn=kint)
 
         assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
@@ -4720,12 +4763,12 @@ class LineTerminal:
 
         if yjump > 1:
             yjump_minus = yjump - 1
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}B", pn=yjump_minus)
+            st.str_write_form_or_form_pn("\x1B" "[" "{}B", pn=yjump_minus)
 
         for y in range(abs(yjump)):
             if y:
-                st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=1)
-            st.stwrite_form_or_form_pn(form, pn=4)  # DENT == 4
+                st.str_write_form_or_form_pn("\x1B" "[" "{}A", pn=1)
+            st.str_write_form_or_form_pn(form, pn=4)  # DENT == 4
 
         # part of Vim >
         # part of Vim >
@@ -4741,7 +4784,7 @@ class LineTerminal:
 
         kint = self.kint_pull_positive()
 
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}M", pn=kint)
         st.column_x_write_dent()  # for Vim D D, VsCode ⌘X
 
         assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
@@ -4761,7 +4804,7 @@ class LineTerminal:
         kint = self.kint_pull_positive()
 
         ktext = self.texts_vmode_wrangle("Insert", kint=kint)
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=1)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}D", pn=1)
 
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 
@@ -4778,7 +4821,7 @@ class LineTerminal:
         kint = self.kint_pull_positive()
 
         self.texts_vmode_wrangle("Replace", kint=kint)
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=1)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}D", pn=1)
 
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 
@@ -4793,7 +4836,7 @@ class LineTerminal:
         kint = self.kint_pull_positive()
 
         self.texts_vmode_wrangle("Replace1", kint=kint)
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=1)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}D", pn=1)
 
         assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 
@@ -4817,7 +4860,7 @@ class LineTerminal:
             self.kint_push_positive(head)
             self.kdo_column_minus_n()  # Vim wraps I Delete left  # Emacs too
 
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}P", pn=head)
+            st.str_write_form_or_form_pn("\x1B" "[" "{}P", pn=head)
 
         if not tail:
             if head:
@@ -4829,7 +4872,7 @@ class LineTerminal:
                 self.kint_push_positive(mid)
                 self.kdo_line_minus_n()
 
-                st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=mid)
+                st.str_write_form_or_form_pn("\x1B" "[" "{}M", pn=mid)
 
         else:
             self.kint_push_positive(st.x_columns)  # rightmost Column before next Row up
@@ -4839,7 +4882,7 @@ class LineTerminal:
                 self.kint_push_positive(mid)
                 self.kdo_line_minus_n()
 
-                st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=mid)
+                st.str_write_form_or_form_pn("\x1B" "[" "{}M", pn=mid)
 
             self.kdo_line_minus_n()
 
@@ -4848,7 +4891,7 @@ class LineTerminal:
                 self.kint_push_positive(tail_minus)
                 self.kdo_column_minus_n()
 
-                st.stwrite_form_or_form_pn("\x1B" "[" "{}P", pn=tail_minus)
+                st.str_write_form_or_form_pn("\x1B" "[" "{}P", pn=tail_minus)
 
         # Disassemble these StrTerminal Writes
 
@@ -4869,7 +4912,7 @@ class LineTerminal:
         st = self.st
 
         kint = self.kint_pull_positive()
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}P", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}P", pn=kint)
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
         # Vim X
@@ -4890,9 +4933,9 @@ class LineTerminal:
             return
 
         if kint:
-            st.stwrite("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=kint)  # insert
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=kint)  # up
+            st.str_write("\n")  # 00/10  # "\x0A"  # "\x1B" "[" "B"
+            st.str_write_form_or_form_pn("\x1B" "[" "{}L", pn=kint)  # insert
+            st.str_write_form_or_form_pn("\x1B" "[" "{}A", pn=kint)  # up
 
         self.kdo_end_plus_n1()
 
@@ -4911,8 +4954,8 @@ class LineTerminal:
         kint = self.kint_pull_positive()
 
         if st.column_x != 1:
-            st.stwrite("\r\n")  # 00/13 00/10  # "\x0D\x0A"
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=kint)
+            st.str_write("\r\n")  # 00/13 00/10  # "\x0D\x0A"
+        st.str_write_form_or_form_pn("\x1B" "[" "{}L", pn=kint)
 
         self.ktext += "\r\n"  # Vim I Return
 
@@ -4941,34 +4984,34 @@ class LineTerminal:
             if st.column_x == 1:
                 if len(kpulls) >= 2:
                     if (kpulls[-2][-1], kpulls[-1][-1]) == ("⌃K", "⌃K"):
-                        st.stwrite("\r")  # 00/13  # "\x0D"
-                        st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=1)  # goodbye
+                        st.str_write("\r")  # 00/13  # "\x0D"
+                        st.str_write_form_or_form_pn("\x1B" "[" "{}M", pn=1)  # goodbye
                         return
 
                         # todo: Cope when ⌃K is not .kdo_tail_head_cut_n
                         # todo: Cope when .kdo_tail_head_cut_n is repeated but not ⌃K
                         # todo: Tell each .kdo_ when it's being repeated by whatever Key Chords
 
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}K", pn=ps_0, default=ps_0)
+            st.str_write_form_or_form_pn("\x1B" "[" "{}K", pn=ps_0, default=ps_0)
             return
 
         # Emacs ⌃K, with Arg
 
         if kint > 0:  # Emacs splits, doesn't delete left
-            st.stwrite("\r")  # 00/13  # "\x0D"
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=kint)  # goodbye
+            st.str_write("\r")  # 00/13  # "\x0D"
+            st.str_write_form_or_form_pn("\x1B" "[" "{}M", pn=kint)  # goodbye
             return
 
         pn = st.column_x - 1
         if pn:
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=pn)
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}P", pn=pn)
+            st.str_write_form_or_form_pn("\x1B" "[" "{}D", pn=pn)
+            st.str_write_form_or_form_pn("\x1B" "[" "{}P", pn=pn)
 
         if not kint:
             return
 
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=-kint)  # up
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=-kint)  # goodbye
+        st.str_write_form_or_form_pn("\x1B" "[" "{}A", pn=-kint)  # up
+        st.str_write_form_or_form_pn("\x1B" "[" "{}M", pn=-kint)  # goodbye
 
         # Disassemble these StrTerminal Writes
 
@@ -4990,7 +5033,7 @@ class LineTerminal:
 
         self.kdo_tail_cut_n()
 
-        st.stwrite("\b")  # 00/08 Backspace (BS) \b ⌃H
+        st.str_write("\b")  # 00/08 Backspace (BS) \b ⌃H
         assert BS == "\b"  # 00/08 Backspace ⌃H
 
         # Vim ⇧D  # same effect as Vim D $
@@ -5007,13 +5050,13 @@ class LineTerminal:
             return
 
         ps_0 = 0  # writes Spaces ahead  # CSI K default Ps = 0
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}K", pn=ps_0, default=ps_0)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}K", pn=ps_0, default=ps_0)
 
         if kint > 1:
             kint_minus = kint - 1
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}B", pn=1)  # down
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}M", pn=kint_minus)  # goodbye
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=1)  # up
+            st.str_write_form_or_form_pn("\x1B" "[" "{}B", pn=1)  # down
+            st.str_write_form_or_form_pn("\x1B" "[" "{}M", pn=kint_minus)  # goodbye
+            st.str_write_form_or_form_pn("\x1B" "[" "{}A", pn=1)  # up
 
         # Disassemble these StrTerminal Writes
 
@@ -5033,7 +5076,7 @@ class LineTerminal:
 
         st = self.st
 
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}C", pn=1)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}C", pn=1)
         self.kdo_ins_n_till()
 
         assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
@@ -5055,7 +5098,7 @@ class LineTerminal:
 
         st = self.st
 
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}C", pn=32100)  # todo: more Columns
+        st.str_write_form_or_form_pn("\x1B" "[" "{}C", pn=32100)  # todo: more Columns
         self.kdo_ins_n_till()
 
         assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
@@ -5069,18 +5112,18 @@ class LineTerminal:
 
         kint = self.kint_pull_positive()
 
-        st.stwrite("\r")  # 00/13  # "\x0D"
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=1)
+        st.str_write("\r")  # 00/13  # "\x0D"
+        st.str_write_form_or_form_pn("\x1B" "[" "{}L", pn=1)
 
         ktext = self.kdo_ins_n_till()
         for _ in range(kint - 1):
-            st.stwrite("\r\n")  # 00/13 00/10  # "\x0D\x0A"
+            st.str_write("\r\n")  # 00/13 00/10  # "\x0D\x0A"
 
             ktext_kint = len(ktext.splitlines())
             if ktext_kint:
-                st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=ktext_kint)
-                st.stwrite(ktext)  # for .kdo_line_ins_above_n Insert
-                st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=ktext_kint)
+                st.str_write_form_or_form_pn("\x1B" "[" "{}L", pn=ktext_kint)
+                st.str_write(ktext)  # for .kdo_line_ins_above_n Insert
+                st.str_write_form_or_form_pn("\x1B" "[" "{}D", pn=ktext_kint)
 
         # Disassemble these StrTerminal Writes
 
@@ -5100,18 +5143,18 @@ class LineTerminal:
 
         kint = self.kint_pull_positive()
 
-        st.stwrite("\r\n")  # 00/13 00/10  # "\x0D\x0A"
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=1)
+        st.str_write("\r\n")  # 00/13 00/10  # "\x0D\x0A"
+        st.str_write_form_or_form_pn("\x1B" "[" "{}L", pn=1)
 
         ktext = self.kdo_ins_n_till()
         for _ in range(kint - 1):
-            st.stwrite("\r\n")  # 00/13 00/10  # "\x0D\x0A"
+            st.str_write("\r\n")  # 00/13 00/10  # "\x0D\x0A"
 
             ktext_kint = len(ktext.splitlines())
             if ktext_kint:
-                st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=ktext_kint)
-                st.stwrite(ktext)  # for .kdo_line_ins_below_n Insert
-                st.stwrite_form_or_form_pn("\x1B" "[" "{}D", pn=ktext_kint)
+                st.str_write_form_or_form_pn("\x1B" "[" "{}L", pn=ktext_kint)
+                st.str_write(ktext)  # for .kdo_line_ins_below_n Insert
+                st.str_write_form_or_form_pn("\x1B" "[" "{}D", pn=ktext_kint)
 
         # Disassemble these StrTerminal Writes
 
@@ -5199,7 +5242,7 @@ class LineTerminal:
 
         if yjump >= 0:
             if yjump:
-                st.stwrite_form_or_form_pn("\x1B" "[" "{}L", pn=1)
+                st.str_write_form_or_form_pn("\x1B" "[" "{}L", pn=1)
             self.kdo_ins_n_till()
 
         # Vim C
@@ -5245,7 +5288,7 @@ class LineTerminal:
                 self.kdo_tail_cut_n()
 
                 if kcap_str == "D":
-                    st.stwrite("\b")  # 00/08 Backspace (BS) \b ⌃H
+                    st.str_write("\b")  # 00/08 Backspace (BS) \b ⌃H
 
                     # todo: more flexible keymaps of Vim D $ vs Vim C $
 
@@ -5266,7 +5309,7 @@ class LineTerminal:
             if xjump > 0:
                 if self.kcap_str in ("⌃E", "$"):
                     if kcap_str == "D":
-                        st.stwrite("\b")  # 00/08 Backspace (BS) \b ⌃H
+                        st.str_write("\b")  # 00/08 Backspace (BS) \b ⌃H
 
                         # todo: more flexible keymaps of Pq ⌃E and Vim D $ vs Vim C $
 
@@ -5276,7 +5319,7 @@ class LineTerminal:
 
         if yjump < -1:
             yjump_minus = (-yjump) - 1
-            st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=yjump_minus)
+            st.str_write_form_or_form_pn("\x1B" "[" "{}A", pn=yjump_minus)
 
         self.kint_push_positive(abs(yjump))
         self.kdo_dents_cut_n()
@@ -5317,13 +5360,13 @@ class LineTerminal:
                 return None
 
             self.kchords_eval(vmode="Meta")  # for .kdo_cut_to_read_eval
-            st.pull_cursor_always_and_keyboard_maybe()  # resamples Cursor, after Eval
+            self.st_pull_cursor_always_and_keyboard_maybe()  # resamples Cursor, after Eval
 
             # Mark zero or more Columns within 1 Line
 
             xjump = column_x - st.column_x
             if st.row_y == row_y:
-                print(f"yjump=0 {xjump=}", file=self.ltlogger)
+                self.pqprint(f"yjump=0 {xjump=}")
                 return (0, xjump)
 
             peek_else = self.kint_peek_else()
@@ -5333,20 +5376,20 @@ class LineTerminal:
 
         kint = self.kint_pull(default=1)
         if not kint:
-            print("yjump=0 xjump=0", file=self.ltlogger)
+            self.pqprint("yjump=0 xjump=0")
             return (0, 0)
 
         if kint != 1:
             if kint < 0:
                 self.kint_push(-kint)
                 self.kdo_line_minus_n()
-                st.pull_cursor_always_and_keyboard_maybe()  # resamples Cursor, after Eval
+                self.st_pull_cursor_always_and_keyboard_maybe()  # resamples Cursor, after Eval
             elif kint < 2:
                 assert False, (kint,)
             elif kint > 1:
                 self.kint_push(kint - 1)
                 self.kdo_line_plus_n()
-                st.pull_cursor_always_and_keyboard_maybe()  # resamples Cursor, after Eval
+                self.st_pull_cursor_always_and_keyboard_maybe()  # resamples Cursor, after Eval
 
         # Mark one or more Lines: the first Line, the last Line, and any Lines in between
 
@@ -5357,7 +5400,7 @@ class LineTerminal:
             yjump = st.row_y - row_y + 1
             yjump = -yjump
 
-        print(f"{yjump=} {xjump=}", file=self.ltlogger)
+        self.pqprint(f"{yjump=} {xjump=}")
         return (yjump, xjump)
 
     #
@@ -5370,8 +5413,8 @@ class LineTerminal:
         st = self.st
 
         kint = self.kint_pull_positive()
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}S", pn=kint)
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}A", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}S", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}A", pn=kint)
 
         # Disassemble these StrTerminal Writes
 
@@ -5387,8 +5430,8 @@ class LineTerminal:
         st = self.st
 
         kint = self.kint_pull_positive()
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}T", pn=kint)
-        st.stwrite_form_or_form_pn("\x1B" "[" "{}B", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}T", pn=kint)
+        st.str_write_form_or_form_pn("\x1B" "[" "{}B", pn=kint)
 
         # Disassemble these StrTerminal Writes
 
@@ -5884,7 +5927,7 @@ CUED_PY_LINES_TEXT = r"""
 
     obytes = ibytes  # sponged  # sponge  # obytes = ibytes
 
-    obytes = ibytes; pq.BytesTerminal().btloopback()  # bt loopback  # bt loop
+    obytes = pq.bytes_terminal_loopback(ibytes)  # bt loopback  # bt loop  # btloop
 
 
     oline = (4 * " ") + iline  # dent  # dented  # textwrap.dented
@@ -5956,9 +5999,9 @@ CUED_PY_LINES_TEXT = r"""
 
     otext = itext.upper()  # upper  # uppered uppercased  # |tr '[a-z]' '[A-Z]'
 
-    otext = itext; pq.StrTerminal().stloopback()  # st loopback  # st loop
-
     otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
+
+    otext = pq.str_terminal_loopback(itext)  # st loopback  # st loop  # stloop
 
     otext = re.sub(r"(.)", repl=r"\1 ", string=itext).rstrip()  # sub  # repl
 
