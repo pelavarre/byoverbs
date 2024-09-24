@@ -1960,7 +1960,9 @@ class ReprLogger:
 
 
 #
-#   ⌃H ⌃I ⌃J ⌃M ⌃[  ⎋[I Tab  ⎋[Z ⇧Tab
+#   ⌃G ⌃H ⌃I ⌃J ⌃M ⌃[
+#
+#   ⎋[I Tab  ⎋[Z ⇧Tab
 #   ⎋[d row-go  ⎋[G column-go
 #
 #   ⎋[M rows-delete  ⎋[L rows-insert  ⎋[P chars-delete  ⎋[@ chars-insert
@@ -2189,7 +2191,7 @@ class BytesTerminal:
         kbytes_list = self.kbytes_list
         assert self.tcgetattr_else, (self.tcgetattr_else,)
 
-        # Sketch this Loop
+        # Set up this Loop
 
         self.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
         self.str_print("Press a Chord once or twice to print its Key Caps and Bytes")
@@ -2277,63 +2279,64 @@ class BytesTerminal:
 
         # Block to fetch at least 1 Byte
 
-        read_0 = self.read_kchar_bytes_if()
+        kbytes1 = self.read_kchar_bytes_if()
 
-        kchord_bytes = read_0
-        if read_0 != b"\x1B":
-            return kchord_bytes
+        many_kbytes = kbytes1
+        if kbytes1 != b"\x1B":
+            return many_kbytes
 
         # Accept 1 or more Esc Bytes, such as x 1B 1B in ⌥⌃FnDelete
 
         while True:
             if not self.kbhit(timeout=0):
-                return kchord_bytes
+                return many_kbytes
 
                 # ⎋ Esc that isn't ⎋⎋ Meta Esc
                 # ⎋⎋ Meta Esc that doesn't come with more Bytes
 
-            read_1 = self.read_kchar_bytes_if()
-            kchord_bytes += read_1
-            if read_1 != b"\x1B":
+            kbytes2 = self.read_kchar_bytes_if()
+            many_kbytes += kbytes2
+            if kbytes2 != b"\x1B":
                 break
 
-        if read_1 == b"O":  # 01/11 04/15 SS3
-            read_2 = self.read_kchar_bytes_if()
-            kchord_bytes += read_2  # rarely in range(0x20, 0x40) CSI_EXTRAS
-            return kchord_bytes
+        if kbytes2 == b"O":  # 01/11 04/15 SS3
+            kbytes3 = self.read_kchar_bytes_if()
+            many_kbytes += kbytes3  # rarely in range(0x20, 0x40) CSI_EXTRAS
+            return many_kbytes
 
         # Accept ⎋[ Meta [ cut short by itself, or longer CSI Escape Sequences
 
-        if read_1 == b"[":  # 01/11 ... 05/11 CSI
-            assert kchord_bytes.endswith(b"\x1B\x5B"), (kchord_bytes,)
+        if kbytes2 == b"[":  # 01/11 ... 05/11 CSI
+            assert many_kbytes.endswith(b"\x1B\x5B"), (many_kbytes,)
             if not self.kbhit(timeout=0):
-                return kchord_bytes  # ⎋[ Meta [
-            kchord_bytes = self.read_csi_kchord_bytes_if(kchord_bytes)
+                return many_kbytes  # ⎋[ Meta [
+            many_kbytes = self.read_csi_kchord_bytes_if(many_kbytes)
 
         # Succeed
 
-        return kchord_bytes
+        return many_kbytes
 
         # cut short by end-of-input, or by undecodable Bytes
         # doesn't raise UnicodeDecodeError
 
-    def read_csi_kchord_bytes_if(self, kchord_bytes) -> bytes:
+    def read_csi_kchord_bytes_if(self, kbytes) -> bytes:
         """Block to read the rest of the CSI Escape Sequence"""
 
         assert CSI_EXTRAS == "".join(chr(_) for _ in range(0x20, 0x40))
 
+        many_kchord_bytes = kbytes
         while True:
-            read_n = self.read_kchar_bytes_if()
-            kchord_bytes += read_n
+            kbytes = self.read_kchar_bytes_if()  # replaces
+            many_kchord_bytes += kbytes
 
-            if len(read_n) == 1:  # as when ord(read_2.encode()) < 0x80
-                ord_2 = read_n[-1]
-                if 0x20 <= ord_2 < 0x40:  # !"#$%&'()*+,-./0123456789:;<=>?
+            if len(kbytes) == 1:  # as when ord(kbytes3.encode()) < 0x80
+                kord = kbytes[-1]
+                if 0x20 <= kord < 0x40:  # !"#$%&'()*+,-./0123456789:;<=>?
                     continue  # Parameter/ Intermediate Bytes in CSI_EXTRAS
 
             break
 
-        return kchord_bytes
+        return many_kchord_bytes
 
         # cut short by end-of-input, or by undecodable Bytes
         # doesn't raise UnicodeDecodeError
@@ -2590,7 +2593,7 @@ class StrTerminal:
 
     bt: BytesTerminal  # wrapped here
     kpushes: list[tuple[bytes, str]]  # cached here
-    kpulls: list[tuple[bytes, str]]  # traced here
+    kpulls: list[tuple[bytes, str]]  # Record of Input, an In-Memory KeyLogger
     tmode: str  # 'Meta'  # 'Replace'  # 'Insert'
 
     y_rows: int  # count Screen Rows, initially -1
@@ -2660,43 +2663,67 @@ class StrTerminal:
 
         self.bt.bytes_stop()
 
-    def str_loopback(self) -> None:
+    def str_loopback(self) -> None:  # bin/pq.py stloop
         """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
         kchord_str_list = self.kchord_str_list
         assert self.bt.tcgetattr_else, (self.bt.tcgetattr_else,)
 
-        # Sketch this Loop
+        # Set up this Loop
 
         self.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
-        self.str_print("Press a Chord once or twice to print its Key Caps and Bytes")
-        self.str_print("Press the Chord again to write its Bytes")
         self.str_print("Press ⌃C ⇧Z ⇧Q to quit")
 
         # Run this Loop
 
-        count_by: dict[bytes, int]
-        count_by = collections.defaultdict(int)
-
+        kchord = (b"R", "⇧R")
         while True:
-            (kbytes, kchord_str) = self.read_one_kchord_bytes_str()
+            (kbytes, kstr) = kchord
 
-            count_by[kbytes] += 1
-
-            if count_by[kbytes] >= 3:
-                self.str_write(kbytes.decode())
+            if kstr == "⇧R":
+                self.str_write_tmode_replace()
+                kchord = self.read_past_text_kchords()
+            elif kstr == "I":
+                self.str_write_tmode_insert()
+                kchord = self.read_past_text_kchords()
             else:
-                bigsep = "  "
-                kb = repr(kbytes)
-                lilsep = " "
-                ks = repr(kchord_str)
-
-                self.str_write(bigsep + kb + lilsep + ks)
+                self.str_write_tmode_meta()
+                self.str_meta_write(kstr)
+                kchord = self.read_one_kchord()
 
             if kchord_str_list[-2:] == ["⇧Z", "⇧Q"]:
+                (kbytes, kstr) = kchord
+                self.str_write_tmode_meta()
+                self.str_meta_write(kstr)
                 break
 
         self.str_print()
+
+    def read_past_text_kchords(self) -> tuple[bytes, str]:
+        """Read Text K Chords and write their Bytes, return the first other K Chord"""
+
+        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
+
+        while True:
+            kchord = self.read_one_kchord()
+            if kchord == (b"\x7F", "Delete"):
+                kchord = (b"\x08", "Backspace")
+
+            (kbytes, kstr) = kchord
+
+            m = re.match(r"^\x1B\[([0-9]+);([0-9]+)R$".encode(), string=kbytes)
+            if m:
+                break
+
+            kdecode = kbytes.decode()
+            if kdecode not in list(" \a\b\n\t\r"):  # also ⌃K ⌃L work like ⌃J at macOS Terminal
+                klstrip = kdecode.lstrip("\x1B")  # \e
+                if not klstrip.isprintable():
+                    break
+
+            self.str_write(kdecode)
+
+        return kchord
 
     #
     # Jump the Cursor to chosen Columns and Rows of the Screen
@@ -2930,7 +2957,7 @@ class StrTerminal:
     # And let the caller push them back, after reading too far ahead
     #
 
-    def append_one_kchord_bytes_str(self, kbytes, kstr) -> None:
+    def append_one_kchord(self, kbytes, kstr) -> None:
         """Say to read a Bytes/Str pair again, as if read too far ahead"""
 
         kpushes = self.kpushes
@@ -2938,12 +2965,12 @@ class StrTerminal:
         assert kbytes, (kbytes, kstr)
         assert kstr, (kstr, kbytes)
 
-        kpush = (kbytes, kstr)
-        kpushes.append(kpush)
+        kchord = (kbytes, kstr)
+        kpushes.append(kchord)
 
         # todo: test Append a K Push, like for bound Key Chord prefixing another
 
-    def pull_one_kchord_bytes_str(self) -> tuple[bytes, str]:
+    def pull_one_kchord(self) -> tuple[bytes, str]:
         """Read the next Pushed Key Chord, else the next Key Chord from the Keyboard"""
 
         kpulls = self.kpulls
@@ -2952,16 +2979,16 @@ class StrTerminal:
         if not kpushes:
             self.pull_cursor_always_and_keyboard_maybe()
             if not kpushes:  # todo: log when reading Keyboard in place of Cursor
-                (kbytes, kstr) = self.read_one_kchord_bytes_str()
-                self.append_one_kchord_bytes_str(kbytes, kstr=kstr)
+                (kbytes, kstr) = self.read_one_kchord()
+                self.append_one_kchord(kbytes, kstr=kstr)
                 assert kpushes == [(kbytes, kstr)], (kpushes, (kbytes, kstr))
 
-        kpush = kpushes.pop(0)
+        kchord = kpushes.pop(0)
 
-        kpull = kpush
+        kpull = kchord
         kpulls.append(kpull)
 
-        return kpush
+        return kchord
 
     def pull_cursor_always_and_keyboard_maybe(self) -> None:
         """Write Device-Status-Report (DSR), read Cursor-Position-Report (CPR)"""
@@ -2974,12 +3001,12 @@ class StrTerminal:
 
         self.str_write("\x1B" "[" "6" "n")
         while True:
-            kpush = self.read_one_kchord_bytes_str()
-            kbytes, kstr = kpush
+            kchord = self.read_one_kchord()
+            (kbytes, kstr) = kchord
             pattern = r"^\x1B\[([0-9]+);([0-9]+)R$".encode()
             m = re.match(pattern, string=kbytes)
             if not m:
-                self.append_one_kchord_bytes_str(kbytes, kstr=kstr)
+                self.append_one_kchord(kbytes, kstr=kstr)
                 continue
 
             break
@@ -3009,7 +3036,7 @@ class StrTerminal:
         self.y_rows = y_rows
         self.x_columns = x_columns
 
-    def read_one_kchord_bytes_str(self) -> tuple[bytes, str]:
+    def read_one_kchord(self) -> tuple[bytes, str]:
         """Read 1 Key Chord, as Bytes and Str"""
 
         bt = self.bt
@@ -3019,29 +3046,29 @@ class StrTerminal:
 
         # Read the Bytes of 1 Key Chord
 
-        kchord_bytes = bt.read_kchord_bytes_if()  # may contain b' '
-        kchars = kchord_bytes.decode()  # may raise UnicodeDecodeError
+        kbytes = bt.read_kchord_bytes_if()  # may contain b' '
+        kchars = kbytes.decode()  # may raise UnicodeDecodeError
 
         # Choose 1 Key Cap to speak of the Bytes of 1 Key Chord
 
         if kchars in kchord_str_by_kchars.keys():
-            kchord_str = kchord_str_by_kchars[kchars]
+            kstr = kchord_str_by_kchars[kchars]
         else:
-            kchord_str = ""
+            kstr = ""
             for kch in kchars:  # often 'len(kchars) == 1'
                 s = self.kch_to_kcap(kch)
-                kchord_str += s
+                kstr += s
 
                 # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
 
         # Succeed
 
         assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
-        assert " " not in kchord_str, (kchord_str,)
+        assert " " not in kstr, (kstr,)
 
-        kchord_str_list.append(kchord_str)
+        kchord_str_list.append(kstr)
 
-        return (kchord_bytes, kchord_str)
+        return (kbytes, kstr)
 
         # '⌃L'  # '⇧Z'
         # '⎋A' from ⌥A while macOS Keyboard > Option as Meta Key
@@ -3435,9 +3462,9 @@ class LineTerminal:
     def one_kchord_read(self) -> None:
         """Read 1 Key Chord, as Bytes and Str"""
 
-        (kchord_bytes, kchord_str) = self.st_pull_one_kchord_bytes_str()
-        self.kbytes = kchord_bytes
-        self.kcap_str = kchord_str
+        (kbytes, kstr) = self.st_pull_one_kchord()
+        self.kbytes = kbytes
+        self.kcap_str = kstr
 
         # '⇧Z'
 
@@ -3491,8 +3518,8 @@ class LineTerminal:
     def some_kchords_read(self) -> None:
         """Read 1 Key Chord Sequence, as Bytes and Str"""
 
-        (kchord_bytes, kchord_str) = self.st_pull_one_kchord_bytes_str()
-        self.tail_kchords_read(kbytes=kchord_bytes, kcap_str=kchord_str)
+        (kbytes, kstr) = self.st_pull_one_kchord()
+        self.tail_kchords_read(kbytes=kbytes, kcap_str=kstr)
 
         # '⌃L'  # '⇧Z ⇧Z'
 
@@ -3547,12 +3574,12 @@ class LineTerminal:
                     index = choices.index(last_choice)
                     for choice in choices[(index + 1) :]:
                         (kb, ks) = choice
-                        st.append_one_kchord_bytes_str(kb, kstr=ks)
+                        st.append_one_kchord(kb, kstr=ks)
                 break
 
             # Block till next Key Chord
 
-            (kb, ks) = self.st_pull_one_kchord_bytes_str()
+            (kb, ks) = self.st_pull_one_kchord()
 
         # Succeed
 
@@ -3584,12 +3611,12 @@ class LineTerminal:
 
         return finds
 
-    def st_pull_one_kchord_bytes_str(self) -> tuple[bytes, str]:
+    def st_pull_one_kchord(self) -> tuple[bytes, str]:
         """Read 1 Key Chord, as Bytes and Str"""
 
         self.line_flush()
 
-        kchord = self.st.pull_one_kchord_bytes_str()
+        kchord = self.st.pull_one_kchord()
         return kchord
 
     def st_pull_cursor_always_and_keyboard_maybe(self) -> None:
@@ -3892,15 +3919,15 @@ class LineTerminal:
 
         #
 
-        (kbytes, kchord_str) = self.st_pull_one_kchord_bytes_str()
+        (kbytes, kstr) = self.st_pull_one_kchord()
         if not kint:
             return
 
         #
 
-        kcap_str = kchord_str
-        if kchord_str in kcap_quote_by_str.keys():
-            kcap_str = kcap_quote_by_str[kchord_str]
+        kcap_str = kstr
+        if kstr in kcap_quote_by_str.keys():
+            kcap_str = kcap_quote_by_str[kstr]
 
         ktext = kint * kcap_str
 
@@ -3925,32 +3952,31 @@ class LineTerminal:
 
         # Block till CSI Sequence complete
 
-        kbytes = b"\x1B" b"["
+        many_kbytes = b"\x1B" b"["
         kcap_str = "⎋ ["
 
         while True:
-            (kchord_bytes, kchord_str) = self.st_pull_one_kchord_bytes_str()
+            (kbytes, kstr) = self.st_pull_one_kchord()
 
-            kbytes += kchord_bytes
+            many_kbytes += kbytes
 
             sep = " "  # '⇧Tab'  # '⇧T a b'  # '⎋⇧Fn X'  # '⎋⇧FnX'
-            kcap_str += sep + kchord_str
+            kcap_str += sep + kstr
 
-            read_2 = kchord_bytes
-            if len(read_2) == 1:
-                ord_2 = read_2[-1]
-                if 0x20 <= ord_2 < 0x40:  # !"#$%&'()*+,-./0123456789:;<=>?
+            if len(kbytes) == 1:
+                kord = kbytes[-1]
+                if 0x20 <= kord < 0x40:  # !"#$%&'()*+,-./0123456789:;<=>?
                     continue
 
             break
 
-        self.kbytes = kbytes
+        self.kbytes = many_kbytes
         self.kcap_str = kcap_str
 
         # Write as if via 'self.kdo_text_write_n()'  # ⎋[m, ⎋[1m, ⎋[31m, ...
 
         kint = self.kint_pull(default=1)
-        kchars = kbytes.decode()  # may raise UnicodeDecodeError
+        kchars = many_kbytes.decode()  # may raise UnicodeDecodeError
         ktext = kint * kchars
         st.str_write(ktext)  # for .kdo_quote_csi_kstrs_n
 
@@ -5955,7 +5981,7 @@ CUED_PY_LINES_TEXT = r"""
 
     olines = pq.ex_macros(ilines)  # em em  # ema  # emac  # emacs
 
-    olines = pq.visual_ex(ilines)  # vi  # vim  # em vi
+    olines = pq.visual_ex(ilines)  # vi  # vim  # em vi  # em/vi
 
     olines = pq.xeditline()  # xeditline
 
