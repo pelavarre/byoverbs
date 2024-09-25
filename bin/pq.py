@@ -1896,20 +1896,20 @@ def kmap_lt_run_till_quit(ilines, kmap) -> list[str]:
     return olines
 
 
-def bytes_terminal_loopback(ibytes) -> bytes:  # bt loopback
+def bytes_terminal_yolo(ibytes) -> bytes:  # bt yolo
     """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
     with BytesTerminal() as bt:
-        bt.bytes_loopback()
+        bt.bytes_yolo()
 
     return b""
 
 
-def str_terminal_loopback(itext) -> str:  # st loopback
+def shadow_terminal_yolo(itext) -> str:  # st yolo
     """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
-    with StrTerminal() as st:
-        st.str_loopback()
+    with ShadowsTerminal() as st:
+        st.shadows_yolo()
 
     return ""
 
@@ -2038,7 +2038,7 @@ DECSCUSR_BAR = "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
 # the 02/00 ' ' of the CSI ' q' is its only 'Intermediate Byte'
 
 
-DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 Device Status [Request] Report  # Ps 6 for CPR
+DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 [Request] Device Status Report  # Ps 6 for CPR
 
 # CSI 05/02 Active [Cursor] Position Report (CPR)
 CPR_Y_X_REGEX = r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 Active [Cursor] Pos Rep (CPR)
@@ -2084,11 +2084,11 @@ class BytesTerminal:
     tcgetattr_else: list[int | list[bytes | int]] | None  # sampled at Entry
     after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Exit
 
-    kbytes_list: list[bytes]  # records Input, as an In-Memory KeyLogger
-    sbytes_list: list[bytes]  # records Output, as an In-Memory ScreenLogger
+    kbytes_list: list[bytes]  # Bytes of each Keyboard Chord in  # KeyLogger
+    sbytes_list: list[bytes]  # Bytes of each Screen Write out  # ScreenLogger
 
     #
-    # Init, enter, exit, breakpoint, flush, stop, and loopback
+    # Init, enter, exit, breakpoint, flush, stop, and yolo self-test
     #
 
     def __init__(self, before=termios.TCSADRAIN, after=termios.TCSADRAIN) -> None:
@@ -2180,7 +2180,7 @@ class BytesTerminal:
 
         # a la Emacs ⌃Z suspend-frame, Vim ⌃Z
 
-    def bytes_loopback(self) -> None:
+    def bytes_yolo(self) -> None:  # bin/pq.py btloop
         """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
         fd = self.fd
@@ -2189,8 +2189,10 @@ class BytesTerminal:
 
         # Set up this Loop
 
+        self.str_print("Let's test Class BytesTerminal")
         self.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
-        self.str_print("Press ⌃C ⇧R or ⌃C I to write Bytes, ⌃C ⇧Z ⇧Q to quit")
+        self.str_print("Press ⌃C ⇧R to write Bytes, also ⌃C I is the same")
+        self.str_print("Press ⌃C ⇧Z ⇧Q to quit")
 
         # Run this Loop
 
@@ -2495,7 +2497,8 @@ for _KCAP in KCAP_BY_KCHARS.values():
 OPTION_KSTR_BY_1_KCHAR = {
     "á": "⌥EA",  # E
     "é": "⌥EE",
-    "í": "⌥EI",  # without the "j́" here (because Combining Accent comes after)
+    "í": "⌥EI",
+    # without the "j́" of ⌥EJ here (because its Combining Accent comes after as a 2nd K Char)
     "ó": "⌥EO",
     "ú": "⌥EU",
     "´": "⌥ESpacebar",
@@ -2589,16 +2592,529 @@ for _KCHARS, _COUNT in collections.Counter(_KCHARS_LIST).items():
 
 
 @dataclasses.dataclass
+class ChordsKeyboard:
+    """Read Combinations of Key Caps from a BytesTerminal, mixed with Inband Signals"""
+
+    bt: BytesTerminal
+
+    y_rows: int  # count Screen Rows, but initially -1
+    x_columns: int  # count of Screen Columns, but initially -1
+
+    row_y: int  # Row of Cursor, but initially -1
+    column_x: int  # Column of Cursor, but initially -1
+
+    kchords: list[tuple[bytes, str]]  # Key Chords Read Ahead after DSR until CPR
+
+    kcpr_bytes_list: list[bytes]  # Bytes of each CPR in  # KeyLogger
+    kstr_list: list[str]  # Str of each Key Chord in  # ScreenLogger
+
+    #
+    # Init, Enter, and Exit
+    #
+
+    def __init__(self, bt) -> None:
+
+        self.bt = bt
+        self.y_rows = -1
+        self.x_columns = -1
+        self.row_y = -1
+        self.column_x = -1
+        self.kchords = list()
+        self.kcpr_bytes_list = list()
+        self.kstr_list = list()
+
+    def __enter__(self) -> "ChordsKeyboard":  # -> typing.Self:
+
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+
+        bt = self.bt
+        kchords = self.kchords
+
+        if kchords:
+            bt.bytes_print()
+            while kchords:
+                (kbytes, kstr) = kchords.pop(0)
+                bt.bytes_print(kstr)
+
+    #
+    # Read from Screen, technically bypassing the Keyboard
+    #
+
+    def read_y_rows_x_columns(self) -> tuple[int, int]:
+        """Sample Counts of Screen Rows and Columns"""
+
+        bt = self.bt
+
+        fd = bt.fd
+        (x_columns, y_rows) = os.get_terminal_size(fd)
+
+        self.y_rows = y_rows
+        self.x_columns = x_columns
+
+        return (y_rows, x_columns)
+
+    #
+    # Read from Keyboard or from Screen
+    #
+
+    def read_row_y_column_x(self) -> tuple[int, int]:
+        """Sample Cursor Row & Column"""
+
+        bt = self.bt
+        kcpr_bytes_list = self.kcpr_bytes_list
+
+        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
+
+        bt.bytes_write("\x1B" "[" "6n")
+
+        n = len(kcpr_bytes_list)
+        while len(kcpr_bytes_list) == n:  # todo: hangs if CPR doesn't come after DSR
+            kchord = self.read_kcprs_till_kchord()
+            self.kchords.append(kchord)
+
+        row_y = self.row_y
+        column_x = self.column_x
+
+        return (row_y, column_x)
+
+    def read_kcprs_till_kchord(self) -> tuple[bytes, str]:
+        """Read 1 Key Chord"""
+
+        bt = self.bt
+        kcpr_bytes_list = self.kcpr_bytes_list
+        kstr_list = self.kstr_list
+
+        kcap_by_kchars = KCAP_BY_KCHARS  # '\e\e[A' for ⎋↑ etc
+
+        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
+
+        # Read the Bytes of 1 Key Chord,
+        # except intercept 0 or more Cursor Position Report's (CPR's)
+
+        while True:
+            kbytes = bt.read_kchord_bytes_if()  # may contain b' ' near to KCAP_SEP
+            kchars = kbytes.decode()  # may raise UnicodeDecodeError
+
+            m = re.match(r"^\x1B\[([0-9]+);([0-9]+)R$", string=kchars)
+            if not m:
+                break
+
+            kcpr_bytes_list.append(kbytes)
+
+            row_y = int(m.group(1))
+            column_x = int(m.group(2))
+            self.row_y_column_x_report(row_y, column_x=column_x)
+
+        # Choose 1 Key Cap to speak of the Bytes of 1 Key Chord
+
+        if kchars in kcap_by_kchars.keys():
+            kstr = kcap_by_kchars[kchars]
+        else:
+            kstr = ""
+            for kch in kchars:  # often 'len(kchars) == 1'
+                s = self.kch_to_kcap(kch)
+                kstr += s
+
+                # '\e[200~' and '\e[201~' may bracket Paste here
+
+            # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
+
+        # Succeed
+
+        assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
+        assert " " not in kstr, (kstr,)
+
+        kstr_list.append(kstr)
+
+        return (kbytes, kstr)
+
+        # '⌃L'  # '⇧Z'
+        # '⎋A' from ⌥A while macOS Keyboard > Option as Meta Key
+
+    def kch_to_kcap(self, ch) -> str:  # noqa C901
+        """Choose a Key Cap to speak of 1 Char read from the Keyboard"""
+
+        o = ord(ch)
+
+        option_kchars = OPTION_KCHARS  # '∂' for ⌥D
+        option_kchars_spaceless = OPTION_KCHARS_SPACELESS  # '∂' for ⌥D
+        option_kstr_by_1_kchar = OPTION_KSTR_BY_1_KCHAR  # 'é' for ⌥EE
+        kcap_by_kchars = KCAP_BY_KCHARS  # '\x7F' for 'Delete'
+
+        # Show more Key Caps than US-Ascii mentions
+
+        if ch in kcap_by_kchars.keys():  # Mac US Key Caps for Spacebar, F12, etc
+            s = kcap_by_kchars[ch]
+
+        elif ch in option_kstr_by_1_kchar.keys():  # Mac US Option Accents
+            s = option_kstr_by_1_kchar[ch]
+
+        elif ch in option_kchars_spaceless:  # Mac US Option Key Caps
+            index = option_kchars.index(ch)
+            asc = chr(0x20 + index)
+            if "A" <= asc <= "Z":
+                asc = "⇧" + asc  # '⇧A'
+            if "a" <= asc <= "z":
+                asc = chr(ord(asc) ^ 0x20)  # 'A'
+            s = "⌥" + asc  # '⌥⇧P'
+
+        # Show the Key Caps of US-Ascii, plus the ⌃ ⇧ Control/ Shift Key Caps
+
+        elif (o < 0x20) or (o == 0x7F):  # C0 Control Bytes, or \x7F Delete (DEL)
+            s = "⌃" + chr(o ^ 0x40)  # '⌃@' from b'\x00'
+        elif "A" <= ch <= "Z":  # printable Upper Case English
+            s = "⇧" + chr(o)  # shifted Key Cap '⇧A' from b'A'
+        elif "a" <= ch <= "z":  # printable Lower Case English
+            s = chr(o ^ 0x20)  # plain Key Cap 'A' from b'a'
+
+        # Test that no Keyboard sends the C1 Control Bytes, nor the Quasi-C1 Bytes
+
+        elif o in range(0x80, 0xA0):  # C1 Control Bytes
+            assert False, (o, ch)
+        elif o == 0xA0:  # 'No-Break Space'
+            s = "⌥Spacebar"
+            assert False, (o, ch)  # unreached because 'kcap_by_kchars'
+        elif o == 0xAD:  # 'Soft Hyphen'
+            assert False, (o, ch)
+
+        # Show the US-Ascii or Unicode Char as if its own Key Cap
+
+        else:
+            assert o < 0x11_0000, (o, ch)
+            s = chr(o)  # '!', '¡', etc
+
+        # Succeed, but insist that Blank Space is never a Key Cap
+
+        assert s.isprintable(), (s, o, ch)  # has no \x00..\x1F, \x7F, \xA0, \xAD, etc
+        assert " " not in s, (s, o, ch)
+
+        return s
+
+        # '⌃L'  # '⇧Z'
+
+    def column_x_report(self, column_x) -> None:
+        """Say which Column is the Cursor's Column"""
+
+        self.column_x = column_x
+
+    def row_y_report(self, row_y) -> None:
+        """Say which Row is the Cursor's Row"""
+
+        self.row_y = row_y
+
+    def row_y_column_x_report(self, row_y, column_x) -> None:
+        """Say which Row & Column is the Cursor's Row & Column"""
+
+        self.row_y = row_y
+        self.column_x = column_x
+
+
+@dataclasses.dataclass
+class ShadowsTerminal:
+    """Write/ Read Chars at Screen/ Keyboard of a Monospaced Square'ish Terminal"""
+
+    bt: BytesTerminal
+    ck: ChordsKeyboard
+    tmode: str  # 'Meta'  # 'Replace'  # 'Insert'
+
+    #
+    # Init, enter, exit, yolo self-test
+    #
+
+    def __init__(self) -> None:
+
+        bt = BytesTerminal()
+
+        self.bt = bt
+        self.ck = ChordsKeyboard(bt)
+        self.tmode = "Replace"  # technically unknown, often 'Meta'
+
+    def __enter__(self) -> "ShadowsTerminal":  # -> typing.Self:
+
+        self.bt.__enter__()
+        self.ck.__enter__()
+        self.str_tmode_write("Meta")  # not .str_tmode_write_if
+
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+
+        self.str_tmode_write_if("Meta")
+        self.ck.__exit__()
+        self.bt.__exit__()
+
+    def shadows_yolo(self) -> None:  # bin/pq.py stloop
+        """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
+
+        kstr_list = self.ck.kstr_list
+        assert self.bt.tcgetattr_else, (self.bt.tcgetattr_else,)
+
+        # Set up this Loop
+
+        self.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
+        self.str_print("Press ⌃C ⇧R to replace, ⌃C I to insert, ⌃C ⇧Z ⇧Q to quit")
+
+        # Run this Loop
+
+        kchord = (b"R", "⇧R")
+        len_kcprs = len(self.ck.kcpr_bytes_list)
+        while True:
+            (kbytes, kstr) = kchord
+
+            next_len_kcprs = len(self.ck.kcpr_bytes_list)
+            if next_len_kcprs != len_kcprs:
+                kcpr = self.ck.kcpr_bytes_list[-1]
+                self.str_meta_write(repr(kcpr))
+                len_kcprs = next_len_kcprs
+
+            if kstr == "⇧R":
+                self.str_write_tmode_replace()
+                kchord = self.read_past_text_kchords()
+            elif kstr == "I":
+                self.str_write_tmode_insert()
+                kchord = self.read_past_text_kchords()
+            else:
+                self.str_write_tmode_meta()
+                self.str_meta_write(kstr)
+                kchord = self.ck.read_kcprs_till_kchord()
+
+            if kstr_list[-2:] == ["⇧Z", "⇧Q"]:
+                (kbytes, kstr) = kchord
+                self.str_write_tmode_meta()
+                self.str_meta_write(kstr)
+                break
+
+        self.str_print()
+
+        # Define ⌃L as rewrite TMode, reread Cursor Position, reread Screen Size
+
+    def read_past_text_kchords(self) -> tuple[bytes, str]:
+        """Read Text K Chords and write their Bytes, return the first other K Chord"""
+
+        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
+
+        len_kcprs = len(self.ck.kcpr_bytes_list)
+        while True:
+            kchord = self.ck.read_kcprs_till_kchord()
+            if kchord == (b"\x7F", "Delete"):
+                kchord = (b"\x08", "Backspace")
+
+            (kbytes, kstr) = kchord
+
+            next_len_kcprs = len(self.ck.kcpr_bytes_list)
+            if next_len_kcprs != len_kcprs:
+                kcpr = self.ck.kcpr_bytes_list[-1]
+                self.str_meta_write(repr(kcpr))
+                len_kcprs = next_len_kcprs
+
+            kdecode = kbytes.decode()
+            if kdecode not in list(" \a\b\n\t\r"):  # also ⌃K ⌃L work like ⌃J at macOS Terminal
+                klstrip = kdecode.lstrip("\x1B")  # \e
+                if not klstrip.isprintable():
+                    break
+
+            self.str_write(kdecode)
+
+            # FIXME: notice when we write DSR ⎋[6n, and look then to read CPR
+
+        return kchord
+
+    #
+    # Write Bytes to jump the Cursor
+    #
+
+    def x_column_write_if(self, x_column) -> None:
+        """Jump the Cursor to a new Column, else nop"""
+
+        assert CHA_Y == "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # "\r" is pn=1
+
+        column = self.ck.column_x != x_column
+        if column:
+            self.str_write_form_or_form_pn("\x1B" "[" "{}G", pn=x_column)
+            self.ck.column_x_report(x_column)
+
+    def y_row_write_if(self, y_row) -> None:
+        """Jump the Cursor to a new Row, else nop"""
+
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+
+        row = self.ck.row_y != y_row
+        if row:
+            self.str_write_form_or_form_pn("\x1B" "[" "{}d", pn=y_row)
+            self.ck.row_y_report(y_row)
+
+    def y_x_row_column_write_if(self, row_y, column_x) -> None:
+        """Jump the Cursor to a new Row & Column, else nop"""
+
+        assert CHA_Y == "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # "\r" is pn=1
+        assert CUP_Y_X == "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position (CUP)
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+
+        row = self.ck.row_y != row_y
+        column = self.ck.column_x != column_x
+
+        if row and column:
+            form = "\x1B" "[" "{};{}H"
+            schars = form.format(row_y, column_x)
+            self.str_write(schars)
+            self.ck.row_y_column_x_report(row_y, column_x=column_x)
+            return
+
+        if row:
+            self.str_write_form_or_form_pn("\x1B" "[" "{}d", pn=row_y)
+            self.ck.row_y_report(row_y)
+            return
+
+        if column:
+            self.str_write_form_or_form_pn("\x1B" "[" "{}G", pn=column_x)
+            self.ck.column_x_report(column_x)
+            return
+
+    #
+    # Write Chars or Bytes
+    #
+
+    def str_write_form_or_form_pn(self, form, pn, default=1) -> None:
+        """Write a CSI Form to the Screen filled out by the Digits of the K Int"""
+
+        assert "{}" in form, (form,)
+        if pn != default:
+            assert pn >= 1, (pn,)
+
+        if pn == default:
+            schars = form.format("")
+        else:
+            schars = form.format(pn)
+
+        self.str_write(schars)
+
+    def str_write(self, schars) -> None:
+        """Write Chars to the Screen, but without implicitly also writing a Line-End"""
+
+        self.str_print(schars, end="")
+
+        # 'st.str_write("\r\n")' and 'st.str_print()' write the same Bytes
+
+    def str_print(self, *args, end="\r\n") -> None:
+        """Write Chars to the Screen as one or more Ended Lines"""
+
+        bt = self.bt
+
+        sep = " "
+        join = sep.join(str(_) for _ in args)
+
+        sbytes = join.encode()
+        ebytes = end.encode()
+
+        bt.bytes_print(sbytes, end=ebytes)
+
+    #
+    # Write Bytes to switch between Replace/ Insert/ Meta
+    #
+
+    def str_meta_write(self, schars) -> None:
+        """Write Chars to the Screen, but don't shadow them, and don't insert them"""
+
+        tmode = self.tmode
+        assert tmode in ("Insert", "Meta", "Replace"), (tmode,)
+
+        self.str_tmode_write_if("Meta")  # not "Insert"
+        self.str_write(schars)
+        self.str_tmode_write_if(tmode)
+
+    def str_tmode_write_if(self, tmode) -> None:
+        """Write Bytes to switch between Replace/ Insert/ Meta only if not written already"""
+
+        assert tmode in ("Insert", "Meta", "Replace"), (tmode,)
+        assert self.tmode in ("Insert", "Meta", "Replace"), (self.tmode,)
+
+        if self.tmode != tmode:
+            self.str_tmode_write(tmode)
+
+    def str_tmode_write(self, tmode) -> None:
+        """Write Bytes to switch between Replace/ Insert/ Meta"""
+
+        func_by_tmode = dict(
+            Replace=self.str_write_tmode_replace,
+            Insert=self.str_write_tmode_insert,
+            Meta=self.str_write_tmode_meta,
+        )
+
+        func = func_by_tmode[tmode]
+        func()
+
+    def str_write_tmode_insert(self) -> None:
+        """Shape the Cursor to say Insert in progress"""
+
+        tmode = self.tmode
+        assert tmode in ("Insert", "Meta", "Replace"), (tmode,)
+
+        self.tmode = "Insert"
+
+        if tmode != "Insert":
+            self.str_write("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
+            self.str_write("\x1B" "[" "6 q")  # CSI 02/00 07/01  # 6 Bar Cursor
+
+        assert SM_IRM == "\x1B" "[" "4h"  # CSI 06/08 Set Mode Insert/ Replace
+        assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
+
+    def str_write_tmode_meta(self) -> None:
+        """Shape the Cursor to say no Replace/ Insert in progress"""
+
+        tmode = self.tmode
+        assert tmode in ("Meta", "Insert", "Replace"), (tmode,)
+
+        self.tmode = "Meta"
+
+        if tmode == "Insert":
+            self.str_write("\x1B" "[" "4l")  # CSI 06/12 Replace
+        if tmode != "Meta":
+            self.str_write("\x1B" "[" " q")  # CSI 02/00 07/01  # No-Style Cursor
+
+        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
+        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
+
+    def str_write_tmode_replace(self) -> None:
+        """Shape the Cursor to say Replace in progress"""
+
+        tmode = self.tmode
+        assert tmode in ("Insert", "Meta", "Replace"), (tmode,)
+
+        self.tmode = "Replace"
+
+        if tmode == "Insert":
+            self.str_write("\x1B" "[" "4l")  # CSI 06/12 Replace
+        if tmode != "Replace":
+            self.str_write("\x1B" "[" "4 q")  # CSI 02/00 07/01  # 4 Skid Cursor
+
+        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
+        assert DECSCUSR_SKID == "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
+
+
+class LineTerminal:
+    def pqprint(self, *args, **kwargs) -> None:
+        pass
+
+    def run_till_quit(self, ilines, kmap, at_ltlaunch_lt_func) -> list[str]:
+        return list()
+
+
+r'''
+
+
+@dataclasses.dataclass
 class StrTerminal:
     """Write/ Read Chars at Screen/ Keyboard of the Terminal"""
 
     bt: BytesTerminal  # wrapped here
     tmode: str  # 'Meta'  # 'Replace'  # 'Insert'
 
-    y_rows: int  # count Screen Rows, initially -1
-    x_columns: int  # count of Screen Columns, initially -1
-    row_y: int  # Row of Screen Cursor in last CPR, initially -1
-    column_x: int  # Column of Screen Cursor in last CPR, initially -1
+    y_rows: int  # count Screen Rows, but initially -1
+    x_columns: int  # count of Screen Columns, but initially -1
+    row_y: int  # Row of Screen Cursor in last CPR, but initially -1
+    column_x: int  # Column of Screen Cursor in last CPR, but initially -1
 
     at_stlaunch_func_else: typing.Callable | None  # runs when Terminal Cursor first found
 
@@ -2615,6 +3131,7 @@ class StrTerminal:
 
         self.bt = bt
         self.tmode = "Meta"
+        self.kcpr = ""  # '\e25;80R'
 
         self.y_rows = -1
         self.x_columns = -1
@@ -2665,68 +3182,6 @@ class StrTerminal:
         """Suspend and resume this Screen/ Keyboard Terminal Process"""
 
         self.bt.bytes_stop()
-
-    def str_loopback(self) -> None:  # bin/pq.py stloop
-        """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
-
-        kstr_list = self.kstr_list
-        assert self.bt.tcgetattr_else, (self.bt.tcgetattr_else,)
-
-        # Set up this Loop
-
-        self.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
-        self.str_print("Press ⌃C ⇧R to replace, ⌃C I to insert, ⌃C ⇧Z ⇧Q to quit")
-
-        # Run this Loop
-
-        kchord = (b"R", "⇧R")
-        while True:
-            (kbytes, kstr) = kchord
-
-            if kstr == "⇧R":
-                self.str_write_tmode_replace()
-                kchord = self.read_past_text_kchords()
-            elif kstr == "I":
-                self.str_write_tmode_insert()
-                kchord = self.read_past_text_kchords()
-            else:
-                self.str_write_tmode_meta()
-                self.str_meta_write(kstr)
-                kchord = self.read_one_kchord()
-
-            if kstr_list[-2:] == ["⇧Z", "⇧Q"]:
-                (kbytes, kstr) = kchord
-                self.str_write_tmode_meta()
-                self.str_meta_write(kstr)
-                break
-
-        self.str_print()
-
-    def read_past_text_kchords(self) -> tuple[bytes, str]:
-        """Read Text K Chords and write their Bytes, return the first other K Chord"""
-
-        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
-
-        while True:
-            kchord = self.read_one_kchord()
-            if kchord == (b"\x7F", "Delete"):
-                kchord = (b"\x08", "Backspace")
-
-            (kbytes, kstr) = kchord
-
-            m = re.match(r"^\x1B\[([0-9]+);([0-9]+)R$".encode(), string=kbytes)
-            if m:
-                break
-
-            kdecode = kbytes.decode()
-            if kdecode not in list(" \a\b\n\t\r"):  # also ⌃K ⌃L work like ⌃J at macOS Terminal
-                klstrip = kdecode.lstrip("\x1B")  # \e
-                if not klstrip.isprintable():
-                    break
-
-            self.str_write(kdecode)
-
-        return kchord
 
     #
     # Jump the Cursor to chosen Columns and Rows of the Screen
@@ -2853,107 +3308,6 @@ class StrTerminal:
         self.str_write(schars)
         self.str_tmode_write(tmode)
 
-    def str_tmode_write(self, tmode) -> None:
-        """Choose Replace/ Insert/ Neither in progress, and shape the Cursor to match"""
-
-        assert tmode in ("Insert", "Meta", "Replace"), (tmode,)
-
-        if tmode == self.tmode:
-            return
-
-        if tmode == "Insert":
-            self.str_write_tmode_insert()
-        elif tmode == "Replace":
-            self.str_write_tmode_replace()
-        else:
-            assert tmode == "Meta", (tmode,)
-            self.str_write_tmode_meta()
-
-    def str_write_tmode_insert(self) -> None:
-        """Shape the Cursor to say Insert in progress"""
-
-        tmode = self.tmode
-        assert tmode in ("Insert", "Meta", "Replace"), (tmode,)
-
-        self.tmode = "Insert"
-
-        if tmode != "Insert":
-            self.str_write("\x1B" "[" "4h")  # CSI 06/08 4 Set Mode Insert/ Replace
-            self.str_write("\x1B" "[" "6 q")  # CSI 02/00 07/01  # 6 Bar Cursor
-
-        assert SM_IRM == "\x1B" "[" "4h"  # CSI 06/08 Set Mode Insert/ Replace
-        assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
-
-    def str_write_tmode_meta(self) -> None:
-        """Shape the Cursor to say no Replace/ Insert in progress"""
-
-        tmode = self.tmode
-        assert tmode in ("Meta", "Insert", "Replace"), (tmode,)
-
-        self.tmode = "Meta"
-
-        if tmode == "Insert":
-            self.str_write("\x1B" "[" "4l")  # CSI 06/12 Replace
-        if tmode != "Meta":
-            self.str_write("\x1B" "[" " q")  # CSI 02/00 07/01  # No-Style Cursor
-
-        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
-        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
-
-    def str_write_tmode_replace(self) -> None:
-        """Shape the Cursor to say Replace in progress"""
-
-        tmode = self.tmode
-        assert tmode in ("Insert", "Meta", "Replace"), (tmode,)
-
-        self.tmode = "Replace"
-
-        if tmode == "Insert":
-            self.str_write("\x1B" "[" "4l")  # CSI 06/12 Replace
-        if tmode != "Replace":
-            self.str_write("\x1B" "[" "4 q")  # CSI 02/00 07/01  # 4 Skid Cursor
-
-        assert RM_IRM == "\x1B" "[" "4l"  # CSI 06/12 Reset Mode Replace/ Insert
-        assert DECSCUSR_SKID == "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
-
-    #
-    # Write Screen Output Chars as Bytes
-    #
-
-    def str_write_form_or_form_pn(self, form, pn, default=1) -> None:
-        """Write a CSI Form to the Screen filled out by the Digits of the K Int"""
-
-        assert "{}" in form, (form,)
-        if pn != default:
-            assert pn >= 1, (pn,)
-
-        if pn == default:
-            schars = form.format("")
-        else:
-            schars = form.format(pn)
-
-        self.str_write(schars)  # for .str_write_form_or_form_pn
-
-    def str_write(self, schars) -> None:
-        """Write Chars to the Screen, but without implicitly also writing a Line-End"""
-
-        self.str_print(schars, end="")
-
-        # 'st.str_write("\r\n")' and 'st.str_print()' write the same Bytes
-
-    def str_print(self, *args, end="\r\n") -> None:
-        """Write Chars to the Screen as one or more Ended Lines"""
-
-        bt = self.bt
-
-        sep = " "
-        join = sep.join(str(_) for _ in args)
-
-        sbytes = join.encode()
-        ebytes = end.encode()
-
-        bt.bytes_print(sbytes, end=ebytes)
-
     #
     # Read Key Chords
     # Encode each Chord as >= 1 Input Bytes, and as >= 1 Str Words of Key Caps
@@ -3036,106 +3390,6 @@ class StrTerminal:
         self.column_x = column_x
         self.y_rows = y_rows
         self.x_columns = x_columns
-
-    def read_one_kchord(self) -> tuple[bytes, str]:
-        """Read 1 Key Chord, as Bytes and Str"""
-
-        bt = self.bt
-        kstr_list = self.kstr_list
-
-        kcap_by_kchars = KCAP_BY_KCHARS  # '\e\e[A' for ⎋↑ etc
-
-        # Read the Bytes of 1 Key Chord
-
-        kbytes = bt.read_kchord_bytes_if()  # may contain b' '
-        kchars = kbytes.decode()  # may raise UnicodeDecodeError
-
-        # Choose 1 Key Cap to speak of the Bytes of 1 Key Chord
-
-        if kchars in kcap_by_kchars.keys():
-            kstr = kcap_by_kchars[kchars]
-        else:
-            kstr = ""
-            for kch in kchars:  # often 'len(kchars) == 1'
-                s = self.kch_to_kcap(kch)
-                kstr += s
-
-            # '\e25;80R' is a Cursor Position Report (CPR) encoded as 1 Key Cap
-
-            # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
-
-        # Succeed
-
-        assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
-        assert " " not in kstr, (kstr,)
-
-        kstr_list.append(kstr)
-
-        return (kbytes, kstr)
-
-        # '⌃L'  # '⇧Z'
-        # '⎋A' from ⌥A while macOS Keyboard > Option as Meta Key
-
-    def kch_to_kcap(self, ch) -> str:  # noqa C901
-        """Choose a Key Cap to speak of 1 Char read from the Keyboard"""
-
-        o = ord(ch)
-
-        option_kchars = OPTION_KCHARS  # '∂' for ⌥D
-        option_kchars_spaceless = OPTION_KCHARS_SPACELESS  # '∂' for ⌥D
-        option_kstr_by_1_kchar = OPTION_KSTR_BY_1_KCHAR  # 'é' for ⌥EE
-        kcap_by_kchars = KCAP_BY_KCHARS  # '\x7F' for 'Delete'
-
-        # Show more Key Caps than US-Ascii mentions
-
-        if ch in kcap_by_kchars.keys():  # Mac US Key Caps for Spacebar, F12, etc
-            s = kcap_by_kchars[ch]
-
-        elif ch in option_kstr_by_1_kchar.keys():  # Mac US Option Accents
-            s = option_kstr_by_1_kchar[ch]
-
-        elif ch in option_kchars_spaceless:  # Mac US Option Key Caps
-            index = option_kchars.index(ch)
-            asc = chr(0x20 + index)
-            if "A" <= asc <= "Z":
-                asc = "⇧" + asc  # '⇧A'
-            if "a" <= asc <= "z":
-                asc = chr(ord(asc) ^ 0x20)  # 'A'
-            s = "⌥" + asc
-
-        # Show the Key Caps of US-Ascii, plus the ⌃ ⇧ Control/ Shift Key Caps
-
-        elif (o < 0x20) or (o == 0x7F):  # C0 Control Bytes, or \x7F Delete (DEL)
-            s = "⌃" + chr(o ^ 0x40)  # '⌃@'
-        elif "A" <= ch <= "Z":  # printable Upper Case English
-            s = "⇧" + chr(o)  # '⇧A'
-        elif "a" <= ch <= "z":  # printable Lower Case English
-            s = chr(o ^ 0x20)  # 'A'
-
-        # Test that no Keyboard sends the C1 Control Bytes, nor the Quasi-C1 Bytes
-
-        elif o in range(0x80, 0xA0):  # C1 Control Bytes
-            assert False, (o, ch)
-        elif o == 0xA0:  # 'No-Break Space'
-            s = "⌥Spacebar"
-            assert False, (o, ch)  # unreached because 'kcap_by_kchars'
-        elif o == 0xAD:  # 'Soft Hyphen'
-            assert False, (o, ch)
-
-        # Show the US-Ascii or Unicode Char as if its own Key Cap
-
-        else:
-            assert o < 0x11_0000, (o, ch)
-            s = chr(o)  # '!', '¡', etc
-
-        # Succeed, but insist that Blank Space is never a Key Cap
-
-        assert s.isprintable(), (s, o, ch)  # has no \x00..\x1F, \x7F, \xA0, \xAD, etc
-        assert " " not in s, (s, o, ch)
-
-        return s
-
-        # '⌃L'  # '⇧Z'
 
 
 PY_CALL = (
@@ -5013,6 +5267,7 @@ class LineTerminal:
             if st.column_x == 1:
                 if len(kpulls) >= 2:
                     if (kpulls[-2][-1], kpulls[-1][-1]) == ("⌃K", "⌃K"):
+                        # assert st.kstr_list[-2:] == ["⌃K", "⌃K"], (st.kstr_list[-2:],)
                         st.str_write("\r")  # 00/13  # "\x0D"
                         st.str_write_form_or_form_pn("\x1B" "[" "{}M", pn=1)  # goodbye
                         return
@@ -5764,6 +6019,9 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 ]
 
 
+'''
+
+
 #
 # Amp up Import TextWrap
 #
@@ -5956,7 +6214,7 @@ CUED_PY_LINES_TEXT = r"""
 
     obytes = ibytes  # sponged  # sponge  # obytes = ibytes
 
-    obytes = pq.bytes_terminal_loopback(ibytes)  # bt loopback  # bt loop  # btloop
+    obytes = pq.bytes_terminal_yolo(ibytes)  # bt yolo  # btyolo
 
 
     oline = (4 * " ") + iline  # dent  # dented  # textwrap.dented
@@ -6030,7 +6288,7 @@ CUED_PY_LINES_TEXT = r"""
 
     otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
 
-    otext = pq.str_terminal_loopback(itext)  # st loopback  # st loop  # stloop
+    otext = pq.shadow_terminal_yolo(itext)  # st yolo  # styolo
 
     otext = re.sub(r"(.)", repl=r"\1 ", string=itext).rstrip()  # sub  # repl
 

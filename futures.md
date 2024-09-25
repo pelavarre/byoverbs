@@ -922,6 +922,8 @@ Pause/ resume a Process launched by Cron
 
 pq patch - could mean pq >pq.patch && git apply -v pq.patch
 
+debug Linux:  dt pq emojis unicodedata >ee
+
 
 ## Copied from
 
