@@ -1960,20 +1960,23 @@ class ReprLogger:
 
 
 #
-#   ⌃G ⌃H ⌃I ⌃J ⌃M ⌃[
+#   ⌃G ⌃H ⌃I ⌃J ⌃M ⌃[   \a \b \t \n \r \e
 #
+#   ⎋[A ↑  ⎋[B ↓  ⎋[C →  ⎋[D ←
 #   ⎋[I Tab  ⎋[Z ⇧Tab
 #   ⎋[d row-go  ⎋[G column-go
 #
 #   ⎋[M rows-delete  ⎋[L rows-insert  ⎋[P chars-delete  ⎋[@ chars-insert
 #   ⎋[K tail-erase  ⎋[1K head-erase  ⎋[2K row-erase
-#   ⎋[T scrolls-up  ⎋[S scrolls-down
+#   ⎋[T scrolls-down  ⎋[S scrolls-up
 #
 #   ⎋[4h insert  ⎋[6 q bar  ⎋[4l replace  ⎋[4 q skid  ⎋[ q unstyled
 #
 #   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline
 #   ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange
 #   ⎋[m plain
+#
+#   ⎋[6n call for ⎋[{y};{x}R response
 #
 
 
@@ -1990,25 +1993,24 @@ ESC = "\x1B"  # 01/11 Escape ⌃[
 
 SS3 = "\x1B" "O"  # 04/15 Single Shift Three  # in macOS F1 F2 F3 F4
 
-
 CSI = "\x1B" "["  # 05/11 Control Sequence Introducer
 CSI_EXTRAS = "".join(chr(_) for _ in range(0x20, 0x40))
 # Parameter, Intermediate, and Not-Final Bytes of a CSI Escape Sequence
+
 
 CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 CUD_Y = "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down  # "\n" is pn=1 except from last Row
 CUF_X = "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
 CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left  # "\b" is pn=1
 
-# ESC 04/05 Next Line (NEL)
-# CSI 04/05 Cursor Next Line (CNL)
+# CNL_Y = "\x1B" "[" "{}E"  # CSI 04/05 Cursor Next Line (CNL)  # a la "\r\n" replace, not insert
 
 CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # "\r" is pn=1
 VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-CUP_1_1 = "\x1B" "[" "H"  # CSI 04/08 Cursor Position  # not much tested by us
-CUP_Y_1 = "\x1B" "[" "{}H"  # CSI 04/08 Cursor Position  # not much tested by us
-CUP_1_X = "\x1B" "[" ";{}H"  # CSI 04/08 Cursor Position  # not much tested by us
+# CUP_1_1 = "\x1B" "[" "H"  # CSI 04/08 Cursor Position
+# CUP_Y_1 = "\x1B" "[" "{}H"  # CSI 04/08 Cursor Position
+# CUP_1_X = "\x1B" "[" ";{}H"  # CSI 04/08 Cursor Position
 CUP_Y_X = "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
 
 CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation  # "\t" is pn=1
@@ -2019,12 +2021,10 @@ IL_Y = "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 DL_Y = "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 DCH_X = "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 
-EL_P = "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line
+EL_P = "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head  # 2 Row
 
 SU_Y = "\x1B" "[" "{}S"  # CSI 05/03 Scroll Up   # Insert Bottom Lines
 SD_Y = "\x1B" "[" "{}T"  # CSI 05/04 Scroll Down  # Insert Top Lines
-# SL_X = "\x1B" "[" "{} @"  # CSI 02/00 04/00 Scroll Left  # no-op at macOS Terminal
-# SR_X = "\x1B" "[" "{} A"  # CSI 02/00 04/01 Scroll Right  # no-op at macOS Terminal
 
 RM_IRM = "\x1B" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
 SM_IRM = "\x1B" "[" "4h"  # CSI 06/08 4 Set Mode Insert/ Replace
@@ -2038,14 +2038,14 @@ DECSCUSR_BAR = "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
 # the 02/00 ' ' of the CSI ' q' is its only 'Intermediate Byte'
 
 
-DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 Device Status Report  # Ps 6 for CPR
+DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 Device Status [Request] Report  # Ps 6 for CPR
 
 # CSI 05/02 Active [Cursor] Position Report (CPR)
 CPR_Y_X_REGEX = r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 Active [Cursor] Pos Rep (CPR)
 
 
 #
-# terminal interventions
+# Terminal Interventions
 #
 #   tput clear && printf '\e[3J'  # clears Screen plus Terminal Scrollback Line Buffer
 #
@@ -2053,11 +2053,12 @@ CPR_Y_X_REGEX = r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 Active [Cursor] Pos R
 #   echo "PS0='$PSO'" && echo "PS1='$PS1'" && trap  # says if Bash is bolding Input
 #
 #   macOS > Terminal > Settings > Profiles > Keyboard > Use Option as Meta Key
+#       chooses whether ⌥9 comes through as itself ⌥9, or instead as ⎋9
 #
 
 
 #
-# lots of docs
+# Lots of Docs
 #
 #   https://unicode.org/charts/PDF/U0000.pdf
 #   https://unicode.org/charts/PDF/U0080.pdf
@@ -2081,17 +2082,19 @@ class BytesTerminal:
 
     before: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Entry
     tcgetattr_else: list[int | list[bytes | int]] | None  # sampled at Entry
-    kinterrupts: int  # count of ⌃C's  # counted between Entry and Exit
     after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Exit
 
-    kbytes_list: list[bytes]  # Record of Input, an In-Memory KeyLogger
-    sbytes_list: list[bytes]  # Record of Output, an In-Memory ScreenLogger
+    kbytes_list: list[bytes]  # records Input, as an In-Memory KeyLogger
+    sbytes_list: list[bytes]  # records Output, as an In-Memory ScreenLogger
 
     #
     # Init, enter, exit, breakpoint, flush, stop, and loopback
     #
 
     def __init__(self, before=termios.TCSADRAIN, after=termios.TCSADRAIN) -> None:
+
+        assert before in (termios.TCSADRAIN, termios.TCSAFLUSH), (before,)
+        assert after in (termios.TCSADRAIN, termios.TCSAFLUSH), (after,)
 
         stdio = sys.stderr
         fd = stdio.fileno()
@@ -2101,13 +2104,12 @@ class BytesTerminal:
 
         self.before = before
         self.tcgetattr_else = None  # is None after Exit and before Entry
-        self.kinterrupts = 0
-        self.after = after  # todo: need Tcsa Flush on large Paste crashing us
+        self.after = after
 
         self.kbytes_list = list()
         self.sbytes_list = list()
 
-        # termios.TCSAFLUSH destroys Input, like for when Paste crashes Code
+        # todo: need .after = termios.TCSAFLUSH on large Paste crashing us
 
     def __enter__(self) -> "BytesTerminal":  # -> typing.Self:
         r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
@@ -2122,14 +2124,8 @@ class BytesTerminal:
 
             self.tcgetattr_else = tcgetattr
 
-            # todo: sample Replace/ Insert Mode
-            # todo: sample Cursor Style
-
             assert before in (termios.TCSADRAIN, termios.TCSAFLUSH), (before,)
-            if False:  # jitter Sat 3/Aug  # ⌃C prints Py Traceback
-                tty.setcbreak(fd, when=termios.TCSAFLUSH)  # ⌃C prints Py Traceback
-            else:
-                tty.setraw(fd, when=before)  # SetRaw defaults to TcsaFlush
+            tty.setraw(fd, when=before)  # SetRaw defaults to TcsaFlush
 
         return self
 
@@ -2141,7 +2137,6 @@ class BytesTerminal:
         after = self.after
 
         if tcgetattr_else is not None:
-
             self.bytes_flush()  # for '__exit__'
 
             tcgetattr = tcgetattr_else
@@ -2161,12 +2156,12 @@ class BytesTerminal:
         self.__enter__()
 
     def bytes_flush(self) -> None:
-        """Flush Screen Output, like just before blocking to wait for Keyboard Input"""
+        """Flush Screen Output, like just before blocking to read Keyboard Input"""
 
         stdio = self.stdio
         stdio.flush()
 
-    def bytes_stop(self) -> None:
+    def bytes_stop(self) -> None:  # todo: learn how to do .bytes_stop() well
         """Suspend and resume this Screen/ Keyboard Terminal Process"""
 
         pid = os.getpid()
@@ -2176,6 +2171,7 @@ class BytesTerminal:
         print("Pq Terminal Stop: ⌃Z F G Return")
         print("macOS ⌃C might stop working till you close Window")  # even past:  reset
         print("Linux might freak lots more than that")
+
         os.kill(pid, signal.SIGTSTP)  # a la 'sh kill $pid -STOP' before 'sh kill $pid -CONT'
 
         self.__enter__()
@@ -2194,30 +2190,30 @@ class BytesTerminal:
         # Set up this Loop
 
         self.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
-        self.str_print("Press a Chord once or twice to print its Key Caps and Bytes")
-        self.str_print("Press the Chord again to write its Bytes")
-        self.str_print("Press ⌃C ⇧Z ⇧Q to quit")
+        self.str_print("Press ⌃C ⇧R or ⌃C I to write Bytes, ⌃C ⇧Z ⇧Q to quit")
 
         # Run this Loop
 
-        count_by: dict[bytes, int]
-        count_by = collections.defaultdict(int)
-
+        tmode = "Write"
         while True:
-            kbytes = self.read_kchord_bytes_if()
-            kbytes_list.append(kbytes)
+            kbytes = self.pull_kchord_bytes_if()
 
-            count_by[kbytes] += 1
-
-            if count_by[kbytes] >= 3:
+            if tmode == "Write":
                 os.write(fd, kbytes)
             else:
-                sep = b" "
-                rep = repr(kbytes).encode()
-                self.bytes_write(sep + rep)
+                kstr = repr(kbytes)
+                os.write(fd, kstr.encode())
 
-            if kbytes_list[-2:] == [b"Z", b"Q"]:  # ⇧Z ⇧Q
-                break
+            if kbytes in (b"i", b"R"):
+                tmode = "Write"
+            elif kbytes == b"\x03":
+                tmode = "Meta"
+            elif kbytes_list[-4:] == [b"\x1B", b"[", b"6", b"n"]:
+                tmode = "Meta"
+
+            if tmode == "Meta":
+                if kbytes_list[-2:] == [b"Z", b"Q"]:  # ⇧Z ⇧Q
+                    break
 
         self.bytes_print()
 
@@ -2231,22 +2227,22 @@ class BytesTerminal:
         sbytes = schars.encode()
         self.bytes_print(sbytes)
 
-    def bytes_write(self, sbytes) -> None:
-        """Write Bytes to the Screen, but without implicitly also writing a Line-End"""
-
-        self.bytes_print(sbytes, end=b"")
-
     def bytes_print(self, *args, end=b"\r\n") -> None:
         """Write Bytes to the Screen as one or more Ended Lines"""
-
-        fd = self.fd
-        sbytes_list = self.sbytes_list
 
         assert self.tcgetattr_else
 
         sep = b" "
         join = sep.join(args)
         sbytes = join + end
+
+        self.bytes_write(sbytes)
+
+    def bytes_write(self, sbytes) -> None:
+        """Write Bytes to the Screen, but without implicitly also writing a Line-End"""
+
+        fd = self.fd
+        sbytes_list = self.sbytes_list
 
         sbytes_list.append(sbytes)
         os.write(fd, sbytes)
@@ -2256,12 +2252,11 @@ class BytesTerminal:
         # called with end=b"n" to add b"\n" in place of b"\r\n"
 
     #
-    # Read Key Chords
-    # Encode each Chord as >= 1 Input Bytes
+    # Read Key Chords as 1 or more Keyboard Bytes
     #
 
     def pull_kchord_bytes_if(self) -> bytes:
-        """Read the Bytes of 1 Incomplete/ Complete Key Chord"""
+        """Read, and record, the Bytes of 1 Incomplete/ Complete Key Chord"""
 
         kbytes_list = self.kbytes_list
 
@@ -2271,7 +2266,7 @@ class BytesTerminal:
         return kbytes
 
     def read_kchord_bytes_if(self) -> bytes:
-        """Read the Bytes of 1 Incomplete/ Complete Key Chord"""
+        """Read the Bytes of 1 Incomplete/ Complete Key Chord, without recording them"""
 
         assert ESC == "\x1B"
         assert CSI == "\x1B" "["
@@ -2320,7 +2315,7 @@ class BytesTerminal:
         # doesn't raise UnicodeDecodeError
 
     def read_csi_kchord_bytes_if(self, kbytes) -> bytes:
-        """Block to read the rest of the CSI Escape Sequence"""
+        """Block to read the rest of 1 CSI Escape Sequence"""
 
         assert CSI_EXTRAS == "".join(chr(_) for _ in range(0x20, 0x40))
 
@@ -2329,7 +2324,7 @@ class BytesTerminal:
             kbytes = self.read_kchar_bytes_if()  # replaces
             many_kchord_bytes += kbytes
 
-            if len(kbytes) == 1:  # as when ord(kbytes3.encode()) < 0x80
+            if len(kbytes) == 1:  # as when ord(kbytes.encode()) < 0x80
                 kord = kbytes[-1]
                 if 0x20 <= kord < 0x40:  # !"#$%&'()*+,-./0123456789:;<=>?
                     continue  # Parameter/ Intermediate Bytes in CSI_EXTRAS
@@ -2338,8 +2333,11 @@ class BytesTerminal:
 
         return many_kchord_bytes
 
+        # continues indefinitely while next Bytes in CSI_EXTRAS
         # cut short by end-of-input, or by undecodable Bytes
         # doesn't raise UnicodeDecodeError
+
+        # todo: limit the length of the CSI Escape Sequence
 
     def read_kchar_bytes_if(self) -> bytes:
         """Read the Bytes of 1 Incomplete/ Complete Char from Keyboard"""
@@ -2352,10 +2350,10 @@ class BytesTerminal:
                 return False
 
         kbytes = b""
-        while True:  # blocks till KChar Bytes complete
-            more = self.readkbyte()
-            assert more, (more,)
-            kbytes += more
+        while True:  # till KChar Bytes complete
+            kbyte = self.readkbyte()  # todo: test end-of-input
+            assert kbyte, (kbyte,)
+            kbytes += kbyte
 
             if not decodable(kbytes):  # todo: invent Unicode Ord > 0x110000
                 suffixes = (b"\x80", b"\x80\x80", b"\x80\x80\x80")
@@ -2377,22 +2375,12 @@ class BytesTerminal:
         fd = self.fd
         assert self.tcgetattr_else
 
-        # Else block to read 1 Keyboard Byte from Keyboard
-
         self.bytes_flush()  # 'readkbyte'
+        kbyte = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
 
-        kbytes = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
+        return kbyte
 
-        if kbytes != b"\x03":  # ⌃C
-            self.kinterrupts = 0
-        else:
-            self.kinterrupts += 1
-            if self.kinterrupts >= 3:
-                if False:  # jitter Sat 3/Aug  # ⌃C prints Py Traceback
-                    raise KeyboardInterrupt()
-
-        return kbytes
-
+        # ⌃C comes through as b"\x03" and doesn't raise KeyboardInterrupt
         # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
 
     def kbhit(self, timeout) -> list[int]:  # 'timeout' in seconds, None for forever
@@ -2409,7 +2397,7 @@ class BytesTerminal:
         return alt_rlist
 
 
-# Shifting Keys other than the Fn Key
+# Name the Shifting Keys
 # Meta hides inside macOS Terminal > Settings > Keyboard > Use Option as Meta Key
 
 Meta = "\N{Broken Circle With Northwest Arrow}"  # ⎋
@@ -2418,6 +2406,10 @@ Option = "\N{Option Key}"  # ⌥
 Shift = "\N{Upwards White Arrow}"  # ⇧
 Command = "\N{Place of Interest Sign}"  # ⌘  # Super  # Windows
 # 'Fn'
+
+
+# Define ⌃Q ⌃V and  ⌃V ⌃Q
+# to strongly abbreviate a few of the KCAP_BY_KCHARS Values
 
 KCAP_QUOTE_BY_STR = {
     "Delete": unicodedata.lookup("Erase To The Left"),  # ⌫
@@ -2428,9 +2420,11 @@ KCAP_QUOTE_BY_STR = {
 }
 
 
+# Encode each Key Chord as a Str without a " " Space in it
+
 KCAP_SEP = " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
 
-KCHORD_STR_BY_KCHARS = {
+KCAP_BY_KCHARS = {
     "\x00": "⌃Spacebar",  # ⌃@  # ⌃⇧2
     "\x09": "Tab",  # '\t' ⇥
     "\x0D": "Return",  # '\r' ⏎
@@ -2488,13 +2482,17 @@ KCHORD_STR_BY_KCHARS = {
     "\xA0": "⌥Spacebar",  # '\N{No-Break Space}'
 }
 
+assert list(KCAP_BY_KCHARS.keys()) == sorted(KCAP_BY_KCHARS.keys())
+
+assert KCAP_SEP == " "
+for _KCAP in KCAP_BY_KCHARS.values():
+    assert " " not in _KCAP, (_KCAP,)
+
 # the ⌥⇧Fn Key Cap quotes only the Shifting Keys, drops the substantive final Key Cap,
 # except that ⎋⇧Fn← ⎋⇧Fn→ ⎋⇧Fn↑ ⎋⇧Fn also exist
 
-assert list(KCHORD_STR_BY_KCHARS.keys()) == sorted(KCHORD_STR_BY_KCHARS.keys())
 
-
-OPTION_KCHORD_STR_BY_1_KCHAR = {
+OPTION_KSTR_BY_1_KCHAR = {
     "á": "⌥EA",  # E
     "é": "⌥EE",
     "í": "⌥EI",  # without the "j́" here (because Combining Accent comes after)
@@ -2576,13 +2574,16 @@ assert len(OPTION_KCHARS) == (0x7E - 0x20) + 1
 OPTION_KCHARS_SPACELESS = OPTION_KCHARS.replace(" ", "")
 
 
+# Give out each Key Cap once, never more than once
+
 _KCHARS_LISTS = [
-    list(KCHORD_STR_BY_KCHARS.keys()),
-    list(OPTION_KCHORD_STR_BY_1_KCHAR.keys()),
+    list(KCAP_BY_KCHARS.keys()),
+    list(OPTION_KSTR_BY_1_KCHAR.keys()),
     list(OPTION_KCHARS_SPACELESS),
 ]
 
 _KCHARS_LIST = list(_KCHARS for _KL in _KCHARS_LISTS for _KCHARS in _KL)
+assert KCAP_SEP == " "
 for _KCHARS, _COUNT in collections.Counter(_KCHARS_LIST).items():
     assert _COUNT == 1, (_COUNT, _KCHARS)
 
@@ -2592,17 +2593,18 @@ class StrTerminal:
     """Write/ Read Chars at Screen/ Keyboard of the Terminal"""
 
     bt: BytesTerminal  # wrapped here
-    kpushes: list[tuple[bytes, str]]  # cached here
-    kpulls: list[tuple[bytes, str]]  # Record of Input, an In-Memory KeyLogger
     tmode: str  # 'Meta'  # 'Replace'  # 'Insert'
 
     y_rows: int  # count Screen Rows, initially -1
     x_columns: int  # count of Screen Columns, initially -1
     row_y: int  # Row of Screen Cursor in last CPR, initially -1
     column_x: int  # Column of Screen Cursor in last CPR, initially -1
+
     at_stlaunch_func_else: typing.Callable | None  # runs when Terminal Cursor first found
 
-    kchord_str_list: list[str]  # Record of Input, an In-Memory ScreenLogger of Key Caps
+    kpushes: list[tuple[bytes, str]]  # cached here
+    kpulls: list[tuple[bytes, str]]  # records Input, as an In-Memory KeyLogger
+    kstr_list: list[str]  # records Input, as an In-Memory KeyLogger
 
     #
     # Init, enter, exit, breakpoint, & loopback
@@ -2612,17 +2614,18 @@ class StrTerminal:
         bt = BytesTerminal()
 
         self.bt = bt
-        self.kpushes = list()
-        self.kpulls = list()
         self.tmode = "Meta"
 
         self.y_rows = -1
         self.x_columns = -1
         self.row_y = -1
         self.column_x = -1
+
         self.at_stlaunch_func_else = None
 
-        self.kchord_str_list = list()
+        self.kpushes = list()
+        self.kpulls = list()
+        self.kstr_list = list()
 
     def __enter__(self) -> "StrTerminal":  # -> typing.Self:
         r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
@@ -2654,7 +2657,7 @@ class StrTerminal:
         self.__enter__()
 
     def str_flush(self) -> None:
-        """Flush Screen Output, like just before blocking to wait for Keyboard Input"""
+        """Flush Screen Output, like just before blocking to read Keyboard Input"""
 
         self.bt.bytes_flush()
 
@@ -2666,13 +2669,13 @@ class StrTerminal:
     def str_loopback(self) -> None:  # bin/pq.py stloop
         """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
-        kchord_str_list = self.kchord_str_list
+        kstr_list = self.kstr_list
         assert self.bt.tcgetattr_else, (self.bt.tcgetattr_else,)
 
         # Set up this Loop
 
         self.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
-        self.str_print("Press ⌃C ⇧Z ⇧Q to quit")
+        self.str_print("Press ⌃C ⇧R to replace, ⌃C I to insert, ⌃C ⇧Z ⇧Q to quit")
 
         # Run this Loop
 
@@ -2691,7 +2694,7 @@ class StrTerminal:
                 self.str_meta_write(kstr)
                 kchord = self.read_one_kchord()
 
-            if kchord_str_list[-2:] == ["⇧Z", "⇧Q"]:
+            if kstr_list[-2:] == ["⇧Z", "⇧Q"]:
                 (kbytes, kstr) = kchord
                 self.str_write_tmode_meta()
                 self.str_meta_write(kstr)
@@ -2968,8 +2971,6 @@ class StrTerminal:
         kchord = (kbytes, kstr)
         kpushes.append(kchord)
 
-        # todo: test Append a K Push, like for bound Key Chord prefixing another
-
     def pull_one_kchord(self) -> tuple[bytes, str]:
         """Read the next Pushed Key Chord, else the next Key Chord from the Keyboard"""
 
@@ -3040,9 +3041,9 @@ class StrTerminal:
         """Read 1 Key Chord, as Bytes and Str"""
 
         bt = self.bt
-        kchord_str_list = self.kchord_str_list
+        kstr_list = self.kstr_list
 
-        kchord_str_by_kchars = KCHORD_STR_BY_KCHARS  # '\e\e[A' for ⎋↑
+        kcap_by_kchars = KCAP_BY_KCHARS  # '\e\e[A' for ⎋↑ etc
 
         # Read the Bytes of 1 Key Chord
 
@@ -3051,22 +3052,24 @@ class StrTerminal:
 
         # Choose 1 Key Cap to speak of the Bytes of 1 Key Chord
 
-        if kchars in kchord_str_by_kchars.keys():
-            kstr = kchord_str_by_kchars[kchars]
+        if kchars in kcap_by_kchars.keys():
+            kstr = kcap_by_kchars[kchars]
         else:
             kstr = ""
             for kch in kchars:  # often 'len(kchars) == 1'
                 s = self.kch_to_kcap(kch)
                 kstr += s
 
-                # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
+            # '\e25;80R' is a Cursor Position Report (CPR) encoded as 1 Key Cap
+
+            # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
 
         # Succeed
 
         assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
         assert " " not in kstr, (kstr,)
 
-        kchord_str_list.append(kstr)
+        kstr_list.append(kstr)
 
         return (kbytes, kstr)
 
@@ -3080,16 +3083,16 @@ class StrTerminal:
 
         option_kchars = OPTION_KCHARS  # '∂' for ⌥D
         option_kchars_spaceless = OPTION_KCHARS_SPACELESS  # '∂' for ⌥D
-        option_kchord_str_by_1_kchar = OPTION_KCHORD_STR_BY_1_KCHAR  # 'é' for ⌥EE
-        kchord_str_by_kchars = KCHORD_STR_BY_KCHARS  # '\x7F' for 'Delete'
+        option_kstr_by_1_kchar = OPTION_KSTR_BY_1_KCHAR  # 'é' for ⌥EE
+        kcap_by_kchars = KCAP_BY_KCHARS  # '\x7F' for 'Delete'
 
         # Show more Key Caps than US-Ascii mentions
 
-        if ch in kchord_str_by_kchars.keys():  # Mac US Key Caps for Spacebar, F12, etc
-            s = kchord_str_by_kchars[ch]
+        if ch in kcap_by_kchars.keys():  # Mac US Key Caps for Spacebar, F12, etc
+            s = kcap_by_kchars[ch]
 
-        elif ch in option_kchord_str_by_1_kchar.keys():  # Mac US Option Accents
-            s = option_kchord_str_by_1_kchar[ch]
+        elif ch in option_kstr_by_1_kchar.keys():  # Mac US Option Accents
+            s = option_kstr_by_1_kchar[ch]
 
         elif ch in option_kchars_spaceless:  # Mac US Option Key Caps
             index = option_kchars.index(ch)
@@ -3115,7 +3118,7 @@ class StrTerminal:
             assert False, (o, ch)
         elif o == 0xA0:  # 'No-Break Space'
             s = "⌥Spacebar"
-            assert False, (o, ch)  # unreached because 'kchord_str_by_kchars'
+            assert False, (o, ch)  # unreached because 'kcap_by_kchars'
         elif o == 0xAD:  # 'Soft Hyphen'
             assert False, (o, ch)
 
@@ -3199,7 +3202,7 @@ class LineTerminal:
         self.st.__enter__()
 
     def line_flush(self) -> None:
-        """Run just before blocking to wait for Keyboard Input"""
+        """Run just before blocking to read Keyboard Input"""
 
         self.pqlogger.logger.flush()  # todo: skipped by uncaught Exception's
         self.st.str_flush()
