@@ -2650,6 +2650,9 @@ class ChordsKeyboard:
         fd = bt.fd
         (x_columns, y_rows) = os.get_terminal_size(fd)
 
+        assert y_rows >= 5, (y_rows,)  # macOS Terminal min 5 Rows
+        assert x_columns >= 20, (x_columns,)  # macOS Terminal min 20 Columns
+
         self.y_rows = y_rows
         self.x_columns = x_columns
 
@@ -3109,62 +3112,11 @@ class StrTerminal:
     """Write/ Read Chars at Screen/ Keyboard of the Terminal"""
 
     bt: BytesTerminal  # wrapped here
-    tmode: str  # 'Meta'  # 'Replace'  # 'Insert'
-
-    y_rows: int  # count Screen Rows, but initially -1
-    x_columns: int  # count of Screen Columns, but initially -1
-    row_y: int  # Row of Screen Cursor in last CPR, but initially -1
-    column_x: int  # Column of Screen Cursor in last CPR, but initially -1
 
     at_stlaunch_func_else: typing.Callable | None  # runs when Terminal Cursor first found
 
     kpushes: list[tuple[bytes, str]]  # cached here
     kpulls: list[tuple[bytes, str]]  # records Input, as an In-Memory KeyLogger
-    kstr_list: list[str]  # records Input, as an In-Memory KeyLogger
-
-    #
-    # Init, enter, exit, breakpoint, & loopback
-    #
-
-    def __init__(self) -> None:
-        bt = BytesTerminal()
-
-        self.bt = bt
-        self.tmode = "Meta"
-        self.kcpr = ""  # '\e25;80R'
-
-        self.y_rows = -1
-        self.x_columns = -1
-        self.row_y = -1
-        self.column_x = -1
-
-        self.at_stlaunch_func_else = None
-
-        self.kpushes = list()
-        self.kpulls = list()
-        self.kstr_list = list()
-
-    def __enter__(self) -> "StrTerminal":  # -> typing.Self:
-        r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
-
-        self.bt.__enter__()
-        return self
-
-    def __exit__(self, *exc_info) -> None:
-        r"""Start line-buffering Input, start replacing \n Output with \r\n, etc"""
-
-        bt = self.bt
-        tcgetattr_else = self.bt.tcgetattr_else
-
-        # Revert Screen Settings to Defaults
-
-        if tcgetattr_else is not None:
-            if self.tmode != "Meta":
-                self.str_write_tmode_meta()
-
-        # Start line-buffering Input, start replacing \n Output with \r\n, etc
-
-        bt.__exit__(*exc_info)
 
     def str_breakpoint(self) -> None:
         r"""Breakpoint with line-buffered Input and \n Output taken to mean \r\n, etc"""
@@ -3294,102 +3246,6 @@ class StrTerminal:
         # Succeed
 
         return (alt_y, alt_x)
-
-    #
-    # Switch between Replace/ Insert/ Neither
-    #
-
-    def str_meta_write(self, schars) -> None:
-        """Write Chars to the Screen, but don't shadow them, and don't insert them"""
-
-        tmode = self.tmode
-
-        self.str_tmode_write("Meta")  # not "Insert"
-        self.str_write(schars)
-        self.str_tmode_write(tmode)
-
-    #
-    # Read Key Chords
-    # Encode each Chord as >= 1 Input Bytes, and as >= 1 Str Words of Key Caps
-    # And let the caller push them back, after reading too far ahead
-    #
-
-    def append_one_kchord(self, kbytes, kstr) -> None:
-        """Say to read a Bytes/Str pair again, as if read too far ahead"""
-
-        kpushes = self.kpushes
-
-        assert kbytes, (kbytes, kstr)
-        assert kstr, (kstr, kbytes)
-
-        kchord = (kbytes, kstr)
-        kpushes.append(kchord)
-
-    def pull_one_kchord(self) -> tuple[bytes, str]:
-        """Read the next Pushed Key Chord, else the next Key Chord from the Keyboard"""
-
-        kpulls = self.kpulls
-        kpushes = self.kpushes
-
-        if not kpushes:
-            self.pull_cursor_always_and_keyboard_maybe()
-            if not kpushes:  # todo: log when reading Keyboard in place of Cursor
-                (kbytes, kstr) = self.read_one_kchord()
-                self.append_one_kchord(kbytes, kstr=kstr)
-                assert kpushes == [(kbytes, kstr)], (kpushes, (kbytes, kstr))
-
-        kchord = kpushes.pop(0)
-
-        kpull = kchord
-        kpulls.append(kpull)
-
-        return kchord
-
-    def pull_cursor_always_and_keyboard_maybe(self) -> None:
-        """Write Device-Status-Report (DSR), read Cursor-Position-Report (CPR)"""
-
-        bt = self.bt
-        fd = bt.fd
-
-        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
-        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
-
-        self.str_write("\x1B" "[" "6" "n")
-        while True:
-            kchord = self.read_one_kchord()
-            (kbytes, kstr) = kchord
-            pattern = r"^\x1B\[([0-9]+);([0-9]+)R$".encode()
-            m = re.match(pattern, string=kbytes)
-            if not m:
-                self.append_one_kchord(kbytes, kstr=kstr)
-                continue
-
-            break
-
-        (by, bx) = m.groups()
-        row_y = int(by)
-        column_x = int(bx)
-
-        (x_columns, y_rows) = os.get_terminal_size(fd)
-
-        assert 1 <= row_y <= y_rows, (row_y, y_rows)
-        assert 1 <= column_x <= x_columns, (column_x, x_columns)
-        assert y_rows >= 5, (y_rows,)  # macOS Terminal min 5 Rows
-        assert x_columns >= 20, (x_columns,)  # macOS Terminal min 20 Columns
-
-        if self.row_y == -1:
-            assert self.column_x == -1, (self.column_x,)
-            assert self.y_rows == -1, (self.y_rows,)
-            assert self.x_columns == -1, (self.x_columns,)
-
-            at_stlaunch_func_else = self.at_stlaunch_func_else
-            if at_stlaunch_func_else is not None:
-                at_stlaunch_func_else()
-
-        self.row_y = row_y
-        self.column_x = column_x
-        self.y_rows = y_rows
-        self.x_columns = x_columns
 
 
 PY_CALL = (
