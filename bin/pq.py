@@ -6425,10 +6425,17 @@ ITEXT_PY_GRAFS_TEXT = """
     iosplits = iosplits._replace(path="/pages/viewpage.action")
     oline = iosplits.geturl()
 
-    # chill
+    # chillx
     assert iline.startswith("http")  # "https", "http", etc
     assert " " not in iline
-    oline = iline.replace("://", " :// ").replace(".", " . ").rstrip()
+    ioline = iline
+    ioline = ioline.replace("/x.com/", "/twitter.com/")
+    count_eq_3 = 3
+    ioline = ioline.replace("/", " /", count_eq_3)
+    ioline = ioline.replace(".", " . ").rstrip()
+    count_eq_1 = 1
+    ioline = ioline.replace(": / /", " :// ", count_eq_1).rstrip()
+    oline = ioline
 
     # warm
     assert iline.startswith("http")  # "https", "http", etc
@@ -6454,7 +6461,7 @@ ITEXT_PY_GRAFS_TEXT = """
 # wviewpage to: https://wiki.example.com/pages/viewpage.action?pageId=12345
 # wviewpage from: https://wiki.example.com/pages/viewpreviousversions.action?pageId=12345
 #
-# chill to:  https :// twitter . com /pelavarre/status/1647691634329686016
+# chillx to:  https :// twitter . com /pelavarre/status/1647691634329686016
 # warm to:  https://twitter.com/pelavarre/status/1647691634329686016
 #
 
