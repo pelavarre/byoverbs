@@ -70,6 +70,7 @@ import collections
 import dataclasses
 import datetime as dt
 import difflib
+import io
 import itertools
 import json
 import os
@@ -1711,6 +1712,9 @@ def pathlib_create_pbpaste_bin() -> None:
 #
 # More Todo's:
 #
+#   Multiple Screens across Terminals or inside one Terminal
+#   Multiple Keyboards across Terminals, even cross Guests
+#
 #   Emacs ⌃W ⌃Y Copy/Paste Buffer vs Os Copy/Paste Buffer
 #
 #   Emacs ⌃R ⌃S Searches
@@ -1994,18 +1998,18 @@ ESC = "\x1B"  # 01/11 Escape ⌃[
 SS3 = "\x1B" "O"  # 04/15 Single Shift Three  # in macOS F1 F2 F3 F4
 
 CSI = "\x1B" "["  # 05/11 Control Sequence Introducer
-CSI_EXTRAS = "".join(chr(_) for _ in range(0x20, 0x40))
+CSI_EXTRAS = "".join(chr(_) for _ in range(0x20, 0x40))  # !"#$%&'()*+,-./0123456789:;<=>?, no @
 # Parameter, Intermediate, and Not-Final Bytes of a CSI Escape Sequence
 
 
 CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-CUD_Y = "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down  # "\n" is pn=1 except from last Row
+CUD_Y = "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down  # "\n" is Pn 1 except from last Row
 CUF_X = "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
-CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left  # "\b" is pn=1
+CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left  # "\b" is Pn 1
 
 # CNL_Y = "\x1B" "[" "{}E"  # CSI 04/05 Cursor Next Line (CNL)  # a la "\r\n" replace, not insert
 
-CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # "\r" is pn=1
+CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # "\r" is Pn 1
 VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
 # CUP_1_1 = "\x1B" "[" "H"  # CSI 04/08 Cursor Position
@@ -2013,7 +2017,7 @@ VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 # CUP_1_X = "\x1B" "[" ";{}H"  # CSI 04/08 Cursor Position
 CUP_Y_X = "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
 
-CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation  # "\t" is pn=1
+CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation  # "\t" is Pn 1
 CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
 
 ICH_X = "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
@@ -2033,7 +2037,7 @@ DECSCUSR = "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
 DECSCUSR_SKID = "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
 DECSCUSR_BAR = "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
 
-# sort the quoted Str above by the CSI Final Byte:  A, B, C, D, G, Z, d, etc
+# sort the quoted Str above mostly by the CSI Final Byte:  A, B, C, D, G, Z, d, etc
 
 # the 02/00 ' ' of the CSI ' q' is its only 'Intermediate Byte'
 
@@ -2042,6 +2046,12 @@ DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 [Request] Device Status Report  # Ps 6 for 
 
 # CSI 05/02 Active [Cursor] Position Report (CPR)
 CPR_Y_X_REGEX = r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 Active [Cursor] Pos Rep (CPR)
+
+
+assert CSI_EXTRAS == "".join(chr(_) for _ in range(0x20, 0x40))  # r"[ -?]", no "@"
+CSI_P_F_REGEX = r"^\x1B\[([ -?])*(.)$"  # CSI Intermediate/ Parameter Bytes and Final Byte
+
+MACOS_TERMINAL_CSI_FINAL_BYTES = "@ABCDEGHIKLMPSTZdhlnqt"
 
 
 #
@@ -2125,7 +2135,11 @@ class BytesTerminal:
             self.tcgetattr_else = tcgetattr
 
             assert before in (termios.TCSADRAIN, termios.TCSAFLUSH), (before,)
-            tty.setraw(fd, when=before)  # SetRaw defaults to TcsaFlush
+
+            if False:  # jitter Fri 27/Sep
+                tty.setcbreak(fd, when=termios.TCSAFLUSH)  # ⌃C prints Py Traceback
+            else:
+                tty.setraw(fd, when=before)  # SetRaw defaults to TcsaFlush
 
         return self
 
@@ -2180,59 +2194,94 @@ class BytesTerminal:
 
         # a la Emacs ⌃Z suspend-frame, Vim ⌃Z
 
-    def bytes_yolo(self) -> None:  # bin/pq.py btloop
+    def bytes_yolo(self) -> None:  # bin/pq.py btyolo
         """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
-        fd = self.fd
+        bt = self
         kbytes_list = self.kbytes_list
         assert self.tcgetattr_else, (self.tcgetattr_else,)
 
-        # Set up this Loop
+        # Speak the Rules
 
-        self.str_print("Let's test Class BytesTerminal")
-        self.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
-        self.str_print("Press ⌃C ⇧R to write Bytes, also ⌃C I is the same")
-        self.str_print("Press ⌃C ⇧Z ⇧Q to quit")
+        bt.str_print("Let's test Class BytesTerminal")
+        bt.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
+        bt.str_print("Press ⌃C ⇧R to write Bytes, also ⌃C I same, and press ⌃C ⇧Z ⇧Q to quit")
 
-        # Run this Loop
+        bt.str_print()
+        bt.str_print()
+
+        bt.sbytes_list.clear()
+
+        # Play till Quit
 
         tmode = "Write"
         while True:
-            kbytes = self.pull_kchord_bytes_if()
+            kbytes = bt.pull_kchord_bytes_if(timeout=0)
+
+            # Loopback the Keyboard Bytes, else describe them
 
             if tmode == "Write":
-                os.write(fd, kbytes)
+                bt.bytes_write(kbytes)
             else:
-                kstr = repr(kbytes)
-                os.write(fd, kstr.encode())
+                assert tmode == "Meta", (tmode,)
 
-            if kbytes in (b"i", b"R"):
+                kstr = repr(kbytes)
+                bt.str_write(kstr)
+
+            # Take just I and ⇧R and ⌃C from Vim, for switching between Write and Meta Modes
+
+            if kbytes in (b"i", b"R"):  # I  # ⇧R
                 tmode = "Write"
-            elif kbytes == b"\x03":
+            elif kbytes == b"\x03":  # ⌃C
                 tmode = "Meta"
-            elif kbytes_list[-4:] == [b"\x1B", b"[", b"6", b"n"]:
+
+            # Switch back into Meta Mode, secretly magically, after CSI Final Byte b"n" or b"t"
+            # todo: wow ugly
+
+            # if kbytes_list[:2] == [b"\x1B", b"["]:  # CSI
+            # if kbytes_list[-1] in (b"n", b"t"):  # DSR  # Terminal Size Query
+
+            if kbytes_list[-4:] == [b"\x1B", b"[", b"5", b"n"]:  # DSR to FIXME
                 tmode = "Meta"
+            elif kbytes_list[-4:] == [b"\x1B", b"[", b"6", b"n"]:  # DSR to CPR
+                tmode = "Meta"
+            elif kbytes_list[-5:] == [b"\x1B", b"[", b"1", b"8", b"t"]:  # [Terminal Size Query]
+                tmode = "Meta"
+
+            # Quit at ⇧Z ⇧Q
 
             if tmode == "Meta":
                 if kbytes_list[-2:] == [b"Z", b"Q"]:  # ⇧Z ⇧Q
                     break
 
-        self.bytes_print()
+        bt.bytes_print()
+
+        # bt.str_print(bt.kbytes_list)
+        # bt.str_print(bt.sbytes_list)
 
     #
     # Write Screen Output Bytes
     #
 
-    def str_print(self, schars) -> None:
+    def str_print(self, *args, end="\r\n") -> None:
         """Write Chars to the Screen as one or more Ended Lines"""
 
+        sep = " "
+        join = sep.join(str(_) for _ in args)
+        sbytes = join.encode()
+
+        end_bytes = end.encode()
+
+        self.bytes_print(sbytes, end=end_bytes)
+
+    def str_write(self, schars) -> None:
+        """Write Chars to the Screen, but without implicitly also writing a Line-End afterwards"""
+
         sbytes = schars.encode()
-        self.bytes_print(sbytes)
+        self.bytes_write(sbytes)
 
     def bytes_print(self, *args, end=b"\r\n") -> None:
         """Write Bytes to the Screen as one or more Ended Lines"""
-
-        assert self.tcgetattr_else
 
         sep = b" "
         join = sep.join(args)
@@ -2241,7 +2290,9 @@ class BytesTerminal:
         self.bytes_write(sbytes)
 
     def bytes_write(self, sbytes) -> None:
-        """Write Bytes to the Screen, but without implicitly also writing a Line-End"""
+        """Write Bytes to the Screen, but without implicitly also writing a Line-End afterwards"""
+
+        assert self.tcgetattr_else, (self.tcgetattr_else,)
 
         fd = self.fd
         sbytes_list = self.sbytes_list
@@ -2257,17 +2308,17 @@ class BytesTerminal:
     # Read Key Chords as 1 or more Keyboard Bytes
     #
 
-    def pull_kchord_bytes_if(self) -> bytes:
+    def pull_kchord_bytes_if(self, timeout) -> bytes:
         """Read, and record, the Bytes of 1 Incomplete/ Complete Key Chord"""
 
         kbytes_list = self.kbytes_list
 
-        kbytes = self.read_kchord_bytes_if()
+        kbytes = self.read_kchord_bytes_if(timeout=timeout)
         kbytes_list.append(kbytes)
 
         return kbytes
 
-    def read_kchord_bytes_if(self) -> bytes:
+    def read_kchord_bytes_if(self, timeout) -> bytes:
         """Read the Bytes of 1 Incomplete/ Complete Key Chord, without recording them"""
 
         assert ESC == "\x1B"
@@ -2285,7 +2336,7 @@ class BytesTerminal:
         # Accept 1 or more Esc Bytes, such as x 1B 1B in ⌥⌃FnDelete
 
         while True:
-            if not self.kbhit(timeout=0):
+            if not self.kbhit(timeout=timeout):
                 return many_kbytes
 
                 # ⎋ Esc that isn't ⎋⎋ Meta Esc
@@ -2305,7 +2356,7 @@ class BytesTerminal:
 
         if kbytes2 == b"[":  # 01/11 ... 05/11 CSI
             assert many_kbytes.endswith(b"\x1B\x5B"), (many_kbytes,)
-            if not self.kbhit(timeout=0):
+            if not self.kbhit(timeout=timeout):
                 return many_kbytes  # ⎋[ Meta [
             many_kbytes = self.read_csi_kchord_bytes_if(many_kbytes)
 
@@ -2353,7 +2404,7 @@ class BytesTerminal:
 
         kbytes = b""
         while True:  # till KChar Bytes complete
-            kbyte = self.readkbyte()  # todo: test end-of-input
+            kbyte = self.read_kbyte()  # todo: test end-of-input
             assert kbyte, (kbyte,)
             kbytes += kbyte
 
@@ -2371,13 +2422,13 @@ class BytesTerminal:
         # cut short by end-of-input, or by undecodable Bytes
         # doesn't raise UnicodeDecodeError
 
-    def readkbyte(self) -> bytes:
+    def read_kbyte(self) -> bytes:
         """Read 1 Keyboard Byte"""
 
         fd = self.fd
-        assert self.tcgetattr_else
+        assert self.tcgetattr_else, (self.tcgetattr_else,)
 
-        self.bytes_flush()  # 'readkbyte'
+        self.bytes_flush()  # 'read_kbyte'
         kbyte = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
 
         return kbyte
@@ -2389,6 +2440,7 @@ class BytesTerminal:
         """Block till next Input Byte, else till Timeout, else till forever"""
 
         stdio = self.stdio
+        assert self.tcgetattr_else, (self.tcgetattr_else,)  # todo: kbhit kind of works anyhow?
 
         rlist: list[int] = [stdio.fileno()]
         wlist: list[int] = list()
@@ -2636,13 +2688,14 @@ class ChordsKeyboard:
             bt.bytes_print()
             while kchords:
                 (kbytes, kstr) = kchords.pop(0)
-                bt.bytes_print(kstr)
+                encode = kstr.encode()
+                bt.bytes_print(encode)
 
     #
-    # Read from Screen, technically bypassing the Keyboard
+    # Read from Keyboard or from Screen
     #
 
-    def read_y_rows_x_columns(self) -> tuple[int, int]:
+    def read_y_rows_x_columns(self, timeout, file=None) -> tuple[int, int]:
         """Sample Counts of Screen Rows and Columns"""
 
         bt = self.bt
@@ -2656,61 +2709,141 @@ class ChordsKeyboard:
         self.y_rows = y_rows
         self.x_columns = x_columns
 
+        if file is not None:
+            file.write(" ⎋[18t" f" ⎋[{y_rows};{x_columns}t")
+            file.flush()
+
         return (y_rows, x_columns)
 
-    #
-    # Read from Keyboard or from Screen
-    #
-
-    def read_row_y_column_x(self) -> tuple[int, int]:
+    def read_row_y_column_x(self, timeout, file=None) -> tuple[int, int]:
         """Sample Cursor Row & Column"""
 
         bt = self.bt
-        kcpr_bytes_list = self.kcpr_bytes_list
 
         assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
 
-        bt.bytes_write("\x1B" "[" "6n")
+        encode = ("\x1B" "[" "6n").encode()
+        bt.bytes_write(encode)
 
-        n = len(kcpr_bytes_list)
-        while len(kcpr_bytes_list) == n:  # todo: hangs if CPR doesn't come after DSR
-            kchord = self.read_kcprs_till_kchord()
-            self.kchords.append(kchord)
+        self.fetch_kchords_till_kcpr(timeout=timeout)
 
         row_y = self.row_y
         column_x = self.column_x
 
+        assert row_y >= 1, (row_y,)
+        assert column_x >= 1, (column_x,)
+
+        if file is not None:
+            file.write(" ⎋[6n" f" ⎋[{row_y};{column_x}R")
+            file.flush()
+
         return (row_y, column_x)
 
-    def read_kcprs_till_kchord(self) -> tuple[bytes, str]:
-        """Read 1 Key Chord"""
+    def read_kchord_despite_kcprs(self, timeout) -> tuple[bytes, str]:
+        """Read 1 Key Chord, but accept Cursor-Position-Report (KCPR's) if they come first"""
 
-        bt = self.bt
-        kcpr_bytes_list = self.kcpr_bytes_list
+        kchords = self.kchords
         kstr_list = self.kstr_list
 
-        kcap_by_kchars = KCAP_BY_KCHARS  # '\e\e[A' for ⎋↑ etc
+        if not kchords:
+            self.fetch_kcprs_till_kchord(timeout=timeout)
+            assert kchords, (kchords,)
+
+        kchord = kchords.pop(0)
+        (kbytes, kstr) = kchord
+
+        kstr_list.append(kstr)
+
+        return (kbytes, kstr)
+
+    def fetch_kchords_till_kcpr(self, timeout) -> None:
+        """Read 1 Cursor-Position-Report (KCPR), catching Key Chords as they come"""
+
+        bt = self.bt
+        kchords = self.kchords
+        kcpr_bytes_list = self.kcpr_bytes_list
 
         assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
 
-        # Read the Bytes of 1 Key Chord,
-        # except intercept 0 or more Cursor Position Report's (CPR's)
+        # Read the Bytes of 1 Cursor Position Report's (CPR),
+        # except intercept 0 or more Key Chords if they come first
 
         while True:
-            kbytes = bt.read_kchord_bytes_if()  # may contain b' ' near to KCAP_SEP
+            kbytes = bt.pull_kchord_bytes_if(timeout=timeout)  # may contain b' ' near to KCAP_SEP
             kchars = kbytes.decode()  # may raise UnicodeDecodeError
 
             m = re.match(r"^\x1B\[([0-9]+);([0-9]+)R$", string=kchars)
             if not m:
-                break
+                kchord = self.kbytes_to_kchord(kbytes)
+                kchords.append(kchord)
+                continue
 
             kcpr_bytes_list.append(kbytes)
 
+            # Forward the KCPR
+
             row_y = int(m.group(1))
             column_x = int(m.group(2))
+
+            assert row_y >= 1, (row_y,)
+            assert column_x >= 1, (column_x,)
+
             self.row_y_column_x_report(row_y, column_x=column_x)
 
-        # Choose 1 Key Cap to speak of the Bytes of 1 Key Chord
+            # Succeed
+
+            return
+
+        # FIXME: move half of the 'fetch_k' Code back down into BytesTerminal
+
+        # todo: hangs if CPR doesn't come after DSR
+
+    def fetch_kcprs_till_kchord(self, timeout) -> None:
+        """Read the Bytes of 1 Key Chord, catching Cursor-Position-Report (KCPR's) as they come"""
+
+        bt = self.bt
+        kchords = self.kchords
+        kcpr_bytes_list = self.kcpr_bytes_list
+
+        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
+
+        # Read the Bytes of 1 Key Chord,
+        # except intercept 0 or more Cursor Position Report's (CPR's) if they come first
+
+        while True:
+            kbytes = bt.pull_kchord_bytes_if(timeout=timeout)  # may contain b' ' near to KCAP_SEP
+            kchars = kbytes.decode()  # may raise UnicodeDecodeError
+
+            m = re.match(r"^\x1B\[([0-9]+);([0-9]+)R$", string=kchars)
+            if not m:
+                kchord = self.kbytes_to_kchord(kbytes)
+                kchords.append(kchord)
+                return
+
+            kcpr_bytes_list.append(kbytes)
+
+            # Forward the KCPR
+
+            row_y = int(m.group(1))
+            column_x = int(m.group(2))
+
+            assert row_y >= 1, (row_y,)
+            assert column_x >= 1, (column_x,)
+
+            self.row_y_column_x_report(row_y, column_x=column_x)
+
+            # Loop to try again
+
+            continue
+
+        # FIXME: move half of the 'fetch_k' Code back down into BytesTerminal
+
+    def kbytes_to_kchord(self, kbytes) -> tuple[bytes, str]:
+        """Choose 1 Key Cap to speak of the Bytes of 1 Key Chord"""
+
+        kchars = kbytes.decode()  # may raise UnicodeDecodeError
+
+        kcap_by_kchars = KCAP_BY_KCHARS  # '\e\e[A' for ⎋↑ etc
 
         if kchars in kcap_by_kchars.keys():
             kstr = kcap_by_kchars[kchars]
@@ -2720,7 +2853,9 @@ class ChordsKeyboard:
                 s = self.kch_to_kcap(kch)
                 kstr += s
 
-                # '\e[200~' and '\e[201~' may bracket Paste here
+                # '⎋[25;80R' Cursor-Position-Report (CPR)
+                # '⎋[25;80t' Rows x Column Terminal Size Report
+                # '⎋[200~' and '⎋[201~' before/ after Paste to bracket it
 
             # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
 
@@ -2728,8 +2863,6 @@ class ChordsKeyboard:
 
         assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
         assert " " not in kstr, (kstr,)
-
-        kstr_list.append(kstr)
 
         return (kbytes, kstr)
 
@@ -2848,81 +2981,130 @@ class ShadowsTerminal:
         self.ck.__exit__()
         self.bt.__exit__()
 
-    def shadows_yolo(self) -> None:  # bin/pq.py stloop
+    def shadows_yolo(self) -> None:  # bin/pq.py styolo
         """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
+        st = self
         kstr_list = self.ck.kstr_list
         assert self.bt.tcgetattr_else, (self.bt.tcgetattr_else,)
 
         # Set up this Loop
 
-        self.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
-        self.str_print("Press ⌃C ⇧R to replace, ⌃C I to insert, ⌃C ⇧Z ⇧Q to quit")
+        st.str_print("Let's test Class ShadowsTerminal")
+        st.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
+        st.str_print("Press ⌃L to count Rows and Columns and say where the Cursor is")
+        st.str_print("Press ⌃C ⇧R to replace, ⌃C I to insert, ⌃C ⇧Z ⇧Q to quit")
+
+        st.str_print()
+        st.str_print()
 
         # Run this Loop
 
         kchord = (b"R", "⇧R")
-        len_kcprs = len(self.ck.kcpr_bytes_list)
+        tmode = "Meta"
         while True:
             (kbytes, kstr) = kchord
 
-            next_len_kcprs = len(self.ck.kcpr_bytes_list)
-            if next_len_kcprs != len_kcprs:
-                kcpr = self.ck.kcpr_bytes_list[-1]
-                self.str_meta_write(repr(kcpr))
-                len_kcprs = next_len_kcprs
+            if kstr == "⌃L":  # ⌃L Rewrite
 
-            if kstr == "⇧R":
-                self.str_write_tmode_replace()
-                kchord = self.read_past_text_kchords()
-            elif kstr == "I":
-                self.str_write_tmode_insert()
-                kchord = self.read_past_text_kchords()
+                file = io.StringIO()
+                st.ck.read_y_rows_x_columns(timeout=1, file=file)
+                st.ck.read_row_y_column_x(timeout=1, file=file)
+                sys.stderr.write(file.getvalue())
+
+                if tmode == "Replace":
+                    st.str_write_tmode_replace()
+                    kchord = st.read_past_text_kchords(timeout=1)
+                elif tmode == "Insert":
+                    st.str_write_tmode_insert()
+                    kchord = st.read_past_text_kchords(timeout=1)
+                else:
+                    kchord = st.ck.read_kchord_despite_kcprs(timeout=1)
+
+            elif kstr == "⇧R":  # ⇧R Replace
+                tmode = "Replace"
+
+                st.str_write_tmode_replace()
+                kchord = st.read_past_text_kchords(timeout=1)
+
+            elif kstr == "I":  # I Insert
+                tmode = "Insert"
+
+                st.str_write_tmode_insert()
+                kchord = st.read_past_text_kchords(timeout=1)
+
             else:
-                self.str_write_tmode_meta()
-                self.str_meta_write(kstr)
-                kchord = self.ck.read_kcprs_till_kchord()
+                tmode = "Meta"
+
+                st.str_write_tmode_meta()
+                st.str_meta_write(kstr)
+
+                kchord = st.ck.read_kchord_despite_kcprs(timeout=1)
 
             if kstr_list[-2:] == ["⇧Z", "⇧Q"]:
                 (kbytes, kstr) = kchord
-                self.str_write_tmode_meta()
-                self.str_meta_write(kstr)
+                st.str_meta_write(kstr)
                 break
 
-        self.str_print()
+        st.str_print()
 
-        # Define ⌃L as rewrite TMode, reread Cursor Position, reread Screen Size
+        # st.str_print(st.bt.kbytes_list)
+        # st.str_print(st.bt.sbytes_list)
 
-    def read_past_text_kchords(self) -> tuple[bytes, str]:
+    def read_past_text_kchords(self, timeout) -> tuple[bytes, str]:
         """Read Text K Chords and write their Bytes, return the first other K Chord"""
 
         assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
 
-        len_kcprs = len(self.ck.kcpr_bytes_list)
         while True:
-            kchord = self.ck.read_kcprs_till_kchord()
-            if kchord == (b"\x7F", "Delete"):
+            alt_kchord = self.ck.read_kchord_despite_kcprs(timeout=timeout)
+
+            kchord = alt_kchord
+            if alt_kchord == (b"\x7F", "Delete"):
                 kchord = (b"\x08", "Backspace")
 
             (kbytes, kstr) = kchord
+            schars = kbytes.decode()  # rarely raises UnicodeDecodeError
 
-            next_len_kcprs = len(self.ck.kcpr_bytes_list)
-            if next_len_kcprs != len_kcprs:
-                kcpr = self.ck.kcpr_bytes_list[-1]
-                self.str_meta_write(repr(kcpr))
-                len_kcprs = next_len_kcprs
+            writable = self.schars_to_writable(schars)
+            if not writable:
+                break
 
-            kdecode = kbytes.decode()
-            if kdecode not in list(" \a\b\n\t\r"):  # also ⌃K ⌃L work like ⌃J at macOS Terminal
-                klstrip = kdecode.lstrip("\x1B")  # \e
-                if not klstrip.isprintable():
-                    break
-
-            self.str_write(kdecode)
-
-            # FIXME: notice when we write DSR ⎋[6n, and look then to read CPR
+            self.str_write(schars)
 
         return kchord
+
+    def schars_to_writable(self, schars) -> bool:
+        """Say if writing Screen Bytes signals their meaning well"""
+
+        assert CSI_P_F_REGEX == r"^\x1B\[([ -?])*(.)$"  # r"[ -?]", no "@"
+        assert MACOS_TERMINAL_CSI_FINAL_BYTES == "@ABCDEGHIKLMPSTZdhlnqt"
+
+        if schars.isprintable():
+            return True
+
+        if schars in list(" \a\b\n\t\r"):
+            return True
+
+            # \b and \r don't move the Cursor when st.column_x == 1
+
+        m = re.match(r"^\x1B\[([ -?]*)(.)$", string=schars)
+        if m:
+            p = m.group(1)
+            f = m.group(2)
+
+            # self.bt.str_print(f"{p=} {f=}")
+
+            if (p + f) in ("5n", "6n", "18t"):  # todo: list these more in common
+                return True
+
+            if f in "@ABCDEGHIKLMPSTZdhlnqt":
+                return True
+
+                # most of these have corner cases of no visible effect
+                # todo: do we write the "...n" and "...t" that aren't ("5n", "6n", "18t")
+
+        return False
 
     #
     # Write Bytes to jump the Cursor
@@ -2931,7 +3113,7 @@ class ShadowsTerminal:
     def x_column_write_if(self, x_column) -> None:
         """Jump the Cursor to a new Column, else nop"""
 
-        assert CHA_Y == "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # "\r" is pn=1
+        assert CHA_Y == "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # "\r" is Pn 1
 
         column = self.ck.column_x != x_column
         if column:
@@ -2951,7 +3133,7 @@ class ShadowsTerminal:
     def y_x_row_column_write_if(self, row_y, column_x) -> None:
         """Jump the Cursor to a new Row & Column, else nop"""
 
-        assert CHA_Y == "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # "\r" is pn=1
+        assert CHA_Y == "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # "\r" is Pn 1
         assert CUP_Y_X == "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position (CUP)
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
