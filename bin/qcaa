@@ -2,6 +2,6 @@
 xs=$?
 if [ $xs -ne 0 ]; then
     echo "+ exit $xs" >&2
-    (set -xe; cat .git/COMMIT_EDITMSG)
+    (set -xe; cat .git/COMMIT_EDITMSG; cat - >/dev/null)
     exit $xs
 fi
