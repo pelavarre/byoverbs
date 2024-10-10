@@ -1,2 +1,8 @@
-set -xe
-git log --oneline --no-decorate -10 "$@" |nl -v0 |awk '{$1 = "HEAD~"$1; print}'
+set -e
+if [ ! -t 1 ]; then
+    set -xe
+    git log --oneline --no-decorate "$@" |nl -v0 |awk '{$1 = "HEAD~"$1; print}'
+else
+    set -xe
+    git log --oneline --no-decorate -15 "$@" |nl -v0 |awk '{$1 = "HEAD~"$1; print}'
+fi

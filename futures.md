@@ -924,6 +924,15 @@ pq patch - could mean pq >pq.patch && git apply -v pq.patch
 
 debug Linux:  dt pq emojis unicodedata >ee
 
+react to shrink/ stretch Terminal?
+    request shrink/ stretch Terminal?
+
+define aware/naive in p
+
+pq sorted text set
+
+generate Json list without trailing Comma
+
 
 ## Copied from
 

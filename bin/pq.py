@@ -6061,6 +6061,114 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 
 #
+# As if Import Csp
+#
+
+
+CSP_DOC_BY_EVENT = {
+    "coin": "the insertion of a coin in the slot of a vending machine",
+    "choc": "the extraction of a chocolate from the dispenser of the machine",
+    #
+    "in1p": "the insertion of one penny",
+    "in2p": "the insertion of a two penny coin",
+    "small": "the extraction of a small biscuit or cookie",
+    "large": "the extraction of a large biscuit or cookie",
+    "out1p": "the extraction of one penny in change",
+}
+
+CSP_EVENT_ALIASES = ["x", "y", "z"]
+
+CSP_DOC_BY_PROC = {
+    "VMS": "the simple vending machine",
+    "VMC": "the complex vending machine",
+    #
+    "P": "one arbitrary process",
+    "Q": "another arbitrary process",
+    "R": "a third arbitrary process",
+    #
+    "STOP": "a process that produces no more events of any alphabet",
+}
+
+CSP_PROC_ALIASES = ["X", "Y"]
+
+CSP_EVENTS_BY_PROC = dict()  # each CSP 'Alphabet' is a Set of Events
+
+CSP_EVENTS_BY_PROC["αVMS"] = ["coin", "choc"]
+CSP_EVENTS_BY_PROC["αVMC"] = ["in1p", "in2p", "small", "large", "out1p"]
+
+X_THEN_P = dict(k="then", event="x", mark="→", proc="P")  # (x → P)  # α(x → P) = αP provided x ∈ αP
+
+# Strings past the Verb to mirror every Char of Sourceline
+# Comparable Frozen DataClasses for each Node of the Abstract Syntax Tree
+# Go ahead and move it all into a separate 'import csp' that we silently let be absent
+#   xxSo as to stop prefixing with CSP_
+
+X1 = dict(  # (coin → STOPαVMS)
+    k="then", event="x", mark=" → ", proc=dict(k="stop", proc="STOP", alphabet="αVMS")
+)
+
+X2 = dict(  # (coin → (choc → (coin → (choc → STOPαVMS ))))
+    k="then",
+    start="(",
+    event="coin",
+    mark=" → ",
+    proc=dict(
+        k="then",
+        event="choc",
+        mark=" → ",
+        proc=dict(
+            k="then",
+            event="coin",
+            mark=" → ",
+            proc=dict(
+                k="then",
+                start="(",
+                event="choc",
+                mark=" → ",
+                proc=dict(k="stop", proc="STOP", alphabet="αVMS"),
+                end=")",
+            ),
+        ),
+        end=")",
+    ),
+    end=")",
+)
+
+CSP_EVENTS_BY_PROC["αCTR"] = ["up", "right"]
+
+X3 = CTR = dict(  # (right → up → right → right → STOPαCTR)
+    k="thens",
+    start="(",
+    prefixes=[("right", " → "), ("up", " → "), ("right", " → "), ("right", " → ")],
+    proc=dict(k="stop", proc="STOP", alphabet="αCTR"),
+    end=")",
+)
+
+CSP_EVENTS_BY_PROC["αCLOCK"] = ["tick"]
+
+CLOCK = dict(  # CLOCK = (tick → CLOCK)
+    k="then", start="(", event="tick", mark=" → ", proc="CLOCK", end=")"
+)
+
+
+def csprocess(ilines) -> list[str]:
+
+    d = dict(
+        doc_by_event=CSP_DOC_BY_EVENT,
+    )
+
+    dumps = json.dumps(d, indent=2)
+
+    olines = dumps.splitlines()
+    return olines
+
+
+#
+#
+#
+
+
+#
 # Amp up Import TextWrap
 #
 
@@ -6096,6 +6204,12 @@ def unicodedata_name_anyhow(char) -> str:
 
     names = UNICODEDATA_NAMES_ANYHOW_BY_CHAR[char]
     for name in names:
+        try:
+            _ = unicodedata.lookup(name)
+        except KeyError:
+            assert name == "EM", (name, sys.version_info)
+            continue
+
         assert unicodedata.lookup(name) == char, (name, hex(ord(char)), ascii(char))
 
     name_0 = names[0]
@@ -6278,6 +6392,8 @@ CUED_PY_LINES_TEXT = r"""
 
     olines = ilines  # olines = ilines  # olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
 
+    olines = pq.csprocess(ilines)  # csp  # Communicating Sequential Processes
+
     olines = pq.ex_macros(ilines)  # em em  # ema  # emac  # emacs
 
     olines = pq.visual_ex(ilines)  # vi  # vim  # em vi  # em/vi
@@ -6353,7 +6469,7 @@ CUED_PY_GRAFS_TEXT = r"""
     # d d d d d d d d
     # e e e e e e
     # g g
-    # i i i i i i i i i i
+    # i i i i i i i i i i i
     # j j
     # k
     # l l l l l l l

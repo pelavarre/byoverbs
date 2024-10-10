@@ -1,6 +1,14 @@
 set -e
-echo 'did you mean: ' git reset HEAD~1 "$@"
-echo press ⌃D to execute, or ⌃C to quit
-cat - >/dev/null
-set -xe
-git reset HEAD~1 "$@"
+if [ $# -ne 0 ]; then
+    echo 'did you mean: ' git reset "$@"
+    echo press ⌃D to execute, or ⌃C to quit
+    cat - >/dev/null
+    set -xe
+    git reset "$@"
+else
+    echo 'did you mean: ' git reset HEAD~1 "$@"
+    echo press ⌃D to execute, or ⌃C to quit
+    cat - >/dev/null
+    set -xe
+    git reset HEAD~1 "$@"
+fi

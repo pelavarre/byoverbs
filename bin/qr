@@ -1,6 +1,8 @@
-set -xe
+set -e
 if [ $# -eq 0 ]; then
+    set -xe
     git revert HEAD
 else
+    set -xe
     git revert "$@"
 fi

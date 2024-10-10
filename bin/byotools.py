@@ -32,40 +32,42 @@ import zoneinfo
 assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 
 
+_: object  # '_: object' gets MyPy to let us run fail-fast tests
+
 # Ubuntu 2018 Long-Term-Stable (LTS)
 
-... == subprocess.run  # new since Sep/2015 Python 3.5  # type: ignore
+_ = subprocess.run  # new since Sep/2015 Python 3.5
 
-... == dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6  # type: ignore
-... == "{:_}".format(12345)  # new since Dec/2016 Python 3.6  # type: ignore
-... == (re.search(r"..", "abcde") or [""])[0]  # new since Python 3.6  # type: ignore
+_ = dt.datetime.now().astimezone()  # new since Dec/2016 Python 3.6
+_ = "{:_}".format(12345)  # new since Dec/2016 Python 3.6
+_ = (re.search(r"..", "abcde") or [""])[0]  # new since Python 3.6
 
 # Ubuntu 2020 LTS
 
-... == breakpoint  # new since Jun/2018 Python 3.7  # type: ignore
-... == dataclasses  # new since Jun/2018 Python 3.7  # type: ignore
+_ = breakpoint  # new since Jun/2018 Python 3.7
+_ = dataclasses  # new since Jun/2018 Python 3.7
 
-... == f"{sys.version_info[:2]=}"  # new since in Oct/2019 Python 3.8   # type: ignore
-... == shlex.join  # new since Oct/2019 Python 3.8  # type: ignore
-# ... == pprint.pp  # new since Oct/2019 Python 3.8  # type: ignore
+_ = f"{sys.version_info[:2]=}"  # new since in Oct/2019 Python 3.8
+_ = shlex.join  # new since Oct/2019 Python 3.8
+# _ = pprint.pp  # new since Oct/2019 Python 3.8
 
 # Ubuntu 2022 LTS
 
-... == str.removeprefix, str.removesuffix  # new since Oct/2020 Python 3.9  # type: ignore
-... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
-... == zoneinfo  # new since Oct/2020 Python 3.9
+_ = str.removeprefix, str.removesuffix  # new since Oct/2020 Python 3.9
+_ = dict[str, int]  # new since Oct/2020 Python 3.9
+_ = zoneinfo  # new since Oct/2020 Python 3.9
 
-... == dict[str, int] | None  # new since Oct/2021 Python 3.10
-# ... == int.bit_count  # new since Oct/2021 Python 3.10
-# ... == list(zip([], [], strict=True))  # new since Oct/2021 Python 3.10
+_ = dict[str, int] | None  # new since Oct/2021 Python 3.10
+# _ = int.bit_count  # new since Oct/2021 Python 3.10
+# _ = list(zip([], [], strict=True))  # new since Oct/2021 Python 3.10
 
 # Ubuntu 2024 LTS
 
-# ... == tomllib  # new since Oct/2022 Python 3.11
-# ... == termios.tcgetwinsize(sys.stderr.fileno())  # new since Oct/2022 Python 3.11
-# ... == typing.Self  # new since Oct/2022 Python 3.11
+# _ = tomllib  # new since Oct/2022 Python 3.11
+# _ = termios.tcgetwinsize(sys.stderr.fileno())  # new since Oct/2022 Python 3.11
+# _ = typing.Self  # new since Oct/2022 Python 3.11
 
-# ... # new since Oct/2023 Python 3.12
+# _ = # new since Oct/2023 Python 3.12
 
 # Ubuntu 2026 LTS
 

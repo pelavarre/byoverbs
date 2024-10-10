@@ -11,6 +11,10 @@
 
 # cd bin/ && find bin/find.py should work sometimes
 
+# touch -d 2024-01-01T00:00:00 2023/2024-01-01
+# touch -d 2024-01-01 2023/2024-01-01  # Linux accepts T00:00:00 abbreviated
+# find . -not -newer 2023/2024-01-01  # finds the first Second of the New Year too :-(
+
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/find.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
