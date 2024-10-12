@@ -20,8 +20,10 @@ examples:
   python3.py --  # run the examples below
 
   python3 -c 'import this' |tail +3 |cat -n |expand
-    # ordered better than muddled
-    # copied better than aliased
+    # 'ordered better than muddled'
+    # 'copied better than aliased'
+    # "'python3' better than 'python3 -O'"
+    # "'env -S python3 -O' better than 'python3'"
 
   : Dec/2008 Python 3  # major release date
   : Jun/2009 Python 3.1  # minor release date
@@ -67,6 +69,7 @@ examples:
   : : Jun/2024 Python 3.12.4  # micro release date
   : : Aug/2024 Python 3.12.5  # micro release date
   : : Sep/2024 Python 3.12.6  # micro release date
+  : Oct/2024 Python 3.13  # minor release date
 
 """
 

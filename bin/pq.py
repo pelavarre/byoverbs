@@ -70,6 +70,7 @@ import collections
 import dataclasses
 import datetime as dt
 import difflib
+import importlib
 import io
 import itertools
 import json
@@ -94,8 +95,12 @@ import unicodedata
 
 _: object  # '_: object' gets MyPy to let us run fail-fast tests
 
-... == dict[str, int]  # new since Oct/2020 Python 3.9  # type: ignore
-... == json, time  # type: ignore   # PyLance ReportUnusedExpression
+_ = dict[str, int]  # new since Oct/2020 Python 3.9
+_ = json, time
+
+
+if not __debug__:
+    raise NotImplementedError(str((__debug__,)))  # "'python3' better than 'python3 -O'"
 
 
 #
@@ -124,6 +129,9 @@ def try_func_else_pdb_pm(func) -> None:
     except Exception as exc:
         (exc_type, exc_value, exc_traceback) = sys.exc_info()
         assert exc is exc_value
+
+        if not hasattr(sys, "last_exc"):  # give up when raised inside exec(py, ...)
+            raise
 
         traceback.print_exc(file=sys.stderr)
 
@@ -205,7 +213,7 @@ class PyExecQueryResult:
         # Parse some Py Code and compose the rest,
         # and maybe sponge up 'self.ibytes_else', and maybe also 'self.itext_else'
 
-        (found_py_graf, complete_py_graf) = self.find_and_form_py_lines()
+        (found_py_graf, complete_py_graf, importables) = self.find_and_form_py_lines()
 
         # Option to trace the Py Code without running it
 
@@ -243,6 +251,8 @@ class PyExecQueryResult:
         # globals()["dirpath"] = None  # todo: doesn't help
 
         try:
+            for importable in importables:
+                importlib.import_module(importable)
             exec(py_text, globals(), alt_locals)  # because "i'm feeling lucky"
         except Exception:
             print((3 * "\n") + py_text + (2 * "\n"), file=sys.stderr)
@@ -439,7 +449,7 @@ class PyExecQueryResult:
     # Parse some Py Code and compose the rest       # todo: resolve the noqa C901
     #
 
-    def find_and_form_py_lines(self) -> tuple[list[str], list[str]]:  # noqa C901
+    def find_and_form_py_lines(self) -> tuple[list[str], list[str], list[str]]:  # noqa C901
         """Parse some Py Code and compose the rest"""
 
         pq_words = self.pq_words
@@ -513,15 +523,17 @@ class PyExecQueryResult:
 
         (ipulls, opushes) = self.py_graf_to_i_pulls_o_pushes(py_graf)
 
-        complete_py_graf = self.py_graf_complete(py_graf, ipulls=ipulls, opushes=opushes)
+        (complete_py_graf, importables) = self.py_graf_complete(
+            py_graf, ipulls=ipulls, opushes=opushes
+        )
 
         # Succeed
 
-        return (found_py_graf, complete_py_graf)
+        return (found_py_graf, complete_py_graf, importables)
 
         # may sponge up 'self.ibytes_else', and maybe also 'self.itext_else'
 
-    def py_graf_complete(self, py_graf, ipulls, opushes) -> list[str]:
+    def py_graf_complete(self, py_graf, ipulls, opushes) -> tuple[list[str], list[str]]:
         """Compose the rest of the Py Code"""
 
         dent = 4 * " "
@@ -552,11 +564,11 @@ class PyExecQueryResult:
             full_py_graf = before_py_graf + div + run_py_graf + div + after_py_graf
             full_py_graf = graf_deframe(full_py_graf)
 
-        fuller_py_graf = py_graf_insert_imports(py_graf=full_py_graf)
+        (fuller_py_graf, importables) = py_graf_insert_imports(py_graf=full_py_graf)
 
         # Succeed
 
-        return fuller_py_graf
+        return (fuller_py_graf, importables)
 
     def form_before_py_graf(self, py_graf, ipulls, opushes) -> list[str]:
         """Say to read Bytes or Text or neither"""
@@ -1089,7 +1101,7 @@ class PyExecQueryResult:
         # Read the Bytes, as if some of the completed Py Graf already ran
 
         core_py_graf = self.form_read_bytes_py_graf()
-        read_py_graf = py_graf_insert_imports(py_graf=core_py_graf)
+        (read_py_graf, imoortables) = py_graf_insert_imports(py_graf=core_py_graf)
 
         read_py_text = "\n".join(read_py_graf)
 
@@ -1157,11 +1169,13 @@ class PyExecQueryResult:
 
         for mgraf in mgrafs:
             raw_py_graf = ["for iline in ilines:"] + list((dent + _) for _ in mgraf)
-            py_graf = py_graf_insert_imports(py_graf=raw_py_graf)
+            (py_graf, importables) = py_graf_insert_imports(py_graf=raw_py_graf)
             py_text = "\n".join(py_graf)
 
             alt_locals = dict(ilines=ilines)
             try:
+                for importable in importables:
+                    importlib.import_module(importable)
                 exec(py_text, globals(), alt_locals)
             except Exception:
                 continue
@@ -1521,10 +1535,10 @@ def py_split(py_text) -> list[str]:
     # except don't drop Comments
 
 
-def py_graf_insert_imports(py_graf) -> list[str]:
+def py_graf_insert_imports(py_graf) -> tuple[list[str], list[str]]:
     """Insert a paragraph of Py Imports up front"""
 
-    #
+    # Magically know how to import a short list of Modules
 
     importables = list(sys.modules.keys())
 
@@ -1535,9 +1549,11 @@ def py_graf_insert_imports(py_graf) -> list[str]:
     importables.append("subprocess")
     importables.append("urllib.parse")
 
+    importables.append("csp")
+
     importables.append("pq")
 
-    #
+    # Take any mention of a Module Name as hint enough to import it
 
     div = list([""])
 
@@ -1552,13 +1568,20 @@ def py_graf_insert_imports(py_graf) -> list[str]:
         elif p == "import urllib":
             import_graf[i] = "import urllib.parse"
 
-    py_modules.sort()
+    # Invite the Caller to run the Imports before Exec, to fail-fast'er and more simply
+
+    inserted_importables = list()
+    for import_line in import_graf:
+        inserted_importable = import_line.split()[-1]  # 'urllib.parse'
+        inserted_importables.append(inserted_importable)
+
+    # Insert the Imports into the Py Graf
 
     fuller_py_graf = list(py_graf)
     if py_modules:
         fuller_py_graf = import_graf + div + py_graf
 
-    return fuller_py_graf
+    return (fuller_py_graf, inserted_importables)
 
 
 #
@@ -6061,114 +6084,6 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 
 #
-# As if Import Csp
-#
-
-
-CSP_DOC_BY_EVENT = {
-    "coin": "the insertion of a coin in the slot of a vending machine",
-    "choc": "the extraction of a chocolate from the dispenser of the machine",
-    #
-    "in1p": "the insertion of one penny",
-    "in2p": "the insertion of a two penny coin",
-    "small": "the extraction of a small biscuit or cookie",
-    "large": "the extraction of a large biscuit or cookie",
-    "out1p": "the extraction of one penny in change",
-}
-
-CSP_EVENT_ALIASES = ["x", "y", "z"]
-
-CSP_DOC_BY_PROC = {
-    "VMS": "the simple vending machine",
-    "VMC": "the complex vending machine",
-    #
-    "P": "one arbitrary process",
-    "Q": "another arbitrary process",
-    "R": "a third arbitrary process",
-    #
-    "STOP": "a process that produces no more events of any alphabet",
-}
-
-CSP_PROC_ALIASES = ["X", "Y"]
-
-CSP_EVENTS_BY_PROC = dict()  # each CSP 'Alphabet' is a Set of Events
-
-CSP_EVENTS_BY_PROC["αVMS"] = ["coin", "choc"]
-CSP_EVENTS_BY_PROC["αVMC"] = ["in1p", "in2p", "small", "large", "out1p"]
-
-X_THEN_P = dict(k="then", event="x", mark="→", proc="P")  # (x → P)  # α(x → P) = αP provided x ∈ αP
-
-# Strings past the Verb to mirror every Char of Sourceline
-# Comparable Frozen DataClasses for each Node of the Abstract Syntax Tree
-# Go ahead and move it all into a separate 'import csp' that we silently let be absent
-#   xxSo as to stop prefixing with CSP_
-
-X1 = dict(  # (coin → STOPαVMS)
-    k="then", event="x", mark=" → ", proc=dict(k="stop", proc="STOP", alphabet="αVMS")
-)
-
-X2 = dict(  # (coin → (choc → (coin → (choc → STOPαVMS ))))
-    k="then",
-    start="(",
-    event="coin",
-    mark=" → ",
-    proc=dict(
-        k="then",
-        event="choc",
-        mark=" → ",
-        proc=dict(
-            k="then",
-            event="coin",
-            mark=" → ",
-            proc=dict(
-                k="then",
-                start="(",
-                event="choc",
-                mark=" → ",
-                proc=dict(k="stop", proc="STOP", alphabet="αVMS"),
-                end=")",
-            ),
-        ),
-        end=")",
-    ),
-    end=")",
-)
-
-CSP_EVENTS_BY_PROC["αCTR"] = ["up", "right"]
-
-X3 = CTR = dict(  # (right → up → right → right → STOPαCTR)
-    k="thens",
-    start="(",
-    prefixes=[("right", " → "), ("up", " → "), ("right", " → "), ("right", " → ")],
-    proc=dict(k="stop", proc="STOP", alphabet="αCTR"),
-    end=")",
-)
-
-CSP_EVENTS_BY_PROC["αCLOCK"] = ["tick"]
-
-CLOCK = dict(  # CLOCK = (tick → CLOCK)
-    k="then", start="(", event="tick", mark=" → ", proc="CLOCK", end=")"
-)
-
-
-def csprocess(ilines) -> list[str]:
-
-    d = dict(
-        doc_by_event=CSP_DOC_BY_EVENT,
-    )
-
-    dumps = json.dumps(d, indent=2)
-
-    olines = dumps.splitlines()
-    return olines
-
-
-#
-#
-#
-
-
-#
 # Amp up Import TextWrap
 #
 
@@ -6390,9 +6305,9 @@ CUED_PY_LINES_TEXT = r"""
     oline = str(ast.literal_eval(iline))  # eval  # undo 'ascii' or 'repr'
 
 
-    olines = ilines  # olines = ilines  # olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
+    olines = csp.csprocess(ilines)  # csp  # Communicating Sequential Processes
 
-    olines = pq.csprocess(ilines)  # csp  # Communicating Sequential Processes
+    olines = ilines  # olines = ilines  # olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
 
     olines = pq.ex_macros(ilines)  # em em  # ema  # emac  # emacs
 

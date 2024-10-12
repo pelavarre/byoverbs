@@ -660,12 +660,6 @@ next Pq traunch
     x.y for y split() inside of x split("\t")
 
 
-    pq dao
-    insert into the tail -n +3 cat -n
-    ordered better than muddled
-    copied better than aliased
-
-
     pq easter
     import this # tail -n +3 cat -n
     future import braces
@@ -932,6 +926,13 @@ define aware/naive in p
 pq sorted text set
 
 generate Json list without trailing Comma
+
+cope with 'qla' and all -... Args, no Author Emails
+
+adopt 'python3.8 -m py_compile' to check for syntax errors, at home and at work
+
+pq dao
+insert my own 'better than' into the tail -n +3 cat -n
 
 
 ## Copied from
