@@ -16,6 +16,10 @@ docs:
 import collections
 import dataclasses
 import json
+import re
+import sys
+
+# import typing
 
 
 @dataclasses.dataclass(order=True, frozen=True)
@@ -48,33 +52,46 @@ class Event(Any):
         return doc
 
 
-coin = Event("the insertion of a coin in the slot of a vending machine")
-choc = Event("the extraction of a chocolate from the dispenser of the machine")
+NO_EVENTS: list[Event]
+NO_EVENTS = list()
 
-in1p = Event("the insertion of one penny")
-in2p = Event("the insertion of a two penny coin")
-small = Event("the extraction of a small biscuit or cookie")
-large = Event("the extraction of a large biscuit or cookie")
-out1p = Event("the extraction of one penny in change")
+
+coin = Event("coin")  # the insertion of a coin in the slot of a vending machine
+choc = Event("choc")  # the extraction of a chocolate from the dispenser of the machine
+
+in1p = Event("in1p")  # the insertion of one penny
+in2p = Event("in2p")  # the insertion of a two penny coin
+small = Event("small")  # the extraction of a small biscuit or cookie
+large = Event("large")  # the extraction of a large biscuit or cookie
+out1p = Event("out1p")  # the extraction of one penny in change
 
 x: Event
 y: Event
 z: Event
 
 
-reassignments: list[tuple[str, object]]  # the aliases we know we've mutated
-reassignments = list()
-
-
 class Process(Any):
     """A pattern of behaviour"""
+
+    def menu_choices(self) -> list[Event]:
+
+        no_events: list[Event]
+        no_events = list()
+
+        return no_events
+
+    def form_event_process(self, event: Event) -> "Process":
+
+        raise NotImplementedError(event)
 
 
 VMS: Process
 VMS = Process("the simple vending machine")
+VMS_0 = VMS  # open up for reassignment
 
 VMC: Process
 VMC = Process("the complex vending machine")
+VMC_0 = VMC  # open up for reassignment
 
 P: Process  # an arbitrary process
 Q: Process
@@ -84,10 +101,6 @@ STOP = Process("[a process who produces no more events of any alphabet]")
 
 X: Process  # an alias of a process
 Y: Process
-
-
-NO_EVENTS: list[Event]
-NO_EVENTS = list()
 
 
 class Alphabet(Any):
@@ -106,11 +119,45 @@ STOPαVMS = STOP  # todo: associate with αVMS
 STOPαVMC = STOP  # todo: associate with αVMC
 
 
+#
+# FIXME: Think up how to code Dynamic Scope
+#
+
+
+PROCESSES_BY_VNAME: dict[str, list[Process]]
+PROCESSES_BY_VNAME = collections.defaultdict(list)
+
+
+def vname_push(vname, process) -> None:
+    PROCESSES_BY_VNAME[vname].append(process)
+
+
+def vname_peek(vname) -> Process:
+
+    m = re.match(r"^CTN[(]([0-9]+)[)]$", string=vname)  # FIXME: ugly, brittle, adequate for now
+    if m:
+        n = int(m.group(1))
+        print(f"Forming CTN({n})")
+        return CTN(n)
+
+    processes = PROCESSES_BY_VNAME[vname]
+    assert processes, (vname, processes)
+    process = processes[-1]
+
+    return process
+
+
+def vname_pop(vname, process) -> None:
+    peek = vname_peek(vname)
+    assert peek is process, (peek, process)
+    PROCESSES_BY_VNAME[vname].pop()
+
+
 # 1.1.1 Prefix
 
 
 class GuardedProcess(Process):
-    """Event x, then Process P"""
+    """Block till Event x, then run through Process P"""
 
     # α(x → P) = αP when x ∈ αP
 
@@ -143,7 +190,7 @@ class GuardedProcess(Process):
         assert len(guards) >= 1, (len(guards), guards)
 
     def guards(self) -> list[Event]:
-        """List the Guards of the Process"""
+        """List the Guarding Events of the Process, from first to last"""
 
         if isinstance(self.events, Event):
             event = self.events
@@ -153,13 +200,55 @@ class GuardedProcess(Process):
 
         return guards
 
-    def menu_choice(self) -> Event:
+    def menu_choices(self) -> list[Event]:
+        """Form a List of the one Event which is the first Guard of the Process"""
+
+        event = self.only_menu_choice()
+        events = [event]
+
+        return events
+
+    def only_menu_choice(self) -> Event:
         """Say which Event is the first Guard of the Process"""
 
         guards = self.guards()
-        menu_choice = guards[0]
+        only_menu_choice = guards[0]
 
-        return menu_choice
+        return only_menu_choice
+
+    def form_event_process(self, event: Event) -> "Process":
+
+        only_menu_choice = self.only_menu_choice()
+        assert event == only_menu_choice, (event, only_menu_choice)
+
+        #
+
+        guards = self.guards()
+        if len(guards) == 1:
+
+            proc = self.process
+            if not isinstance(proc, Process):
+                vname = self.process
+                proc = vname_peek(vname)
+
+            return proc
+
+        #
+
+        events = self.events
+        assert isinstance(events, list), (type(events), events)
+
+        less_events = list(events)
+
+        assert less_events[0] == only_menu_choice, (less_events[0], only_menu_choice)
+        less_events.pop(0)
+
+        assert isinstance(less_events[0], str), (type(less_events[0]), less_events[0])
+        less_events.pop(0)
+
+        proc = GuardedProcess(self.start, less_events, self.then, self.process, self.end)
+
+        return proc
 
 
 # we say (x → (y → STOP)), we don't say (x → y)'
@@ -182,12 +271,12 @@ class GuardedProcess(Process):
 
 # X1
 # (coin → STOPαVMS)
-GuardedProcess("(", coin, " → ", STOPαVMS, ")")
+U1 = GuardedProcess("(", coin, " → ", STOPαVMS, ")")
 
 
 # X2
 # (coin → (choc → (coin → (choc → STOPαVMS))))
-GuardedProcess(
+U2 = GuardedProcess(
     "(",
     coin,
     " → ",
@@ -219,13 +308,16 @@ CTR = GuardedProcess("(", [right, " → ", up, " → ", right, " → ", right], 
 #
 
 
+# CLOCK = (tick → CLOCK)  # tick → tick → tick → ...
+
 tick = Event("tick")
 αCLOCK = Alphabet([tick])
 
 CLOCK: Process
 CLOCK = GuardedProcess("(", tick, " → ", "CLOCK", ")", doc="a perpetual clock")
+vname_push("CLOCK", process=CLOCK)
 
-# CLOCK = (tick → CLOCK)  # tick → tick → tick → ...
+CLOCK_0 = CLOCK  # open up for reassignment
 
 
 class RecursiveProcessWithAlphabet(Process):
@@ -259,6 +351,20 @@ class RecursiveProcessWithAlphabet(Process):
         self.pmark = pmark
         self.process = process
 
+    def menu_choices(self) -> list[Event]:
+        proc = self.process
+        events = proc.menu_choices()
+        return events
+
+    def form_event_process(self, event: Event) -> Process:
+        proc = self.process
+
+        vname_push(self.vname, process=self)
+        event_proc = proc.form_event_process(event)
+        # vname_pop(self.vname, process=self)  # todo: make this work
+
+        return event_proc
+
 
 class RecursiveProcess(RecursiveProcessWithAlphabet):
     """The process X such that X = F(X)"""
@@ -291,8 +397,6 @@ class RecursiveProcess(RecursiveProcessWithAlphabet):
 
 # X1
 
-reassignments.append(("CLOCK", CLOCK))
-
 CLOCK = RecursiveProcessWithAlphabet(
     "μ ",
     "X",
@@ -310,8 +414,6 @@ CLOCK = RecursiveProcessWithAlphabet(
 # VMS = (coin → (choc → VMS))
 # VMS = μ X : {coin, choc} • (coin → (choc → X ))
 
-reassignments.append(("VMS", VMS))
-
 VMS = GuardedProcess(  # (replaces earlier less complete definition)
     "(",
     [coin, " → ", choc],
@@ -321,13 +423,15 @@ VMS = GuardedProcess(  # (replaces earlier less complete definition)
     doc="the simple vending machine",
 )
 
+vname_push("VMS", process=VMS)
+
 
 # X3
 
 # CH5A = (in5p → out2p → out1p → out2p → CH5A)
 
-in5p = Event("the insertion of a five penny coin")
-out2p = Event("the extraction of two pennies in change")
+in5p = Event("in5p")  # the insertion of a five penny coin
+out2p = Event("out2p")  # the extraction of two pennies in change
 αCH5A = Alphabet([in5p, out2p, out1p])
 
 CH5A = GuardedProcess(
@@ -338,6 +442,8 @@ CH5A = GuardedProcess(
     ")",
     doc="a machine that gives change for 5p repeatedly",
 )
+
+vname_push("CH5A", process=CH5A)
 
 
 # X4
@@ -352,6 +458,8 @@ CH5B = GuardedProcess(
     ")",
     doc="a different change-giving machine with the same alphabet",
 )
+
+vname_push("CH5B", process=CH5B)
 
 
 #
@@ -392,13 +500,27 @@ class ChoiceProcess(Process):
 
     def menu_choices(self) -> list[Event]:
         procs = self.menu_procs()
-        events = list(_.menu_choice() for _ in procs)
+        events = list(_.only_menu_choice() for _ in procs)
         return events
 
     def menu_procs(self) -> list[GuardedProcess]:
         choices = self.choices
         procs = list(_ for _ in choices if isinstance(_, GuardedProcess))
         return procs
+
+    def form_event_process(self, event: Event) -> Process:
+
+        menu_procs = self.menu_procs()
+        menu_choices = self.menu_choices()
+
+        assert event in menu_choices, (event, menu_choices)
+
+        for menu_proc in menu_procs:
+            only_menu_choice = menu_proc.only_menu_choice()
+            if event == only_menu_choice:
+                return menu_proc.form_event_process(event)
+
+        assert False, (event, menu_choices)
 
 
 # (one example of compilation failure, from the digression past X7 of 1.1.3 Choice)
@@ -470,7 +592,7 @@ class ChoiceProcess(Process):
 
 # (up → STOP | right → right → up → STOP)
 
-ChoiceProcess(
+U3 = ChoiceProcess(
     "(",
     [
         GuardedProcess("", up, " → ", STOP, ""),
@@ -501,6 +623,8 @@ CH5C = GuardedProcess(
     ),
     "",
 )
+
+vname_push("CH5C", process=CH5C)
 
 
 # X3
@@ -550,8 +674,6 @@ VMCT = RecursiveProcess(
 #       | in1p → (large → VMC | in1p → STOP)
 #   )
 # )
-
-reassignments.append(("VMC", VMC))
 
 VMC = ChoiceProcess(
     "(",
@@ -605,6 +727,8 @@ VMC = ChoiceProcess(
     ")",
 )
 
+vname_push("VMC", process=VMC)
+
 
 # X5
 
@@ -635,11 +759,11 @@ VMS2 = GuardedProcess("(", coin, " → ", VMCRED, ")")
 
 # X7
 
-in_0 = Event("input of zero on its input channel")  # they choose inputs
-in_1 = Event("input of one on its input channel")
+in_0 = Event("in_0")  # input of zero on its input channel")  # they choose inpu
+in_1 = Event("in_1")  # input of one on its input channel
 
-out_0 = Event("output of zero on its output channel")  # it chooses outputs
-out_1 = Event("output of one on its output channel")
+out_0 = Event("out_0")  # output of zero on its output channel")  # it chooses outpu
+out_1 = Event("out_1")  # output of one on its output channel
 
 COPYBIT = RecursiveProcess(  # [exact same structure as VMCRED]
     "μ ",
@@ -682,8 +806,151 @@ COPYBIT = RecursiveProcess(  # [exact same structure as VMCRED]
 #
 
 
+# X1
+
+# original text speaks of DD, O, and L
+# but to speak of 'O =' clashes w Flake8 E741 'ambiguous variable name' ban against 'O ='
+
+setorange = Event("setorange")
+setlemon = Event("setlemon")
+orange = Event("orange")
+lemon = Event("lemon")
+
+αDD = αDD_O = αDD_L = Alphabet([setorange, setlemon, orange, lemon])
+
+DD = ChoiceProcess(
+    "(",
+    [
+        GuardedProcess("", setorange, " → ", "DD_O", ""),
+        "|",
+        GuardedProcess("", setlemon, " → ", "DD_L", ""),
+    ],
+    ")",
+)
+
+DD_O = ChoiceProcess(
+    "(",
+    [
+        GuardedProcess("", orange, " → ", "DD_O", ""),
+        "|",
+        GuardedProcess("", setlemon, " → ", "DD_L", ""),
+        "|",
+        GuardedProcess("", setorange, " → ", "DD_O", ""),
+    ],
+    ")",
+)
+
+DD_L = ChoiceProcess(
+    "(",
+    [
+        GuardedProcess("", lemon, " → ", "DD_L", ""),
+        "|",
+        GuardedProcess("", setorange, " → ", "DD_O", ""),
+        "|",
+        GuardedProcess("", setlemon, " → ", "DD_L", ""),
+    ],
+    ")",
+)
+
+vname_push("DD_L", process=DD_L)
+vname_push("DD_O", process=DD_O)
+
+
+# X2 Events
+
+around = Event("around")
+down = Event("down")
+
+
+# X2 Process
+
+
+def CTN(n: int) -> Process:
+
+    if n == 0:
+        P = ChoiceProcess(
+            "(",
+            [
+                GuardedProcess("", up, " → ", f"CTN({1})", ""),
+                "|",
+                GuardedProcess("", around, " → ", f"CTN({0})", ""),
+            ],
+            ")",
+        )
+        return P
+
+    P = ChoiceProcess(
+        "(",
+        [
+            GuardedProcess("", up, " → ", f"CTN({n + 1})", ""),
+            "|",
+            GuardedProcess("", down, " → ", f"CTN({n - 1})", ""),
+        ],
+        ")",
+    )
+
+    return P
+
+
 #
-# As if Import Csp
+# 1.2 Pictures (nothing here yet)
+#
+
+
+#
+# 1.3 Laws (nothing here yet)
+#
+
+
+#
+# 1.4 Implementation of processes
+#
+
+
+def process_walk(P: Process) -> None:
+
+    Q = P
+    while True:
+        events = Q.menu_choices()
+        event_strs = list(str(_) for _ in events)
+
+        while True:
+            print(event_strs)
+
+            line = sys.stdin.readline()
+
+            if not events:
+                print("BLEEP")
+                return
+
+            if len(events) == 1:
+                event = events[0]
+                break
+
+            strip = line.strip()
+            if strip in event_strs:
+                event = events[event_strs.index(strip)]
+                break
+
+        Q = Q.form_event_process(event)
+
+
+#
+# 1.5 Traces
+#
+
+#
+# FIXME: Run well from the Sh Command Line
+#
+
+
+def main() -> None:
+
+    assert sys.argv[1:] == ["--yolo"], (sys.argv[1:],)
+
+
+#
+# FIXME: React well when called from Pq
 #
 
 
