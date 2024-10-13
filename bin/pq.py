@@ -2040,6 +2040,8 @@ VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 # CUP_1_X = "\x1B" "[" ";{}H"  # CSI 04/08 Cursor Position
 CUP_Y_X = "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
 
+ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head  # 2 All # 3 Scrollback
+
 CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation  # "\t" is Pn 1
 CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
 

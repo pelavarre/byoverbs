@@ -8,25 +8,56 @@ work with Communicating Sequential Processes (CSP)
 docs:
   https://en.wikipedia.org/wiki/Communicating_sequential_processes
   http://www.usingcsp.com/cspbook.pdf (4/Dec/2022)
+
+examples:
+
+  U1 = (coin → STOP)
+  U2 = (coin → (choc → (coin → (choc → STOP))))
+  CTR = (right → up → right → right → STOP)
+  CLOCK_0 = (tick → CLOCK_0)
+  CLOCK = μ X:{tick} • (tick → X)
+  VMS = (coin → choc → VMS)
+  CH5A = (in5p → out2p → out1p → out2p → CH5A)
+  CH5B = (in5p → out1p → out1p → out1p → out2p → CH5B)
+  U3 = (up → STOP | right → right → up → STOP)
+  CH5C = in5p → (out1p → out1p → out1p → out2p → CH5C | out2p → out1p → out2p → CH5C)
+  VMCT = μ X • coin → choc → X | toffee → X
+  VMC = (in2p → (large → VMC | small → out1p → VMC)
+    | in1p → (small → VMC | in1p → (large → VMC | in1p → STOP)))
+  VMCRED = μ X • (coin → choc → X | choc → coin → X)
+  VMS2 = (coin → μ X • (coin → choc → X | choc → coin → X))
+  COPYBIT = μ X • (in_0 → out_0 → X | in_1 → out_1 → X)
+  DD = (setorange → DD_O | setlemon → DD_L)
+  DD_O = (orange → DD_O | setlemon → DD_L | setorange → DD_O)
+  DD_L = (lemon → DD_L | setorange → DD_O | setlemon → DD_L)
+
 """
 
 # code reviewed by People, Black, Flake8, & MyPy
 
 
+import code
 import collections
 import dataclasses
 import json
+import random
 import re
+import string
 import sys
 
 # import typing
 
 
-@dataclasses.dataclass(order=True, frozen=True)
+@dataclasses.dataclass(order=True)  # , frozen=True)  # todo: why not frozen
 class Any:
     """A thing that can be"""
 
     doc: str | None
+
+    def __str__(self) -> str:
+        doc = self.doc
+        str_doc = str(doc)  # 'None'  # 'alef'
+        return str_doc
 
 
 #
@@ -38,18 +69,18 @@ A: set  # [implied much later in the text, like in the digression past X7 of 1.1
 B: set
 
 
-class Event(Any):
+@dataclasses.dataclass(order=True, frozen=True)
+class Event:  # todo: why not a Subclass of a Frozen Any ?
     """A thing that happens, especially one of importance"""
 
-    # we don't ask 'whether one event occurs simultaneously with another'
-
-    def __init__(self, doc: str) -> None:
-        super().__init__(doc)
+    doc: str
 
     def __repr__(self) -> str:
         doc = self.doc
         assert doc
         return doc
+
+    # we don't ask 'whether one event occurs simultaneously with another'
 
 
 NO_EVENTS: list[Event]
@@ -70,8 +101,12 @@ y: Event
 z: Event
 
 
+@dataclasses.dataclass(order=True)  # , frozen=True)  # todo: why not frozen
 class Process(Any):
     """A pattern of behaviour"""
+
+    def __call__(self) -> None:
+        process_walk(self)
 
     def menu_choices(self) -> list[Event]:
 
@@ -85,24 +120,23 @@ class Process(Any):
         raise NotImplementedError(event)
 
 
-VMS: Process
-VMS = Process("the simple vending machine")
-VMS_0 = VMS  # open up for reassignment
+VMS_0 = Process("VMS_0")  # the simple vending machine
+# todo: cope with reassignments, to allow 'VMS =' both as an early example and also later
 
-VMC: Process
-VMC = Process("the complex vending machine")
-VMC_0 = VMC  # open up for reassignment
+VMC_0 = Process("VMC_0")  # the complex vending machine
+# todo: cope with reassignments, to allow 'VMC =' both as an early example and also later
 
 P: Process  # an arbitrary process
 Q: Process
 R: Process
 
-STOP = Process("[a process who produces no more events of any alphabet]")
+STOP = Process("STOP")  # a process that takes no more events
 
 X: Process  # an alias of a process
 Y: Process
 
 
+@dataclasses.dataclass(order=True)  # , frozen=True)  # todo: why not frozen
 class Alphabet(Any):
     events: list[Event]  # zero or more Events
 
@@ -110,6 +144,10 @@ class Alphabet(Any):
         super().__init__(doc)
 
         self.events = list(events)  # 'copied better than aliased'
+
+    def __str__(self) -> str:
+        rep = "{" + ", ".join(str(_) for _ in self.events) + "}"
+        return rep
 
 
 αVMS = Alphabet([coin, choc])
@@ -156,6 +194,7 @@ def vname_pop(vname, process) -> None:
 # 1.1.1 Prefix
 
 
+@dataclasses.dataclass(order=True)  # , frozen=True)  # todo: why not frozen
 class GuardedProcess(Process):
     """Block till Event x, then run through Process P"""
 
@@ -188,6 +227,22 @@ class GuardedProcess(Process):
 
         guards = self.guards()
         assert len(guards) >= 1, (len(guards), guards)
+
+    def __str__(self) -> str:
+
+        rep = ""
+
+        rep += self.start
+        if isinstance(self.events, Event):
+            event = self.events
+            rep += str(event)
+        else:
+            rep += "".join(str(_) for _ in self.events)
+        rep += self.then
+        rep += str(self.process)
+        rep += self.end
+
+        return rep
 
     def guards(self) -> list[Event]:
         """List the Guarding Events of the Process, from first to last"""
@@ -309,17 +364,18 @@ CTR = GuardedProcess("(", [right, " → ", up, " → ", right, " → ", right], 
 
 
 # CLOCK = (tick → CLOCK)  # tick → tick → tick → ...
+# (an alt CLOCK = comes later)
 
 tick = Event("tick")
 αCLOCK = Alphabet([tick])
 
-CLOCK: Process
-CLOCK = GuardedProcess("(", tick, " → ", "CLOCK", ")", doc="a perpetual clock")
-vname_push("CLOCK", process=CLOCK)
+CLOCK_0 = GuardedProcess("(", tick, " → ", "CLOCK_0", ")", doc="a perpetual clock")
+vname_push("CLOCK_0", process=CLOCK_0)
 
-CLOCK_0 = CLOCK  # open up for reassignment
+# todo: cope with reassignments, to allow 'CLOCK =' both as an early example and also later
 
 
+@dataclasses.dataclass(order=True)  # , frozen=True)  # todo: why not frozen
 class RecursiveProcessWithAlphabet(Process):
     """The process X with alphabet A such that X = F(X)"""
 
@@ -351,6 +407,19 @@ class RecursiveProcessWithAlphabet(Process):
         self.pmark = pmark
         self.process = process
 
+    def __str__(self) -> str:
+
+        rep = ""
+
+        rep += self.vmark
+        rep += self.vname
+        rep += self.amark
+        rep += str(self.alphabet)
+        rep += self.pmark
+        rep += str(self.process)
+
+        return rep
+
     def menu_choices(self) -> list[Event]:
         proc = self.process
         events = proc.menu_choices()
@@ -361,11 +430,12 @@ class RecursiveProcessWithAlphabet(Process):
 
         vname_push(self.vname, process=self)
         event_proc = proc.form_event_process(event)
-        # vname_pop(self.vname, process=self)  # todo: make this work
+        # vname_pop(self.vname, process=self)  # todo: make vname_pop's work
 
         return event_proc
 
 
+@dataclasses.dataclass(order=True)  # , frozen=True)  # todo: why not frozen
 class RecursiveProcess(RecursiveProcessWithAlphabet):
     """The process X such that X = F(X)"""
 
@@ -393,6 +463,17 @@ class RecursiveProcess(RecursiveProcessWithAlphabet):
             process=process,
             doc=doc,
         )
+
+    def __str__(self) -> str:
+
+        rep = ""
+
+        rep += self.vmark
+        rep += self.vname
+        rep += self.pmark
+        rep += str(self.process)
+
+        return rep
 
 
 # X1
@@ -467,6 +548,7 @@ vname_push("CH5B", process=CH5B)
 #
 
 
+@dataclasses.dataclass(order=True)  # , frozen=True)  # todo: why not frozen
 class ChoiceProcess(Process):
     """Event x then P, choice Event y then Q ”"""
 
@@ -497,6 +579,15 @@ class ChoiceProcess(Process):
             if count != 1:
                 breakpoint()
             assert count == 1, (guard, count)
+
+    def __str__(self) -> str:
+
+        rep = ""
+        rep += self.start
+        rep += "".join(str(_) for _ in self.choices)
+        rep += self.end
+
+        return rep
 
     def menu_choices(self) -> list[Event]:
         procs = self.menu_procs()
@@ -541,12 +632,12 @@ class ChoiceProcess(Process):
 #     "(",
 #     [
 #         GuardedProcess("(", x, " → ", P, ")"),
-#         "|",
+#         " | ",
 #         ChoiceProcess(
 #             "(",
 #             [
 #                 GuardedProcess("(", y, " → ", Q, ")"),
-#                 "|",
+#                 " | ",
 #                 GuardedProcess("(", z, " → ", R, ")"),
 #             ],
 #             ")",
@@ -576,7 +667,7 @@ class ChoiceProcess(Process):
 #         "(",
 #         [
 #             GuardedProcess("(", [x, " → ", y], " → ", P, ")"),
-#             "|",
+#             " | ",
 #             GuardedProcess("(", [x, " → ", z], " → ", Q, ")"),
 #         ],
 #         ")",
@@ -596,7 +687,7 @@ U3 = ChoiceProcess(
     "(",
     [
         GuardedProcess("", up, " → ", STOP, ""),
-        "|",
+        " | ",
         GuardedProcess("", [right, " → ", right, " → ", up], " → ", STOP, ""),
     ],
     ")",
@@ -613,13 +704,13 @@ CH5C = GuardedProcess(
     in5p,
     " → ",
     ChoiceProcess(
-        "",
+        "(",
         [
             GuardedProcess("", [out1p, " → ", out1p, " → ", out1p, " → ", out2p], " → ", "CH5C", ""),
-            "|",
+            " | ",
             GuardedProcess("", [out2p, " → ", out1p, " → ", out2p], " → ", "CH5C", ""),
         ],
-        "",
+        ")",
     ),
     "",
 )
@@ -645,7 +736,7 @@ VMCT = RecursiveProcess(
             "",
             [
                 GuardedProcess("", choc, " → ", "X", ""),
-                "|",
+                " | ",
                 GuardedProcess("", toffee, " → ", "X", ""),
             ],
             "",
@@ -686,14 +777,14 @@ VMC = ChoiceProcess(
                 "(",
                 [
                     GuardedProcess("", large, " → ", "VMC", ""),
-                    "|",
+                    " | ",
                     GuardedProcess("", [small, " → ", out1p], " → ", "VMC", ""),
                 ],
                 ")",
             ),
             "",
         ),
-        "|",
+        " | ",
         GuardedProcess(
             "",
             in1p,
@@ -702,7 +793,7 @@ VMC = ChoiceProcess(
                 "(",
                 [
                     GuardedProcess("", small, " → ", "VMC", ""),
-                    "|",
+                    " | ",
                     GuardedProcess(
                         "",
                         in1p,
@@ -711,7 +802,7 @@ VMC = ChoiceProcess(
                             "(",
                             [
                                 GuardedProcess("", large, " → ", "VMC", ""),
-                                "|",
+                                " | ",
                                 GuardedProcess("", in1p, " → ", STOP, ""),
                             ],
                             ")",
@@ -742,7 +833,7 @@ VMCRED = RecursiveProcess(
         "(",
         [
             GuardedProcess("", [coin, " → ", choc], " → ", "X", ""),
-            "|",
+            " | ",
             GuardedProcess("", [choc, " → ", coin], " → ", "X", ""),
         ],
         ")",
@@ -773,7 +864,7 @@ COPYBIT = RecursiveProcess(  # [exact same structure as VMCRED]
         "(",
         [
             GuardedProcess("", [in_0, " → ", out_0], " → ", "X", ""),
-            "|",
+            " | ",
             GuardedProcess("", [in_1, " → ", out_1], " → ", "X", ""),
         ],
         ")",
@@ -822,7 +913,7 @@ DD = ChoiceProcess(
     "(",
     [
         GuardedProcess("", setorange, " → ", "DD_O", ""),
-        "|",
+        " | ",
         GuardedProcess("", setlemon, " → ", "DD_L", ""),
     ],
     ")",
@@ -832,9 +923,9 @@ DD_O = ChoiceProcess(
     "(",
     [
         GuardedProcess("", orange, " → ", "DD_O", ""),
-        "|",
+        " | ",
         GuardedProcess("", setlemon, " → ", "DD_L", ""),
-        "|",
+        " | ",
         GuardedProcess("", setorange, " → ", "DD_O", ""),
     ],
     ")",
@@ -844,9 +935,9 @@ DD_L = ChoiceProcess(
     "(",
     [
         GuardedProcess("", lemon, " → ", "DD_L", ""),
-        "|",
+        " | ",
         GuardedProcess("", setorange, " → ", "DD_O", ""),
-        "|",
+        " | ",
         GuardedProcess("", setlemon, " → ", "DD_L", ""),
     ],
     ")",
@@ -865,6 +956,7 @@ down = Event("down")
 # X2 Process
 
 
+# todo: teach CTN(n) to detect when walking again into CTN(n)
 def CTN(n: int) -> Process:
 
     if n == 0:
@@ -872,7 +964,7 @@ def CTN(n: int) -> Process:
             "(",
             [
                 GuardedProcess("", up, " → ", f"CTN({1})", ""),
-                "|",
+                " | ",
                 GuardedProcess("", around, " → ", f"CTN({0})", ""),
             ],
             ")",
@@ -883,7 +975,7 @@ def CTN(n: int) -> Process:
         "(",
         [
             GuardedProcess("", up, " → ", f"CTN({n + 1})", ""),
-            "|",
+            " | ",
             GuardedProcess("", down, " → ", f"CTN({n - 1})", ""),
         ],
         ")",
@@ -909,15 +1001,33 @@ def CTN(n: int) -> Process:
 
 def process_walk(P: Process) -> None:
 
+    print("#", P)
+    print()
+
     Q = P
     while True:
+        if Q is P:
+            print()
+
         events = Q.menu_choices()
         event_strs = list(str(_) for _ in events)
 
+        # bit = True
         while True:
-            print(event_strs)
+            # bit = not bit
 
+            print(event_strs)
+            # if bit:
+            #     print(" ", end="")
+
+            sys.stdout.flush()
             line = sys.stdin.readline()
+
+            if not line:
+                print("⌃D TTY EOF")
+                return
+
+            strip = line.strip()
 
             if not events:
                 print("BLEEP")
@@ -925,14 +1035,26 @@ def process_walk(P: Process) -> None:
 
             if len(events) == 1:
                 event = events[0]
+                if strip != str(event):
+                    print("\x1B[A", end="")
+                    print(event)
                 break
 
-            strip = line.strip()
             if strip in event_strs:
                 event = events[event_strs.index(strip)]
                 break
 
+            event = random.choice(events)
+            print("\x1B[A", end="")
+            print(event)
+            break
+
+            # print("\x1B[A" "\x1B[A" "\x1B[J", end="")
+
         Q = Q.form_event_process(event)
+
+        # CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+        # ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail
 
 
 #
@@ -948,9 +1070,42 @@ def main() -> None:
 
     assert sys.argv[1:] == ["--yolo"], (sys.argv[1:],)
 
+    #
+
+    globals_dict = globals()
+    items = list(globals_dict.items())  # = sorted(globals_dict.items())
+
+    locals_dict = dict((k, v) for (k, v) in items if not (set(k) & set(string.ascii_lowercase)))
+
+    del locals_dict["NO_EVENTS"]
+    del locals_dict["PROCESSES_BY_VNAME"]
+
+    #
+
+    print()
+
+    for pname, process in locals_dict.items():
+        if isinstance(process, Process):
+            if pname in ["VMS_0", "VMC_0", "STOP"]:
+                continue
+            if pname in ["STOPαVMS", "STOPαVMC", "STOPαCTR"]:
+                continue
+
+            print(pname, "=", process)
+
+    print()
+
+    #
+
+    code.interact(banner="", local=locals_dict, exitmsg="")
+
+    print("bye")
+
+    # 'code.interact' adds '__builtins__' into the dir()
+
 
 #
-# FIXME: React well when called from Pq
+# todo: React well when called from Pq
 #
 
 
@@ -960,6 +1115,15 @@ def csprocess(ilines) -> list[str]:
 
     olines = dumps.splitlines()
     return olines
+
+
+#
+# Run from the Sh Command Line, if not imported
+#
+
+
+if __name__ == "__main__":
+    main()
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
