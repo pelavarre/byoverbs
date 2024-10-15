@@ -1547,6 +1547,7 @@ def py_graf_insert_imports(py_graf) -> tuple[list[str], list[str]]:
     importables.append("socket")
     importables.append("string")
     importables.append("subprocess")
+    importables.append("urllib")
     importables.append("urllib.parse")
 
     importables.append("csp")
