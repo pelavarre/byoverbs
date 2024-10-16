@@ -12,7 +12,7 @@ docs:
 grammar:
 
   Instruction = ( Assignment | ClosedProcess | Name ) End
-  Assignment = Name "=" ( MarkedProcess | Alphabet | Name )
+  Assignment = Name "=" { Name "=" } ( MarkedProcess | Alphabet | Name )
   Process = MarkedProcess | Name
   MarkedProcess = RecursiveProcess | ChoiceProcess | GuardedProcess | ClosedProcess
   RecursiveProcess = "μ" Name [ ":" Alphabet ] "•" Process
@@ -20,7 +20,8 @@ grammar:
   GuardedProcess = "(" OpenGuardedProcess ")" | OpenGuardedProcess
   OpenGuardedProcess = Event "→" { Event "→" } Process
   ClosedProcess = "(" MarkedProcess | Name ")"
-  Alphabet = "{" Event { "," Event } "}"
+  Alphabet = EventSet | Name
+  EventSet = "{" Event { "," Event } "}"
   Event = Name
 
 examples:
@@ -35,7 +36,7 @@ examples:
   CH5B = (in5p → out1p → out1p → out1p → out2p → CH5B)
   U3 = (up → STOP | right → right → up → STOP)
   CH5C = in5p → (out1p → out1p → out1p → out2p → CH5C | out2p → out1p → out2p → CH5C)
-  VMCT = μ X • coin → choc → X | toffee → X
+  VMCT = μ X • coin → (choc → X | toffee → X)
   VMC = (in2p → (large → VMC | small → out1p → VMC)
     | in1p → (small → VMC | in1p → (large → VMC | in1p → STOP)))
   VMCRED = μ X • (coin → choc → X | choc → coin → X)
@@ -45,11 +46,18 @@ examples:
   DD_O = (orange → DD_O | setlemon → DD_L | setorange → DD_O)
   DD_L = (lemon → DD_L | setorange → DD_O | setlemon → DD_L)
 
+  αVMS = {coin, choc}
+  αVMC = {in1p, in2p, small, large, out1p}
+  αCTR = {up, right}
+  αCLOCK = {tick}
+  αCH5A = {in5p, out2p, out1p}
+  αDD = αDD_O = αDD_L = {setorange, setlemon, orange, lemon}
 """
 
 # code reviewed by People, Black, Flake8, & MyPy
 
 
+import __main__
 import code
 import collections
 import dataclasses
@@ -58,6 +66,7 @@ import random
 import re
 import string
 import sys
+import textwrap
 
 # import typing
 
@@ -97,7 +106,7 @@ class Event:  # todo: why not a Subclass of a Frozen Any ?
     # we don't ask 'whether one event occurs simultaneously with another'
 
 
-NO_EVENTS: list[Event]
+NO_EVENTS: list[Event | str]
 NO_EVENTS = list()
 
 
@@ -152,15 +161,44 @@ Y: Process
 
 @dataclasses.dataclass(order=True)  # , frozen=True)  # todo: why not frozen
 class Alphabet(Any):
-    events: list[Event]  # zero or more Events
+    events: list[Event | str]  # zero or more Events, separated by "," Marks
 
-    def __init__(self, events: list[Event] = NO_EVENTS, doc: str | None = None) -> None:
+    def __init__(self, events=NO_EVENTS, doc: str | None = None) -> None:
         super().__init__(doc)
 
-        self.events = list(events)  # 'copied better than aliased'
+        correcteds: list[Event | str]
+        correcteds = list()
+
+        marking = False
+        for event_or_str in events:
+
+            if isinstance(event_or_str, Event):
+                event = event_or_str
+                if marking:
+                    correcteds.append(", ")
+                correcteds.append(event)
+                marking = True
+
+            else:
+                assert isinstance(event_or_str, str), (type(event_or_str), event_or_str)
+                mark = event_or_str.strip()
+                if mark != ",":
+                    event_name = event_or_str
+                    if marking:
+                        correcteds.append(", ")
+                    correcteds.append(event_name)
+                    marking = True
+
+                else:
+                    markplus = event_or_str
+                    assert marking, (marking, markplus)
+                    correcteds.append(markplus)
+                    marking = False
+
+        self.events = correcteds
 
     def __str__(self) -> str:
-        rep = "{" + ", ".join(str(_) for _ in self.events) + "}"
+        rep = "{" + "".join(str(_) for _ in self.events) + "}"
         return rep
 
 
@@ -210,7 +248,7 @@ def vname_pop(vname, process) -> None:
 
 @dataclasses.dataclass(order=True)  # , frozen=True)  # todo: why not frozen
 class GuardedProcess(Process):
-    """Block till Event x, then run through Process P"""
+    """Block till Event x, then run through Process P: 'x then P'"""
 
     # α(x → P) = αP when x ∈ αP
 
@@ -385,6 +423,9 @@ tick = Event("tick")
 
 CLOCK_0 = GuardedProcess("(", tick, " → ", "CLOCK_0", ")", doc="a perpetual clock")
 vname_push("CLOCK_0", process=CLOCK_0)
+
+CLOCK_1 = GuardedProcess("(", tick, " → ", "CLOCK_1", ")", doc="a perpetual clock")
+vname_push("CLOCK_1", process=CLOCK_1)
 
 # todo: cope with reassignments, to allow 'CLOCK =' both as an early example and also later
 
@@ -590,8 +631,6 @@ class ChoiceProcess(Process):
 
         count_by_guard = collections.Counter(menu_choices)
         for guard, count in count_by_guard.items():
-            if count != 1:
-                breakpoint()
             assert count == 1, (guard, count)
 
     def __str__(self) -> str:
@@ -747,13 +786,13 @@ VMCT = RecursiveProcess(
         coin,
         " → ",
         ChoiceProcess(
-            "",
+            "(",
             [
                 GuardedProcess("", choc, " → ", "X", ""),
                 " | ",
                 GuardedProcess("", toffee, " → ", "X", ""),
             ],
-            "",
+            ")",
         ),
         "",
     ),
@@ -1076,7 +1115,7 @@ def process_walk(P: Process) -> None:
 #
 
 #
-# FIXME: Run well from the Sh Command Line
+# Run well from the Sh Command Line
 #
 
 
@@ -1084,7 +1123,13 @@ def main() -> None:
 
     assert sys.argv[1:] == ["--yolo"], (sys.argv[1:],)
 
-    #
+    # Run some quick quiet self-test's
+
+    csp_texts = fetch_csp_texts()
+    try_parser(csp_texts)
+    try_runner(csp_texts)
+
+    # Scrape out a Dict for 'code.interact'
 
     globals_dict = globals()
     items = list(globals_dict.items())  # = sorted(globals_dict.items())
@@ -1094,22 +1139,27 @@ def main() -> None:
     del locals_dict["NO_EVENTS"]
     del locals_dict["PROCESSES_BY_VNAME"]
 
-    #
+    # Print the hand-assembled Process'es and Alphabet's
 
     print()
 
-    for pname, process in locals_dict.items():
-        if isinstance(process, Process):
-            if pname in ["VMS_0", "VMC_0", "STOP"]:
+    for iname, ivalue in locals_dict.items():
+        if isinstance(ivalue, Process):
+            if iname in ["VMS_0", "VMC_0", "STOP"]:
                 continue
-            if pname in ["STOPαVMS", "STOPαVMC", "STOPαCTR"]:
+            if iname in ["STOPαVMS", "STOPαVMC", "STOPαCTR"]:
                 continue
-
-            print(pname, "=", process)
+            print(iname, "=", ivalue)
 
     print()
 
-    #
+    for iname, ivalue in locals_dict.items():
+        if isinstance(ivalue, Alphabet):
+            print(iname, "=", ivalue)
+
+    print()
+
+    # Run one Interactive Console, till exit
 
     code.interact(banner="", local=locals_dict, exitmsg="")
 
@@ -1134,6 +1184,38 @@ def csprocess(ilines) -> list[str]:
 #
 # Parse CSP Instructions
 #
+
+
+def fetch_csp_texts() -> list[str]:
+
+    doc = __main__.__doc__
+    assert doc, (doc,)
+
+    tail = doc[doc.index("examples:") :]
+    splitlines = tail.splitlines()
+    dedent = textwrap.dedent("\n".join(splitlines[1:]))
+    strip = dedent.strip()
+    ilines = strip.splitlines()
+
+    csp_texts = list()
+    for index, iline in enumerate(ilines):
+        if not iline.startswith(" "):
+            if iline:
+                csp_texts.append(iline)
+        else:
+            assert index >= 1, (index, iline)
+            assert ilines[index - 1], (ilines[index - 1], index, iline)
+            csp_texts[-1] += "\n" + iline
+
+    return csp_texts
+
+
+def try_parser(csp_texts) -> None:
+
+    for csp_text in csp_texts:
+        p = Parser(csp_text)
+        ok = p.take_instruction()
+        assert ok, (csp_text,)
 
 
 @dataclasses.dataclass(order=True)  # , frozen=True)
@@ -1166,12 +1248,16 @@ class Parser:
         # point out "(" found when ")" missing, and "{" found when "}" missing
 
     def take_end(self) -> bool:
-        """FIXME"""
+        """Take the End of the Text"""
 
         assert 0 <= self.index <= len(self.text)
         ok = self.index == len(self.text)
 
         return ok
+
+    #
+    # Accept one Grammar
+    #
 
     def take_instruction(self) -> bool:
         """Instruction = ( Assignment | ClosedProcess | Name ) End"""
@@ -1183,14 +1269,21 @@ class Parser:
         return ok
 
     def take_assignment(self) -> bool:
-        """Assignment = Name "=" ( MarkedProcess | Alphabet | Name )"""
+        """Assignment = Name "=" { Name "=" } ( MarkedProcess | Alphabet | Name )"""
 
         self.open_take("Assignment")
-        ok = self.close_take(
-            self.take_name()
-            and self.take_mark("=")
-            and (self.take_marked_process() or self.take_alphabet() or self.take_name())
-        )
+
+        ok = self.take_name() and self.take_mark("=")
+
+        self.open_take("AcceptOneTake")
+        try_more = ok
+        while try_more:
+            try_more = self.take_name() and self.take_mark("=")
+            self.close_accept_one_take(try_more)
+            self.open_take("AcceptOneTake")
+        self.close_accept_one_take(False)
+
+        ok = self.close_take(self.take_marked_process() or self.take_alphabet() or self.take_name())
 
         return ok
 
@@ -1276,6 +1369,14 @@ class Parser:
 
         return ok
 
+        # if ok:  # FIXME
+        #     breakpoint()
+        #     # (Pdb) p self.takes[-1][-1]
+
+        # ['OpenGuardedProcess', ['Event', ['Name', 'coin']], ['→', ' → '], ['Process', ['Name', 'STOP']]]
+
+        #  gg = csp.GuardedProcess("", [csp.coin], " → ", csp.STOP, "")
+
     def take_closed_process(self) -> bool:
         """ClosedProcess = "(" MarkedProcess | Name ")" """
 
@@ -1289,9 +1390,17 @@ class Parser:
         return ok
 
     def take_alphabet(self) -> bool:
-        """Alphabet = "{" Event { "," Event } "}" """
+        """Alphabet = EventSet | Name"""
 
         self.open_take("Alphabet")
+        ok = self.close_take(self.take_event_set() or self.take_name())
+
+        return ok
+
+    def take_event_set(self) -> bool:
+        """EventSet = "{" Event { "," Event } "}" """
+
+        self.open_take("EventSet")
         ok = self.take_mark("{") and self.take_event()
 
         self.open_take("AcceptOneTake")
@@ -1319,18 +1428,22 @@ class Parser:
     #
 
     def take_name(self) -> bool:
-        """FIXME"""
+        """Take any one Name"""
 
         index = self.index
         takes = self.takes
         text = self.text
 
-        text0 = text[index:]
-        m = re.match(r"^[a-zA-Z_][a-zA-Z_0-9]*", string=text0)
+        # Fail now if Name not found
+
+        text0 = text[index:]  # todo: more than "α" accepted with r"[a-zA-Z_]"
+        m = re.match(r"^[a-zA-Z_α][a-zA-Z_0-9]*", string=text0)
         if not m:
             return False
 
         name = m.group()
+
+        # Take the Name
 
         take: list[str]
         take = ["Name", name]
@@ -1341,14 +1454,19 @@ class Parser:
         assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
         deepest_take.append(take)
 
+        # Succeed
+
         return True
 
     def take_mark(self, mark) -> bool:
-        """FIXME"""
+        """Take a matching Mark"""
 
         index = self.index
         takes = self.takes
         text = self.text
+
+        # Capture the Blank Chars before and After the Mark,
+        # or fail now because Mark not found
 
         text0 = text[index:]
 
@@ -1360,16 +1478,20 @@ class Parser:
         text3 = text2.lstrip()
 
         len_taken_text = len(text0) - len(text3)
-        taken_text = text0[:len_taken_text]
+        markplus = text0[:len_taken_text]
+
+        # Take the MarkPlus
 
         take: list[str]
-        take = [mark, taken_text]
+        take = [mark, markplus]
 
-        self.index += len(taken_text)
+        self.index += len(markplus)
 
         deepest_take = takes[-1]
         assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
         deepest_take.append(take)
+
+        # Succeed
 
         return True
 
@@ -1378,7 +1500,7 @@ class Parser:
     #
 
     def open_take(self, name) -> None:
-        """FIXME"""
+        """Open up a List of Takes"""
 
         index = self.index
         starts = self.starts
@@ -1390,7 +1512,7 @@ class Parser:
         takes.append(take)
 
     def close_take(self, ok) -> bool:
-        """FIXME"""
+        """Commit and close a List of Takes, else backtrack"""
 
         starts = self.starts
         takes = self.takes
@@ -1409,7 +1531,7 @@ class Parser:
         return True
 
     def close_accept_one_take(self, ok) -> bool:
-        """FIXME"""
+        """Commit and close and merge a List of Takes, else backtrack"""  # todo: say this better
 
         starts = self.starts
         takes = self.takes
@@ -1426,9 +1548,28 @@ class Parser:
 
         deepest_take = takes[-1]
         assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
-        deepest_take.extend(take)
+        deepest_take.extend(take[1:])
 
         return True
+
+
+#
+#
+#
+
+
+def try_runner(csp_texts) -> None:
+
+    vm = VirtualMachine()
+
+    for csp_text in csp_texts:
+        vm.csp_text_run(csp_text)
+
+
+@dataclasses.dataclass(order=True)  # , frozen=True)
+class VirtualMachine:
+    def csp_text_run(self, csp_text) -> None:
+        pass
 
 
 #

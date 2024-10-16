@@ -934,6 +934,10 @@ adopt 'python3.8 -m py_compile' to check for syntax errors, at home and at work
 pq dao
 insert my own 'better than' into the tail -n +3 cat -n
 
+pq wviewpage
+vs https://wiki.example.com/pages/viewinfo.action?pageId=123456789
+
+
 
 ## Copied from
 
