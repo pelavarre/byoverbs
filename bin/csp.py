@@ -9,6 +9,20 @@ docs:
   https://en.wikipedia.org/wiki/Communicating_sequential_processes
   http://www.usingcsp.com/cspbook.pdf (4/Dec/2022)
 
+grammar:
+
+  Instruction = ( Assignment | ClosedProcess | Name ) End
+  Assignment = Name "=" ( MarkedProcess | Alphabet | Name )
+  Process = MarkedProcess | Name
+  MarkedProcess = RecursiveProcess | ChoiceProcess | GuardedProcess | ClosedProcess
+  RecursiveProcess = "μ" Name [ ":" Alphabet ] "•" Process
+  ChoiceProcess = GuardedProcess "|" GuardedProcess { "|" GuardedProcess }
+  GuardedProcess = "(" OpenGuardedProcess ")" | OpenGuardedProcess
+  OpenGuardedProcess = Event "→" { Event "→" } Process
+  ClosedProcess = "(" MarkedProcess | Name ")"
+  Alphabet = "{" Event { "," Event } "}"
+  Event = Name
+
 examples:
 
   U1 = (coin → STOP)
@@ -1115,6 +1129,306 @@ def csprocess(ilines) -> list[str]:
 
     olines = dumps.splitlines()
     return olines
+
+
+#
+# Parse CSP Instructions
+#
+
+
+@dataclasses.dataclass(order=True)  # , frozen=True)
+class Parser:
+
+    text: str
+    index: int
+    starts: list[int]
+    takes: list[list | str]
+
+    def __init__(self, text) -> None:
+
+        start = 0
+        starts = list()
+        starts.append(start)
+
+        takes: list[list | str]
+        take: list
+
+        takes = list()
+        take = list()
+        takes.append(take)
+
+        self.text = text
+        self.index = start
+        self.starts = starts
+        self.takes = takes
+
+        # todo: make self.text[self.index:] more available
+        # point out "(" found when ")" missing, and "{" found when "}" missing
+
+    def take_end(self) -> bool:
+        """FIXME"""
+
+        assert 0 <= self.index <= len(self.text)
+        ok = self.index == len(self.text)
+
+        return ok
+
+    def take_instruction(self) -> bool:
+        """Instruction = ( Assignment | ClosedProcess | Name ) End"""
+
+        self.open_take("Instruction")
+        ok = self.take_assignment() or self.take_closed_process() or self.take_name()
+        ok = self.close_take(ok and self.take_end())
+
+        return ok
+
+    def take_assignment(self) -> bool:
+        """Assignment = Name "=" ( MarkedProcess | Alphabet | Name )"""
+
+        self.open_take("Assignment")
+        ok = self.close_take(
+            self.take_name()
+            and self.take_mark("=")
+            and (self.take_marked_process() or self.take_alphabet() or self.take_name())
+        )
+
+        return ok
+
+    def take_process(self) -> bool:
+        """Process = MarkedProcess | Name"""
+
+        self.open_take("Process")
+        ok = self.close_take(self.take_marked_process() or self.take_name())
+
+        return ok
+
+    def take_marked_process(self) -> bool:
+        """MarkedProcess = RecursiveProcess | ChoiceProcess | GuardedProcess | ClosedProcess"""
+
+        self.open_take("MarkedProcess")
+        ok = self.close_take(
+            self.take_recursive_process()
+            or self.take_choice_process()
+            or self.take_guarded_process()
+            or self.take_closed_process()
+        )
+
+        return ok
+
+    def take_recursive_process(self) -> bool:
+        """RecursiveProcess = "μ" Name [ ":" Alphabet ] "•" Process"""
+
+        self.open_take("RecursiveProcess")
+        ok = self.take_mark("μ") and self.take_name()
+
+        if ok:
+            self.open_take("AcceptOneTake")
+            self.close_accept_one_take(self.take_mark(":") and self.take_alphabet())
+
+        ok = self.close_take(ok and self.take_mark("•") and self.take_process())
+
+        return ok
+
+    def take_choice_process(self) -> bool:
+        """ChoiceProcess = GuardedProcess "|" GuardedProcess { "|" GuardedProcess }"""
+
+        self.open_take("ChoiceProcess")
+        ok = self.take_guarded_process() and self.take_mark("|") and self.take_guarded_process()
+
+        self.open_take("AcceptOneTake")
+        try_more = ok
+        while try_more:
+            try_more = self.take_mark("|") and self.take_guarded_process()
+            self.close_accept_one_take(try_more)
+            self.open_take("AcceptOneTake")
+        self.close_accept_one_take(False)
+
+        ok = self.close_take(ok)
+
+        return ok
+
+    def take_guarded_process(self) -> bool:
+        """GuardedProcess = "(" OpenGuardedProcess ")" | OpenGuardedProcess"""
+
+        self.open_take("GuardedProcess")
+        ok = self.close_take(
+            (self.take_mark("(") and self.take_open_guarded_process() and self.take_mark(")"))
+            or self.take_open_guarded_process()
+        )
+
+        return ok
+
+    def take_open_guarded_process(self) -> bool:
+        """OpenGuardedProcess = Event "→" { Event "→" } Process"""
+
+        self.open_take("OpenGuardedProcess")
+        ok = self.take_event() and self.take_mark("→")
+
+        self.open_take("AcceptOneTake")
+        try_more = ok
+        while try_more:
+            try_more = self.take_event() and self.take_mark("→")
+            self.close_accept_one_take(try_more)
+            self.open_take("AcceptOneTake")
+        self.close_accept_one_take(False)
+
+        ok = self.close_take(ok and self.take_process())
+
+        return ok
+
+    def take_closed_process(self) -> bool:
+        """ClosedProcess = "(" MarkedProcess | Name ")" """
+
+        self.open_take("ClosedProcess")
+        ok = self.close_take(
+            self.take_mark("(")
+            and (self.take_marked_process() or self.take_name())
+            and self.take_mark(")")
+        )
+
+        return ok
+
+    def take_alphabet(self) -> bool:
+        """Alphabet = "{" Event { "," Event } "}" """
+
+        self.open_take("Alphabet")
+        ok = self.take_mark("{") and self.take_event()
+
+        self.open_take("AcceptOneTake")
+        try_more = ok
+        while try_more:
+            try_more = self.take_mark(",") and self.take_event()
+            self.close_accept_one_take(try_more)
+            self.open_take("AcceptOneTake")
+        self.close_accept_one_take(False)
+
+        ok = self.close_take(ok and self.take_mark("}"))
+
+        return ok
+
+    def take_event(self) -> bool:
+        """Event = Name"""
+
+        self.open_take("Event")
+        ok = self.close_take(self.take_name())
+
+        return ok
+
+    #
+    #
+    #
+
+    def take_name(self) -> bool:
+        """FIXME"""
+
+        index = self.index
+        takes = self.takes
+        text = self.text
+
+        text0 = text[index:]
+        m = re.match(r"^[a-zA-Z_][a-zA-Z_0-9]*", string=text0)
+        if not m:
+            return False
+
+        name = m.group()
+
+        take: list[str]
+        take = ["Name", name]
+
+        self.index += len(name)
+
+        deepest_take = takes[-1]
+        assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
+        deepest_take.append(take)
+
+        return True
+
+    def take_mark(self, mark) -> bool:
+        """FIXME"""
+
+        index = self.index
+        takes = self.takes
+        text = self.text
+
+        text0 = text[index:]
+
+        text1 = text0.lstrip()
+        if not text1.startswith(mark):
+            return False
+
+        text2 = text1.removeprefix(mark)
+        text3 = text2.lstrip()
+
+        len_taken_text = len(text0) - len(text3)
+        taken_text = text0[:len_taken_text]
+
+        take: list[str]
+        take = [mark, taken_text]
+
+        self.index += len(taken_text)
+
+        deepest_take = takes[-1]
+        assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
+        deepest_take.append(take)
+
+        return True
+
+    #
+    #
+    #
+
+    def open_take(self, name) -> None:
+        """FIXME"""
+
+        index = self.index
+        starts = self.starts
+        takes = self.takes
+
+        starts.append(index)
+
+        take = [name]
+        takes.append(take)
+
+    def close_take(self, ok) -> bool:
+        """FIXME"""
+
+        starts = self.starts
+        takes = self.takes
+
+        start = starts.pop()
+        take = takes.pop()
+
+        if not ok:
+            self.index = start
+            return False
+
+        deepest_take = takes[-1]
+        assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
+        deepest_take.append(take)
+
+        return True
+
+    def close_accept_one_take(self, ok) -> bool:
+        """FIXME"""
+
+        starts = self.starts
+        takes = self.takes
+
+        start = starts.pop()
+        take = takes.pop()
+        assert take[0] == "AcceptOneTake", (take[0], take)
+
+        took = ok and (len(take) > 1)
+
+        if not took:
+            self.index = start
+            return False
+
+        deepest_take = takes[-1]
+        assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
+        deepest_take.extend(take)
+
+        return True
 
 
 #
