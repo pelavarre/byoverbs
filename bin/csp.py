@@ -62,6 +62,7 @@ import code
 import collections
 import dataclasses
 import functools
+import importlib
 import json
 import random
 import re
@@ -146,6 +147,13 @@ class Process(Any):
         """Form a Process for stepping past a chosen Event"""
 
         raise NotImplementedError(chosen)
+
+    def print_traces(self):
+        """Print the Traces of Self"""
+
+        p_traces = traces(P=self)
+        for p_trace in p_traces:
+            print(p_trace)
 
 
 VMS_0 = Process("VMS_0")  # the simple vending machine
@@ -1151,6 +1159,86 @@ def process_step(P: Process) -> None:
 #
 
 #
+# 1.6 Operations on Traces
+#
+# 1.6.1 Catenation
+#
+# 1.6.2 Restriction
+#
+# 1.6.3 Head and tail
+#
+# 1.6.4 Star
+#
+#   A∗ = { t | t = ⟨⟩ ∨ ( t0 ∈ A ∧ t′ ∈ A∗ ) }
+#
+# 1.6.5 Ordering
+#
+# 1.6.6 Length
+#
+
+#
+# 1.7 Implementation of traces
+#
+
+#
+# 1.8 Traces of a process
+#
+
+
+def traces(P: Process, trace: list[Event] = list()) -> list[list[Event]]:
+    """Walk the Traces of a Process"""
+
+    traces = list()
+
+    pairs: list[tuple[Process, list[Event]]]
+    pairs = list()
+
+    p_trace = trace
+    p_pair = (P, p_trace)
+    pairs.append(p_pair)
+
+    processes = list()
+
+    main_loop = Event(".")
+    etc = Event("...")
+    bleep = Event("BLEEP")  # todo: Bleep is the Event that is not an Event, but ...
+
+    while pairs:
+        (Q, q_trace) = pairs.pop(0)
+        # print(f"{q_trace=}  # traces")
+
+        #
+
+        if Q in processes:
+            traces.append(q_trace + [etc])
+            continue
+
+        if Q is not STOP:
+            processes.append(Q)
+            if len(processes) > 25:
+                print("Quitting after tracing 25 Processes")
+                break
+
+        #
+
+        choices = Q.menu_choices()
+        if not choices:
+            traces.append(q_trace + [bleep])
+            continue
+
+        for chosen in choices:
+            r_trace = q_trace + [chosen]
+            R = Q.form_chosen_process(chosen)
+            if R is P:
+                traces.append(r_trace + [main_loop])
+            else:
+                r_pair = (R, r_trace)
+                pairs.append(r_pair)
+
+    return traces
+
+
+#
 # Run well from the Sh Command Line
 #
 
@@ -1174,6 +1262,10 @@ def main() -> None:
 
     del locals_dict["NO_EVENTS"]
     del locals_dict["PROCESSES_BY_VNAME"]
+
+    csp = importlib.import_module("csp")
+    assert "csp" not in locals_dict.keys()
+    locals_dict["csp"] = csp
 
     # Print the hand-assembled Process'es and Alphabet's
 

@@ -6691,5 +6691,12 @@ if __name__ == "__main__":
     main()
 
 
+# todo: Translate MakeTrans a la Sh |tr '...' '...'
+#   |pq 'oline = iline.translate(str.maketrans("HW", "hw"))' |cat -
+
+# todo: Translate MakeTrans a la Sh |tr -d '...'
+#   |pq 'oline = iline.translate(str.maketrans("", "", ", !"))' |cat -
+
+
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
