@@ -61,6 +61,7 @@ import __main__
 import code
 import collections
 import dataclasses
+import functools
 import json
 import random
 import re
@@ -129,18 +130,22 @@ class Process(Any):
     """A pattern of behaviour"""
 
     def __call__(self) -> None:
-        process_walk(self)
+        """Step and chat through a Trace of Self, when called"""
+
+        process_step(self)
 
     def menu_choices(self) -> list[Event]:
+        """List the choices for stepping forward with Self"""
 
         no_events: list[Event]
         no_events = list()
 
         return no_events
 
-    def form_event_process(self, event: Event) -> "Process":
+    def form_chosen_process(self, chosen: Event) -> "Process":
+        """Form a Process for stepping past a chosen Event"""
 
-        raise NotImplementedError(event)
+        raise NotImplementedError(chosen)
 
 
 VMS_0 = Process("VMS_0")  # the simple vending machine
@@ -227,7 +232,6 @@ def vname_peek(vname) -> Process:
     m = re.match(r"^CTN[(]([0-9]+)[)]$", string=vname)  # FIXME: ugly, brittle, adequate for now
     if m:
         n = int(m.group(1))
-        print(f"Forming CTN({n})")
         return CTN(n)
 
     processes = PROCESSES_BY_VNAME[vname]
@@ -277,8 +281,7 @@ class GuardedProcess(Process):
         self.process = process
         self.end = end
 
-        guards = self.guards()
-        assert len(guards) >= 1, (len(guards), guards)
+        _ = self.guards()
 
     def __str__(self) -> str:
 
@@ -297,40 +300,41 @@ class GuardedProcess(Process):
         return rep
 
     def guards(self) -> list[Event]:
-        """List the Guarding Events of the Process, from first to last"""
+        """Form a List of the Guards of the Process, in order"""
 
-        if isinstance(self.events, Event):
-            event = self.events
+        events = self.events
+        if isinstance(events, Event):
+            event = events
             guards = [event]
         else:
-            guards = list(_ for _ in self.events if isinstance(_, Event))
+            guards = list(_ for _ in events if isinstance(_, Event))
+
+        assert guards, (guards,)
+        assert len(guards) >= 1, (len(guards), guards)
 
         return guards
 
     def menu_choices(self) -> list[Event]:
-        """Form a List of the one Event which is the first Guard of the Process"""
-
-        event = self.only_menu_choice()
-        events = [event]
-
-        return events
-
-    def only_menu_choice(self) -> Event:
-        """Say which Event is the first Guard of the Process"""
+        """Offer the first Guard as the only Choice"""
 
         guards = self.guards()
-        only_menu_choice = guards[0]
+        choice = guards[0]
 
-        return only_menu_choice
+        choices = [choice]
 
-    def form_event_process(self, event: Event) -> "Process":
+        return choices
 
-        only_menu_choice = self.only_menu_choice()
-        assert event == only_menu_choice, (event, only_menu_choice)
+    def form_chosen_process(self, chosen: Event) -> "Process":
+        """Find or form a Process for stepping past the only Choice"""
 
-        #
-
+        events = self.events
+        choices = self.menu_choices()
         guards = self.guards()
+
+        assert choices == [chosen], (choices, chosen)
+
+        # Step into the Process guarded here, after the last Guard
+
         if len(guards) == 1:
 
             proc = self.process
@@ -340,14 +344,13 @@ class GuardedProcess(Process):
 
             return proc
 
-        #
+        # Form a new Guarded Process, with the leading chosen Guard removed
 
-        events = self.events
-        assert isinstance(events, list), (type(events), events)
+        assert isinstance(events, list), (type(events), events)  # not just 1 Event
 
         less_events = list(events)
 
-        assert less_events[0] == only_menu_choice, (less_events[0], only_menu_choice)
+        assert less_events[0] == chosen, (less_events[0], chosen)
         less_events.pop(0)
 
         assert isinstance(less_events[0], str), (type(less_events[0]), less_events[0])
@@ -476,16 +479,21 @@ class RecursiveProcessWithAlphabet(Process):
         return rep
 
     def menu_choices(self) -> list[Event]:
-        proc = self.process
-        events = proc.menu_choices()
-        return events
+        """Offer the Choices of the enclosed Process"""
 
-    def form_event_process(self, event: Event) -> Process:
+        proc = self.process
+        choices = proc.menu_choices()
+
+        return choices
+
+    def form_chosen_process(self, chosen: Event) -> Process:
+        """Call on the enclosed Process to step past the chosen Event"""
+
         proc = self.process
 
         vname_push(self.vname, process=self)
-        event_proc = proc.form_event_process(event)
-        # vname_pop(self.vname, process=self)  # todo: make vname_pop's work
+        event_proc = proc.form_chosen_process(chosen)
+        # vname_pop(self.vname, process=self)  # FIXME: make vname_pop's work
 
         return event_proc
 
@@ -626,12 +634,7 @@ class ChoiceProcess(Process):
         self.choices = choices
         self.end = end
 
-        menu_choices = self.menu_choices()
-        assert len(menu_choices) >= 2, (len(menu_choices), menu_choices)
-
-        count_by_guard = collections.Counter(menu_choices)
-        for guard, count in count_by_guard.items():
-            assert count == 1, (guard, count)
+        _ = self.menu_choices()
 
     def __str__(self) -> str:
 
@@ -643,28 +646,51 @@ class ChoiceProcess(Process):
         return rep
 
     def menu_choices(self) -> list[Event]:
+        """Offer the first Guard of each Guarded Process as another Choice"""
+
+        choices = list()
+
         procs = self.menu_procs()
-        events = list(_.only_menu_choice() for _ in procs)
-        return events
+        for proc in procs:
+            more_choices = proc.menu_choices()
+            assert more_choices, (proc, more_choices)
+            assert len(more_choices) == 1, (proc, more_choices)
+
+            choices.extend(more_choices)
+
+        assert len(choices) >= 2, (len(choices), choices)
+
+        count_by_choice = collections.Counter(choices)
+        for choice, count in count_by_choice.items():
+            assert count == 1, (choice, count)
+
+        return choices
 
     def menu_procs(self) -> list[GuardedProcess]:
+        """Form a List of the Guarded Processes, in order"""
+
         choices = self.choices
         procs = list(_ for _ in choices if isinstance(_, GuardedProcess))
+
         return procs
 
-    def form_event_process(self, event: Event) -> Process:
+    def form_chosen_process(self, chosen: Event) -> Process:
+        """Call on one Guarded Process to step past the chosen Event"""
 
-        menu_procs = self.menu_procs()
         menu_choices = self.menu_choices()
 
-        assert event in menu_choices, (event, menu_choices)
+        assert chosen in menu_choices, (chosen, menu_choices)
 
-        for menu_proc in menu_procs:
-            only_menu_choice = menu_proc.only_menu_choice()
-            if event == only_menu_choice:
-                return menu_proc.form_event_process(event)
+        procs = self.menu_procs()
+        for proc in procs:
+            more_choices = proc.menu_choices()
+            assert more_choices, (proc, more_choices)
+            assert len(more_choices) == 1, (proc, more_choices)
 
-        assert False, (event, menu_choices)
+            if chosen == more_choices[-1]:
+                return proc.form_chosen_process(chosen)
+
+        assert False, (chosen, menu_choices)
 
 
 # (one example of compilation failure, from the digression past X7 of 1.1.3 Choice)
@@ -1009,8 +1035,10 @@ down = Event("down")
 # X2 Process
 
 
-# todo: teach CTN(n) to detect when walking again into CTN(n)
+@functools.lru_cache(maxsize=None)
 def CTN(n: int) -> Process:
+
+    print(f"Forming CTN({n})")
 
     if n == 0:
         P = ChoiceProcess(
@@ -1052,26 +1080,28 @@ def CTN(n: int) -> Process:
 #
 
 
-def process_walk(P: Process) -> None:
+def process_step(P: Process) -> None:
+    """Step and chat through a Trace of a Process"""
 
     print("#", P)
     print()
+
+    # Start a new Trace as often as we step back to the same Process
 
     Q = P
     while True:
         if Q is P:
             print()
 
-        events = Q.menu_choices()
-        event_strs = list(str(_) for _ in events)
+        # Offer 0 or more Choices
 
-        # bit = True
+        choices = Q.menu_choices()
+        choice_strs = list(str(_) for _ in choices)
+
         while True:
-            # bit = not bit
+            print(choice_strs)
 
-            print(event_strs)
-            # if bit:
-            #     print(" ", end="")
+            # Quit on request
 
             sys.stdout.flush()
             line = sys.stdin.readline()
@@ -1082,29 +1112,35 @@ def process_walk(P: Process) -> None:
 
             strip = line.strip()
 
-            if not events:
+            # Quit when there are no Choices for stepping forward
+
+            if not choices:
                 print("BLEEP")
                 return
 
-            if len(events) == 1:
-                event = events[0]
-                if strip != str(event):
+            # Run ahead with the only Choice, when there is only one
+
+            if len(choices) == 1:
+                chosen = choices[-1]
+                if strip != str(chosen):
                     print("\x1B[A", end="")
-                    print(event)
+                    print(chosen)
                 break
 
-            if strip in event_strs:
-                event = events[event_strs.index(strip)]
+            # Run ahead with the first whole match
+
+            if strip in choice_strs:
+                chosen = choices[choice_strs.index(strip)]
                 break
 
-            event = random.choice(events)
+            # Run ahead with a random Choice
+
+            chosen = random.choice(choices)
             print("\x1B[A", end="")
-            print(event)
+            print(chosen)
             break
 
-            # print("\x1B[A" "\x1B[A" "\x1B[J", end="")
-
-        Q = Q.form_event_process(event)
+        Q = Q.form_chosen_process(chosen)
 
         # CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
         # ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail
@@ -1579,6 +1615,13 @@ class VirtualMachine:
 
 if __name__ == "__main__":
     main()
+
+
+# FIXME: Print the Source Fragments of a successful Parse
+
+# FIXME: Assemble a successful Parse into a Process, Alphabet, etc
+
+# FIXME: Exhaust the Traces, but then give up on CTR(n)
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
