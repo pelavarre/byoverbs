@@ -4,7 +4,7 @@ usage: from demos import qikpycache
 persist into the './__pycache__/' Dir a Cache of Func Calls and Results
 
 see also:
-  from functools import lru_cache
+  functools.lru_cache
 
 examples:
   rm -fr __pycache__/
