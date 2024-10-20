@@ -387,13 +387,15 @@ class GuardedProcess(Process):
 # todo: test this nope more often
 
 
-# X1
+# 1.1.1 X1
 # (coin → STOPαVMS)
+
 U1 = GuardedProcess("(", coin, " → ", STOPαVMS, ")")
 
 
-# X2
+# 1.1.1 X2
 # (coin → (choc → (coin → (choc → STOPαVMS))))
+
 U2 = GuardedProcess(
     "(",
     coin,
@@ -409,7 +411,7 @@ U2 = GuardedProcess(
 )
 
 
-# X3
+# 1.1.1 X3
 # CTR = (right → (up → (right → (right → STOPαCTR))))
 
 up = Event("up")
@@ -547,7 +549,7 @@ class RecursiveProcess(RecursiveProcessWithAlphabet):
         return rep
 
 
-# X1
+# 1.1.2 X1
 
 CLOCK = RecursiveProcessWithAlphabet(
     "μ ",
@@ -559,26 +561,37 @@ CLOCK = RecursiveProcessWithAlphabet(
 )
 
 
-# X2
+# 1.1.2 X2
 
 # a simple vending machine which serves as many chocs as required
 
 # VMS = (coin → (choc → VMS))
-# VMS = μ X : {coin, choc} • (coin → (choc → X ))
+# todo: cope with reassignments, to allow 'VMS =' both as an early example and also later
 
-VMS = GuardedProcess(  # (replaces earlier less complete definition)
+VMS_1 = GuardedProcess(
     "(",
     [coin, " → ", choc],
     " → ",
-    "VMS",
+    "VMS_1",
     ")",
     doc="the simple vending machine",
 )
 
-vname_push("VMS", process=VMS)
+vname_push("VMS_1", process=VMS_1)
+
+# VMS = μ X : {coin, choc} • (coin → (choc → X ))    # cyclic
+
+VMS = RecursiveProcessWithAlphabet(
+    "μ ",
+    "X",
+    ":",
+    Alphabet([coin, choc]),
+    " • ",
+    GuardedProcess("(", [coin, " → ", choc], " → ", "X", ")", doc="the simple vending machine"),
+)
 
 
-# X3
+# 1.1.2 X3
 
 # CH5A = (in5p → out2p → out1p → out2p → CH5A)
 
@@ -598,7 +611,7 @@ CH5A = GuardedProcess(
 vname_push("CH5A", process=CH5A)
 
 
-# X4
+# 1.1.2 X4
 
 # CH5B = (in5p → out1p → out1p → out1p → out2p → CH5B)
 
@@ -766,7 +779,7 @@ class ChoiceProcess(Process):
 # todo: test this nope more often
 
 
-# X1
+# 1.1.3 X1
 
 # (up → STOP | right → right → up → STOP)
 
@@ -781,7 +794,7 @@ U3 = ChoiceProcess(
 )
 
 
-# X2
+# 1.1.3 X2
 
 # CH5C = in5p → (out1p → out1p → out1p → out2p → CH5C
 #               | out2p → out1p → out2p → CH5C)
@@ -805,9 +818,9 @@ CH5C = GuardedProcess(
 vname_push("CH5C", process=CH5C)
 
 
-# X3
+# 1.1.3 X3
 
-# VMCT = μ X • coin → (choc → X | toffee → X )
+# VMCT = μ X • coin → (choc → X | toffee → X )  # cyclic
 
 toffee = Event("toffee")
 
@@ -833,7 +846,7 @@ VMCT = RecursiveProcess(
 )
 
 
-# X4
+# 1.1.3 X4
 
 # a more complicated vending machine,
 # which offers a choice of coins and a choice of goods and change
@@ -908,7 +921,7 @@ VMC = ChoiceProcess(
 vname_push("VMC", process=VMC)
 
 
-# X5
+# 1.1.3 X5
 
 # VMCRED = μ X • (coin → choc → X | choc → coin → X )
 
@@ -928,14 +941,14 @@ VMCRED = RecursiveProcess(
 )
 
 
-# X6
+# 1.1.3 X6
 
 # VMS2 = (coin → VMCRED)
 
 VMS2 = GuardedProcess("(", coin, " → ", VMCRED, ")")
 
 
-# X7
+# 1.1.3 X7
 
 in_0 = Event("in_0")  # input of zero on its input channel")  # they choose inpu
 in_1 = Event("in_1")  # input of one on its input channel
@@ -962,10 +975,10 @@ COPYBIT = RecursiveProcess(  # [exact same structure as VMCRED]
 # (x:B → P(x))  # Event x from Alphabet B, then Process P of Event x
 
 
-# X8
+# 1.1.3 X8
 
 # αRUNA = A
-# RUNA = (x:A → RUNA)
+# RUNA = (x:A → RUNA)  # cyclic
 
 
 # General Choice Notation
@@ -984,7 +997,7 @@ COPYBIT = RecursiveProcess(  # [exact same structure as VMCRED]
 #
 
 
-# X1
+# 1.1.4 X1
 
 # original text speaks of DD, O, and L
 # but to speak of 'O =' clashes w Flake8 E741 'ambiguous variable name' ban against 'O ='
@@ -1034,13 +1047,13 @@ vname_push("DD_L", process=DD_L)
 vname_push("DD_O", process=DD_O)
 
 
-# X2 Events
+# 1.1.4 X2 Events
 
 around = Event("around")
 down = Event("down")
 
 
-# X2 Process
+# 1.1.4 X2 Process formed by Func  # cyclic, called out in the case of CTN(7) by 1.8.3 X5
 
 
 @functools.lru_cache(maxsize=None)
@@ -1183,6 +1196,33 @@ def process_step(P: Process) -> None:
 #
 # 1.8 Traces of a process
 #
+# 1.8.1 Laws
+#
+# 1.8.2 Implementation
+#
+# 1.8.3 After
+#
+#   X = (a → (X / ⟨a⟩))  # same as X = X
+#
+#
+
+#
+# 1.9 More operations on traces [skippable]
+# 1.9.1 Change of symbol
+# 1.9.2 Catenation
+# 1.9.3 Interleaving
+# 1.9.4 Subscription
+# 1.9.5 Reversal
+# 1.9.6 Selection
+# 1.9.7 Composition
+#
+
+#
+# 1.10 Specifications
+# 1.10.1 Satisfaction
+# 1.10.2 Proofs
+#
+
 
 
 def traces(P: Process, trace: list[Event] = list()) -> list[list[Event]]:
