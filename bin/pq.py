@@ -93,7 +93,7 @@ import typing
 import unicodedata
 
 
-_: object  # '_: object' gets MyPy to let us run fail-fast tests
+_: object  # '_: object' tells MyPy to accept '_ =' tests across two and more Datatypes
 
 _ = dict[str, int]  # new since Oct/2020 Python 3.9
 _ = json, time

@@ -937,7 +937,12 @@ insert my own 'better than' into the tail -n +3 cat -n
 pq wviewpage
 vs https://wiki.example.com/pages/viewinfo.action?pageId=123456789
 
+pq n c
+exits via AssertionError
 
+adopt m for Make, over b for Build?
+
+fix qrl
 
 ## Copied from
 

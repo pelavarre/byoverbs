@@ -155,7 +155,7 @@ QUICK_LAZY_IMPORT_NAMES = """
 
     # from VEnv Pip Install
 
-    jira matplotlib numpy pandas psycopg2 redis requests
+    jira matplotlib numpy pandas psutil psycopg2 redis requests
 
 
 """.splitlines()
@@ -164,7 +164,7 @@ QUICK_LAZY_IMPORT_NAMES = list(_.partition("#")[0] for _ in QUICK_LAZY_IMPORT_NA
 QUICK_LAZY_IMPORT_NAMES = list(_.strip() for _ in QUICK_LAZY_IMPORT_NAMES)
 QUICK_LAZY_IMPORT_NAMES = " ".join(QUICK_LAZY_IMPORT_NAMES).split()
 
-assert len(QUICK_LAZY_IMPORT_NAMES) == 200, (len(QUICK_LAZY_IMPORT_NAMES),)
+assert len(QUICK_LAZY_IMPORT_NAMES) == 201, (len(QUICK_LAZY_IMPORT_NAMES), 201)
 
 
 class LazyImport:

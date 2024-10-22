@@ -29,6 +29,8 @@ examples:
   awk.py --h  # show help lines and exit (more reliable than -h)
   awk.py --  # prefix each line with "-- " and suffix each line with " --"
 
+  F=log; (cat $F; tail -F $F) |awk '!d[$0]++' |grep -i Error  # don't repeat Lines seen already
+
   F=bin/awk.py && cat $F |awk '(length($0)>88){print "'$F':"NR":"$0}'
 
   seq 20 |awk '!(NR%2){print o, $0} {o=$0}'  # join each pair of Lines
@@ -41,6 +43,8 @@ examples:
   alias -- --a="awk -F: '$A'"
   unset A
   grep 'seq.*[|]' bin/*.py |--a
+
+  echo 'aa  bb  cc' |awk '{$1=$1};1'  # collapse each IFS into one OFS
 """
 
 import __main__

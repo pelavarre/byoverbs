@@ -23,6 +23,8 @@ examples:
   sed 's,^.*$,& = self.&,'  # Sed Repl '&' means the Chars matched
 
   pbpaste |awk '{print $NF}' |sed 's,^,-- ,' |sed 's,$, --,' |pbcopy
+
+  echo 'aa  bb  cc' |sed 's,  *, ,g'  # collapse each input run of Spaces into single Space
 """
 
 # qdno |sed "s,\",echo $'," |sed "s,\",'," |bash  # converts to Sh $'' from Git ""
