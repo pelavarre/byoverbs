@@ -23,9 +23,11 @@ examples:
 
 
 import __main__
+import argparse
 import code
 import random
 import sys
+import textwrap
 
 
 #
@@ -144,6 +146,8 @@ class Process:
     def after_process_of(self, choice: str) -> "Process":
         raise NotImplementedError("after_process_of")
 
+    # todo: toggle off '==' equality, to test clients only take 'is' equality
+
 
 class Cloak(Process):
 
@@ -190,6 +194,8 @@ class Cloak(Process):
         eq_pushes.append(eq_push)
 
         g[key] = value
+
+        # todo: move .eq_push/ .eq_pop out of Class Cloak
 
     def eq_pop(self, key: str, value: object | None) -> None:
         eq_pushes = self.eq_pushes
@@ -430,10 +436,81 @@ CloakedStop = Cloak(key="STOP", value=FalseProcess)  # as if a Flow of no Events
 
 
 def main() -> None:
+    """Run well from the Sh Command Line"""
 
-    # Take Words in from the Sh Command Line  # FIXME: ArgParse
+    parse_csp_py_args_else()  # often prints help & exits
 
-    assert sys.argv[1:] == ["--yolo"], (sys.argv[1:],)
+    main_try()
+
+
+def parse_csp_py_args_else() -> None:
+    """Take Words in from the Sh Command Line"""
+
+    doc = __main__.__doc__
+    assert doc, (doc,)
+
+    parser = doc_to_parser(doc, add_help=True, epilog_at="examples:")
+
+    yolo_help = "do what's popular now"
+    parser.add_argument("--yolo", action="count", help=yolo_help)
+
+    parse_args_else(parser)
+
+
+def doc_to_parser(doc: str, add_help: bool, epilog_at: str) -> argparse.ArgumentParser:
+    """Form an ArgParse ArgumentParser"""
+
+    assert doc
+    strip = doc.strip()
+    lines = strip.splitlines()
+
+    usage = lines[0]
+    prog = usage.split()[1]
+    description = lines[2]
+
+    epilog = strip[strip.index(epilog_at) :]
+
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        description=description,
+        add_help=True,
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=epilog,
+    )
+
+    return parser
+
+
+def parse_args_else(parser: argparse.ArgumentParser) -> None:
+    """Take Words in from the Sh Command Line, else Print Help and Exit"""
+
+    epilog = parser.epilog
+    assert epilog, (epilog,)
+
+    shargs = sys.argv[1:]
+    if sys.argv[1:] == ["--"]:  # ArgParse chokes if Sep present without Pos Args
+        shargs = list()
+
+    testdoc = textwrap.dedent("\n".join(epilog.splitlines()[1:]))
+    if not sys.argv[1:]:
+        print()
+        print(testdoc)
+        print()
+
+        sys.exit(0)  # exits 0 after printing help
+
+    parser.parse_args(shargs)
+
+    # often prints help & exits
+
+
+#
+# Run some Self-Test's
+#
+
+
+def main_try() -> None:
+    """Run some Self-Test's"""
 
     # Run one Interactive Console, till exit
 
