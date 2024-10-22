@@ -11,7 +11,7 @@ options:
 
 docs:
   https://en.wikipedia.org/wiki/Communicating_sequential_processes
-  http://www.usingcsp.com/cspbook.pdf (4/Dec/2022)
+  http://www.usingcsp.com/cspbook.pdf (Dec/2022)
 
 examples:
   csp.py --h  # shows this message and quits
@@ -19,50 +19,62 @@ examples:
   csp.py --yolo  # opens the Python Repl, as if:  python3 -i csp.py
 """
 
-# code reviewed by People, Black, Flake8, & MyPy
+# code reviewed by People, Black, Flake8, MyPy, & PyLance-Standard
 
 
+import __main__
 import code
-import importlib
 import random
 import sys
 
 
 #
-# List lots of examples from CspBook.pdf, spoken as Dict, List, and Str
+# List examples from CspBook.pdf, spoken as Dict, List, and Str
 #
 #   + Step across List[Str] to reach a (Dict | List | Str)
 #   + Branch across 2 Keys or more of Dict[Str, Dict | List | Str] into a (Dict | List | Str)
-#   + Learn your own name at a Dict[Str, Dict | List | Str] of 1 Key
+#   + Learn your Name or Process first, at a Dict[Str, Dict | List | Str] of 1 Key
 #
 
 
 class CspBookExamples:
 
-    STOP: list  # pacifies MyPy's weird demand for Empty Lists to declare their Datatypes
+    STOP: list  # meets the MyPy demand for a Datatype at each Empty List
+
+    # Finite Flows
 
     STOP = list()
-
     U1 = ["coin", STOP]  # 1.1.1 X1
-
     U2 = ["coin", ["choc", ["coin", ["choc", STOP]]]]  # 1.1.1 X2
-
     CTR = ["right", "up", "right", "right", STOP]  # # 1.1.1 X3
 
-    CLOCK_0 = ["tick", "CLOCK_0"]  # first 'CLOCK =' of CspBook Pdf
-    CLOCK_1 = ["tick", "CLOCK_1"]  # missing from CspBook Pdf
-    # FIXME: why prints as [tick, tick, ...] with Two Ticks
+    # Cyclic Flows on an Alphabet of 1 Event
+
+    CLOCK0: list | str
+    CLOCK0 = "CLOCK0"
+    CLOCK0 = ["tick", CLOCK0]  # first 'CLOCK =' of CspBook Pdf
+
+    CLOCK1: list | str
+    CLOCK1 = "CLOCK1"
+    CLOCK1 = ["tick", CLOCK1]  # missing from CspBook Pdf
 
     X = "X"
     CLOCK = {"X": ["tick", X]}  # 1.1.2 X1
 
-    XCLOCK = {"X": ["tick", "tock", "boom", X]}  # missing from CspBook Pdf
+    # Cyclic Flows on an Alphabet of a Few Events
 
-    VMS_0 = ["coin", "choc", "VMS"]  # first 'VMS =' of CspBook Pdf
+    CLOCK3 = {"X": ["tick", "tock", "boom", X]}  # missing from CspBook Pdf
+
+    VMS_0: list | str
+    VMS_0 = "VMS_0"
+    VMS_0 = ["coin", "choc", VMS_0]  # first 'VMS =' of CspBook Pdf
+
     VMS = {"X": ["coin", "choc", X]}  # 1.1.2 X2
 
     CH5A = ["in5p", "out2p", "out1p", "out2p", "CH5A"]  # 1.1.2 X3
     CH5B = ["in5p", "out1p", "out1p", "out1p", "out2p", "CH5B"]  # 1.1.2 X4
+
+    # Acyclic Choices and Cyclic Choices
 
     U3 = {"up": STOP, "right": ["right", "up", STOP]}  # 1.1.3 X1
 
@@ -81,36 +93,36 @@ class CspBookExamples:
         "small": ["out1p", "VMC"],
         "in1p": {"small": "VMC", "in1p": {"large": "VMC", "in1p": STOP}},  # acyclic
     }
-    # FIXME: why prints as 'in1p, in1p, in1p,' twice
 
     VMCRED = {"X": {"coin": ["choc", "X"], "choc": ["coin", "X"]}}  # 1.1.3 X5
     VMS2 = ["coin", {"X": {"coin": ["choc", "X"], "choc": ["coin", "X"]}}]  # 1.1.3 X6  # acyclic
 
     COPYBIT = {"X": {"in_0": ["out_0", "X"], "in_1": ["out_1", "X"]}}  # 1.1.3 X7
 
-    DD = {"setorange": "DD_O", "setlemon": "DD_L"}  # 1.1.4 X1
-    DD_O = {"orange": "DD_O", "setlemon": "DD_L", "setorange": "DD_O"}  # in CspBook Pdf as 'O ='
-    DD_L = {"lemon": "DD_L", "setorange": "DD_O", "setlemon": "DD_L"}  # in CspBook Pdf as 'L ='
-    # Flake8 defaults to reject 'O =' via Flake8 E741 ambiguous variable name 'O'
+    DD = {"setorange": "OO", "setlemon": "LL"}  # 1.1.4 X1
+    OO = {"setlemon": "LL", "orange": "OO", "setorange": "OO"}
+    LL = {"setorange": "OO", "lemon": "LL", "setlemon": "LL"}
+    # 'OO =' & 'LL =' ducks Flake8 E741 Ambiguous Variable Name, but mutates CspBook 'O =' & 'L ='
+    # Ending 'X =' with the : "X" Choices untangles the loops, but mutates CspBook O L O, L O L
 
     @staticmethod
     def CT(n: int) -> dict:  # 1.1.4 X2  # Cyclic CT(7) called out by 1.8.3 X5
 
         print(f"Forming CTN({n})")
 
-        P: dict
+        p: dict
 
         if n == 0:
-            P = {"up": lambda: CT(1), "around": lambda: CT(0)}
-            return P
+            p = {"up": lambda: CT(1), "around": lambda: CT(0)}
+            return p
 
-        P = {"up": lambda: CT(n + 1), "down": CT(n - 1)}
-        return P
+        p = {"up": lambda: CT(n + 1), "down": CT(n - 1)}
+        return p
 
-        # todo: make 'def CT' work
+        # todo: make 'def CT(n)' work
 
 
-CT = CspBookExamples.CT
+CT = CspBookExamples.CT  # defines the mention 'CT' inside 'def CT'
 
 
 #
@@ -120,247 +132,296 @@ CT = CspBookExamples.CT
 
 class Process:
 
-    process_name: str
+    def __bool__(self) -> bool:
+        return False
 
-    def __init__(self, name="[]") -> None:
-        self.process_name = name
+    def abs_process(self) -> "Process":
+        raise NotImplementedError("abs_process")
+
+    def menu_choices(self) -> list[str]:
+        raise NotImplementedError("menu_choices")
+
+    def after_process_of(self, choice: str) -> "Process":
+        raise NotImplementedError("after_process_of")
+
+
+class Cloak(Process):
+
+    eq_pushes: list[tuple[str, object | None]]
+
+    key: str
+    value: Process
+
+    def __init__(self, key: str, value: Process | dict | list | str) -> None:
+        self.eq_pushes = list()
+
+        self.key = key
+        if isinstance(value, Process):
+            self.value = value
+            return
+
+        self.value = FalseProcess
+
+        if key:
+            self.eq_push(key, value=self)
+
+        self.value = to_process_if(value)  # replaces
+
+        if key:
+            self.eq_pop(key, value=self)
+
+    def eq_push(self, key: str, value: object) -> None:
+        eq_pushes = self.eq_pushes
+
+        assert key, (key,)
+        assert value is not None, (value,)
+
+        g = globals()
+        if key not in g.keys():
+            v = None
+        else:
+            v = g[key]
+            assert v is not None, (
+                key,
+                v,
+            )
+
+        eq_push = (key, v)
+        eq_pushes.append(eq_push)
+
+        g[key] = value
+
+    def eq_pop(self, key: str, value: object | None) -> None:
+        eq_pushes = self.eq_pushes
+
+        g = globals()
+        assert key in g.keys(), (key,)
+        assert g[key] is value, (g[key], value)
+
+        eq_push = eq_pushes.pop()
+        (k, v) = eq_push
+        assert k == key, (k, key, value)
+
+        if v is None:
+            del g[k]
+        else:
+            g[k] = v
+
+    def __bool__(self) -> bool:
+        value = self.value
+        b = value.__bool__()
+        return b
 
     def __str__(self) -> str:
-        """Draw Self as a CSP Process"""
-        s = self.process_name  # '[]' as the Json Str of the STOP Process
+        key = self.key
+        value = self.value
+
+        self.value = FalseProcess
+        if not value:
+            s = str(key).strip()
+        else:
+            s = value.__str__()  # todo: more robustly choose to say 'X =' or not
+            if key and (key == key.strip()):
+                s = f"μ {key} • {s}"  # todo: more robustly choose to say 'μ X •' or not
+        self.value = value
+
         return s
 
     def abs_process(self) -> "Process":
-        """Search through Aliases and Defs to find the actual Process"""
-        return self
+        value = self.value
+
+        p: Process
+
+        p = self
+        if value:
+            p = value.abs_process()
+
+        return p
 
     def menu_choices(self) -> list[str]:
-        """List the Steps ahead, if any"""
-        return list()
+        value = self.value
+
+        choices = list()
+        if value:
+            choices = value.menu_choices()
+
+        return choices
 
     def after_process_of(self, choice: str) -> "Process":
-        """Take a particular next Step forward"""
-        assert False, (choice, self)
+        value = self.value
+
+        if not value:
+            raise NotImplementedError(f"{self=} {choice=}")
+
+        p = value.after_process_of(choice)
+
+        return p
 
     # works like the STOP Process, unless overriden
 
 
-cloak_str_recursions = list()
+class Flow(Process):
 
+    guard: str
+    after: Process
 
-class Cloak(Process):  # FIXME: merge into Base Class Process
+    def __init__(self, cells: list[Process | dict | list | str]) -> None:
 
-    process_else: Process | None
+        assert len(cells) >= 2, (len(cells), cells)
 
-    def __init__(self, name) -> None:
-        assert isinstance(name, str), (type(name), name)
-        super().__init__(name)
-        self.process_else = None
+        after = to_process_if(cells[-1])
 
-    def __str__(self) -> str:
-        process_name = self.process_name
-        process_else = self.process_else
+        for index in reversed(range(1, len(cells) - 1)):
+            guard = cells[index]
+            assert isinstance(guard, str), (type(guard), guard, cells)
 
-        if process_else:
-            process = process_else
-            if process_name not in cloak_str_recursions:
-                cloak_str_recursions.append(process_name)
-                s = process.__str__()
-                pop = cloak_str_recursions.pop()  # todo: try/ finally
-                assert pop == process_name, (pop, process_name)
-                return s
+            pair: list[Process | dict | list | str]  # MyPy needs | dict | list | mentioned
+            pair = [guard, after]
 
-        s = super().__str__()
-        return s
+            after = Flow(pair)
 
-    def abs_process(self) -> Process:
-        if self.process_else:
-            process = self.process_else
-            P = process.abs_process()
-            return P
-        P = super().abs_process()
-        return P
+        guard = cells[0]
+        assert isinstance(guard, str), (type(guard), guard, cells)
 
-    def menu_choices(self) -> list[str]:
-        if self.process_else:
-            process = self.process_else
-            choices = process.menu_choices()
-            return choices
-        choices = super().menu_choices()
-        return choices
+        self.guard = guard
+        self.after = after
 
-    def after_process_of(self, choice: str) -> Process:
-        if self.process_else:
-            process = self.process_else
-            P = process.after_process_of(choice)
-            return P
-        P = super().after_process_of(choice)
-        return P
-
-
-class Flow(Process, list):
-
-    def __init__(self, P: list) -> None:
-        Process.__init__(self, "")
-        list.__init__(self, P)  # todo: coherent super init's
-
-        assert P, (P,)
-        assert len(P) >= 2, (P,)
+    def __bool__(self) -> bool:
+        return True
 
     def __str__(self) -> str:
-        s = " → ".join(str(_) for _ in self)
+        guard = self.guard
+        after = self.after
+
+        g = guard
+        a = str(after)
+        if isinstance(after, Flow):
+            a = a.removeprefix("(").removesuffix(")")
+
+        s = f"{g} → {a}"
         s = f"({s})"
+
         return s
 
     def abs_process(self) -> Process:
         return self
 
     def menu_choices(self) -> list[str]:
-        assert self, (self,)
-        guard = self[0]
-        return [guard]
+        guard = self.guard
+        choices = [guard]  # one choice only
+        return choices
 
     def after_process_of(self, choice: str) -> Process:
-        """Take a particular next Step forward"""
-
-        assert self, (self,)
-        guard = self[0]
+        guard = self.guard
+        after = self.after
         assert choice == guard, (choice, guard, self)
-
-        # Step to next Guard
-
-        after_process: Process
-        if len(self) >= 3:
-            after_process = Flow(self[1:])
-            return after_process
-
-        # Step into the Guarded Process
-
-        assert len(self) == 2, (len(self), self)
-
-        V = self[-1]
-
-        if isinstance(V, Process):
-            after_process = V
-        else:
-            after_process = loads_to_process(P=V)
-
-        return after_process
+        return after
 
 
-class Choice(Process, dict):
+class Choice(Process):
 
-    def __init__(self, P: dict) -> None:
-        Process.__init__(self, "")
-        dict.__init__(self, P)
+    by_choice: dict[str, Process]
 
-        assert P, (P,)
-        assert len(P.keys()) >= 2, (P.keys(),)
+    def __init__(self, d: dict[str, Process | dict | list | str]) -> None:
 
-        items = list(self.items())
-        for k, v in items:
-            V = to_process(v)
-            self[k] = V
+        assert len(d.keys()) >= 2, (d.keys(),)
+
+        by_choice = dict()
+        for k, v in d.items():
+            assert isinstance(k, str), (k,)
+
+            choice = k
+            after = to_process_if(v)
+
+            by_choice[choice] = after
+
+        self.by_choice = by_choice
+
+    def __bool__(self) -> bool:
+        return True
 
     def __str__(self) -> str:
-        s = " | ".join(f"{k} → {v}" for k, v in self.items())
+        by_choice = self.by_choice
+
+        s = " | ".join(f"{k} → {v}" for (k, v) in by_choice.items())
         s = f"({s})"
+
         return s
 
     def abs_process(self) -> Process:
         return self
 
     def menu_choices(self) -> list[str]:
-        guards = list(self.keys())
-        return guards
+        by_choice = self.by_choice
+        choices = list(by_choice.keys())
+        return choices
 
     def after_process_of(self, choice: str) -> Process:
         """Take a particular next Step forward"""
 
-        assert self, (self,)
-        guards = list(self.keys())
-        assert len(guards) >= 2, (guards, choice, self)
-        assert choice in guards, (choice, guards, self)
+        by_choice = self.by_choice
+        choices = self.menu_choices()
 
-        # Step through the Chosen Guard into the Chosen Process
+        assert choice in choices, (choice, choices)
+        after = by_choice[choice]
 
-        V = self[choice]
-
-        if isinstance(V, Process):
-            after_process = V
-        else:
-            after_process = loads_to_process(P=V)
-
-        return after_process
+        return after
 
 
-def_str_recursions = list()
+def to_process_if(o: Process | dict | list | str) -> Process:
+    """Return no change, else a Process in place of Dict | List | Str"""
+
+    # Accept a Process as is
+
+    if isinstance(o, Process):
+        return o  # todo: 'better copied than aliased'
+
+    # Form a Choice from a large Dict, or a Cloak from a Dict of 1 Item
+
+    if isinstance(o, dict):
+        items = list(o.items())
+        if len(items) >= 2:
+            choice = Choice(d=o)
+            return choice
+
+        item = items[-1]
+
+        key = item[0]
+        value = item[-1]
+
+        cloak = Cloak(key, value=value)
+        return cloak
+
+    # Form a Stop or a Flow from a List
+
+    if isinstance(o, list):
+        if not o:
+            o = CloakedStop  # acts like the STOP Process
+            return o
+
+        assert len(o) >= 2, (len(o), o)
+
+        flow = Flow(cells=o)
+        return flow
+
+    # Find a Process by Name
+
+    g = globals()
+    if o in g.keys():
+        process = g[o]
+        assert isinstance(process, Process), (process,)
+        return process
+
+    # Else cloak this Name for now
+
+    cloak = Cloak(o, value=FalseProcess)
+    return cloak
 
 
-class Def(Process, dict):
+FalseProcess = Process()  # akin to Lisp Nil and Python None
+assert not FalseProcess
 
-    def __init__(self, P: dict) -> None:
-        Process.__init__(self, "")
-        dict.__init__(self, P)
-
-        assert P, (P,)
-        assert len(P.keys()) == 1, (P.keys(),)
-
-        (k, v) = list(P.items())[-1]
-
-        vv_else = None
-        if k in globals().keys():
-            vv_else = globals()[k]
-            assert vv_else is not None, (vv_else, k)
-            del globals()[k]
-
-        globals()[k] = self  # todo: work well with Scopes
-        V = to_process(v)
-
-        if vv_else is not None:
-            globals()[k] = vv_else
-
-        assert self[k] is v, (self[k], v)
-        self[k] = V
-
-    def __str__(self) -> str:
-        (k, v) = list(self.items())[-1]
-
-        globals()[k] = self  # todo: work well with Scopes
-        V = to_process(v)
-
-        if k in def_str_recursions:
-            s = f"{k}"
-        else:
-            def_str_recursions.append(k)
-            s = f"μ {k} • {V}"
-            pop = def_str_recursions.pop()  # todo: try/ finally
-            assert pop == k, (pop, k)
-
-        return s
-
-    def abs_process(self) -> Process:
-        (k, V) = list(self.items())[-1]
-        W = to_process(V)
-        return W
-
-    def menu_choices(self) -> list[str]:
-        (k, v) = list(self.items())[-1]
-        assert isinstance(v, Process)
-        choices = v.menu_choices()
-        return choices
-
-    def after_process_of(self, choice: str) -> Process:
-        (v_name, V) = list(self.items())[-1]
-        assert isinstance(V, Process)
-
-        # print(f"globals()[{v_name!r}] = {V!r}")
-        globals()[v_name] = V  # adds or replaces  # todo: work well with Scopes
-        # print(f"setattr({module!r}, {v_name!r}, {V!r})")
-        # setattr(module, v_name, V)  # adds or replaces  # todo: work well with Scopes
-
-        after_process = V.after_process_of(choice)
-        return after_process
+CloakedStop = Cloak(key="STOP", value=FalseProcess)  # as if a Flow of no Events
 
 
 #
@@ -370,7 +431,7 @@ class Def(Process, dict):
 
 def main() -> None:
 
-    # Early on, take Words in from the Sh Command Line, and give back Help Lines
+    # Take Words in from the Sh Command Line  # FIXME: ArgParse
 
     assert sys.argv[1:] == ["--yolo"], (sys.argv[1:],)
 
@@ -383,8 +444,7 @@ def main() -> None:
     del scope1["CT"]
 
     scope2 = scope_to_next_scope(scope1, casefolds=["csp", "dir", "step"])
-    scope_compile_processes(scope2, verbose=False)
-    scope_print_afters(scope2, verbose=True)
+    scope_compile_processes(scope2)
 
     scope3 = dict(globals())
     scope4 = scope_to_next_scope(scope3, casefolds=["csp", "dir", "step"])
@@ -403,9 +463,8 @@ def main() -> None:
 def scope_to_next_scope(scope: dict[str, object], casefolds: list[str]) -> dict[str, object]:
     """Form a Scope of Names to work with"""
 
-    csp = importlib.import_module("csp")
     assert "csp" not in scope.keys()
-    scope["csp"] = csp  # else unimported by default
+    scope["csp"] = __main__  # else unimported by default
 
     def scope_unsorted_dir(*args, **kwargs) -> list[str]:
         """List the Names in Scope, else in Args"""
@@ -440,30 +499,53 @@ def scope_to_next_scope(scope: dict[str, object], casefolds: list[str]) -> dict[
     return scope
 
 
-def scope_compile_processes(scope, verbose) -> None:
+def scope_compile_processes(scope) -> None:
 
+    droppables = ["STOP", "X", "CT"]
     d1_items = list(_ for _ in scope.items() if _[0].upper() == _[0])
-    d1_items = list(_ for _ in d1_items if _[0] not in ["CT"])
+    d1_items = list(_ for _ in d1_items if _[0] not in droppables)
 
     g = globals()
 
     for k, v in d1_items:
         assert isinstance(v, (dict | list | str)), (type(v), v, k)
         assert k not in g.keys(), (k,)
-        g[k] = Cloak(k)
+        g[k] = Cloak(" " + k + " ", value=FalseProcess)
 
     d2 = dict()
     for k, v in d1_items:
-        P = to_process(v)
-        d2[k] = P
+        p = to_process_if(v)
+        d2[k] = p
 
-    for k, P in d2.items():
-        g[k].process_else = P
+    for k, p in d2.items():
+        g[k].key = f" {k} "
+        g[k].value = p
 
-    for k, P in d2.items():
+    dd = g["DD"].value
+    oo = g["OO"].value
+    ll = g["LL"].value  # todo: more robustly choose to Str into OO/ LL or not
+
+    for k, p in d2.items():
+
+        if k in ["DD", "OO", "LL"]:
+            if k != "DD":
+                g["DD"].value = FalseProcess
+            if k != "OO":
+                g["OO"].value = FalseProcess
+            if k != "LL":
+                g["LL"].value = FalseProcess
+
         s = str(g[k])
-        if verbose:
-            print(f"{k} = {s}")
+
+        g["DD"].value = dd
+        g["OO"].value = oo
+        g["LL"].value = ll
+
+        print()
+        print(f"{k} = {s}")
+
+        afters = process_to_afters(g[k])
+        afters_print(afters)
 
 
 #
@@ -471,113 +553,18 @@ def scope_compile_processes(scope, verbose) -> None:
 #
 
 
-def scope_print_afters(scope, verbose) -> None:  # noqa C901 complex
+def afters_print(afters: list[list[str]]) -> None:
 
-    d1_items = list(_ for _ in scope.items() if _[0].upper() == _[0])
-    d1_items = list(_ for _ in d1_items if _[0] not in ["CT"])
+    alt = dict()
+    alt["."] = "."  # not "'.'"
+    alt["..."] = "..."  # not "'...'"
 
-    for k, P in d1_items:
-
-        if verbose:
-            print()
-            print(f"{k} = {P}")
-
-        p_afters = process_to_afters(P)
-
-        alt = dict()
-        alt["..."] = "..."  # not "'...'"
-        alt["."] = "..."  # not "'.'"
-
-        if verbose:
-            for p_after in p_afters:
-                join = ", ".join((alt[word] if (word in alt) else word) for word in p_after)
-                print(f"[{join}]")
+    for after in afters:
+        join = ", ".join((alt[word] if (word in alt) else word) for word in after)
+        print(f"[{join}]")
 
 
-def loads_to_process(P: dict | list | str) -> Process:
-
-    Q: Process
-
-    # Form a Def or Choice from a Dict
-
-    if isinstance(P, dict):
-        assert P, (P,)
-        if len(P.keys()) == 1:
-            Q = Def(P)
-            return Q
-
-        Q = Choice(P)
-        return Q
-
-    # Form a Flow from a List
-
-    if isinstance(P, list):
-        if not P:
-            Q = Process()  # acts like the STOP Process
-            return Q
-
-        assert len(P) >= 2, (len(P), P)
-
-        Pn = P[-1]
-        Qn = to_process(Pn)  # mutually recurses
-
-        Q = Flow(P[:-1] + [Qn])
-        return Q
-
-    # Form a Process from a Str
-
-    assert isinstance(P, str), (type(P), P)
-    Q = to_process(P)  # mutually recurses
-
-    return Q
-
-
-to_process_recursions: list[str]
-to_process_recursions = list()  # limits recursion
-
-
-def to_process(P: Process | dict | list | str) -> Process:
-    """Return a Process, else form a Process, else find a Process"""
-
-    # Return a Process as a Process
-
-    if isinstance(P, Process):
-        return P
-
-    # Form a Process from a Json Dict or Json List
-
-    if isinstance(P, (dict, list)):
-        Q = loads_to_process(P)  # mutually recurses
-        return Q
-
-    # Return the Process Value of a Str
-
-    assert isinstance(P, str), (type(P), P)
-
-    q_name = P
-
-    if q_name in to_process_recursions:
-        print(f"Infinite Recursion:  {q_name} = ... {q_name} ...")
-        breakpoint()
-        return Process()  # acts like the STOP Process
-
-    if q_name not in globals().keys():
-        Q = Cloak(q_name)
-        return Q
-
-    Q = globals()[q_name]
-
-    to_process_recursions.append(q_name)
-    R = to_process(Q)  # recurses
-    pop = to_process_recursions.pop()
-    assert pop == q_name, (pop, q_name)  # todo: try/ finally
-
-    assert isinstance(R, (Cloak | Flow | Def | Choice | str)), (type(R), R, P)
-
-    return R
-
-
-def process_to_afters(P: Process | dict | list | str, after: list[str] = list()) -> list[list[str]]:
+def process_to_afters(p: Process | dict | list | str, after: list[str] = list()) -> list[list[str]]:
     """Walk the Traces of a Process"""
 
     afters = list()
@@ -586,7 +573,7 @@ def process_to_afters(P: Process | dict | list | str, after: list[str] = list())
     pairs = list()
 
     p_after = after
-    p_pair = (P, p_after)
+    p_pair = (p, p_after)
     pairs.append(p_pair)
 
     processes = list()
@@ -595,24 +582,30 @@ def process_to_afters(P: Process | dict | list | str, after: list[str] = list())
     etc = str("...")
     bleep = str("BLEEP")  # todo: Bleep is the Event that is not an Event, but ...
 
+    r1 = None
     while pairs:
-        (Q, q_after) = pairs.pop(0)
-        # print(f"{q_after=}  # afters")
+        (q, q_after) = pairs.pop(0)
+        # print(f"{q_after=}  # process_to_afters")
 
         #
 
-        R = to_process(Q)
+        r = to_process_if(q)
+        r = r.abs_process()
 
-        if R in processes:
+        assert r is not None
+        if r1 is None:
+            r1 = r
+
+        if r in processes:
             afters.append(q_after + [etc])
             continue
 
         #
 
-        choices = R.menu_choices()
-
+        choices = r.menu_choices()
         if choices:
-            processes.append(R)
+            # print("processes.append", repr(r))
+            processes.append(r)
             if len(processes) > 25:
                 print("Quitting after tracing 25 Processes")
                 break
@@ -625,11 +618,12 @@ def process_to_afters(P: Process | dict | list | str, after: list[str] = list())
 
         for choice in choices:
             s_after = q_after + [choice]
-            S = R.after_process_of(choice)
-            if S is R:
+            s = r.after_process_of(choice)
+            s = s.abs_process()
+            if s is r1:
                 afters.append(s_after + [main_loop])
             else:
-                s_pair = (S, s_after)
+                s_pair = (s, s_after)
                 pairs.append(s_pair)
 
     return afters
@@ -640,37 +634,35 @@ def process_to_afters(P: Process | dict | list | str, after: list[str] = list())
 #
 
 
-def process_step(P: dict | list | str) -> None:
+def process_step(p: dict | list | str) -> None:
     """Step and chat through a Trace of a Process"""
 
     # Find the first actual Process, not just its Aliases
 
-    Q: Process
-    if isinstance(P, Process):
-        Q = P
+    q: Process
+    if isinstance(p, Process):
+        q = p
     else:
-        q_else_q_name = loads_to_process(P)
-        if isinstance(q_else_q_name, str):
-            print("Process Name {!q_name} has no Def")
+        q = to_process_if(p)
+        if not q:
+            print("Process Name {!p} has no Def")  # todo: more test of this
             return
 
-        Q = q_else_q_name
+    r = q.abs_process()
 
-    R = Q.abs_process()
-
-    R1 = R
-    print("#", R1)
+    r1 = r
+    print("#", r1)
     print()
 
     # Start a new Trace as often as we step back to the same Process
 
     while True:
-        if R is R1:
+        if r is r1:
             print()
 
         # Offer 0 or more Choices
 
-        choices = R.menu_choices()
+        choices = r.menu_choices()
         print(choices)
 
         sys.stdout.flush()
@@ -681,8 +673,8 @@ def process_step(P: dict | list | str) -> None:
         choice = process_step_choose_and_reprint(choices, line=line)
         assert choice, (choice, line, choices)
 
-        R = R.after_process_of(choice)
-        R = R.abs_process()
+        r = r.after_process_of(choice)
+        r = r.abs_process()
 
         # CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
         # ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail
@@ -750,6 +742,10 @@ if __name__ == "__main__":
 
 
 # todo: Command-Line Input History
+# todo: Parse Csp Input Lines into Dict | List | Str, and then compile those
+
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py

@@ -148,7 +148,7 @@ class Process(Any):
 
         raise NotImplementedError(chosen)
 
-    def print_traces(self):
+    def print_traces(self) -> None:
         """Print the Traces of Self"""
 
         p_traces = traces(P=self)
@@ -1224,7 +1224,6 @@ def process_step(P: Process) -> None:
 #
 
 
-
 def traces(P: Process, trace: list[Event] = list()) -> list[list[Event]]:
     """Walk the Traces of a Process"""
 
@@ -1756,5 +1755,5 @@ if __name__ == "__main__":
 # FIXME: Exhaust the Traces, but then give up on CTR(n)
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
+# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp6.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

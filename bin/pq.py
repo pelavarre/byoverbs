@@ -494,7 +494,7 @@ class PyExecQueryResult:
 
         if not py_graf:
             if any((" " in _) for _ in pq_words):
-                py_graf = list(pq_words)  # better copied than aliased
+                py_graf = list(pq_words)  # 'copied better than aliased'
             elif len(pq_words) == 1:
                 pq_word = pq_words[-1]
 
@@ -1549,8 +1549,6 @@ def py_graf_insert_imports(py_graf) -> tuple[list[str], list[str]]:
     importables.append("subprocess")
     importables.append("urllib")
     importables.append("urllib.parse")
-
-    importables.append("csp")
 
     importables.append("pq")
 
@@ -6307,8 +6305,6 @@ CUED_PY_LINES_TEXT = r"""
 
     oline = str(ast.literal_eval(iline))  # eval  # undo 'ascii' or 'repr'
 
-
-    olines = csp.csprocess(ilines)  # csp  # Communicating Sequential Processes
 
     olines = ilines  # olines = ilines  # olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
 
