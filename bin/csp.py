@@ -24,14 +24,19 @@ examples:
 
 import __main__
 import argparse
+import bdb
 import code
+import functools
+import pdb
 import random
 import sys
 import textwrap
+import traceback
+import typing
 
 
 #
-# List examples from CspBook.pdf, spoken as Dict, List, and Str
+# List examples from CspBook·Pdf, spoken as Dict, List, and Str
 #
 #   + Step across a List[Str] to reach 1 (Dict | List | Str)
 #   + Don't yet give a Csp meaning to a List of 1 Item
@@ -50,36 +55,36 @@ class CspBookExamples:
     STOP: list
     STOP = list()
 
-    U1 = ["coin", STOP]  # 1.1.1 X1
-    U2 = ["coin", ["choc", ["coin", ["choc", STOP]]]]  # 1.1.1 X2
+    U1 = ["coin", STOP]  # 1.1.1 X1  # not named by CspBook·Pdf
+    U2 = ["coin", ["choc", ["coin", ["choc", STOP]]]]  # 1.1.1 X2  # not named by CspBook·Pdf
     CTR = ["right", "up", "right", "right", STOP]  # # 1.1.1 X3
 
     #
     # Cyclic Flows on an Alphabet of 1 Event
     #
 
-    CLOCK0: list | str
-    CLOCK0 = "CLOCK0"
-    CLOCK0 = ["tick", CLOCK0]  # first 'CLOCK =' of CspBook Pdf
-
     CLOCK1: list | str
-    CLOCK1 = "CLOCK1"
-    CLOCK1 = ["tick", CLOCK1]  # missing from CspBook Pdf
+    CLOCK1 = "CLOCK1"  # CspBook·Pdf takes lazy eval of ClOCK0 for granted
+    CLOCK1 = ["tick", CLOCK1]  # 1st of 2 'CLOCK =' of CspBook·Pdf
+
+    CLOCK2: list | str
+    CLOCK2 = "CLOCK2"  # CspBook·Pdf doesn't distinguish CLOCK1, CLOCK2, CLOCK3, CLOCK
+    CLOCK2 = ["tick", CLOCK2]  # missing from CspBook·Pdf
 
     X = "X"
-    CLOCK = {"X": ["tick", X]}  # 1.1.2 X1
+    CLOCK = {"X": ["tick", X]}  # 1.1.2 X1  # 2nd of 2 'CLOCK =' of CspBook·Pdf
 
     #
     # Cyclic Flows on an Alphabet of a Few Events
     #
 
-    CLOCK3 = {"X": ["tick", "tock", "boom", X]}  # missing from CspBook Pdf
+    CLOCK3 = {"X": ["tick", "tock", "boom", X]}  # missing from CspBook·Pdf
 
-    VMS_0: list | str
-    VMS_0 = "VMS_0"
-    VMS_0 = ["coin", "choc", VMS_0]  # first 'VMS =' of CspBook Pdf
+    VMS1: list | str
+    VMS1 = "VMS0"
+    VMS1 = ["coin", "choc", VMS1]  # 1st of 2 'VMS =' of CspBook·Pdf
 
-    VMS = {"X": ["coin", "choc", X]}  # 1.1.2 X2
+    VMS = {"X": ["coin", "choc", X]}  # 1.1.2 X2  # 2nd of 2 'VMS =' of CspBook·Pdf
 
     CH5A = ["in5p", "out2p", "out1p", "out2p", "CH5A"]  # 1.1.2 X3
     CH5B = ["in5p", "out1p", "out1p", "out1p", "out2p", "CH5B"]  # 1.1.2 X4
@@ -88,7 +93,7 @@ class CspBookExamples:
     # Acyclic Choices and Cyclic Choices
     #
 
-    U3 = {"up": STOP, "right": ["right", "up", STOP]}  # 1.1.3 X1
+    U3 = {"up": STOP, "right": ["right", "up", STOP]}  # 1.1.3 X1  # not named by CspBook·Pdf
 
     CH5C = [  # 1.1.3 X2
         "in5p",
@@ -110,6 +115,7 @@ class CspBookExamples:
 
     VMCRED = {"X": {"coin": ["choc", X], "choc": ["coin", X]}}  # 1.1.3 X5
     VMS2 = ["coin", {"X": {"coin": ["choc", X], "choc": ["coin", X]}}]  # 1.1.3 X6  # acyclic
+    # 'VMS2 =' is explicit in CspBook·Pdf
 
     COPYBIT = {"X": {"in_0": ["out_0", X], "in_1": ["out_1", X]}}  # 1.1.3 X7
 
@@ -117,9 +123,10 @@ class CspBookExamples:
     # Mutually Recursive Process Definition
     #
 
-    DD: dict | str
-    OO: dict | str
+    DD: dict | str  # CspBook·Pdf speaks of 'DD =', 'O =', 'L ='
+    OO: dict | str  # Flake8 E741 Ambiguous Variable Name rejects 'O ='
     LL: dict | str
+
     DD = "DD"
     OO = "OO"
     LL = "OO"
@@ -128,8 +135,7 @@ class CspBookExamples:
     OO = {"setlemon": LL, "orange": OO, "setorange": OO}
     LL = {"setorange": OO, "lemon": LL, "setlemon": LL}
 
-    # 'OO =' & 'LL =' ducks Flake8 E741 Ambiguous Variable Name, but mutates CspBook 'O =' & 'L ='
-    # Ending 'X =' with the : "X" Choices untangles the loops, but mutates CspBook O L O, L O L
+    # CspBook·Pdf says = O L O and = L O L, where we say = O O L and = L L O for clarity
 
 
 #
@@ -137,20 +143,152 @@ class CspBookExamples:
 #
 
 
-def CT(n: int) -> dict:  # 1.1.4 X2  # Cyclic CT(7) called out by 1.8.3 X5
+STR_CT = """
 
-    print(f"Forming CTN({n})")
+    {
+      0: up → CT(1) | around → CT(0)
+      n: up → CT(n + 1) | down → CT(n - 1)
+    }
+
+"""
+
+
+@functools.lru_cache(maxsize=None)
+def CT(n: int) -> "Process":
+    d = ct_n_to_dict(n)
+    p = to_process_if(d)
+    return p
+
+
+def ct_n_to_dict(n: int) -> dict:  # 1.1.4 X2  # Cyclic CT(7) called out by 1.8.3 X5
 
     p: dict
 
     if n == 0:
         p = {"up": lambda: CT(1), "around": lambda: CT(0)}
+
+        assert p["up"].__name__ == "<lambda>", p["up"].__name__
+        assert p["around"].__name__ == "<lambda>", p["around"].__name__
+
+        p["up"].__name__ = "CT(1)"
+        p["around"].__name__ = "CT(0)"
+
         return p
 
-    p = {"up": lambda: CT(n + 1), "down": CT(n - 1)}
+    p = {"up": lambda: CT(n + 1), "down": lambda: CT(n - 1)}
+
+    assert p["up"].__name__ == "<lambda>", p["up"].__name__
+    assert p["down"].__name__ == "<lambda>", p["down"].__name__
+
+    p["up"].__name__ = f"CT({n + 1})"
+    p["down"].__name__ = f"CT({n - 1})"
+
     return p
 
-    # todo: make 'def CT(n)' work
+
+#
+# Run well from the Sh Command Line
+#
+
+
+def main() -> None:
+    """Run well from the Sh Command Line"""
+
+    parse_csp_py_args_else()  # often prints help & exits
+
+    # Run some self-test's, then emulate:  python3 -i csp.py
+
+    try_func_else_pdb_pm(func=main_try)
+
+
+def try_func_else_pdb_pm(func) -> None:
+    """Call a Py Func, but post-mortem debug an unhandled Exc"""
+
+    try:
+        func()
+    except bdb.BdbQuit:
+        raise
+    except Exception as exc:
+        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        assert exc is exc_value
+
+        if not hasattr(sys, "last_exc"):
+            sys.last_exc = exc_value
+
+        traceback.print_exc(file=sys.stderr)
+
+        print("\n", file=sys.stderr)
+        print("\n", file=sys.stderr)
+        print("\n", file=sys.stderr)
+
+        print(">>> sys.last_traceback = sys.exc_info()[-1]", file=sys.stderr)
+        sys.last_traceback = exc_traceback
+
+        print(">>> pdb.pm()", file=sys.stderr)
+        pdb.pm()
+
+        raise
+
+
+def parse_csp_py_args_else() -> None:
+    """Take Words in from the Sh Command Line"""
+
+    doc = __main__.__doc__
+    assert doc, (doc,)
+
+    parser = doc_to_parser(doc, add_help=True, epilog_at="examples:")
+
+    yolo_help = "do what's popular now"
+    parser.add_argument("--yolo", action="count", help=yolo_help)
+
+    parse_args_else(parser)
+
+
+def doc_to_parser(doc: str, add_help: bool, epilog_at: str) -> argparse.ArgumentParser:
+    """Form an ArgParse ArgumentParser out of the Doc, often the Main Doc"""
+
+    assert doc
+    strip = doc.strip()
+    lines = strip.splitlines()
+
+    usage = lines[0]
+    prog = usage.split()[1]
+    description = lines[2]
+
+    epilog = strip[strip.index(epilog_at) :]
+
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        description=description,
+        add_help=True,
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=epilog,
+    )
+
+    return parser
+
+
+def parse_args_else(parser: argparse.ArgumentParser) -> None:
+    """Take Words in from the Sh Command Line, else Print Help and Exit"""
+
+    epilog = parser.epilog
+    assert epilog, (epilog,)
+
+    shargs = sys.argv[1:]
+    if sys.argv[1:] == ["--"]:  # ArgParse chokes if Sep present without Pos Args
+        shargs = list()
+
+    testdoc = textwrap.dedent("\n".join(epilog.splitlines()[1:]))
+    if not sys.argv[1:]:
+        print()
+        print(testdoc)
+        print()
+
+        sys.exit(0)  # exits 0 after printing help
+
+    parser.parse_args(shargs)
+
+    # often prints help & exits
 
 
 #
@@ -363,6 +501,78 @@ class Pseudonym(Box):  # Str "X"
         return s
 
 
+class Hope(Process):  # Callable
+    """Run a Process formed later"""
+
+    func: typing.Callable
+    process: Process | None
+
+    def __init__(self, func: typing.Callable) -> None:
+        super().__init__()
+
+        self.func = func
+        self.process = None
+
+        # print(func.__name__, repr(self))
+        assert func.__name__ not in hope_by_name.keys(), (func.__name__,)
+        hope_by_name[func.__name__] = self
+
+    def __str__(self) -> str:
+        """Speak of X marks the spot"""
+
+        func = self.func
+        s = func.__name__
+        return s
+
+    def __bool__(self) -> bool:
+        """Choose Truthy or Falsey by the Value"""
+
+        func = self.func
+
+        p = self.process if self.process else to_process_if(func())
+        self.process = p
+
+        b = p.__bool__()
+        return b
+
+    def abs_process(self) -> "Process":
+        """Uncloak the Value"""
+
+        func = self.func
+
+        p = self.process if self.process else to_process_if(func())
+        self.process = p
+
+        q = p.abs_process()
+        return q
+
+    def menu_choices(self) -> list[str]:
+        """Offer the Menu Choices of the Value"""
+
+        func = self.func
+
+        p = self.process if self.process else to_process_if(func())
+        self.process = p
+
+        choices = p.menu_choices()
+        return choices
+
+    def after_process_of(self, choice: str) -> "Process":
+        """Forward a Menu Choice into the Value"""
+
+        func = self.func
+
+        p = self.process if self.process else to_process_if(func())
+        self.process = p
+
+        q = p.after_process_of(choice)
+        return q
+
+
+hope_by_name: dict[str, Hope]
+hope_by_name = dict()
+
+
 class Cloak(Pseudonym):  # Dict {"X": ["tick", X]}
     """Run a Process with a Name, and with an awareness of its own Name"""
 
@@ -426,13 +636,23 @@ def eq_pop(key: str, value: object | None) -> None:
     # todo: more robust Scoping, beyond .eq_pop/ .eq_push Shadowing
 
 
-def to_process_if(o: Process | dict | list | str) -> Process:
+def to_process_if(o: Process | dict | list | str | typing.Callable) -> Process:
     """Return no change, else a Process in place of Dict | List | Str"""
 
     # Accept a Process as is
 
     if isinstance(o, Process):
         return o  # todo: 'better copied than aliased' at .to_process_if
+
+    # Accept a Callable to hold for now, to run later
+
+    if callable(o):
+        if o.__name__ in hope_by_name.keys():
+            hope = hope_by_name[o.__name__]
+            return hope
+
+        hope = Hope(o)
+        return hope
 
     # Form a Choice from a large Dict, or a Cloak from a Dict of 1 Item
 
@@ -484,98 +704,37 @@ PseudonymStopProcess = Pseudonym(key="STOP", value=StopProcess)
 
 
 #
-# Run well from the Sh Command Line
-#
-
-
-def main() -> None:
-    """Run well from the Sh Command Line"""
-
-    parse_csp_py_args_else()  # often prints help & exits
-
-    main_try()
-
-
-def parse_csp_py_args_else() -> None:
-    """Take Words in from the Sh Command Line"""
-
-    doc = __main__.__doc__
-    assert doc, (doc,)
-
-    parser = doc_to_parser(doc, add_help=True, epilog_at="examples:")
-
-    yolo_help = "do what's popular now"
-    parser.add_argument("--yolo", action="count", help=yolo_help)
-
-    parse_args_else(parser)
-
-
-def doc_to_parser(doc: str, add_help: bool, epilog_at: str) -> argparse.ArgumentParser:
-    """Form an ArgParse ArgumentParser"""
-
-    assert doc
-    strip = doc.strip()
-    lines = strip.splitlines()
-
-    usage = lines[0]
-    prog = usage.split()[1]
-    description = lines[2]
-
-    epilog = strip[strip.index(epilog_at) :]
-
-    parser = argparse.ArgumentParser(
-        prog=prog,
-        description=description,
-        add_help=True,
-        formatter_class=argparse.RawTextHelpFormatter,
-        epilog=epilog,
-    )
-
-    return parser
-
-
-def parse_args_else(parser: argparse.ArgumentParser) -> None:
-    """Take Words in from the Sh Command Line, else Print Help and Exit"""
-
-    epilog = parser.epilog
-    assert epilog, (epilog,)
-
-    shargs = sys.argv[1:]
-    if sys.argv[1:] == ["--"]:  # ArgParse chokes if Sep present without Pos Args
-        shargs = list()
-
-    testdoc = textwrap.dedent("\n".join(epilog.splitlines()[1:]))
-    if not sys.argv[1:]:
-        print()
-        print(testdoc)
-        print()
-
-        sys.exit(0)  # exits 0 after printing help
-
-    parser.parse_args(shargs)
-
-    # often prints help & exits
-
-
-#
 # Run some Self-Test's
 #
 
 
 def main_try() -> None:
-    """Run some Self-Test's"""
+    """Run some Self-Test's, and then emulate:  python3 -i csp.py"""
 
     # Compile each Example Process,
-    # from (Dict | List | Str) to a Global Variable with the same Name
+    # from (Dict | List | Str), to a Global Variable with the same Name
 
     compile_scope = dict(vars(CspBookExamples))
     compile_scope = dict(_ for _ in compile_scope.items() if _[0].upper() == _[0])
 
     scope_compile_processes(scope=compile_scope)
 
-    # Run one Interactive Console, till exit
+    # List the compiled Processes
 
-    run_scope = scope_to_next_scope(scope=globals(), casefolds=["csp", "dir", "step"])
+    run_scope = scope_to_alt_scope(scope=globals())
+
+    print()
+    print("CT(n) =", run_scope["CT"])
+    limit = 5
+    afters = process_to_afters(CT(0), limit=limit)
+    print("\n".join(", ".join(_) for _ in afters))
+    print(f"# quit tracing infinite depth, after {limit} Processes #")
+
+    print()
+    print("CT(4) =", run_scope["CT"](4))
+    print("# (not tracing CT(4)) #")
+
+    # Run one Interactive Console, till exit, much as if:  python3 -i csp.py
 
     print()
     print(">>> dir()")
@@ -588,45 +747,55 @@ def main_try() -> None:
     # 'code.interact' adds '__builtins__' into the Scope
 
 
-def scope_to_next_scope(scope: dict[str, object], casefolds: list[str]) -> dict[str, object]:
-    """Form a Scope of Names to work with"""
+def scope_to_alt_scope(scope: dict[str, object]):
+    """Cut down a Scope of Names to work with"""
 
     alt_scope = dict(scope)  # 'better copied than aliased'
-
-    assert "csp" not in alt_scope.keys()
-    alt_scope["csp"] = __main__  # else unimported by default
-
-    def scope_unsorted_dir(*args, **kwargs) -> list[str]:
-        """List the Names in Scope, else in Args"""
-        if args:
-            names = __builtins__.dir(*args, **kwargs)
-            return names
-        names = list(alt_scope.keys())
-        return names
-
-    assert "dir" not in alt_scope.keys()
-    alt_scope["dir"] = scope_unsorted_dir  # __builtins__["dir"]() is sorted :-(
-
-    assert "step" not in alt_scope.keys()
-    alt_scope["step"] = process_step
-
-    # Drop the casefolded Names from this Scope, except don't drop our celebrated Casefolds
 
     items = list(alt_scope.items())
     for k, v in items:
         if k.startswith("_"):
             del alt_scope[k]
         elif k == k.casefold():
-            if k not in casefolds:
-                del alt_scope[k]
+            del alt_scope[k]
         elif k.upper() == k:
             pass
         else:
             del alt_scope[k]
 
+    # Compile the infinite CT(n) Processes more lazily and dynamically
+
+    del alt_scope["STR_CT"]
+    del alt_scope["CT"]
+
+    class callable_ct_class:
+        def __call__(self, n) -> Process:
+            return CT(n)
+
+        def __str__(self) -> str:
+            s = textwrap.dedent(STR_CT).strip()
+            return s
+
+    alt_scope["CT"] = callable_ct_class()
+
+    # Add on:  csp, dir, step
+
+    alt_scope["csp"] = __main__  # else unimported by default
+    alt_scope["dir"] = lambda *args, **kwargs: scope_unsorted_dir(alt_scope, *args, **kwargs)
+    alt_scope["step"] = process_step
+
     # Succeed
 
     return alt_scope
+
+
+def scope_unsorted_dir(scope, *args, **kwargs) -> list[str]:
+    """List the Names in Scope, else in Args"""
+    if args:
+        names = __builtins__.dir(*args, **kwargs)
+        return names
+    names = list(scope.keys())
+    return names
 
 
 def scope_compile_processes(scope) -> None:
@@ -659,7 +828,7 @@ def scope_compile_processes(scope) -> None:
         print()
         print(f"{k} = {s}")
 
-        # Skip simple Indefinite Loops
+        # Skip our simplest Infinite Loops
 
         pv = p.value
         assert pv is not p, (pv, p)
@@ -667,7 +836,7 @@ def scope_compile_processes(scope) -> None:
             assert pv.value is not pv, (pv.value, pv)
 
             if pv.value is p:
-                print("# indefinite loop #")
+                print("# infinite loop #")
                 continue
 
         assert k != "X", (k,)
@@ -675,29 +844,19 @@ def scope_compile_processes(scope) -> None:
         # Print each Flow through the Process
 
         afters = process_to_afters(p)
-        afters_print(afters)
+        print("\n".join(", ".join(_) for _ in afters))
 
 
 #
-# Print the Afters of each Example Process, and its Name
+# Spell out the Afters of each Example Process, and its Name
+# CspBook·Pdf doesn't discuss this, doesn't upvote its breadth-first bias
 #
 
 
-def afters_print(afters: list[list[str]]) -> None:
-
-    alt = dict()
-    alt["."] = "."  # not "'.'"
-    alt["..."] = "..."  # not "'...'"
-
-    for after in afters:
-        join = ", ".join((alt[word] if (word in alt) else word) for word in after)
-        print(f"[{join}]")
-
-
-def process_to_afters(p: Process | dict | list | str, after: list[str] = list()) -> list[list[str]]:
+def process_to_afters(p: Process, limit=None, *, after: list[str] = list()) -> list[list[str]]:
     """Walk the Traces of a Process"""
 
-    afters = list()
+    # Choose what work to start with
 
     pairs: list[tuple[Process | dict | list | str, list[str]]]
     pairs = list()
@@ -706,18 +865,23 @@ def process_to_afters(p: Process | dict | list | str, after: list[str] = list())
     p_pair = (p, p_after)
     pairs.append(p_pair)
 
-    processes = list()
+    # Choose how to speak of empty and infinite futures
 
-    main_loop = str(".")
-    etc = str("...")
-    bleep = str("BLEEP")  # todo: Bleep is the Event that is not an Event, but ...
+    bleep = "BLEEP"  # todo: Bleep is the Event that is not an Event, but ...
+    etc = "..."
+    main_loop = "."
+
+    # Work on while work remains
+
+    afters = list()
 
     r1 = None
+    processes = list()
     while pairs:
         (q, q_after) = pairs.pop(0)
-        # print(f"{q_after=}  # process_to_afters")
 
-        #
+        # Compile the Process and snoop out the first compiled Process
+        # Stop work after looping to recompile a process already compiled
 
         r = to_process_if(q)
         r = r.abs_process()
@@ -730,31 +894,42 @@ def process_to_afters(p: Process | dict | list | str, after: list[str] = list())
             afters.append(q_after + [etc])
             continue
 
-        #
+        # Stop work after compiling enough Processes
 
         choices = r.menu_choices()
         if choices:
-            # print("processes.append", repr(r))
             processes.append(r)
-            if len(processes) > 25:
-                print("Quitting after tracing 25 Processes")
-                break
 
-        #
+            if limit is not None:
+                if len(processes) > limit:
+                    # print(f"# quit tracing infinite depth, after {limit} Processes #")
+                    break
+
+        # Stop work after running out of Choices
 
         if not choices:
             afters.append(q_after + [bleep])
             continue
 
+        # Visit each Choice in parallel, breadth-first
+
         for choice in choices:
             s_after = q_after + [choice]
             s = r.after_process_of(choice)
             s = s.abs_process()
+
+            # Stop work after looping to reach the first compiled process
+
             if s is r1:
                 afters.append(s_after + [main_loop])
+
+            # Else work on
+
             else:
                 s_pair = (s, s_after)
                 pairs.append(s_pair)
+
+    # Succeed
 
     return afters
 
@@ -872,6 +1047,7 @@ if __name__ == "__main__":
 
 
 # todo: Command-Line Input History
+# todo: compile lines of Csp Input
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
