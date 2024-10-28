@@ -29,6 +29,7 @@ import code
 import functools
 import pdb
 import random
+import re
 import sys
 import textwrap
 import traceback
@@ -713,7 +714,7 @@ hope_by_name = dict()
 
 
 #
-# Run some Self-Test's
+# Run some Self-Test's, and then emulate:  python3 -i csp.py
 #
 
 
@@ -726,7 +727,17 @@ def main_try() -> None:
     compile_scope = dict(vars(CspBookExamples))
     compile_scope = dict(_ for _ in compile_scope.items() if _[0].upper() == _[0])
 
-    scope_compile_processes(scope=compile_scope)
+    csp_texts = scope_compile_processes(scope=compile_scope)
+
+    # print()
+    for csp_text in csp_texts:
+        cp = Parser(csp_text)
+        ok = cp.take_input()
+        assert ok, (csp_text, cp.takes)
+
+        assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
+        assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
+        # print(cp.takes[-1][-1])
 
     # List the finite compiled Processes
 
@@ -755,6 +766,8 @@ def main_try() -> None:
     print(">>> dir()")
     print(repr(list(run_scope.keys())))
 
+    g = globals()
+    g["run_scope"] = run_scope
     code.interact(banner="", local=run_scope, exitmsg="")  # not 'locals='
 
     print("bye")
@@ -789,6 +802,7 @@ def scope_to_alt_scope(scope: dict[str, object]):
 
     # Add on:  csp, dir, step
 
+    alt_scope["add"] = process_add
     alt_scope["csp"] = __main__  # else unimported by default
     alt_scope["dir"] = lambda *args, **kwargs: scope_unsorted_dir(alt_scope, *args, **kwargs)
     alt_scope["step"] = process_step
@@ -800,14 +814,19 @@ def scope_to_alt_scope(scope: dict[str, object]):
 
 def scope_unsorted_dir(scope, *args, **kwargs) -> list[str]:
     """List the Names in Scope, else in Args"""
+
     if args:
         names = __builtins__.dir(*args, **kwargs)
         return names
+
     names = list(scope.keys())
+    if "__builtins__" in names:
+        names.remove("__builtins__")
+
     return names
 
 
-def scope_compile_processes(scope) -> None:
+def scope_compile_processes(scope) -> list[str]:
     """Compile each named (Dict | List | Str) into a Global Process Variable with the same Name"""
 
     g = globals()
@@ -830,12 +849,16 @@ def scope_compile_processes(scope) -> None:
 
     # Print each Process
 
+    csp_texts = list()
     for k in scope.keys():
         p = g[k]
         s = str(p.value)
 
+        csp_text = f"{k} = {s}"
+        csp_texts.append(csp_text)
+
         print()
-        print(f"{k} = {s}")
+        print(csp_text)
 
         # Skip our simplest Infinite Loops
 
@@ -855,9 +878,11 @@ def scope_compile_processes(scope) -> None:
         afters = process_to_afters(p)
         print("\n".join(", ".join(_) for _ in afters))
 
+    return csp_texts
+
 
 #
-# Spell out the Afters of each Example Process, and its Name
+# Spell out the Event Traces of each Example Process, and its Name
 # CspBook·Pdf doesn't discuss this, doesn't upvote its breadth-first bias
 #
 
@@ -1035,6 +1060,398 @@ def process_step_choose_and_reprint(choices, line) -> str:
 
 
 #
+# Parse Lines of CSP Input, by way of this Grammar =>
+#
+#   Input = Assignment End
+#   Assignment = Named "=" Process
+#
+#   Process = Wrapped | Unwrapped
+#   Wrapped = "(" Process ")"
+#   Unwrapped = Choice | Chosen
+
+#   Choice = Event "→" Chosen "|" Event "→" Chosen { "|" Event "→" Chosen }
+#   Chosen = Wrapped | Flow | Cloak | Named
+#   Flow = Event "→" { Event "→" } Process
+#   Cloak = "μ" Named "•" Process
+#
+#   Named = Word
+#   Event = Word
+#
+
+
+def process_add(csp_text: str) -> None:
+    """Compile a Csp Instruction into a Global Process Variables"""
+
+    cp = Parser(csp_text)
+    ok = cp.take_input()
+    if not ok:
+        print("nope")
+        return
+
+    assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
+    assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
+
+    input_ = cp.takes[-1][-1]
+    assert isinstance(input_, list), (type(input_), input_)
+    assert len(input_) == 2, (len(input_), input_)
+
+    g = globals()
+    run_scope = g["run_scope"]
+
+    (name, process) = input_
+    p = to_process_if(process)
+    run_scope[name] = p
+
+    afters = process_to_afters(p)
+    print("\n".join(", ".join(_) for _ in afters))
+
+
+class Parser:
+
+    text: str  # the Source Chars to consume
+    index: int  # the Count of Source Chars consumed
+
+    starts: list[int]  # the index'es to backtrack to
+    takes: list[dict | list | str]  # the parsed Input
+
+    def __init__(self, text) -> None:
+
+        start = 0
+        starts = list()
+        starts.append(start)
+
+        takes: list[dict | list | str]
+        take: list
+
+        takes = list()
+        take = list()
+        takes.append(take)
+
+        self.text = text
+        self.index = start
+        self.starts = starts
+        self.takes = takes
+
+        # todo: make self.text[self.index:] more available
+        # point out "(" found when ")" missing, and "{" found when "}" missing
+
+    #
+    # Take a whole Input
+    #
+
+    def take_input(self) -> bool:
+        """Input = Assignment End"""
+
+        self.open_take()
+        ok = self.take_assignment() and self.take_end()
+        ok = self.close_take(ok)
+
+        return ok
+
+    def take_assignment(self) -> bool:
+        """Assignment = Named "=" Process"""
+
+        self.open_take()
+        ok = self.take_named() and self.take_mark("=") and self.take_process()
+        ok = self.close_take(ok)
+
+        return ok
+
+    #
+    # Wrap Processes in Round Brackets (aka, Parentheses)
+    #
+
+    def take_process(self) -> bool:
+        """Process = Wrapped | Unwrapped"""
+
+        self.open_take()
+        ok = self.take_wrapped() or self.take_unwrapped()
+        ok = self.close_take(ok)
+
+        return ok
+
+    def take_wrapped(self) -> bool:
+        """Wrapped = "(" Process ")" """
+
+        self.open_take()
+        ok = self.take_mark("(") and self.take_process() and self.take_mark(")")
+        ok = self.close_take(ok)
+
+        return ok
+
+    def take_unwrapped(self) -> bool:
+        """Unwrapped = Choice | Chosen"""
+
+        self.open_take()
+        ok = self.take_choice() or self.take_chosen()
+        ok = self.close_take(ok)
+
+        return ok
+
+    #
+    # Pick apart Choice and Flow and Cloak
+    #
+
+    def take_choice(self) -> bool:
+        """Choice = Event "→" Chosen "|" Event "→" Chosen { "|" Event "→" Chosen }"""
+
+        self.open_take()
+        ok = self.take_event() and self.take_mark("→") and self.take_chosen()
+        ok = ok and self.take_mark("|")
+        ok = ok and self.take_event() and self.take_mark("→") and self.take_chosen()
+
+        self.open_take()
+        more_ok = ok
+        while more_ok:
+            more_ok = self.take_mark("|")
+            more_ok = more_ok and self.take_event() and self.take_mark("→") and self.take_process()
+            self.close_accept_one_take(more_ok)
+            self.open_take()
+        self.close_accept_one_take(False)
+
+        ok = self.close_take(ok)
+
+        if ok:
+            deepest_take = self.takes[-1]
+            assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
+            take = deepest_take[-1]
+            assert isinstance(take, list), (type(take), take)
+
+            assert len(take) >= 4, (len(take), take)
+            assert (len(take) % 2) == 0, (len(take), take)
+
+            d = dict()
+            events = take[::2]
+            for event, process in zip(take[::2], take[1::2]):
+                d[event] = process
+
+            keys = list(d.keys())
+            assert keys == events, (keys, events)
+
+            deepest_take[-1] = d
+
+        return ok
+
+    def take_chosen(self) -> bool:
+        """Chosen = Wrapped | Flow | Cloak | Named"""
+
+        self.open_take()
+        ok = self.take_wrapped() or self.take_flow() or self.take_cloak() or self.take_named()
+        ok = self.close_take(ok)
+
+        return ok
+
+    def take_flow(self) -> bool:
+        """Flow = Event "→" { Event "→" } Process"""
+
+        self.open_take()
+        ok = self.take_event() and self.take_mark("→")
+
+        self.open_take()
+        more_ok = ok
+        while more_ok:
+            more_ok = self.take_event() and self.take_mark("→")
+            self.close_accept_one_take(more_ok)
+            self.open_take()
+        self.close_accept_one_take(False)
+
+        ok = ok and self.take_process()
+
+        ok = self.close_take(ok)
+
+        return ok
+
+    def take_cloak(self) -> bool:
+        """Cloak = "μ" Named "•" Process"""
+
+        self.open_take()
+        ok = (
+            self.take_mark("μ") and self.take_named() and self.take_mark("•") and self.take_process()
+        )
+        ok = self.close_take(ok)
+
+        if ok:
+            deepest_take = self.takes[-1]
+            assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
+            take = deepest_take[-1]
+            assert isinstance(take, list), (type(take), take)
+
+            assert len(take) == 2, (len(take), take)
+            (name, process) = take
+
+            d = dict()
+            d[name] = process
+            deepest_take[-1] = d
+
+        return ok
+
+    #
+    # Accept a Process or Event Name
+    #
+
+    def take_named(self) -> bool:
+        """Named = Word"""
+
+        self.open_take()
+        ok = self.take_word()  # todo: require Uppercase for Process Names
+        ok = self.close_take(ok)
+
+        return ok
+
+    def take_event(self) -> bool:
+        """Event = Word"""
+
+        self.open_take()
+        ok = self.take_word()  # todo: require Lowercase for Event Names
+        ok = self.close_take(ok)
+
+        return ok
+
+    #
+    # Accept one Grammar
+    #
+
+    def take_end(self) -> bool:
+        """Take the End of the Text"""
+
+        self.drop_blanks()
+
+        assert 0 <= self.index <= len(self.text)
+        ok = self.index == len(self.text)
+
+        return ok
+
+    def drop_blanks(self) -> None:
+        """Drop one or more Blanks, if present there"""
+
+        index = self.index
+        text = self.text
+
+        text1 = text[index:]
+        lstrip = text1.lstrip()
+        length = len(text1) - len(lstrip)
+
+        self.index = index + length
+
+    def take_word(self) -> bool:
+        """Take any one Name"""
+
+        self.drop_blanks()
+
+        index = self.index
+        takes = self.takes
+        text = self.text
+
+        # Fail now if Name not found
+
+        text1 = text[index:]  # todo: more than r"[a-zA-Z_]" as Letters in Names
+        m = re.match(r"^[a-zA-Z_][a-zA-Z_0-9]*", string=text1)
+        if not m:
+            return False
+
+        name = m.group()
+
+        # Take the Name
+
+        take = name
+
+        self.index += len(name)
+
+        deepest_take = takes[-1]
+        assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
+        deepest_take.append(take)
+
+        # Succeed
+
+        return True
+
+    def take_mark(self, mark) -> bool:
+        """Take a matching Mark"""
+
+        self.drop_blanks()
+
+        index = self.index
+        text = self.text
+
+        # Fail now if Mark not found
+
+        text1 = text[index:]
+        if not text1.startswith(mark):
+            return False
+
+        # Take the Mark
+
+        self.index += len(mark)
+
+        # Succeed
+
+        return True
+
+    #
+    #
+    #
+
+    def open_take(self) -> None:
+        """Open up a List of Takes"""
+
+        index = self.index
+        starts = self.starts
+        takes = self.takes
+
+        starts.append(index)
+
+        take: list
+        take = list()
+
+        takes.append(take)
+
+    def close_take(self, ok) -> bool:
+        """Commit and close a List of Takes, else backtrack"""
+
+        starts = self.starts
+        takes = self.takes
+
+        start = starts.pop()
+        take = takes.pop()
+        while isinstance(take, list) and (len(take) == 1):
+            take = take[-1]
+
+        if not ok:
+            self.index = start
+            return False
+
+        deepest_take = takes[-1]
+        assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
+        deepest_take.append(take)
+
+        return True
+
+    def close_accept_one_take(self, ok) -> bool:
+        """Commit and close and merge a List of Takes, else backtrack"""  # todo: say this better
+
+        starts = self.starts
+        takes = self.takes
+
+        start = starts.pop()
+        take = takes.pop()
+        while isinstance(take, list) and (len(take) == 1):
+            take = take[-1]
+
+        if not ok:
+            self.index = start
+            return False
+
+        deepest_take = takes[-1]
+        assert isinstance(deepest_take, list), (type(deepest_take), deepest_take)
+        if not isinstance(take, list):
+            deepest_take.append(take)
+        else:
+            deepest_take.extend(take)
+
+        return True
+
+
+#
 # Run from the Sh Command Line, if not imported
 #
 
@@ -1044,7 +1461,7 @@ if __name__ == "__main__":
 
 
 # todo: Command-Line Input History
-# todo: Compile lines of Csp Input
+# todo: Retire bin/csp6.py
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
