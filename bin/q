@@ -1,7 +1,8 @@
-if [ $# -ne 0 ]; then
-    echo "$0: ERROR: unrecognized arguments:" "$@"
-    exit 2  # exit 2 for wrong args
+if [ $# -eq 0 ]; then
+    set -xe
+    git checkout
+else
+    set -xe
+    git config --get-regexp "^alias.$1"
+    git "$@"
 fi
-
-set -xe
-git checkout

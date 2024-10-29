@@ -26,7 +26,7 @@ git branch --all |grep /feature/ |grep -v /guests/
 # only once, at only one Clone inside one Host
 
 ssh host1
-git push origin HEAD:guests/jqdoe
+git push origin HEAD:guests/jqdoe  # create remote for: git branch
 
 
 # 3 - Copy your Branch out to each Host,
@@ -37,12 +37,19 @@ git fetch
 git checkout guests/jqdoe
 
 
+# 3.5 - Alternatively, make your Branch local first, then push, then distribute
+
+ssh host1
+git checkout -b guests/jqdoe/goodwork-PROJ-12345
+git push --set-upstream origin guests/jqdoe/goodwork-PROJ-12345  # create remote for: git branch
+
+
 # 4 - Delete your Branch remotely, like 'rm -rf',
 # only once, at only one Clone inside one Host
 
 cat .git/config
 ssh host3
-git push origin --delete guests/jqdoe
+git push origin --delete guests/jqdoe  # delete for: git branch
 
 
 # 5 - Delete your Branch locally from each Host,

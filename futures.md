@@ -944,6 +944,8 @@ adopt m for Make, over b for Build?
 
 fix qrl
 
+uu = uniq in the way of don't make me sort the input - for like reviewing CLI Input History
+
 ## Copied from
 
 Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md
