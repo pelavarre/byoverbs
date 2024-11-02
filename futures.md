@@ -945,6 +945,7 @@ adopt m for Make, over b for Build?
 fix qrl
 
 uu = uniq in the way of don't make me sort the input - for like reviewing CLI Input History
+fh |tac |uu |tac
 
 ## Copied from
 

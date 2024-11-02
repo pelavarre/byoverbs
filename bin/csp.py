@@ -56,8 +56,8 @@ class CspBookExamples:
     STOP: list
     STOP = list()
 
-    U1 = ["coin", STOP]  # 1.1.1 X1  # not named by CspBook·Pdf
-    U2 = ["coin", ["choc", ["coin", ["choc", STOP]]]]  # 1.1.1 X2  # not named by CspBook·Pdf
+    U1 = ["coin", STOP]  # 1.1.1 X1  # unnamed in CspBook·Pdf
+    U2 = ["coin", ["choc", ["coin", ["choc", STOP]]]]  # 1.1.1 X2  # unnamed in CspBook·Pdf
     CTR = ["right", "up", "right", "right", STOP]  # # 1.1.1 X3
 
     #
@@ -65,12 +65,12 @@ class CspBookExamples:
     #
 
     CLOCK1: list | str
-    CLOCK1 = "CLOCK1"  # CspBook·Pdf takes lazy eval of ClOCK0 for granted
+    CLOCK1 = "CLOCK1"  # CspBook·Pdf takes lazy eval of CLOCK for granted
     CLOCK1 = ["tick", CLOCK1]  # 1st of 2 'CLOCK =' of CspBook·Pdf
 
     CLOCK2: list | str
-    CLOCK2 = "CLOCK2"  # CspBook·Pdf doesn't distinguish CLOCK1, CLOCK2, CLOCK3, CLOCK
-    CLOCK2 = ["tick", CLOCK2]  # missing from CspBook·Pdf
+    CLOCK2 = "CLOCK2"
+    CLOCK2 = ["tick", CLOCK2]  # CLOCK2 missing from CspBook·Pdf
 
     X = "X"
     CLOCK = {"X": ["tick", X]}  # 1.1.2 X1  # 2nd of 2 'CLOCK =' of CspBook·Pdf
@@ -79,7 +79,7 @@ class CspBookExamples:
     # Cyclic Flows on an Alphabet of a Few Events
     #
 
-    CLOCK3 = {"X": ["tick", "tock", "boom", X]}  # missing from CspBook·Pdf
+    CLOCK3 = {"X": ["tick", "tock", "boom", X]}  # CLOCK3 missing from CspBook·Pdf
 
     VMS1: list | str
     VMS1 = "VMS0"
@@ -94,7 +94,7 @@ class CspBookExamples:
     # Acyclic Choices and Cyclic Choices
     #
 
-    U3 = {"up": STOP, "right": ["right", "up", STOP]}  # 1.1.3 X1  # not named by CspBook·Pdf
+    U3 = {"up": STOP, "right": ["right", "up", STOP]}  # 1.1.3 X1  # unnamed in CspBook·Pdf
 
     CH5C = [  # 1.1.3 X2
         "in5p",
@@ -775,7 +775,7 @@ def main_try() -> None:
     # 'code.interact' adds '__builtins__' into the Scope
 
 
-def scope_to_alt_scope(scope: dict[str, object]):
+def scope_to_alt_scope(scope: dict[str, object]) -> dict[str, object]:
     """Cut down a Scope of Names to work with"""
 
     alt_scope = dict(scope)  # 'better copied than aliased'
@@ -1462,6 +1462,14 @@ if __name__ == "__main__":
 
 # todo: Command-Line Input History
 # todo: Retire bin/csp6.py
+
+_ = """
+
+    >>> print(VMS1.abs_process())
+    (coin → choc → VMS0)  # oops, should be VMS1
+    >>>
+
+"""
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
