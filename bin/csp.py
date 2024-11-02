@@ -82,7 +82,7 @@ class CspBookExamples:
     CLOCK3 = {"X": ["tick", "tock", "boom", X]}  # CLOCK3 missing from CspBook·Pdf
 
     VMS1: list | str
-    VMS1 = "VMS0"
+    VMS1 = "VMS1"
     VMS1 = ["coin", "choc", VMS1]  # 1st of 2 'VMS =' of CspBook·Pdf
 
     VMS = {"X": ["coin", "choc", X]}  # 1.1.2 X2  # 2nd of 2 'VMS =' of CspBook·Pdf
@@ -109,10 +109,18 @@ class CspBookExamples:
     VMC: dict | str
     VMC = "VMC"
     VMC = {  # 1.1.3 X4
-        "in2p": ["large", VMC],
-        "small": ["out1p", VMC],
+        "in2p": {"large": VMC, "small": ["out1p", VMC]},
         "in1p": {"small": VMC, "in1p": {"large": VMC, "in1p": STOP}},  # acyclic
     }
+
+    VMC2: dict | str  # VMC2 missing from CspBook
+    VMC2 = "VMC2"
+    VMC2 = {  # 1.1.3 X4
+        "in2p": {"large": VMC2, "small": ["out1p", VMC2]},
+        "in1p": {"small": VMC2, "in1p": {"large": VMC2, "small": ["out1p", VMC2]}},  # cyclic
+    }
+
+    # todo: (Y): {"large": Y, "small": ["out1p", Y]} for Don't-Repeat-Yourself inside VMC2
 
     VMCRED = {"X": {"coin": ["choc", X], "choc": ["coin", X]}}  # 1.1.3 X5
     VMS2 = ["coin", {"X": {"coin": ["choc", X], "choc": ["coin", X]}}]  # 1.1.3 X6  # acyclic
@@ -1462,14 +1470,6 @@ if __name__ == "__main__":
 
 # todo: Command-Line Input History
 # todo: Retire bin/csp6.py
-
-_ = """
-
-    >>> print(VMS1.abs_process())
-    (coin → choc → VMS0)  # oops, should be VMS1
-    >>>
-
-"""
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
