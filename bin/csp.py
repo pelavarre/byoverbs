@@ -120,7 +120,9 @@ class CspBookExamples:
         "in1p": {"small": VMC2, "in1p": {"large": VMC2, "small": ["out1p", VMC2]}},  # cyclic
     }
 
-    # todo: (Y): {"large": Y, "small": ["out1p", Y]} for Don't-Repeat-Yourself inside VMC2
+    # todo: lean deeper into Don't-Repeat-Yourself
+    # todo: [{"large": [], "small": ["out1p"]}, VMC2]  # No-Op & Single-Event Processes?
+    # todo: (Y): {"large": Y, "small": ["out1p", Y]}  # Function on Process Y?
 
     VMCRED = {"X": {"coin": ["choc", X], "choc": ["coin", X]}}  # 1.1.3 X5
     VMS2 = ["coin", {"X": {"coin": ["choc", X], "choc": ["coin", X]}}]  # 1.1.3 X6  # acyclic
@@ -139,7 +141,7 @@ class CspBookExamples:
     OO = {"orange": OO1, "setorange": OO1, "setlemon": LL1}
     LL = {"lemon": LL1, "setlemon": LL1, "setorange": OO1}
 
-    # CspBook·Pdf says = O L O and = L O L, where we say = OO1 OO1 LL1 and = LL1 LL1 OO1 for clarity
+    # CspBook·Pdf says = O L O and = L O L, where we say = O O L and = L L O for clarity
 
 
 #
@@ -150,11 +152,16 @@ class CspBookExamples:
 str_ct = """
 
     {
-      0: up → CT(1) | around → CT(0)
-      n: up → CT(n + 1) | down → CT(n - 1)
+      0: around → CT(0) | up → CT(1)
+      n: down → CT(n - 1) | up → CT(n + 1)
     }
 
 """
+
+# CspBook Pdf says Infinite Up before Finite Around or Finite Down,
+# where we say Finite before Infinite, for clarity,
+# but our 'def process_to_afters' finds the same Traces either way,
+# but we're telling you that, not yet showing you that
 
 
 class callable_ct_class:
@@ -181,23 +188,23 @@ def ct_n_to_dict(n: int) -> dict:  # 1.1.4 X2  # Cyclic CT(7) called out by 1.8.
     p: dict
 
     if n == 0:
-        p = {"up": lambda: ct(1), "around": lambda: ct(0)}
+        p = {"around": lambda: ct(0), "up": lambda: ct(1)}
 
-        assert p["up"].__name__ == "<lambda>", p["up"].__name__
         assert p["around"].__name__ == "<lambda>", p["around"].__name__
+        assert p["up"].__name__ == "<lambda>", p["up"].__name__
 
-        p["up"].__name__ = "CT(1)"
         p["around"].__name__ = "CT(0)"
+        p["up"].__name__ = "CT(1)"
 
         return p
 
-    p = {"up": lambda: ct(n + 1), "down": lambda: ct(n - 1)}
+    p = {"down": lambda: ct(n - 1), "up": lambda: ct(n + 1)}
 
-    assert p["up"].__name__ == "<lambda>", p["up"].__name__
     assert p["down"].__name__ == "<lambda>", p["down"].__name__
+    assert p["up"].__name__ == "<lambda>", p["up"].__name__
 
-    p["up"].__name__ = f"CT({n + 1})"
     p["down"].__name__ = f"CT({n - 1})"
+    p["up"].__name__ = f"CT({n + 1})"
 
     return p
 
@@ -1468,8 +1475,9 @@ if __name__ == "__main__":
     main()
 
 
-# todo: Command-Line Input History
 # todo: Retire bin/csp6.py
+# todo: Code for showing Cyclicity, showing Acyclity, giving up after a limit?
+# todo: Command-Line Input History
 
 
 # posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
