@@ -105,7 +105,7 @@ def main() -> None:
         if early_when.month != when.month:
             subprocess_run(early_argv)
 
-    # Run the month
+    # Run the month  # TODO: Run the month before, the month, and the month after
 
     middle_argv = list(inner_argv)
     argv_append_cal_args(middle_argv, args=args, when=when)

@@ -927,6 +927,9 @@ pq sorted text set
 
 generate Json list without trailing Comma
 
+
+### 13 - Thirteenth Traunch
+
 cope with 'qla' and all -... Args, no Author Emails
 
 adopt 'python3.8 -m py_compile' to check for syntax errors, at home and at work
@@ -946,6 +949,15 @@ fix qrl
 
 uu = uniq in the way of don't make me sort the input - for like reviewing CLI Input History
 fh |tac |uu |tac
+
+cal option to give more than 14 Days to both sides
+    Like how about default to give the whole months to both sides
+
+screen transcripts with no lag into:  tail -F
+
+The Terminal Sh should tell me when we’ll first test the changes I
+just now saved into my CronTab
+
 
 ## Copied from
 

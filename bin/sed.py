@@ -22,10 +22,12 @@ examples:
   sed "s,.*,'&',"  # Sed Repl '&' means the Chars matched
   sed 's,^.*$,& = self.&,'  # Sed Repl '&' means the Chars matched
 
-  pbpaste |awk '{print $NF}' |sed 's,^,-- ,' |sed 's,$, --,' |pbcopy
-
   echo 'aa  bb  cc' |sed 's,  *, ,g'  # collapse each input run of Spaces into single Space
+
+  pbpaste |awk '{print $NF}' |sed 's,^,-- ,' |sed 's,$, --,' |pbcopy
 """
+
+# beware, changing the last Paragraph of Doc above does redefine:  sed.py --
 
 # qdno |sed "s,\",echo $'," |sed "s,\",'," |bash  # converts to Sh $'' from Git ""
 
