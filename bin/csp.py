@@ -56,9 +56,11 @@ class CspBookExamples:
     STOP: list
     STOP = list()
 
-    U1 = ["coin", STOP]  # 1.1.1 X1  # unnamed in CspBook·Pdf
-    U2 = ["coin", ["choc", ["coin", ["choc", STOP]]]]  # 1.1.1 X2  # unnamed in CspBook·Pdf
-    CTR = ["right", "up", "right", "right", STOP]  # # 1.1.1 X3
+    # U1 = STOP  # unmentioned by CspBook·Pdf  # FIXME: make this mean:  U1 is STOP
+
+    U111X1 = ["coin", STOP]  # 1.1.1 X1  # unnamed in CspBook·Pdf
+    U111X2 = ["coin", ["choc", ["coin", ["choc", STOP]]]]  # 1.1.1 X2  # unnamed in CspBook·Pdf
+    CTR = ["right", "up", "right", "right", STOP]  # 1.1.1 X3
 
     #
     # Cyclic Flows on an Alphabet of 1 Event
@@ -94,7 +96,7 @@ class CspBookExamples:
     # Acyclic Choices and Cyclic Choices
     #
 
-    U3 = {"up": STOP, "right": ["right", "up", STOP]}  # 1.1.3 X1  # unnamed in CspBook·Pdf
+    U113X1 = {"up": STOP, "right": ["right", "up", STOP]}  # 1.1.3 X1  # unnamed in CspBook·Pdf
 
     CH5C = [  # 1.1.3 X2
         "in5p",
@@ -164,16 +166,22 @@ str_ct = """
 # but we're telling you that, not yet showing you that
 
 
-class callable_ct_class:
-    def __call__(self, n) -> "Process":
-        return def_ct(n)
+class ProcessFactory:
+
+    func: typing.Callable
+    str_self: str
+
+    def __init__(self, func, chars) -> None:
+        self.func = func
+        self.str_self = textwrap.dedent(chars).strip()
+
+    def __call__(self, *args, **kwargs) -> "Process":
+        func = self.func
+        return func(*args, **kwargs)
 
     def __str__(self) -> str:
-        s = textwrap.dedent(str_ct).strip()
+        s = self.str_self
         return s
-
-
-ct = callable_ct_class()
 
 
 @functools.lru_cache(maxsize=None)
@@ -181,6 +189,9 @@ def def_ct(n: int) -> "Process":
     d = ct_n_to_dict(n)
     p = to_process_if(d)
     return p
+
+
+ct = ProcessFactory(func=def_ct, chars=str_ct)
 
 
 def ct_n_to_dict(n: int) -> dict:  # 1.1.4 X2  # Cyclic CT(7) called out by 1.8.3 X5
@@ -317,6 +328,10 @@ def parse_args_else(parser: argparse.ArgumentParser) -> None:
 #
 # Form a Process from a Dict or List, like after loading one of those from a Json File
 #
+
+
+CODE_SCOPE: dict[str, object]
+CODE_SCOPE = dict()
 
 
 class Process:  # List [] of zero Items
@@ -518,9 +533,13 @@ class Pseudonym(Box):  # Str "X"
         assert key, (key,)
         self.key = key
 
-    def __str__(self) -> str:
-        """Speak of X marks the spot"""
+    # def __repr__(self) -> str:  # todo: Repr's for Process'es
+    #     key = self.key
+    #     value = self.value
+    #     s = f"Pseudonym({key!r}, {repr(value)}) at 0x{id(self):X}"
+    #     return s
 
+    def __str__(self) -> str:
         key = self.key
         s = key
         return s
@@ -552,10 +571,11 @@ eq_pushes = list()
 def eq_push(key: str, value: object) -> None:
     """Define the Key here for awhile"""
 
+    g = CODE_SCOPE
+
     assert key, (key,)
     assert value is not None, (value,)
 
-    g = globals()
     if key not in g.keys():
         v = None
     else:
@@ -567,13 +587,14 @@ def eq_push(key: str, value: object) -> None:
 
     g[key] = value
 
-    # todo: more robust Scoping, beyond .eq_push/ .eq_pop Shadowing
+    # todo: more robust Scoping, beyond .eq_push Shadowing
 
 
 def eq_pop(key: str, value: object | None) -> None:
     """Stop defining the Key here"""
 
-    g = globals()
+    g = CODE_SCOPE
+
     assert key in g.keys(), (key,)
     assert g[key] is value, (g[key], value)
 
@@ -586,11 +607,13 @@ def eq_pop(key: str, value: object | None) -> None:
     else:
         g[k] = v
 
-    # todo: more robust Scoping, beyond .eq_pop/ .eq_push Shadowing
+    # todo: more robust Scoping, beyond .eq_pop Shadowing
 
 
 def to_process_if(o: Process | dict | list | str | typing.Callable) -> Process:
     """Return no change, else a Process in place of Dict | List | Str"""
+
+    g = CODE_SCOPE
 
     # Accept a Process as is
 
@@ -639,7 +662,6 @@ def to_process_if(o: Process | dict | list | str | typing.Callable) -> Process:
 
     assert isinstance(o, str), (type(o), o)
 
-    g = globals()
     if o in g.keys():
         process = g[o]
         assert isinstance(process, Process), (process,)
@@ -736,15 +758,28 @@ hope_by_name = dict()
 def main_try() -> None:
     """Run some Self-Test's, and then emulate:  python3 -i csp.py"""
 
+    code_scope = CODE_SCOPE
+
     # Compile each Example Process,
-    # from (Dict | List | Str), to a Global Variable with the same Name
+    # from (Dict | List | Str), to a Process Variable with the same Name
 
-    compile_scope = dict(vars(CspBookExamples))
-    compile_scope = dict(_ for _ in compile_scope.items() if _[0].upper() == _[0])
+    from_scope = dict(vars(CspBookExamples))
+    from_scope = dict(_ for _ in from_scope.items() if _[0].upper() == _[0])
 
-    csp_texts = scope_compile_processes(scope=compile_scope)
+    del from_scope["OO1"]
+    del from_scope["LL1"]
 
-    # print()
+    if False:  # tests just a few cases, when commented in
+        from_scope = dict(
+            STOP=from_scope["STOP"],
+            # U1=from_scope["U1"],
+            U111X1=from_scope["U111X1"],
+        )
+
+    csp_texts = scope_compile_processes(code_scope, from_scope=from_scope)
+
+    code_scope["CT"] = ct
+
     for csp_text in csp_texts:
         cp = Parser(csp_text)
         ok = cp.take_input()
@@ -752,16 +787,11 @@ def main_try() -> None:
 
         assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
         assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
-        # print(cp.takes[-1][-1])
-
-    # List the finite compiled Processes
-
-    run_scope = scope_to_alt_scope(scope=globals())
 
     # Sketch the infinity of Processes defined by 'def CT'
 
     print()
-    print("CT(n) =", run_scope["CT"])
+    print("CT(n) =", code_scope["CT"])
 
     limit = 5
     afters = process_to_afters(ct(0), limit=limit)
@@ -769,7 +799,7 @@ def main_try() -> None:
     print("\n".join(", ".join(_) for _ in afters))
     print(f"# quit tracing infinite depth, after {limit} Processes #")
 
-    assert run_scope["CT"] is ct, (run_scope["CT"], ct)
+    assert code_scope["CT"] is ct, (code_scope["CT"], ct)
 
     print()
     print("CT(4) =", ct(4))
@@ -777,54 +807,20 @@ def main_try() -> None:
 
     # Run one Interactive Console, till exit, much as if:  python3 -i csp.py
 
+    code_scope["add"] = process_add
+    code_scope["csp"] = __main__  # else unimported by default
+    code_scope["dir"] = lambda *args, **kwargs: scope_unsorted_dir(code_scope, *args, **kwargs)
+    code_scope["step"] = process_step
+
     print()
     print(">>> dir()")
-    print(repr(list(run_scope.keys())))
+    print(repr(list(code_scope.keys())))
 
-    g = globals()
-    g["run_scope"] = run_scope
-    code.interact(banner="", local=run_scope, exitmsg="")  # not 'locals='
+    code.interact(banner="", local=code_scope, exitmsg="")  # not 'locals='
 
     print("bye")
 
     # 'code.interact' adds '__builtins__' into the Scope
-
-
-def scope_to_alt_scope(scope: dict[str, object]) -> dict[str, object]:
-    """Cut down a Scope of Names to work with"""
-
-    alt_scope = dict(scope)  # 'better copied than aliased'
-
-    items = list(alt_scope.items())
-    for k, v in items:
-        if k.startswith("_"):
-            del alt_scope[k]
-        elif k == k.casefold():
-            del alt_scope[k]
-        elif k.upper() == k:
-            pass
-        else:
-            del alt_scope[k]
-
-    # Bury the evidence of mutual recursion
-
-    del alt_scope["OO1"]
-    del alt_scope["LL1"]
-
-    # Add on:  CT
-
-    alt_scope["CT"] = ct
-
-    # Add on:  csp, dir, step
-
-    alt_scope["add"] = process_add
-    alt_scope["csp"] = __main__  # else unimported by default
-    alt_scope["dir"] = lambda *args, **kwargs: scope_unsorted_dir(alt_scope, *args, **kwargs)
-    alt_scope["step"] = process_step
-
-    # Succeed
-
-    return alt_scope
 
 
 def scope_unsorted_dir(scope, *args, **kwargs) -> list[str]:
@@ -841,32 +837,39 @@ def scope_unsorted_dir(scope, *args, **kwargs) -> list[str]:
     return names
 
 
-def scope_compile_processes(scope) -> list[str]:
-    """Compile each named (Dict | List | Str) into a Global Process Variable with the same Name"""
+def scope_compile_processes(to_scope, from_scope) -> list[str]:
+    """Compile each named (Dict | List | Str) into a Process Variable with the same Name"""
 
-    g = globals()
+    # Abbreviate some names
+
+    t = to_scope
+    f = from_scope
 
     # Create each Process Pseudonym
 
-    for k, v in scope.items():
+    for k, v in f.items():
         assert isinstance(v, (dict | list | str)), (type(v), v, k)
-        assert k not in g.keys(), (k,)
+        assert k not in t.keys(), (k,)
+
         p = Pseudonym(k, value=StopProcess)
-        g[k] = p
+        t[k] = p
 
     # Compile each Process into its own Pseudonym, in order
 
-    for k, v in scope.items():
-        p = g[k]
+    for k, v in f.items():
+        p = t[k]
+        assert p.value is StopProcess, (p.value,)
 
         q = to_process_if(v)
+        assert q is not StopProcess, (q,)  # FIXME: but it should be, at U1 = STOP
+
         p.value = q
 
     # Print each Process
 
     csp_texts = list()
-    for k in scope.keys():
-        p = g[k]
+    for k in f.keys():
+        p = t[k]
         s = str(p.value)
 
         csp_text = f"{k} = {s}"
@@ -878,9 +881,9 @@ def scope_compile_processes(scope) -> list[str]:
         # Skip our simplest Infinite Loops
 
         pv = p.value
-        assert pv is not p, (pv, p)
+        assert pv is not p, (pv, p, k)
         if isinstance(pv, Pseudonym):
-            assert pv.value is not pv, (pv.value, pv)
+            assert pv.value is not pv, (pv.value, pv, k)
 
             if pv.value is p:
                 print("# infinite loop #")
@@ -1030,11 +1033,11 @@ def process_step_stdin_readline(choices) -> str:
     try:
         line = sys.stdin.readline()
     except KeyboardInterrupt:  # same across sys.platform in ["darwin", "linux"] nowadays
-        print(" TTY INT KeyboardInterrupt")  # -> '⌃C TTY INT ...'
+        print(" KeyboardInterrupt")  # --> ⌃C KeyboardInterrupt
         return ""
 
     if not line:
-        print("⌃D TTY EOF")  # as if 'except EOFError' for 'input()'
+        print("⌃D EOFError")  # as if 'except EOFError' for 'input()'
         return ""
 
     # Quit when there are no Choices for stepping forward
@@ -1094,8 +1097,10 @@ def process_step_choose_and_reprint(choices, line) -> str:
 #
 
 
-def process_add(csp_text: str) -> None:
-    """Compile a Csp Instruction into a Global Process Variables"""
+def process_add(csp_text: str) -> None:  # FIXME: return the compiled process
+    """Compile and run 1 Csp Instruction"""
+
+    g = CODE_SCOPE
 
     cp = Parser(csp_text)
     ok = cp.take_input()
@@ -1110,15 +1115,14 @@ def process_add(csp_text: str) -> None:
     assert isinstance(input_, list), (type(input_), input_)
     assert len(input_) == 2, (len(input_), input_)
 
-    g = globals()
-    run_scope = g["run_scope"]
-
     (name, process) = input_
     p = to_process_if(process)
-    run_scope[name] = p
+    g[name] = p
 
-    afters = process_to_afters(p)
-    print("\n".join(", ".join(_) for _ in afters))
+    process_to_afters(p)
+
+    # afters = process_to_afters(p)
+    # print("\n".join(", ".join(_) for _ in afters))
 
 
 class Parser:
@@ -1442,7 +1446,7 @@ class Parser:
         return True
 
     def close_accept_one_take(self, ok) -> bool:
-        """Commit and close and merge a List of Takes, else backtrack"""  # todo: say this better
+        """Commit and close and merge a List of Takes, else backtrack"""
 
         starts = self.starts
         takes = self.takes
@@ -1464,6 +1468,8 @@ class Parser:
             deepest_take.extend(take)
 
         return True
+
+        # todo: I once wrote 'todo: say this better'. Ugh. Better than what??
 
 
 #
