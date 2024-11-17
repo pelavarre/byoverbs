@@ -531,7 +531,14 @@ class Flow(Process):  # List of Events then Process  # ["tick", "tock", "boom", 
 
         assert len(cells) >= 2, (len(cells), cells)
 
-        after = to_process_if(cells[-1])
+        if not isinstance(cells[-1], list):
+            after = to_process_if(cells[-1])
+        else:
+            p = to_process_if(cells[-1])
+            if not isinstance(p, Flow):
+                after = p
+            else:
+                after = Box(p)
 
         for index in reversed(range(1, len(cells) - 1)):
             guard = cells[index]
@@ -869,6 +876,9 @@ def eq_pop(key: str, value: object | None) -> None:
 def main_try() -> None:
     """Run some Self-Test's, and then emulate:  python3 -i csp.py"""
 
+    if main_args.c:
+        raise NotImplementedError(main_args.c)
+
     code_scope = CODE_SCOPE
     g = code_scope
 
@@ -1184,7 +1194,7 @@ def process_step(p: Process) -> None:
         # CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
         # ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail
 
-    # todo: DD() prints 'OO' and 'LL' without explaining them
+    # todo: DD() prints '(setorange → O | setlemon → L)' without explaining 'O' and 'L'
 
 
 def process_step_stdin_readline(choices) -> str:
@@ -1307,6 +1317,7 @@ def exec_(csp_text: str) -> None:
             assert len(execcable) == 2, (len(execcable), execcable)
 
             (name, process) = execcable
+            # print(f"execcable = {execcable}")  # todo: log this Parser Result
             p = to_process_if(process)
 
             q = p
@@ -1692,7 +1703,7 @@ class Parser:
 
         return True
 
-        # todo: I once wrote 'todo: say this better'. Ugh. Better than what??
+        # todo: I once wrote 'todo: say this is better'. Ugh. Better than what??
 
 
 #
