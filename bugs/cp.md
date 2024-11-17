@@ -29,6 +29,6 @@ examples of making Cp·Py do as well.
 
 ## Copied from
 
-Posted into:  https://github.com/pelavarre/byoverbs/blob/main/bugs/cp.md
+Posted as:  https://github.com/pelavarre/byoverbs/blob/main/bugs/cp.md
 <br>
 Copied from:  git clone https://github.com/pelavarre/byoverbs.git

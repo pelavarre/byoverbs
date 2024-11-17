@@ -48,5 +48,5 @@ bindkey "\ez" zap-to-char  # ⌥Z for Zsh, like Emacs, but ignores case and keep
 :
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot-zshrc
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot-zshrc
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -117,5 +117,5 @@ endfun
 " ⇧Z ⇧Z => Save Then Quit
 
 
-" posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.vimrc
+" posted as:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.vimrc
 " copied from:  git clone https://github.com/pelavarre/byoverbs.git

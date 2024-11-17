@@ -95,7 +95,7 @@ soon: black flake8 mypy shellcheck selftest
 	git describe --always --dirty
 	:
 
-# todo: no 'last2lines' cover for:  git grep -l 'posted into' |grep -v .py$
+# todo: no 'last2lines' cover for:  git grep -l 'posted as' |grep -v .py$
 
 
 #
@@ -203,5 +203,5 @@ dotfiles:
 	:
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/Makefile
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/Makefile
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

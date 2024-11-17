@@ -77,5 +77,5 @@
 ;             Shortcuts > Select The Previous Input Source  ⌃Space
 
 
-; posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.emacs
+; posted as:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.emacs
 ; copied from:  git clone https://github.com/pelavarre/byoverbs.git

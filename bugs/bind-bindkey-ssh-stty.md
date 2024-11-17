@@ -90,6 +90,6 @@ but I've never seen people make that complex choice.
 
 ## Copied from
 
-Posted into:  https://github.com/pelavarre/byoverbs/blob/main/bugs/bugs/bind-bindkey-ssh-stty.md
+Posted as:  https://github.com/pelavarre/byoverbs/blob/main/bugs/bind-bindkey-ssh-stty.md
 <br>
 Copied from:  git clone https://github.com/pelavarre/byoverbs.git

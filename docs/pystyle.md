@@ -67,6 +67,6 @@ words: [Str], when each Str contains no Sep<br>
 
 ## Copied from
 
-Posted into:  https://github.com/pelavarre/byoverbs/blob/main/docs/pystyle.md
+Posted as:  https://github.com/pelavarre/byoverbs/blob/main/docs/pystyle.md
 <br>
 Copied from:  git clone https://github.com/pelavarre/byoverbs.git

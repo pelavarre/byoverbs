@@ -186,5 +186,5 @@ echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 echo
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.bash_profile
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.bash_profile
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

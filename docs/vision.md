@@ -285,6 +285,6 @@ We think with the objects we love; we love the objects we think with
 
 ## Copied from
 
-Posted into:  https://github.com/pelavarre/byoverbs/blob/main/docs/vision.md
+Posted as:  https://github.com/pelavarre/byoverbs/blob/main/docs/vision.md
 <br>
 Copied from:  git clone https://github.com/pelavarre/byoverbs.git

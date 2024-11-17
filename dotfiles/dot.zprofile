@@ -142,5 +142,5 @@ echo
 #
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot-zprofile
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot-zprofile
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -58,5 +58,5 @@ PROMPT_COMMAND="precmd;$PROMPT_COMMAND"
 :
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.bashrc
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.bashrc
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

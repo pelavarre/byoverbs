@@ -316,6 +316,6 @@ Odds on we'll fix broken things faster if you're up talking them out with us
 
 ## Copied from
 
-Posted into:  https://github.com/pelavarre/byoverbs/blob/main/ReadmeSlowly.md
+Posted as:  https://github.com/pelavarre/byoverbs/blob/main/docs/ReadmeSlowly.md
 <br>
 Copied from:  git clone https://github.com/pelavarre/byoverbs.git

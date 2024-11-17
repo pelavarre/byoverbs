@@ -44,6 +44,6 @@ then you'll see two Dots in place of 1
 
 ## Copied from
 
-Posted into:  https://github.com/pelavarre/byoverbs/blob/main/bugs/DotTabReturn.md
+Posted as:  https://github.com/pelavarre/byoverbs/blob/main/bugs/DotTabReturn.md
 <br>
 Copied from:  git clone https://github.com/pelavarre/byoverbs.git

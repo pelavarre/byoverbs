@@ -73,6 +73,6 @@ Lately I settle for defining only
 
 ## Copied from
 
-Posted into:  https://github.com/pelavarre/byoverbs/blob/main/bugs/bugs/alias-declare-which-whence.py
+Posted as:  https://github.com/pelavarre/byoverbs/blob/main/bugs/alias-declare-which-whence.md
 <br>
 Copied from:  git clone https://github.com/pelavarre/byoverbs.git

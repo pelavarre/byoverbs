@@ -49,5 +49,5 @@ else
 fi
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/python3.bash
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/python3.bash
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -17,5 +17,5 @@ ls -1 byoverbs/pwnme/*  # list the games
 byoverbs/demos/tictactoe.py --  # start playing Tic-Tac-Toe in particular
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/pwnme/tictactoe.bash
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/pwnme/tictactoe.bash
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

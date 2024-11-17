@@ -72,17 +72,19 @@ def main() -> None:
             # Fetch each Py File, and edit zero or more of them
 
             ext = os.path.splitext(find)[-1]
-            if ext == ".py":
+            if ext == ".md":
+                visit_md_find(find)
+            elif ext == ".py":
                 visit_py_find(find)
 
-        # todo: no cover for:  git grep -l 'posted into' |grep -v .py$
+        # todo: no cover for:  git grep -l 'posted as' |grep -v .py$
 
     # Say what happened
 
     join = " ".join(loud_pyfinds)
     if loud_pyfinds:
         print()
-        print(r"vi {} +'/# posted into\|# copied from'".format(join))
+        print(r"vi {} +'/# posted as\|# copied from'".format(join))
 
     print()
     print(
@@ -90,6 +92,12 @@ def main() -> None:
             len(edits), len(pyfinds), len(dirnames)
         )
     )
+
+
+def visit_md_find(find) -> None:
+    """Fetch this Md File, review it, and auto-correct it if need be"""
+
+    # todo: .visit_md_find
 
 
 def visit_py_find(find) -> None:
@@ -103,35 +111,42 @@ def visit_py_find(find) -> None:
     pyfinds.append(find)
 
     path = pathlib.Path(find)
-    text = path.read_text()
-    tail = "\n".join(text.splitlines()[-4:]) + "\n"
+    rtext = path.read_text()
+    tail = "\n".join(rtext.splitlines()[-4:]) + "\n"
 
     # Add the Autocorrection of 4 new Autostyled Lines if not present already
 
     repl = main_tail.replace("demos/last2lines.py", find)
 
-    alt_text = text
+    wtext = rtext
     if tail != repl:
-        if text:
+
+        if tail.replace("posted into", "posted as") == repl:
+            rindex = rtext.rindex("posted into")
+            wtext = rtext[:rindex] + rtext[rindex:].replace("posted into", "posted as")
+            path.write_text(wtext)
+            return
+
+        if rtext:
             edits.append(find)
-            alt_text = text + repl
+            wtext = rtext + repl
             with open(find, "a") as appending:
                 appending.write(repl)
 
-    # Surface more than 1 'posted into' or 'copied from' mark
+    # Surface more than 1 'posted as' or 'copied from' mark
 
-    lines = alt_text.splitlines()
+    lines = wtext.splitlines()
 
     loud_pairs = list()
     for index, line in enumerate(lines):
         line_number = 1 + index
 
-        if line.startswith("# posted into:"):
+        if line.startswith("# posted as:"):
             loud_pairs.append([line_number, line])
         if line.startswith("# copied from:"):
             loud_pairs.append([line_number, line])
 
-    if text:
+    if rtext:
         if len(loud_pairs) != 2:
             loud_pyfinds.append(find)
 
@@ -142,5 +157,5 @@ if __name__ == "__main__":
     main()
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/last2lines.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/last2lines.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

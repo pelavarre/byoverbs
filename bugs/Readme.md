@@ -27,6 +27,6 @@ Sherry Turkle
 
 ## Copied from
 
-Posted into:  https://github.com/pelavarre/byoverbs/blob/main/bugs/Readme.md
+Posted as:  https://github.com/pelavarre/byoverbs/blob/main/bugs/Readme.md
 <br>
 Copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -122,5 +122,5 @@ cd dotfiles/ || exit 1
 # calls for Bash while Zsh unknown
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/shellcheck.bash
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/shellcheck.bash
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -59,7 +59,7 @@ and work differently from striking the ⌃D and ⌥D and ⌘D Key Caps too
 
 ## Copied from
 
-Posted into:  https://github.com/pelavarre/byoverbs/blob/main/docs/future-work-emacs-vim.md
+Posted as:  https://github.com/pelavarre/byoverbs/blob/main/docs/future-work-emacs-vim.md
 <br>
 Copied from:  git clone https://github.com/pelavarre/byoverbs.git
 <br>

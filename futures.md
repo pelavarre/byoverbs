@@ -271,7 +271,7 @@ Git Commit Messages drafted, not pushed
 
     ls.py: Ship usage: ls.py [-R]  # walk deep down to show dirs in dirs
 
-    .: Link the Tracked Files to Posted-Into/ Copied-From
+    .: Link the Tracked Files to Posted-As/ Copied-From
 
     find.py: Ship usage: find.py [TOP ...]
     find.py: Ship usage: find.py [TOP ...] [-prune]
@@ -542,7 +542,7 @@ Mac Terminal
 
     qspno "" v $'' for Unicode such as:  $'demos/replit\302\267com'
 
-    also do the Posted-Into/ Copied-From Stamps for those Tracked Files
+    also do the Posted-As/ Copied-From Stamps for those Tracked Files
 
 
 ### 8 - Eighth traunch
@@ -961,6 +961,10 @@ just now saved into my CronTab
 
 ## Copied from
 
-Posted into:  https://github.com/pelavarre/byoverbs/blob/main/futures.md
+Posted as:  https://github.com/pelavarre/byoverbs/blob/main/futures.md
 <br>
 Copied from:  git clone https://github.com/pelavarre/byoverbs.git
+
+
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/futures.md
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git
