@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 r"""
-usage: csp.py [-h] [--yolo]
+usage: csp.py [-h] [-c CSP] [-i]
 
 work with Communicating Sequential Processes (CSP) notations
 
 options:
   -h, --help  show this message and exit
-  --yolo      do what's popular now
+  -c CSP      compile & run a line of CSP notation (may be empty)
+  -i          run the Python Repl to inspect interactively
 
 docs:
   https://en.wikipedia.org/wiki/Communicating_sequential_processes
@@ -16,7 +17,8 @@ docs:
 examples:
   csp.py --h  # shows this message and quits
   csp.py  # shows these examples and quits
-  csp.py --yolo  # opens the Python Repl, as if:  python3 -i csp.py
+  csp.py -i  # opens the Python Repl to work with many CspBook·Pdf examples
+  csp.py -i -c ''  # opens the Python Repl to work without much
 """
 
 # code reviewed by People, Black, Flake8, MyPy, & PyLance-Standard
@@ -243,10 +245,14 @@ def ct_n_to_dict(n: int) -> dict:  # 1.1.4 X2  # Cyclic CT(7) called out by 1.8.
 #
 
 
+main_args = argparse.Namespace()
+
+
 def main() -> None:
     """Run well from the Sh Command Line"""
 
-    parse_csp_py_args_else()  # often prints help & exits
+    ns = parse_csp_py_args_else()  # often prints help & exits
+    vars(main_args).update(vars(ns))
 
     # Run some self-test's, then emulate:  python3 -i csp.py
 
@@ -282,7 +288,7 @@ def try_func_else_pdb_pm(func) -> None:
         raise
 
 
-def parse_csp_py_args_else() -> None:
+def parse_csp_py_args_else() -> argparse.Namespace:
     """Take Words in from the Sh Command Line"""
 
     doc = __main__.__doc__
@@ -290,10 +296,18 @@ def parse_csp_py_args_else() -> None:
 
     parser = doc_to_parser(doc, add_help=True, epilog_at="examples:")
 
-    yolo_help = "do what's popular now"
-    parser.add_argument("--yolo", action="count", help=yolo_help)
+    c_help = "compile & run a line of CSP notation (may be empty)"
+    i_help = "run the Python Repl to inspect interactively"
 
-    parse_args_else(parser)
+    parser.add_argument("-c", metavar="CSP", help=c_help)
+    parser.add_argument("-i", action="count", help=i_help)
+
+    ns = parse_args_else(parser)
+    return ns
+
+    # works much like:  python3 -i -c ''
+    # works much like:  python3 -c ''
+    # works much like:  python3 --
 
 
 def doc_to_parser(doc: str, add_help: bool, epilog_at: str) -> argparse.ArgumentParser:
@@ -320,7 +334,7 @@ def doc_to_parser(doc: str, add_help: bool, epilog_at: str) -> argparse.Argument
     return parser
 
 
-def parse_args_else(parser: argparse.ArgumentParser) -> None:
+def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
     """Take Words in from the Sh Command Line, else Print Help and Exit"""
 
     epilog = parser.epilog
@@ -338,7 +352,8 @@ def parse_args_else(parser: argparse.ArgumentParser) -> None:
 
         sys.exit(0)  # exits 0 after printing help
 
-    parser.parse_args(shargs)
+    ns = parser.parse_args(shargs)
+    return ns
 
     # often prints help & exits
 
@@ -671,6 +686,21 @@ class Mention(Box):  # Str "X"
         assert key, (key,)
         self.key = key
 
+    def __abs__(self) -> "Process":
+        """Unbox the Value"""
+
+        # g = CODE_SCOPE  # FIXME: don't loop infinitely through:  CLOCK1B = μ X • (tick → X)
+        # key = self.key
+        # if key in g.keys():
+        #     gkvalue = g[key]
+        #     if gkvalue is not self.value:
+        #         self.value = gkvalue  # todo: work out more elegantly when this happens
+
+        value = self.value
+        p = value.__abs__()
+
+        return p
+
     # def __repr__(self) -> str:  # todo: Repr's for Process'es
     #     key = self.key
     #     value = self.value
@@ -863,57 +893,64 @@ def main_try() -> None:
     # Compile each Example Process,
     # from (Dict | List | Str), to a Process Variable with the same Name
 
-    from_scope = dict(vars(CspBookExamples))
-    from_scope = dict(_ for _ in from_scope.items() if _[0].upper() == _[0])
+    if main_args.c is None:
 
-    del from_scope["O1"]  # todo: more elegant mutual recursion
-    del from_scope["L1"]
+        from_scope = dict(vars(CspBookExamples))
+        from_scope = dict(_ for _ in from_scope.items() if _[0].upper() == _[0])
 
-    csp_texts = scope_compile_processes(code_scope, from_scope=from_scope)
+        del from_scope["O1"]  # todo: more elegant mutual recursion
+        del from_scope["L1"]
 
-    assert g["U1"] is g["STOP"], (g["U1"], g["STOP"])
-    assert g["CLOCK"] is g["CLOCK1B"], (g["CLOCK"], g["CLOCK1B"])
-    assert g["VMS"] is g["VMS1B"], (g["VMS"], g["VMS1B"])
+        csp_texts = scope_compile_processes(code_scope, from_scope=from_scope)
 
-    code_scope["CT"] = ct
+        assert g["U1"] is g["STOP"], (g["U1"], g["STOP"])
+        assert g["CLOCK"] is g["CLOCK1B"], (g["CLOCK"], g["CLOCK1B"])
+        assert g["VMS"] is g["VMS1B"], (g["VMS"], g["VMS1B"])
 
-    for csp_text in csp_texts:
-        cp = Parser(csp_text)
-        ok = cp.take_exec()
+        code_scope["CT"] = ct
 
-        assert ok, (csp_text, cp.takes)
-        # todo: add failing test of:  lemon
+        for csp_text in csp_texts:
+            cp = Parser(csp_text)
+            ok = cp.take_exec()
 
-        assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
-        assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
+            assert ok, (csp_text, cp.takes)
+            # todo: add failing test of:  lemon
 
-    # Sketch the infinity of Processes defined by 'def CT'
+            assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
+            assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
 
-    print()
-    print("CT(n) =", code_scope["CT"])
+        # Sketch the infinity of Processes defined by 'def CT'
 
-    assert PLENTY_DEPTH_5 == 5
+        iprint()
+        iprint("CT(n) =", code_scope["CT"])
 
-    limit = 5
-    afters = process_to_afters(ct(0), limit=limit)
-    print("\n".join(", ".join(_) for _ in afters))
-    print(f"# quit tracing infinite depth, after {limit} Processes #")
+        assert PLENTY_DEPTH_5 == 5
 
-    assert code_scope["CT"] is ct, (code_scope["CT"], ct)
+        limit = 5
+        afters = process_to_afters(ct(0), limit=limit)
+        iprint("\n".join(", ".join(_) for _ in afters))
+        iprint(f"# quit tracing infinite depth, after {limit} Processes #")
 
-    print()
-    print("CT(4) =", ct(4))
-    print("# not tracing CT(4) #")
+        assert code_scope["CT"] is ct, (code_scope["CT"], ct)
+
+        iprint()
+        iprint("CT(4) =", ct(4))
+        iprint("# not tracing CT(4) #")
 
     # Run one Interactive Console, till exit, much as if:  python3 -i csp.py
 
-    print()
-    print(">>> dir()")
-    print(repr(list(code_scope.keys())))
+    if main_args.i:
 
-    code.interact(banner="", local=code_scope, exitmsg="")  # not 'locals='
+        iprint()
+        iprint(">>> dir()")
+        iprint(repr(list(code_scope.keys())))
 
-    print("bye")
+        code.interact(banner="", local=code_scope, exitmsg="")  # not 'locals='
+
+        iprint("bye")
+
+    if not main_args.i:
+        print("bye")
 
     # 'code.interact' adds '__builtins__' into the Scope
 
@@ -991,19 +1028,28 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
         csp_text = f"{k} = {s}"
         csp_texts.append(csp_text)
 
-        print()
-        print(csp_text)
+        iprint()
+        iprint(csp_text)
 
         # Print each Flow through the Process
 
         if (k != "STOP") and (k in str_by_alias.keys()):
             if k == s:
-                print("# infinite loop #")  # todo: think more about STOP = STOP vs X = X
+                iprint("# infinite loop #")  # todo: think more about STOP = STOP vs X = X
         else:
+            # print(f"{k=}  # scope_compile_processes")
             afters = process_to_afters(p)
-            print("\n".join(", ".join(_) for _ in afters))
+            iprint("\n".join(", ".join(_) for _ in afters))
 
     return csp_texts
+
+
+def iprint(*args, **kwargs) -> None:
+    """Form a Line of Text, but only print it if running on into our -i Repl"""
+
+    itext = " ".join(str(_) for _ in args)
+    if main_args.i:
+        print(itext, **kwargs)
 
 
 #
@@ -1658,7 +1704,7 @@ if __name__ == "__main__":
     main()
 
 
-# todo: Retire bin/csp6.py
+# todo: Pull 'nope's and 'compilation failure's from 'bin/csp6.py', then retire it
 # todo: Code for showing Cyclicity, showing Acyclity, giving up after a limit?
 # todo: Command-Line Input History
 
@@ -1667,10 +1713,14 @@ if __name__ == "__main__":
 
 TESTS = """
 
+    csp.exec_('P1 = (coin → (choc → (coin → (choc → STOP))))')
+    csp.exec_('P2 = (coin → choc → coin → choc → STOP)')
+    print(P1)
+    print(P2)
+
     P1 = csp.eval_("lime → P2")
     P2 = csp.eval_("fig → STOP")
     P1()
-
     P3 = csp.eval_("P2")
     P3 is P2
 
