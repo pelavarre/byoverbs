@@ -60,14 +60,13 @@ class CspBookExamples:
     STOP = list()
 
     # U1 = STOP  # unmentioned by CspBook·Pdf  # FIXME: make this mean:  U1 is STOP
-    # U2 = [STOP]  # unmentioned by CspBook·Pdf  # FIXME: make this mean:  U2 = (STOP)
+    U2 = [STOP]  # unmentioned by CspBook·Pdf
 
     # 1.1.1 X1  # unnamed in CspBook·Pdf
     U111X1 = ["coin", STOP]
 
     # 1.1.1 X2  # unnamed in CspBook·Pdf
-    # U111X2 = [["coin", [["choc", [["coin", [["choc", STOP]]]]]]]]  # FIXME: more faithful
-    U111X2 = ["coin", ["choc", ["coin", ["choc", STOP]]]]
+    U111X2 = [["coin", [["choc", [["coin", [["choc", STOP]]]]]]]]
 
     # 1.1.1 X3
     CTR = ["right", "up", "right", "right", STOP]
@@ -344,7 +343,7 @@ CODE_SCOPE: dict[str, object]
 CODE_SCOPE = dict()
 
 
-class Process:  # List [] of zero Items
+class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
     """List the Def's of every Process"""
 
     def __bool__(self) -> bool:
@@ -416,6 +415,10 @@ def to_process_if(o: Process | dict | list | str | typing.Callable) -> Process:
             o = StopProcessMention
             return o
 
+        if len(o) == 1:
+            box = Box(o[-1])
+            return box
+
         assert len(o) >= 2, (len(o), o)
 
         flow = Flow(cells=o)
@@ -438,7 +441,7 @@ def to_process_if(o: Process | dict | list | str | typing.Callable) -> Process:
     return nym
 
 
-class Flow(Process):
+class Flow(Process):  # List of Events then Process  # ["tick", "tock", "boom", X]
 
     guard: str
     after: Process
@@ -501,7 +504,7 @@ class Flow(Process):
         return after
 
 
-class Choice(Process):
+class Choice(Process):  # Dict of 2 or more Process by Event  # {"choc": X, "toffee": X}
 
     by_choice: dict[str, Process]
 
@@ -571,6 +574,17 @@ class Box(Process):  # not part of .json()  # close to a List of 1 Item
         b = value.__bool__()
         return b
 
+    def __str__(self) -> str:
+        """Speak of the Value as inside Parentheses"""
+
+        value = self.value
+
+        s = value.__str__()
+        if not (s.startswith("(") and s.endswith(")")):
+            s = "(" + s + ")"
+
+        return s
+
     def abs_process(self) -> "Process":
         """Uncloak the Value"""
 
@@ -612,6 +626,8 @@ class Mention(Box):  # Str "X"
     #     return s
 
     def __str__(self) -> str:
+        """Speak of the Value by Name"""
+
         key = self.key
         s = key
         return s
@@ -628,7 +644,7 @@ class Cloak(Mention):  # Dict {"X": ["tick", X]}
         eq_pop(key, value=self)
 
     def __str__(self) -> str:
-        """Speak of μ X • [... X ... X ...]"""
+        """Speak of the Value as self-aware:  μ X • [... X ... X ...]"""
 
         key = self.key
         value = self.value
