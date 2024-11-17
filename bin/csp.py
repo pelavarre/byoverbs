@@ -1227,9 +1227,14 @@ def eval_(csp_text: str) -> Process:
     evallable = cp.takes[-1][-1]
 
     p = to_process_if(evallable)
-    process_to_afters(p)  # raises Exception if broken, now, before returning
 
-    return p
+    q = p
+    if isinstance(p, Mention):  # collapses Mentions', but not Box'es nor Cloak's
+        q = p.__abs__()
+
+    process_to_afters(q)  # raises Exception if broken, now, before returning
+
+    return q
 
 
 def exec_(csp_text: str) -> None:
@@ -1260,10 +1265,9 @@ def exec_(csp_text: str) -> None:
 
             q = p
             if isinstance(p, Mention):  # collapses Mentions', but not Box'es nor Cloak's
-                q = p.value
-                g[name] = q
-            else:
-                g[name] = q
+                q = p.__abs__()
+
+            g[name] = q
 
             process_to_afters(q)  # raises Exception if broken, now, before returning
 
@@ -1272,7 +1276,12 @@ def exec_(csp_text: str) -> None:
     # Else accept an anonymous Process
 
     p = to_process_if(execcable)
-    process_to_afters(p)  # raises Exception if broken, now, before returning
+
+    q = p
+    if isinstance(p, Mention):  # collapses Mentions', but not Box'es nor Cloak's
+        q = p.__abs__()
+
+    process_to_afters(q)  # raises Exception if broken, now, before returning
 
 
 class Parser:
