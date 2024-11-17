@@ -59,7 +59,7 @@ class CspBookExamples:
     STOP: list
     STOP = list()
 
-    # U1 = STOP  # unmentioned by CspBook·Pdf  # FIXME: make this mean:  U1 is STOP
+    # U1 = STOP  # unmentioned by CspBook·Pdf
     U2 = [STOP]  # unmentioned by CspBook·Pdf
 
     # 1.1.1 X1  # unnamed in CspBook·Pdf
@@ -864,7 +864,7 @@ def main_try() -> None:
 
     print()
     print("CT(4) =", ct(4))
-    print("# (not tracing CT(4)) #")
+    print("# not tracing CT(4) #")
 
     # Run one Interactive Console, till exit, much as if:  python3 -i csp.py
 
@@ -915,6 +915,13 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
         p = Mention(k, value=StopProcess)
         t[k] = p
 
+        if k == "STOP":  # FIXME: grok CLOCK = CLOCK1B etc
+            t["U1"] = p
+        elif k == "CLOCK1B":
+            t["CLOCK"] = p
+        elif k == "VMS1B":
+            t["VMS"] = p
+
     # Compile each Process into its own Mention, in order
 
     for k, v in f.items():
@@ -924,8 +931,21 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
         q = to_process_if(v)
         assert q is not StopProcess, (q,)  # FIXME: but it should be, at U1 = STOP
 
+        # r = q.abs_process()
+        #
+        # s = q
+        # if r is not StopProcess:
+        #     s = r
+
         p.value = q
         t[k] = q  # mutates t[k]
+
+        if k == "STOP":  # FIXME: grok CLOCK = CLOCK1B etc
+            t["U1"] = q
+        elif k == "CLOCK1B":
+            t["CLOCK"] = q
+        elif k == "VMS1B":
+            t["VMS"] = q
 
     # Print each Process
 
@@ -962,6 +982,16 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
 
         afters = process_to_afters(p)
         print("\n".join(", ".join(_) for _ in afters))
+
+        if k == "STOP":  # FIXME: grok CLOCK = CLOCK1B etc
+            print()
+            print("U1 = STOP")
+        elif k == "CLOCK1B":
+            print()
+            print("CLOCK = CLOCK1B")
+        elif k == "VMS1B":
+            print()
+            print("VMS = VMS1B")
 
     return csp_texts
 
@@ -1062,7 +1092,7 @@ def process_step(p: Process) -> None:
 
     q = p.abs_process()
 
-    print("#", q)
+    print("#", p)  # not q
     print()
 
     q1 = q  # aliases
@@ -1189,11 +1219,17 @@ def text_eval_instruction(csp_text: str) -> Process:
 
             (name, process) = instruction
             p = to_process_if(process)
-            g[name] = p
 
-            process_to_afters(p)  # raises Exception if broken, now, before returning
+            q = p
+            if isinstance(p, Mention):
+                q = p.value
+                g[name] = q
+            else:
+                g[name] = q
 
-            return p
+            process_to_afters(q)  # raises Exception if broken, now, before returning
+
+            return q
 
     # Else accept an anonymous Process
 
