@@ -1,5 +1,11 @@
 #!/bin/bash
 
+#
+# to do: more elegantly resolve
+#
+# shellcheck disable=SC2086  # Double quote to prevent globbing and word splitting
+#
+
 set -e
 
 
