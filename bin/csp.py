@@ -3,7 +3,7 @@
 r"""
 usage: csp.py [-h] [--yolo]
 
-work with Communicating Sequential Processes (CSP)
+work with Communicating Sequential Processes (CSP) notations
 
 options:
   -h, --help  show this message and exit
@@ -37,13 +37,16 @@ import typing
 
 
 #
-# List examples from CspBook·Pdf, spoken as Dict, List, and Str
+# List examples from CspBook·Pdf, but spoken as Dict, List, and Str
 #
 #   + Step across a List[Str] to reach 1 (Dict | List | Str)
-#   + Don't yet give a Csp meaning to a List of 1 Item
+#   + Take a List[ItemsOrItem] as saying (ItemsOrItem) in place of ItemsOrItem
+#
 #   + Branch across >= 2 Keys of a Dict[Str, Dict | List | Str]
 #   + Learn your own Name on the way into a Dict[Str, Dict | List | Str] of 1 Key
-#   + Accept a Str as a Name not yet defined
+#
+#   + Accept a Str as an uppercase Process Name not yet defined
+#   + Or accept a Str as a lowercase Event Name
 #
 
 
@@ -57,37 +60,44 @@ class CspBookExamples:
     STOP = list()
 
     # U1 = STOP  # unmentioned by CspBook·Pdf  # FIXME: make this mean:  U1 is STOP
+    # U2 = [STOP]  # unmentioned by CspBook·Pdf  # FIXME: make this mean:  U2 = (STOP)
 
-    U111X1 = ["coin", STOP]  # 1.1.1 X1  # unnamed in CspBook·Pdf
-    U111X2 = ["coin", ["choc", ["coin", ["choc", STOP]]]]  # 1.1.1 X2  # unnamed in CspBook·Pdf
-    CTR = ["right", "up", "right", "right", STOP]  # 1.1.1 X3
+    # 1.1.1 X1  # unnamed in CspBook·Pdf
+    U111X1 = ["coin", STOP]
+
+    # 1.1.1 X2  # unnamed in CspBook·Pdf
+    # U111X2 = [["coin", [["choc", [["coin", [["choc", STOP]]]]]]]]  # FIXME: more faithful
+    U111X2 = ["coin", ["choc", ["coin", ["choc", STOP]]]]
+
+    # 1.1.1 X3
+    CTR = ["right", "up", "right", "right", STOP]
 
     #
     # Cyclic Flows on an Alphabet of 1 Event
     #
 
-    CLOCK1: list | str
-    CLOCK1 = "CLOCK1"  # CspBook·Pdf takes lazy eval of CLOCK for granted
-    CLOCK1 = ["tick", CLOCK1]  # 1st of 2 'CLOCK =' of CspBook·Pdf
-
-    CLOCK2: list | str
-    CLOCK2 = "CLOCK2"
-    CLOCK2 = ["tick", CLOCK2]  # CLOCK2 missing from CspBook·Pdf
+    CLOCK1A: list | str
+    CLOCK1A = "CLOCK1A"  # CspBook·Pdf takes the lazy eval of CLOCK1 for granted
+    CLOCK1A = ["tick", CLOCK1A]  # 1st of 2 'CLOCK =' of CspBook·Pdf
 
     X = "X"
-    CLOCK = {"X": ["tick", X]}  # 1.1.2 X1  # 2nd of 2 'CLOCK =' of CspBook·Pdf
+    CLOCK1B = {"X": ["tick", X]}  # 1.1.2 X1  # 2nd of 2 'CLOCK =' of CspBook·Pdf
+
+    # CLOCK = CLOCK1B  # FIXME: make this mean:  last CLOCK is CLOCK1B
 
     #
     # Cyclic Flows on an Alphabet of a Few Events
     #
 
-    CLOCK3 = {"X": ["tick", "tock", "boom", X]}  # CLOCK3 missing from CspBook·Pdf
+    CLOCK2 = {"X": ["tick", "tock", "boom", X]}  # CLOCK2 missing from CspBook·Pdf
 
-    VMS1: list | str
-    VMS1 = "VMS1"
-    VMS1 = ["coin", "choc", VMS1]  # 1st of 2 'VMS =' of CspBook·Pdf
+    VMS1A: list | str
+    VMS1A = "VMS1A"
+    VMS1A = ["coin", "choc", VMS1A]  # 1st of 2 'VMS =' of CspBook·Pdf
 
-    VMS = {"X": ["coin", "choc", X]}  # 1.1.2 X2  # 2nd of 2 'VMS =' of CspBook·Pdf
+    VMS1B = {"X": ["coin", "choc", X]}  # 1.1.2 X2  # 2nd of 2 'VMS =' of CspBook·Pdf
+
+    # VMS = VMS1B  # FIXME: make this mean:  last VMS is VMS1B
 
     CH5A = ["in5p", "out2p", "out1p", "out2p", "CH5A"]  # 1.1.2 X3
     CH5B = ["in5p", "out1p", "out1p", "out1p", "out2p", "CH5B"]  # 1.1.2 X4
@@ -96,9 +106,10 @@ class CspBookExamples:
     # Acyclic Choices and Cyclic Choices
     #
 
-    U113X1 = {"up": STOP, "right": ["right", "up", STOP]}  # 1.1.3 X1  # unnamed in CspBook·Pdf
+    # 1.1.3 X1  # unnamed in CspBook·Pdf
+    U113X1 = {"up": STOP, "right": ["right", "up", STOP]}  # acyclic
 
-    CH5C = [  # 1.1.3 X2
+    CH5C = [  # 1.1.3 X2  # cyclic
         "in5p",
         {
             "out1p": ["out1p", "out1p", "out2p", "CH5C"],
@@ -106,7 +117,7 @@ class CspBookExamples:
         },
     ]
 
-    VMCT = {"X": ["coin", {"choc": X, "toffee": X}]}  # 1.1.3 X3
+    VMCT = {"X": ["coin", {"choc": X, "toffee": X}]}  # 1.1.3 X3  # cyclic
 
     VMC: dict | str
     VMC = "VMC"
@@ -126,14 +137,14 @@ class CspBookExamples:
     # todo: [{"large": [], "small": ["out1p"]}, VMC2]  # No-Op & Single-Event Processes?
     # todo: (Y): {"large": Y, "small": ["out1p", Y]}  # Function on Process Y?
 
-    VMCRED = {"X": {"coin": ["choc", X], "choc": ["coin", X]}}  # 1.1.3 X5
+    VMCRED = {"X": {"coin": ["choc", X], "choc": ["coin", X]}}  # 1.1.3 X5  # cyclic
     VMS2 = ["coin", {"X": {"coin": ["choc", X], "choc": ["coin", X]}}]  # 1.1.3 X6  # acyclic
-    # 'VMS2 =' is explicit in CspBook·Pdf
+    # 'VMS2 =' is explicit in CspBook·Pdf, distinct from 'VMS ='
 
     COPYBIT = {"X": {"in_0": ["out_0", X], "in_1": ["out_1", X]}}  # 1.1.3 X7
 
     #
-    # Mutually Recursive Process Definition
+    # Mutually Recursive Processes
     #
 
     OO1 = "OO"  # Flake8 E741 Ambiguous Variable Name rejects 'O ='
@@ -147,23 +158,12 @@ class CspBookExamples:
 
 
 #
-# Infinite Sets of Processes Definition
+# Add the "CT =" example from CspBook·Pdf of an Infinite Set of Processes
 #
-
-
-str_ct = """
-
-    {
-      0: around → CT(0) | up → CT(1)
-      n: down → CT(n - 1) | up → CT(n + 1)
-    }
-
-"""
-
-# CspBook Pdf says Infinite Up before Finite Around or Finite Down,
-# where we say Finite before Infinite, for clarity,
-# but our 'def process_to_afters' finds the same Traces either way,
-# but we're telling you that, not yet showing you that
+#   We say 0: around | up, and n: down | up,
+#   so as to show the finite past clearly before getting into the infinite futures,
+#   despite CspBook·Pdf saying the reverse, as 0: up | around, and n: up | down
+#
 
 
 class ProcessFactory:
@@ -184,7 +184,17 @@ class ProcessFactory:
         return s
 
 
-@functools.lru_cache(maxsize=None)
+str_ct = """
+
+    {
+      0: around → CT(0) | up → CT(1)
+      n: down → CT(n - 1) | up → CT(n + 1)
+    }
+
+"""
+
+
+@functools.lru_cache(maxsize=None)  # make cyclic detectable by compiling each Int only once
 def def_ct(n: int) -> "Process":
     d = ct_n_to_dict(n)
     p = to_process_if(d)
@@ -357,13 +367,75 @@ class Process:  # List [] of zero Items
 
         raise NotImplementedError("after_process_of")
 
-    # works lots like the STOP Process, till overriden
-    # but its __str__ is the default object.__str__, doesn't say "STOP"
+    # works like the StopProcessMention, till overriden
+    # except its __str__ is the default object.__str__, doesn't say "STOP"
 
     # todo: toggle off '==' equality, to test clients only take 'is' equality
 
 
-StopProcess = Process()  # akin to Lisp Nil and Python None  # as if a Flow of no Events
+def to_process_if(o: Process | dict | list | str | typing.Callable) -> Process:
+    """Return a Process unchanged, else a Process in place of Dict | List | Str"""
+
+    g = CODE_SCOPE
+
+    # Accept a Process as is
+
+    if isinstance(o, Process):
+        return o  # todo: 'better copied than aliased' vs .to_process_if
+
+    # Accept a Callable to hold for now, to run later
+
+    if callable(o):
+        if o.__name__ in hope_by_name.keys():
+            hope = hope_by_name[o.__name__]
+            return hope
+
+        hope = Hope(o)  # todo: why not add this Hope into .hope_by_name here?
+        return hope
+
+    # Form a Choice from a large Dict, or a Cloak from a Dict of 1 Item
+
+    if isinstance(o, dict):
+        items = list(o.items())
+        if len(items) >= 2:
+            choice = Choice(d=o)
+            return choice
+
+        item = items[-1]
+
+        key = item[0]
+        value = item[-1]
+
+        cloak = Cloak(key, value=value)
+        return cloak
+
+    # Form a Stop or a Flow from a List
+
+    if isinstance(o, list):
+        if not o:
+            o = StopProcessMention
+            return o
+
+        assert len(o) >= 2, (len(o), o)
+
+        flow = Flow(cells=o)
+        return flow
+
+    # Find a Process in the Compile-Time Scope by Name now
+
+    assert isinstance(o, str), (type(o), o)
+
+    if o in g.keys():
+        process = g[o]
+        assert isinstance(process, Process), (process,)
+
+        nym = Mention(o, value=process)
+        return nym
+
+    # Else find the Process in the Run-Time Scope by Name later
+
+    nym = Mention(o, value=StopProcess)
+    return nym
 
 
 class Flow(Process):
@@ -522,7 +594,7 @@ class Box(Process):  # not part of .json()  # close to a List of 1 Item
         return p
 
 
-class Pseudonym(Box):  # Str "X"
+class Mention(Box):  # Str "X"
     """Run a Process with a Name, but without an awareness of its own Name"""
 
     key: str
@@ -536,7 +608,7 @@ class Pseudonym(Box):  # Str "X"
     # def __repr__(self) -> str:  # todo: Repr's for Process'es
     #     key = self.key
     #     value = self.value
-    #     s = f"Pseudonym({key!r}, {repr(value)}) at 0x{id(self):X}"
+    #     s = f"Mention({key!r}, {repr(value)}) at 0x{id(self):X}"
     #     return s
 
     def __str__(self) -> str:
@@ -545,8 +617,8 @@ class Pseudonym(Box):  # Str "X"
         return s
 
 
-class Cloak(Pseudonym):  # Dict {"X": ["tick", X]}
-    """Run a Process with a Name, and with an awareness of its own Name"""
+class Cloak(Mention):  # Dict {"X": ["tick", X]}
+    """Run a Process with a Name, and an awareness of its own Name"""
 
     def __init__(self, key: str, value: Process | dict | list | str) -> None:
         super().__init__(key, value=value)
@@ -562,120 +634,6 @@ class Cloak(Pseudonym):  # Dict {"X": ["tick", X]}
         value = self.value
         s = f"μ {key} • {value}"  # 'μ X • ["tick", X]'
         return s
-
-
-eq_pushes: list[tuple[str, object | None]]
-eq_pushes = list()
-
-
-def eq_push(key: str, value: object) -> None:
-    """Define the Key here for awhile"""
-
-    g = CODE_SCOPE
-
-    assert key, (key,)
-    assert value is not None, (value,)
-
-    if key not in g.keys():
-        v = None
-    else:
-        v = g[key]
-        assert v is not None, (key, v)
-
-    eq_push = (key, v)
-    eq_pushes.append(eq_push)
-
-    g[key] = value
-
-    # todo: more robust Scoping, beyond .eq_push Shadowing
-
-
-def eq_pop(key: str, value: object | None) -> None:
-    """Stop defining the Key here"""
-
-    g = CODE_SCOPE
-
-    assert key in g.keys(), (key,)
-    assert g[key] is value, (g[key], value)
-
-    eq_push = eq_pushes.pop()
-    (k, v) = eq_push
-    assert k == key, (k, key, value)
-
-    if v is None:
-        del g[k]
-    else:
-        g[k] = v
-
-    # todo: more robust Scoping, beyond .eq_pop Shadowing
-
-
-def to_process_if(o: Process | dict | list | str | typing.Callable) -> Process:
-    """Return no change, else a Process in place of Dict | List | Str"""
-
-    g = CODE_SCOPE
-
-    # Accept a Process as is
-
-    if isinstance(o, Process):
-        return o  # todo: 'better copied than aliased' vs .to_process_if
-
-    # Accept a Callable to hold for now, to run later
-
-    if callable(o):
-        if o.__name__ in hope_by_name.keys():
-            hope = hope_by_name[o.__name__]
-            return hope
-
-        hope = Hope(o)
-        return hope
-
-    # Form a Choice from a large Dict, or a Cloak from a Dict of 1 Item
-
-    if isinstance(o, dict):
-        items = list(o.items())
-        if len(items) >= 2:
-            choice = Choice(d=o)
-            return choice
-
-        item = items[-1]
-
-        key = item[0]
-        value = item[-1]
-
-        cloak = Cloak(key, value=value)
-        return cloak
-
-    # Form a Stop or a Flow from a List
-
-    if isinstance(o, list):
-        if not o:
-            o = PseudonymStopProcess
-            return o
-
-        assert len(o) >= 2, (len(o), o)
-
-        flow = Flow(cells=o)
-        return flow
-
-    # Find a Process in the Compile-Time Scope by Name now
-
-    assert isinstance(o, str), (type(o), o)
-
-    if o in g.keys():
-        process = g[o]
-        assert isinstance(process, Process), (process,)
-
-        nym = Pseudonym(o, value=process)
-        return nym
-
-    # Else find the Process in the Run-Time Scope by Name later
-
-    nym = Pseudonym(o, value=StopProcess)
-    return nym
-
-
-PseudonymStopProcess = Pseudonym(key="STOP", value=StopProcess)
 
 
 class Hope(Process):  # Callable
@@ -746,8 +704,63 @@ class Hope(Process):  # Callable
         return q
 
 
+#
+# FIXME Find words to say what this is about
+#
+
+
+StopProcess = Process()  # akin to Lisp Nil and Python None  # as if a Flow of no Events
+
+StopProcessMention = Mention(key="STOP", value=StopProcess)
+
+
+eq_pushes: list[tuple[str, object | None]]
+eq_pushes = list()
+
 hope_by_name: dict[str, Hope]
 hope_by_name = dict()
+
+
+def eq_push(key: str, value: object) -> None:
+    """Define the Key as a Variable until .eq_pop"""
+
+    g = CODE_SCOPE
+
+    assert key, (key,)
+    assert value is not None, (value,)
+
+    if key not in g.keys():
+        v = None
+    else:
+        v = g[key]
+        assert v is not None, (key, v)
+
+    eq_push = (key, v)
+    eq_pushes.append(eq_push)
+
+    g[key] = value
+
+    # todo: more robust Scoping, beyond .eq_push Shadowing
+
+
+def eq_pop(key: str, value: object | None) -> None:
+    """Undo the .eq_push now"""
+
+    g = CODE_SCOPE
+
+    assert key in g.keys(), (key,)
+    assert g[key] is value, (g[key], value)
+
+    eq_push = eq_pushes.pop()
+    (k, v) = eq_push
+    assert k == key, (k, key, value)
+
+    if v is None:
+        del g[k]
+    else:
+        g[k] = v
+
+    # todo: more robust Scoping, beyond .eq_pop Shadowing
 
 
 #
@@ -845,16 +858,16 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
     t = to_scope
     f = from_scope
 
-    # Create each Process Pseudonym
+    # Create each Process Mention
 
     for k, v in f.items():
         assert isinstance(v, (dict | list | str)), (type(v), v, k)
         assert k not in t.keys(), (k,)
 
-        p = Pseudonym(k, value=StopProcess)
+        p = Mention(k, value=StopProcess)
         t[k] = p
 
-    # Compile each Process into its own Pseudonym, in order
+    # Compile each Process into its own Mention, in order
 
     for k, v in f.items():
         p = t[k]
@@ -882,7 +895,7 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
 
         pv = p.value
         assert pv is not p, (pv, p, k)
-        if isinstance(pv, Pseudonym):
+        if isinstance(pv, Mention):
             assert pv.value is not pv, (pv.value, pv, k)
 
             if pv.value is p:
