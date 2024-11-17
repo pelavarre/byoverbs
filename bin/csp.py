@@ -150,14 +150,17 @@ class CspBookExamples:
     # Mutually Recursive Processes
     #
 
-    OO1 = "OO"  # Flake8 E741 Ambiguous Variable Name rejects 'O ='
-    LL1 = "LL"  # CspBook·Pdf speaks of 'DD =', 'O =', 'L ='
+    O1 = "O"
+    L1 = "L"
 
-    DD = {"setorange": OO1, "setlemon": LL1}  # 1.1.4 X1
-    OO = {"orange": OO1, "setorange": OO1, "setlemon": LL1}
-    LL = {"lemon": LL1, "setlemon": LL1, "setorange": OO1}
+    DD = {"setorange": O1, "setlemon": L1}  # 1.1.4 X1
 
-    # CspBook·Pdf says = O L O and = L O L, where we say = O O L and = L L O for clarity
+    O = {"orange": O1, "setorange": O1, "setlemon": L1}  # noqa: E741 Ambiguous Variable Name 'O'
+    L = {"lemon": L1, "setlemon": L1, "setorange": O1}
+
+    # We say  = O O L and = L L O
+    # so as to show the finite past clearly before getting into the infinite futures,
+    # despite CspBook·Pdf saying these shuffled, as = O L O and as = L O L
 
 
 #
@@ -378,6 +381,11 @@ def str_is_process_name(chars) -> bool:
 class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
     """List the Def's of every Process"""
 
+    def __abs__(self) -> "Process":
+        """Default to say a Process is itself, aliasing no one"""
+
+        return self
+
     def __call__(self, *args, **kwargs) -> typing.Union["Process", str, None]:
         """Step interactively if no Args, else return After-Process-Of, else Raise Exception"""
 
@@ -389,7 +397,7 @@ class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
             choices = self.menu_choices()
             if choice in choices:
                 p = self.after_process_of(choice)
-                q = p.abs_process()
+                q = p.__abs__()
                 return q
 
             return "BLEEP"
@@ -406,13 +414,6 @@ class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
 
         p = self.after_process_of(*args, **kwargs)  # raises TypeError
         return p
-
-    def abs_process(self) -> "Process":
-        """Default to say a Process is itself, aliasing no one"""
-
-        return self
-
-        # todo: grow into 'def __abs___' in place of 'def abs_process' maybe?
 
     def menu_choices(self) -> list[str]:
         """Offer no Menu Choices, like a Stop Process"""
@@ -636,11 +637,11 @@ class Box(Process):  # List of 1 Process  # [STOP]
 
         return s
 
-    def abs_process(self) -> "Process":
-        """Uncloak the Value"""
+    def __abs__(self) -> "Process":
+        """Unbox the Value"""
 
         value = self.value
-        p = value.abs_process()
+        p = value.__abs__()
 
         return p
 
@@ -684,15 +685,25 @@ class Mention(Box):  # Str "X"
         return s
 
 
-class Cloak(Mention):  # Dict {"X": ["tick", X]}
+class Cloak(Box):  # Dict {"X": ["tick", X]}
     """Run a Process with a Name, and an awareness of its own Name"""
 
+    key: str
+
     def __init__(self, key: str, value: SerializedProcess) -> None:
-        super().__init__(key, value=value)
+        super().__init__(value=value)
+
+        assert key, (key,)
+        self.key = key
 
         eq_push(key, value=self)
         self.value = to_process_if(value)  # replaces
         eq_pop(key, value=self)
+
+    def __abs__(self) -> "Process":
+        """Don't unbox the Value, keep it cloaked"""
+
+        return self
 
     def __str__(self) -> str:
         """Speak of the Value as self-aware:  μ X • [... X ... X ...]"""
@@ -725,15 +736,15 @@ class Hope(Process):  # Callable
         s = func.__name__
         return s
 
-    def abs_process(self) -> "Process":
-        """Uncloak the Value"""
+    def __abs__(self) -> "Process":
+        """Unbox the Value"""
 
         func = self.func
 
         p = self.process if self.process else to_process_if(func())
         self.process = p
 
-        q = p.abs_process()
+        q = p.__abs__()
         return q
 
     def menu_choices(self) -> list[str]:
@@ -843,7 +854,7 @@ def main_try() -> None:
     csp = argparse.Namespace(  # todo: redefine 'import csp' to be something like this small
         exec_=exec_,
         eval_=eval_,
-        walk=walk,
+        sketch=sketch,
     )
 
     code_scope["csp"] = csp  # not '["csp"] = __main__', and not 'import csp'
@@ -855,8 +866,8 @@ def main_try() -> None:
     from_scope = dict(vars(CspBookExamples))
     from_scope = dict(_ for _ in from_scope.items() if _[0].upper() == _[0])
 
-    del from_scope["OO1"]
-    del from_scope["LL1"]
+    del from_scope["O1"]  # todo: more elegant mutual recursion
+    del from_scope["L1"]
 
     csp_texts = scope_compile_processes(code_scope, from_scope=from_scope)
 
@@ -907,7 +918,7 @@ def main_try() -> None:
     # 'code.interact' adds '__builtins__' into the Scope
 
 
-def walk(process) -> None:
+def sketch(process) -> None:
 
     assert PLENTY_DEPTH_5 == 5
 
@@ -915,8 +926,8 @@ def walk(process) -> None:
     afters = process_to_afters(process, limit=limit)
     print("\n".join(", ".join(_) for _ in afters))
 
-    # todo: mention when the depth limit of .walk matters
-    # todo: vary the depth of .walk
+    # todo: mention when the depth limit of .sketch matters
+    # todo: vary the depth of .sketch
     # todo: visit the Process'es, don't just print them
 
 
@@ -960,10 +971,9 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
         q = to_process_if(v)
         assert q is not StopProcess, (q,)
 
-        if isinstance(q, Mention):
-            if not isinstance(q, Cloak):  # todo: derive Mention from Cloak?
-                str_by_alias[k] = q.key
-                q = q.value
+        if isinstance(q, Mention):  # collapses Mentions', but not Box'es nor Cloak's
+            str_by_alias[k] = q.key
+            q = q.value
 
         p.value = q
         t[k] = q  # mutates t[k]
@@ -1009,7 +1019,7 @@ empty_list = list()
 def process_to_afters(p: Process, limit=None, *, after: list[str] = empty_list) -> list[list[str]]:
     """Walk the Traces of a Process"""
 
-    q = p.abs_process()
+    q = p.__abs__()
     q_after = after
 
     # Choose how to speak of empty and infinite futures
@@ -1049,7 +1059,7 @@ def process_to_afters(p: Process, limit=None, *, after: list[str] = empty_list) 
             s_after = q_after + [choice]
 
             r = q.after_process_of(choice)
-            s = r.abs_process()
+            s = r.__abs__()
 
             # Stop work after looping to reach the first compiled process
 
@@ -1090,13 +1100,20 @@ def process_step(p: Process) -> None:
 
     # Start a new Trace as often as we step back to the same Process
 
-    q = p.abs_process()
+    q = p.__abs__()
 
     print("#", p)  # not q
     print()
 
     q1 = q  # aliases
+    # q_list = list()
     while True:
+
+        # if q not in q_list:
+        #     q_list.append(q)
+        # else:
+        #     print("# ...")
+
         if q is q1:
             print()
 
@@ -1114,12 +1131,14 @@ def process_step(p: Process) -> None:
         assert choice, (choice, line, choices)
 
         r = q.after_process_of(choice)
-        s = r.abs_process()
+        s = r.__abs__()
 
         q = s  # replaces
 
         # CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
         # ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail
+
+    # todo: DD() prints 'OO' and 'LL' without explaining them
 
 
 def process_step_stdin_readline(choices) -> str:
@@ -1240,7 +1259,7 @@ def exec_(csp_text: str) -> None:
             p = to_process_if(process)
 
             q = p
-            if isinstance(p, Mention):
+            if isinstance(p, Mention):  # collapses Mentions', but not Box'es nor Cloak's
                 q = p.value
                 g[name] = q
             else:
@@ -1633,6 +1652,20 @@ if __name__ == "__main__":
 # todo: Retire bin/csp6.py
 # todo: Code for showing Cyclicity, showing Acyclity, giving up after a limit?
 # todo: Command-Line Input History
+
+
+# todo: pass more interactive tests
+
+TESTS = """
+
+    P1 = csp.eval_("lime → P2")
+    P2 = csp.eval_("fig → STOP")
+    P1()
+
+    P3 = csp.eval_("P2")
+    P3 is P2
+
+"""
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
