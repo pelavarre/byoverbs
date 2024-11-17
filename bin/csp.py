@@ -337,41 +337,13 @@ def parse_args_else(parser: argparse.ArgumentParser) -> None:
 
 
 #
-# Form a Process from a Dict or List, like after loading one of those from a Json File
+# Deserialize a Csp Process out of a Dict | List | Str | Callable
+# Deserialize a Dict | List | Str eagerly now, deserialize a Callable later when run
 #
 
 
 CODE_SCOPE: dict[str, object]
 CODE_SCOPE = dict()
-
-
-class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
-    """List the Def's of every Process"""
-
-    def __bool__(self) -> bool:
-        """Say a Process with no Menu Choices is Falsey"""
-
-        return False
-
-    def abs_process(self) -> "Process":
-        """Default to say a Process is itself, aliasing no one"""
-
-        return self
-
-    def menu_choices(self) -> list[str]:
-        """Offer no Menu Choices, like a Stop Process"""
-
-        return list()
-
-    def after_process_of(self, choice: str) -> "Process":
-        """Take no Menu Choices"""
-
-        raise NotImplementedError("after_process_of")
-
-    # works like the StopProcessMention, till overriden
-    # except its __str__ is the default object.__str__, doesn't say "STOP"
-
-    # todo: toggle off '==' equality, to test clients only take 'is' equality
 
 
 EventName = str
@@ -393,6 +365,32 @@ def str_is_process_name(chars) -> bool:
     # todo: explain why Chars here must be a Process Name
     # todo: add passing test of 'P ; Q' and failing test of:  P → Q
     # todo: add failing test of:  choc → P | toffee → lime
+
+
+class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
+    """List the Def's of every Process"""
+
+    def abs_process(self) -> "Process":
+        """Default to say a Process is itself, aliasing no one"""
+
+        return self
+
+        # todo: grow into 'def __abs___' in place of 'def abs_process' maybe?
+
+    def menu_choices(self) -> list[str]:
+        """Offer no Menu Choices, like a Stop Process"""
+
+        return list()
+
+    def after_process_of(self, choice: str) -> "Process":
+        """Take no Menu Choices"""
+
+        raise NotImplementedError("after_process_of")
+
+    # works like the StopProcessMention, till overriden
+    # except its __str__ is the default object.__str__, doesn't say "STOP"
+
+    # todo: toggle off '==' equality, to test clients only take 'is' equality
 
 
 SerializedProcess = Process | dict | list | ProcessName | typing.Callable
@@ -435,7 +433,7 @@ def to_process_if(o: Process | SerializedProcess) -> Process:
         cloak = Cloak(key, value=value)
         return cloak
 
-    # Form a Stop or a Flow from a List
+    # Form a Stop or Box or Flow from a List  # todo: or like Sequence P ; Q ; R
 
     if isinstance(o, list):
         if not o:
@@ -499,11 +497,6 @@ class Flow(Process):  # List of Events then Process  # ["tick", "tock", "boom", 
         self.guard = guard
         self.after = after
 
-    def __bool__(self) -> bool:
-        """Say every Flow Process is Truthy, for it offers 1 Menu Choice"""
-
-        return True
-
     def __str__(self) -> str:
         """Speak of this Flow Process as (x → P)"""
 
@@ -556,11 +549,6 @@ class Choice(Process):  # Dict of 2 or more Process by Event  # {"choc": X, "tof
 
         self.by_choice = by_choice
 
-    def __bool__(self) -> bool:
-        """Say every Choice Process is Truthy, for it offers 1 Menu Choice"""
-
-        return True
-
     def __str__(self) -> str:
         """Speak of this Choice Process as (x → P | y → Q | ...)"""
 
@@ -599,13 +587,6 @@ class Box(Process):  # List of 1 Process  # [STOP]
         super().__init__()
 
         self.value = to_process_if(value)
-
-    def __bool__(self) -> bool:
-        """Choose Truthy or Falsey by the Value"""
-
-        value = self.value
-        b = value.__bool__()
-        return b
 
     def __str__(self) -> str:
         """Speak of the Value as inside Parentheses"""
@@ -706,18 +687,6 @@ class Hope(Process):  # Callable
         func = self.func
         s = func.__name__
         return s
-
-    def __bool__(self) -> bool:
-        """Choose Truthy or Falsey by the Value"""
-
-        func = self.func
-
-        p = self.process if self.process else to_process_if(func())
-        # assert p, (p, func)  # todo: test Hope of StopProcess
-        self.process = p
-
-        b = p.__bool__()
-        return b
 
     def abs_process(self) -> "Process":
         """Uncloak the Value"""
