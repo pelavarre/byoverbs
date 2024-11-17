@@ -759,5 +759,5 @@ if __name__ == "__main__":
 # todo: yes, a first draft, but no, its Physics can't explode all the Bricks yet
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/shbreakout.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/shbreakout.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

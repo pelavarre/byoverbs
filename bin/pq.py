@@ -6694,5 +6694,5 @@ if __name__ == "__main__":
 #   |pq 'oline = iline.translate(str.maketrans("", "", ", !"))' |cat -
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/pq.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

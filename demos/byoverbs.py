@@ -99,5 +99,5 @@ if True:  # ducks Flake8 E402 module.level.import.not.at.top.of.file
     _ = byoverbs
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/byoverbs.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/byoverbs.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

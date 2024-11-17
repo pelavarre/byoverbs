@@ -87,5 +87,5 @@ for line in lines:
         print(dent + alt_line)
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/t3print.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/t3print.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

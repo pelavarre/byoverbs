@@ -206,5 +206,5 @@ def_some_lazy_imports()  # ~0.75 ms
 # todo: up line, insert line, print Import, restore cursor - when Import happens
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/lazy_import.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/lazy_import.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

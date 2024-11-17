@@ -14,5 +14,5 @@ import byotools as byo
 byo.sys_exit()
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/declare.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/declare.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -23,5 +23,5 @@ import byotools as byo
 byo.sys_exit()
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/google.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/google.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

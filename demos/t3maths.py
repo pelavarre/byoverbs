@@ -136,5 +136,5 @@ for c in c_by_nxo["x"]:
         func(c)
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/t3maths.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/t3maths.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

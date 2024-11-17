@@ -31,5 +31,5 @@ import byohelper
 ... == byohelper  # type: ignore
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/pwd..py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/pwd..py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

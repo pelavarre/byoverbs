@@ -434,5 +434,5 @@ if __name__ == "__main__":
 # see also https://github.com/pelavarre/byoverbs/blob/main/demos/ptyspawn.py
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/pseudotty.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/pseudotty.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

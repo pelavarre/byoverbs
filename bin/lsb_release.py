@@ -78,5 +78,5 @@ else:
     print(got)
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/lsb_release.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/lsb_release.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

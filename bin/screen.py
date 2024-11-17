@@ -164,5 +164,5 @@ Return
 # todo: call it in a way that blocks its TERM=screen default, for Vim Py Def Orange
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/screen.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/screen.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

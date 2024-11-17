@@ -900,5 +900,5 @@ if __name__ == "__main__":
     code.interact(banner="", local=globals())
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/t3studio.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/t3studio.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

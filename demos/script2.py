@@ -363,5 +363,5 @@ if __name__ == "__main__":
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/script2.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/script2.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

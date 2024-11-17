@@ -277,5 +277,5 @@ if __name__ == "__main__":
 # todo: stop wrongly dropping '&kiosk' open.py 'http://grafana/plot?orgId=123&kiosk'
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/open.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/open.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

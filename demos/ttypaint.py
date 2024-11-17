@@ -1114,5 +1114,5 @@ if __name__ == "__main__":
 # todo: why no exit write of '\e[m' to undo b'\e[1m' for Bold, b'\e34m' for Blue, etc
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/ttypaint.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/ttypaint.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

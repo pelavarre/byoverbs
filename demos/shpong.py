@@ -813,5 +813,5 @@ if __name__ == "__main__":
 # todo:  record and replay the game, at 1X or some other X speed
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/shpong.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/shpong.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

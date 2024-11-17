@@ -23,5 +23,5 @@
 #
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/xargs.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/xargs.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

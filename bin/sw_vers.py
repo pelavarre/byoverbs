@@ -90,5 +90,5 @@ else:
     print(alt_got)
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/sw_vers.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/sw_vers.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

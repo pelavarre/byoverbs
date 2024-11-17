@@ -36,5 +36,5 @@ finally:
 # Mar/2024 ReplIt·Com Shell could do this TermIOs Select kind of 'kbhit()'
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/kbhit.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/kbhit.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

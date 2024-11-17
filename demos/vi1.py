@@ -1344,5 +1344,5 @@ if __name__ == "__main__":
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/vi1.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/vi1.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

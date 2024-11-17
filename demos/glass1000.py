@@ -771,5 +771,5 @@ if __name__ == "__main__":
 # FIXME: GShell Mouse Clicks below the Bottom Row
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/glass1000.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/glass1000.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

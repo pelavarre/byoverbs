@@ -1755,5 +1755,5 @@ if __name__ == "__main__":
 # FIXME: Exhaust the Traces, but then give up on CTR(n)
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp6.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp6.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

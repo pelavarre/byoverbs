@@ -955,5 +955,5 @@ def textwrap_lists_tabled(lists, sep="  ", divider=None) -> str:
     return join
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/byotools.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/byotools.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

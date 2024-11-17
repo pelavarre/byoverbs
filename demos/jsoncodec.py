@@ -70,5 +70,5 @@ for test in tests:
     print(type(obj).__name__, repr(obj), str(obj))
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/jsoncodec.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/jsoncodec.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

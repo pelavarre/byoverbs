@@ -52,5 +52,5 @@ if sys.argv[1:]:
 byo.subprocess_exit_run_if()
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/mypy.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/mypy.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

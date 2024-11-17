@@ -2024,5 +2024,5 @@ if __name__ == "__main__":
 # todo: 'def run_till_quit' prompts for n != 3
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/tictactoe.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/tictactoe.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

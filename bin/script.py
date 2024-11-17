@@ -27,5 +27,5 @@ export PS1='\$ '
 """
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/script.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/script.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

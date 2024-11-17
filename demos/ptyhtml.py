@@ -38,5 +38,5 @@ with open(filename, mode) as script:
 # usage:  python3 demos/ptyhtml.py [-h] [-a] [-p] [filename]
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/ptyhtml.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/ptyhtml.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

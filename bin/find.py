@@ -16,5 +16,5 @@
 # find . -not -newer 2023/2024-01-01  # finds the first Second of the New Year too :-(
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/find.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/find.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

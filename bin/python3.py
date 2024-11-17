@@ -100,5 +100,5 @@ byo.subprocess_exit_run_if()
 # todo: some good way to remember to say encoding="utf-8" more often than "utf8"
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/python3.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/python3.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -72,5 +72,5 @@ def main() -> None:
 main()
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/hashbang.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/hashbang.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

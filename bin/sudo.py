@@ -6,5 +6,5 @@ _ = """
 """
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/sudo.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/sudo.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

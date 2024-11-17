@@ -1490,5 +1490,5 @@ if __name__ == "__main__":
 # bug: our 'def fd_patch_output' gives no Cpu to Sprites while 'fd_patch_input' blocked
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/demos/ptybreakout.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/ptybreakout.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

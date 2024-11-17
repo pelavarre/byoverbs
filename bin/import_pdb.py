@@ -21,5 +21,5 @@ byo.sys_exit()
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/import_pdb.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/import_pdb.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
