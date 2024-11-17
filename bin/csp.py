@@ -228,6 +228,8 @@ def ct_n_to_dict(n: int) -> dict:  # 1.1.4 X2  # Cyclic CT(7) called out by 1.8.
 
     return p
 
+    # todo: think about about the .__name__ connection into Class Hope
+
 
 #
 # Run well from the Sh Command Line
@@ -372,8 +374,33 @@ class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
     # todo: toggle off '==' equality, to test clients only take 'is' equality
 
 
-def to_process_if(o: Process | dict | list | str | typing.Callable) -> Process:
-    """Return a Process unchanged, else a Process in place of Dict | List | Str"""
+EventName = str
+ProcessName = str
+
+
+def str_is_event_name(chars) -> bool:
+    assert chars != chars.upper(), (chars,)
+    return chars == chars.lower()  # todo: think over .lower vs .casefold @ .is_event_name
+
+    # todo: explain why Chars here must be an Event Name
+    # todo: add failing test of:  choc → toffee
+
+
+def str_is_process_name(chars) -> bool:
+    assert chars != chars.lower(), (chars,)
+    return chars == chars.upper()
+
+    # todo: explain why Chars here must be a Process Name
+    # todo: add passing test of 'P ; Q' and failing test of:  P → Q
+    # todo: add failing test of:  choc → P | toffee → lime
+
+
+SerializedProcess = Process | dict | list | ProcessName | typing.Callable
+SerializedEventOrProcess = EventName | SerializedProcess
+
+
+def to_process_if(o: Process | SerializedProcess) -> Process:
+    """Return a Process unchanged, else a deserialized Process"""
 
     g = CODE_SCOPE
 
@@ -437,16 +464,19 @@ def to_process_if(o: Process | dict | list | str | typing.Callable) -> Process:
 
     # Else find the Process in the Run-Time Scope by Name later
 
+    assert str_is_process_name(o), (o,)
+
     nym = Mention(o, value=StopProcess)
     return nym
 
 
 class Flow(Process):  # List of Events then Process  # ["tick", "tock", "boom", X]
+    """Take one or more Events, then run a Process"""
 
     guard: str
     after: Process
 
-    def __init__(self, cells: list[Process | dict | list | str]) -> None:
+    def __init__(self, cells: list[SerializedEventOrProcess]) -> None:
 
         assert len(cells) >= 2, (len(cells), cells)
 
@@ -455,14 +485,16 @@ class Flow(Process):  # List of Events then Process  # ["tick", "tock", "boom", 
         for index in reversed(range(1, len(cells) - 1)):
             guard = cells[index]
             assert isinstance(guard, str), (type(guard), guard, cells)
+            assert str_is_event_name(guard), (guard,)
 
-            pair: list[Process | dict | list | str]  # MyPy needs | dict | list | mentioned
+            pair: list[SerializedEventOrProcess]
             pair = [guard, after]
 
             after = Flow(pair)
 
         guard = cells[0]
         assert isinstance(guard, str), (type(guard), guard, cells)
+        assert str_is_event_name(guard), (guard,)
 
         self.guard = guard
         self.after = after
@@ -505,10 +537,11 @@ class Flow(Process):  # List of Events then Process  # ["tick", "tock", "boom", 
 
 
 class Choice(Process):  # Dict of 2 or more Process by Event  # {"choc": X, "toffee": X}
+    """Take one Event as a choice of which Process to run"""
 
     by_choice: dict[str, Process]
 
-    def __init__(self, d: dict[str, Process | dict | list | str]) -> None:
+    def __init__(self, d: dict[EventName, SerializedProcess]) -> None:
 
         assert len(d.keys()) >= 2, (d.keys(),)
 
@@ -557,12 +590,12 @@ class Choice(Process):  # Dict of 2 or more Process by Event  # {"choc": X, "tof
         return after
 
 
-class Box(Process):  # not part of .json()  # close to a List of 1 Item
-    """Run a Process inside another Process"""
+class Box(Process):  # List of 1 Process  # [STOP]
+    """Run a Process inside a Context"""
 
     value: Process
 
-    def __init__(self, value: Process | dict | list | str) -> None:
+    def __init__(self, value: SerializedProcess) -> None:
         super().__init__()
 
         self.value = to_process_if(value)
@@ -613,7 +646,7 @@ class Mention(Box):  # Str "X"
 
     key: str
 
-    def __init__(self, key: str, value: Process | dict | list | str) -> None:
+    def __init__(self, key: str, value: SerializedProcess) -> None:
         super().__init__(value)
 
         assert key, (key,)
@@ -636,7 +669,7 @@ class Mention(Box):  # Str "X"
 class Cloak(Mention):  # Dict {"X": ["tick", X]}
     """Run a Process with a Name, and an awareness of its own Name"""
 
-    def __init__(self, key: str, value: Process | dict | list | str) -> None:
+    def __init__(self, key: str, value: SerializedProcess) -> None:
         super().__init__(key, value=value)
 
         eq_push(key, value=self)
@@ -653,7 +686,7 @@ class Cloak(Mention):  # Dict {"X": ["tick", X]}
 
 
 class Hope(Process):  # Callable
-    """Run a Process formed later"""
+    """Run a Process defined later, by calling a Func when needed"""
 
     func: typing.Callable
     process: Process | None
@@ -664,7 +697,6 @@ class Hope(Process):  # Callable
         self.func = func
         self.process = None
 
-        # print(func.__name__, repr(self))
         assert func.__name__ not in hope_by_name.keys(), (func.__name__,)
         hope_by_name[func.__name__] = self
 
@@ -681,6 +713,7 @@ class Hope(Process):  # Callable
         func = self.func
 
         p = self.process if self.process else to_process_if(func())
+        # assert p, (p, func)  # todo: test Hope of StopProcess
         self.process = p
 
         b = p.__bool__()
@@ -718,6 +751,8 @@ class Hope(Process):  # Callable
 
         q = p.after_process_of(choice)
         return q
+
+    # todo: Class Hope works a lot like Class Box. Should merge together?
 
 
 #
@@ -798,13 +833,6 @@ def main_try() -> None:
     del from_scope["OO1"]
     del from_scope["LL1"]
 
-    if False:  # tests just a few cases, when commented in
-        from_scope = dict(
-            STOP=from_scope["STOP"],
-            # U1=from_scope["U1"],
-            U111X1=from_scope["U111X1"],
-        )
-
     csp_texts = scope_compile_processes(code_scope, from_scope=from_scope)
 
     code_scope["CT"] = ct
@@ -812,7 +840,9 @@ def main_try() -> None:
     for csp_text in csp_texts:
         cp = Parser(csp_text)
         ok = cp.take_input()
+
         assert ok, (csp_text, cp.takes)
+        # todo: add failing test of:  lemon
 
         assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
         assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
@@ -1133,9 +1163,7 @@ def process_add(csp_text: str) -> None:  # FIXME: return the compiled process
 
     cp = Parser(csp_text)
     ok = cp.take_input()
-    if not ok:
-        print("nope")
-        return
+    assert ok, (csp_text,)  # todo: explain why our parsing of Csp failed
 
     assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
     assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
