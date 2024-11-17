@@ -59,7 +59,7 @@ class CspBookExamples:
     STOP: list
     STOP = list()
 
-    # U1 = STOP  # unmentioned by CspBook·Pdf
+    U1 = "STOP"  # unmentioned by CspBook·Pdf
     U2 = [STOP]  # unmentioned by CspBook·Pdf
 
     # 1.1.1 X1  # unnamed in CspBook·Pdf
@@ -82,7 +82,7 @@ class CspBookExamples:
     X = "X"
     CLOCK1B = {"X": ["tick", X]}  # 1.1.2 X1  # 2nd of 2 'CLOCK =' of CspBook·Pdf
 
-    # CLOCK = CLOCK1B  # FIXME: make this mean:  last CLOCK is CLOCK1B
+    CLOCK = "CLOCK1B"
 
     #
     # Cyclic Flows on an Alphabet of a Few Events
@@ -96,7 +96,7 @@ class CspBookExamples:
 
     VMS1B = {"X": ["coin", "choc", X]}  # 1.1.2 X2  # 2nd of 2 'VMS =' of CspBook·Pdf
 
-    # VMS = VMS1B  # FIXME: make this mean:  last VMS is VMS1B
+    VMS = "VMS1B"
 
     CH5A = ["in5p", "out2p", "out1p", "out2p", "CH5A"]  # 1.1.2 X3
     CH5B = ["in5p", "out1p", "out1p", "out1p", "out2p", "CH5B"]  # 1.1.2 X4
@@ -825,6 +825,7 @@ def main_try() -> None:
     """Run some Self-Test's, and then emulate:  python3 -i csp.py"""
 
     code_scope = CODE_SCOPE
+    g = code_scope
 
     # Compile each Example Process,
     # from (Dict | List | Str), to a Process Variable with the same Name
@@ -836,6 +837,10 @@ def main_try() -> None:
     del from_scope["LL1"]
 
     csp_texts = scope_compile_processes(code_scope, from_scope=from_scope)
+
+    assert g["U1"] is g["STOP"], (g["U1"], g["STOP"])
+    assert g["CLOCK"] is g["CLOCK1B"], (g["CLOCK"], g["CLOCK1B"])
+    assert g["VMS"] is g["VMS1B"], (g["VMS"], g["VMS1B"])
 
     code_scope["CT"] = ct
 
@@ -915,44 +920,34 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
         p = Mention(k, value=StopProcess)
         t[k] = p
 
-        if k == "STOP":  # FIXME: grok CLOCK = CLOCK1B etc
-            t["U1"] = p
-        elif k == "CLOCK1B":
-            t["CLOCK"] = p
-        elif k == "VMS1B":
-            t["VMS"] = p
-
     # Compile each Process into its own Mention, in order
+
+    str_by_alias = dict()
 
     for k, v in f.items():
         p = t[k]
         assert p.value is StopProcess, (p.value,)
 
         q = to_process_if(v)
-        assert q is not StopProcess, (q,)  # FIXME: but it should be, at U1 = STOP
+        assert q is not StopProcess, (q,)
 
-        # r = q.abs_process()
-        #
-        # s = q
-        # if r is not StopProcess:
-        #     s = r
+        if isinstance(q, Mention):
+            if not isinstance(q, Cloak):  # todo: derive Mention from Cloak?
+                str_by_alias[k] = q.key
+                q = q.value
 
         p.value = q
         t[k] = q  # mutates t[k]
-
-        if k == "STOP":  # FIXME: grok CLOCK = CLOCK1B etc
-            t["U1"] = q
-        elif k == "CLOCK1B":
-            t["CLOCK"] = q
-        elif k == "VMS1B":
-            t["VMS"] = q
 
     # Print each Process
 
     csp_texts = list()
     for k in f.keys():
         p = t[k]
+
         s = str(p)
+        if k in str_by_alias.keys():
+            s = str_by_alias[k]
 
         csp_text = f"{k} = {s}"
         csp_texts.append(csp_text)
@@ -960,38 +955,14 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
         print()
         print(csp_text)
 
-        # Skip our simplest Infinite Loops
-
-        if k == "X":
-            print("# infinite loop #")
-            continue
-
-        if isinstance(p, Mention):
-            pv = p.value
-            assert pv is not p, (pv, p, k)
-
-            if isinstance(pv, Mention):
-                pvv = pv.value
-                if pvv is p:
-                    print("# infinite loop #")
-                    continue
-
-        assert k != "X", (k,)
-
         # Print each Flow through the Process
 
-        afters = process_to_afters(p)
-        print("\n".join(", ".join(_) for _ in afters))
-
-        if k == "STOP":  # FIXME: grok CLOCK = CLOCK1B etc
-            print()
-            print("U1 = STOP")
-        elif k == "CLOCK1B":
-            print()
-            print("CLOCK = CLOCK1B")
-        elif k == "VMS1B":
-            print()
-            print("VMS = VMS1B")
+        if (k != "STOP") and (k in str_by_alias.keys()):
+            if k == s:
+                print("# infinite loop #")  # todo: think more about STOP = STOP vs X = X
+        else:
+            afters = process_to_afters(p)
+            print("\n".join(", ".join(_) for _ in afters))
 
     return csp_texts
 
