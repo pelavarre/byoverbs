@@ -50,6 +50,9 @@ import typing
 #
 
 
+PLENTY_DEPTH_5 = 5  # chooses how deep to trace an infinite Set of Processes
+
+
 class CspBookExamples:
 
     #
@@ -67,6 +70,7 @@ class CspBookExamples:
 
     # 1.1.1 X2  # unnamed in CspBook·Pdf
     U111X2 = [["coin", [["choc", [["coin", [["choc", STOP]]]]]]]]
+    U111X2B = ["coin", "choc", "coin", "choc", STOP]  # only described, not shown, by CspBook·Pdf
 
     # 1.1.1 X3
     CTR = ["right", "up", "right", "right", STOP]
@@ -827,6 +831,24 @@ def main_try() -> None:
     code_scope = CODE_SCOPE
     g = code_scope
 
+    # Fill the Scope with some conventional '__...__' and a heavily abbreviated 'import csp'
+
+    assert not code_scope
+
+    code_scope["__annotations__"] = dict()
+    code_scope["__builtins__"] = __builtins__
+    code_scope["__doc__"] = None
+    code_scope["__name__"] = "__console__"
+
+    csp = argparse.Namespace(  # todo: redefine 'import csp' to be something like this small
+        exec_=exec_,
+        eval_=eval_,
+        walk=walk,
+    )
+
+    code_scope["csp"] = csp  # not '["csp"] = __main__', and not 'import csp'
+    code_scope["dir"] = lambda *args, **kwargs: scope_unsorted_dir(code_scope, *args, **kwargs)
+
     # Compile each Example Process,
     # from (Dict | List | Str), to a Process Variable with the same Name
 
@@ -846,7 +868,7 @@ def main_try() -> None:
 
     for csp_text in csp_texts:
         cp = Parser(csp_text)
-        ok = cp.take_text()
+        ok = cp.take_exec()
 
         assert ok, (csp_text, cp.takes)
         # todo: add failing test of:  lemon
@@ -859,9 +881,10 @@ def main_try() -> None:
     print()
     print("CT(n) =", code_scope["CT"])
 
+    assert PLENTY_DEPTH_5 == 5
+
     limit = 5
     afters = process_to_afters(ct(0), limit=limit)
-
     print("\n".join(", ".join(_) for _ in afters))
     print(f"# quit tracing infinite depth, after {limit} Processes #")
 
@@ -872,11 +895,6 @@ def main_try() -> None:
     print("# not tracing CT(4) #")
 
     # Run one Interactive Console, till exit, much as if:  python3 -i csp.py
-
-    code_scope["add"] = text_eval_instruction
-    code_scope["csp"] = __main__  # else unimported by default
-    code_scope["dir"] = lambda *args, **kwargs: scope_unsorted_dir(code_scope, *args, **kwargs)
-    code_scope["step"] = process_step
 
     print()
     print(">>> dir()")
@@ -889,16 +907,27 @@ def main_try() -> None:
     # 'code.interact' adds '__builtins__' into the Scope
 
 
-def scope_unsorted_dir(scope, *args, **kwargs) -> list[str]:
-    """List the Names in Scope, else in Args"""
+def walk(process) -> None:
 
-    if args:
+    assert PLENTY_DEPTH_5 == 5
+
+    limit = 5
+    afters = process_to_afters(process, limit=limit)
+    print("\n".join(", ".join(_) for _ in afters))
+
+    # todo: mention when the depth limit of .walk matters
+    # todo: vary the depth of .walk
+    # todo: visit the Process'es, don't just print them
+
+
+def scope_unsorted_dir(scope, *args, **kwargs) -> list[str]:
+    """List the Names in Scope in order, else an alphabetical sort of the Names in Args"""
+
+    if args or kwargs:
         names = __builtins__.dir(*args, **kwargs)
         return names
 
     names = list(scope.keys())
-    if "__builtins__" in names:
-        names.remove("__builtins__")
 
     return names
 
@@ -1166,29 +1195,48 @@ def process_step_choose_and_reprint(choices, line) -> str:
 #
 
 
-def text_eval_instruction(csp_text: str) -> Process:
-    """Compile and run 1 Csp Instruction"""
-
-    g = CODE_SCOPE
+def eval_(csp_text: str) -> Process:
+    """Compile and run 1 Csp Evallable Instruction"""
 
     cp = Parser(csp_text)
-    ok = cp.take_text()
+    ok = cp.take_eval()
     assert ok, (csp_text,)  # todo: explain why our parsing of Csp failed
 
     assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
     assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
 
+    evallable = cp.takes[-1][-1]
+
+    p = to_process_if(evallable)
+    process_to_afters(p)  # raises Exception if broken, now, before returning
+
+    return p
+
+
+def exec_(csp_text: str) -> None:
+    """Compile and run 1 Csp Execcable Instruction"""
+
+    g = CODE_SCOPE
+
+    cp = Parser(csp_text)
+    ok = cp.take_exec()
+    assert ok, (csp_text,)  # todo: explain why our parsing of Csp failed
+
+    assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
+    assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
+
+    execcable = cp.takes[-1][-1]
+
     # Accept an Assignment
 
-    instruction = cp.takes[-1][-1]
-    if isinstance(instruction, list):
-        assert instruction, (instruction,)
+    if isinstance(execcable, list):
+        assert execcable, (execcable,)
 
-        item_0 = instruction[0]
+        item_0 = execcable[0]
         if isinstance(item_0, str) and str_is_process_name(item_0):
-            assert len(instruction) == 2, (len(instruction), instruction)
+            assert len(execcable) == 2, (len(execcable), execcable)
 
-            (name, process) = instruction
+            (name, process) = execcable
             p = to_process_if(process)
 
             q = p
@@ -1200,14 +1248,12 @@ def text_eval_instruction(csp_text: str) -> Process:
 
             process_to_afters(q)  # raises Exception if broken, now, before returning
 
-            return q
+            return
 
     # Else accept an anonymous Process
 
-    p = to_process_if(instruction)
+    p = to_process_if(execcable)
     process_to_afters(p)  # raises Exception if broken, now, before returning
-
-    return p
 
 
 class Parser:
@@ -1243,17 +1289,17 @@ class Parser:
     # Take 1 Instruction
     #
 
-    def take_text(self) -> bool:
-        """Text = Instruction End"""
+    def take_exec(self) -> bool:
+        """Exec = Execcable End"""
 
         self.open_take()
-        ok = self.take_instruction() and self.take_end()
+        ok = self.take_execcable() and self.take_end()
         ok = self.close_take(ok)
 
         return ok
 
-    def take_instruction(self) -> bool:
-        """Instruction = Assignment | Process"""
+    def take_execcable(self) -> bool:
+        """Execcable = Assignment | Process"""
 
         self.open_take()
         ok = self.take_assignment() or self.take_process()
@@ -1266,6 +1312,15 @@ class Parser:
 
         self.open_take()
         ok = self.take_named() and self.take_mark("=") and self.take_process()
+        ok = self.close_take(ok)
+
+        return ok
+
+    def take_eval(self) -> bool:
+        """Eval = Process End"""
+
+        self.open_take()
+        ok = self.take_process() and self.take_end()
         ok = self.close_take(ok)
 
         return ok
@@ -1580,5 +1635,5 @@ if __name__ == "__main__":
 # todo: Command-Line Input History
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/csp.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
