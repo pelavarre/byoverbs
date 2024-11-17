@@ -351,16 +351,20 @@ ProcessName = str
 
 
 def str_is_event_name(chars) -> bool:
-    assert chars != chars.upper(), (chars,)
-    return chars == chars.lower()  # todo: think over .lower vs .casefold @ .is_event_name
+    if chars == chars.lower():  # todo: think over .lower vs .casefold @ .is_event_name
+        assert chars != chars.upper(), (chars,)
+        return True
+    return False
 
     # todo: explain why Chars here must be an Event Name
     # todo: add failing test of:  choc → toffee
 
 
 def str_is_process_name(chars) -> bool:
-    assert chars != chars.lower(), (chars,)
-    return chars == chars.upper()
+    if chars == chars.upper():
+        assert chars != chars.lower(), (chars,)
+        return True
+    return False
 
     # todo: explain why Chars here must be a Process Name
     # todo: add passing test of 'P ; Q' and failing test of:  P → Q
@@ -369,6 +373,35 @@ def str_is_process_name(chars) -> bool:
 
 class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
     """List the Def's of every Process"""
+
+    def __call__(self, *args, **kwargs) -> typing.Union["Process", str, None]:
+        """Step interactively if no Args, else return After-Process-Of, else Raise Exception"""
+
+        if (not args) and (not kwargs):
+            process_step(self)
+            return None
+
+        def func(choice) -> typing.Union["Process", str]:
+            choices = self.menu_choices()
+            if choice in choices:
+                p = self.after_process_of(choice)
+                q = p.abs_process()
+                return q
+
+            return "BLEEP"
+
+        if (len(args) == 1) and (not kwargs):
+            choice = args[-1]
+            result = func(choice)
+            return result
+
+        if (not args) and (list(kwargs.keys()) == ["choice"]):
+            choice = kwargs["choice"]
+            result = func(choice)
+            return result
+
+        p = self.after_process_of(*args, **kwargs)  # raises TypeError
+        return p
 
     def abs_process(self) -> "Process":
         """Default to say a Process is itself, aliasing no one"""
@@ -808,7 +841,7 @@ def main_try() -> None:
 
     for csp_text in csp_texts:
         cp = Parser(csp_text)
-        ok = cp.take_input()
+        ok = cp.take_text()
 
         assert ok, (csp_text, cp.takes)
         # todo: add failing test of:  lemon
@@ -835,7 +868,7 @@ def main_try() -> None:
 
     # Run one Interactive Console, till exit, much as if:  python3 -i csp.py
 
-    code_scope["add"] = process_add
+    code_scope["add"] = text_eval_instruction
     code_scope["csp"] = __main__  # else unimported by default
     code_scope["dir"] = lambda *args, **kwargs: scope_unsorted_dir(code_scope, *args, **kwargs)
     code_scope["step"] = process_step
@@ -892,13 +925,14 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
         assert q is not StopProcess, (q,)  # FIXME: but it should be, at U1 = STOP
 
         p.value = q
+        t[k] = q  # mutates t[k]
 
     # Print each Process
 
     csp_texts = list()
     for k in f.keys():
         p = t[k]
-        s = str(p.value)
+        s = str(p)
 
         csp_text = f"{k} = {s}"
         csp_texts.append(csp_text)
@@ -908,14 +942,19 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
 
         # Skip our simplest Infinite Loops
 
-        pv = p.value
-        assert pv is not p, (pv, p, k)
-        if isinstance(pv, Mention):
-            assert pv.value is not pv, (pv.value, pv, k)
+        if k == "X":
+            print("# infinite loop #")
+            continue
 
-            if pv.value is p:
-                print("# infinite loop #")
-                continue
+        if isinstance(p, Mention):
+            pv = p.value
+            assert pv is not p, (pv, p, k)
+
+            if isinstance(pv, Mention):
+                pvv = pv.value
+                if pvv is p:
+                    print("# infinite loop #")
+                    continue
 
         assert k != "X", (k,)
 
@@ -1106,9 +1145,10 @@ def process_step_choose_and_reprint(choices, line) -> str:
 
 
 #
-# Parse Lines of CSP Input, by way of this Grammar =>
+# Parse Lines of CSP Instructions, by way of this Grammar =>
 #
-#   Input = Assignment End
+#   Text = Instruction End
+#   Instruction = Assignment | Process
 #   Assignment = Named "=" Process
 #
 #   Process = Wrapped | Unwrapped
@@ -1125,30 +1165,42 @@ def process_step_choose_and_reprint(choices, line) -> str:
 #
 
 
-def process_add(csp_text: str) -> None:  # FIXME: return the compiled process
+def text_eval_instruction(csp_text: str) -> Process:
     """Compile and run 1 Csp Instruction"""
 
     g = CODE_SCOPE
 
     cp = Parser(csp_text)
-    ok = cp.take_input()
+    ok = cp.take_text()
     assert ok, (csp_text,)  # todo: explain why our parsing of Csp failed
 
     assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
     assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
 
-    input_ = cp.takes[-1][-1]
-    assert isinstance(input_, list), (type(input_), input_)
-    assert len(input_) == 2, (len(input_), input_)
+    # Accept an Assignment
 
-    (name, process) = input_
-    p = to_process_if(process)
-    g[name] = p
+    instruction = cp.takes[-1][-1]
+    if isinstance(instruction, list):
+        assert instruction, (instruction,)
 
-    process_to_afters(p)
+        item_0 = instruction[0]
+        if isinstance(item_0, str) and str_is_process_name(item_0):
+            assert len(instruction) == 2, (len(instruction), instruction)
 
-    # afters = process_to_afters(p)
-    # print("\n".join(", ".join(_) for _ in afters))
+            (name, process) = instruction
+            p = to_process_if(process)
+            g[name] = p
+
+            process_to_afters(p)  # raises Exception if broken, now, before returning
+
+            return p
+
+    # Else accept an anonymous Process
+
+    p = to_process_if(instruction)
+    process_to_afters(p)  # raises Exception if broken, now, before returning
+
+    return p
 
 
 class Parser:
@@ -1157,7 +1209,7 @@ class Parser:
     index: int  # the Count of Source Chars consumed
 
     starts: list[int]  # the index'es to backtrack to
-    takes: list[dict | list | str]  # the parsed Input
+    takes: list[dict | list | str]  # the parsed Instruction
 
     def __init__(self, text) -> None:
 
@@ -1181,14 +1233,23 @@ class Parser:
         # point out "(" found when ")" missing, and "{" found when "}" missing
 
     #
-    # Take a whole Input
+    # Take 1 Instruction
     #
 
-    def take_input(self) -> bool:
-        """Input = Assignment End"""
+    def take_text(self) -> bool:
+        """Text = Instruction End"""
 
         self.open_take()
-        ok = self.take_assignment() and self.take_end()
+        ok = self.take_instruction() and self.take_end()
+        ok = self.close_take(ok)
+
+        return ok
+
+    def take_instruction(self) -> bool:
+        """Instruction = Assignment | Process"""
+
+        self.open_take()
+        ok = self.take_assignment() or self.take_process()
         ok = self.close_take(ok)
 
         return ok
