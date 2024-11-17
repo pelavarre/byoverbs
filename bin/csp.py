@@ -51,6 +51,11 @@ import typing
 #   + Or accept a Str as a lowercase Event Name
 #
 
+#
+# 'We shall often omit explicit mention of the Alphabet A',
+#   'in the case of  μ X : A • F(X)'
+#
+
 
 PLENTY_DEPTH_5 = 5  # chooses how deep to trace an infinite Set of Processes
 
@@ -58,7 +63,7 @@ PLENTY_DEPTH_5 = 5  # chooses how deep to trace an infinite Set of Processes
 class CspBookExamples:
 
     #
-    # Finite Flows
+    # 1.1.1 Prefix = Finite Flows (of Prefix And Then Process)
     #
 
     STOP: list
@@ -77,30 +82,40 @@ class CspBookExamples:
     # 1.1.1 X3
     CTR = ["right", "up", "right", "right", STOP]
 
+    U113X3B = ["x", ["y", STOP]]
+
     #
-    # Cyclic Flows on an Alphabet of 1 Event
+    # 1.1.2 Recursion = Cyclic Flows on an Alphabet of 1 Event
     #
 
     CLOCK1A: list | str
     CLOCK1A = "CLOCK1A"  # CspBook·Pdf takes the lazy eval of CLOCK1 for granted
     CLOCK1A = ["tick", CLOCK1A]  # 1st of 2 'CLOCK =' of CspBook·Pdf
 
-    X = "X"
-    CLOCK1B = {"X": ["tick", X]}  # 1.1.2 X1  # 2nd of 2 'CLOCK =' of CspBook·Pdf
+    # like to saying 'x = x*x + x - 2' to define x = math.sqrt(2)
 
-    CLOCK = "CLOCK1B"
+    CLOCK1B: list | str
+    CLOCK1B = "CLOCK1B"
+    CLOCK1B = ["tick", ["tick", ["tick", CLOCK1B]]]
+
+    # like to saying math.sqrt(2) = 1.414...
+
+    X = "X"
+    CLOCK1C = {"X": ["tick", X]}  # 1.1.2 X1  # 2nd of 2 'CLOCK =' of CspBook·Pdf
+
+    CLOCK = "CLOCK1C"
 
     #
-    # Cyclic Flows on an Alphabet of a Few Events
+    # 1.1.3 Choice = Cyclic Flows on an Alphabet of a Few Events
     #
 
     CLOCK2 = {"X": ["tick", "tock", "boom", X]}  # CLOCK2 missing from CspBook·Pdf
 
     VMS1A: list | str
     VMS1A = "VMS1A"
-    VMS1A = ["coin", "choc", VMS1A]  # 1st of 2 'VMS =' of CspBook·Pdf
+    VMS1A = ["coin", ["choc", VMS1A]]  # 1st of 2 'VMS =' of CspBook·Pdf
 
-    VMS1B = {"X": ["coin", "choc", X]}  # 1.1.2 X2  # 2nd of 2 'VMS =' of CspBook·Pdf
+    VMS1B = {"X": ["coin", ["choc", X]]}  # 1.1.2 X2  # 2nd of 2 'VMS =' of CspBook·Pdf
 
     VMS = "VMS1B"
 
@@ -108,7 +123,7 @@ class CspBookExamples:
     CH5B = ["in5p", "out1p", "out1p", "out1p", "out2p", "CH5B"]  # 1.1.2 X4
 
     #
-    # Acyclic Choices and Cyclic Choices
+    # Acyclic Choices and Cyclic Choices (of 2-Or-More Distinct Events)
     #
 
     # 1.1.3 X1  # unnamed in CspBook·Pdf
@@ -126,16 +141,22 @@ class CspBookExamples:
 
     VMC: dict | str
     VMC = "VMC"
-    VMC = {  # 1.1.3 X4
+    VMC = {  # 1.1.3 X4  # acyclic
         "in2p": {"large": VMC, "small": ["out1p", VMC]},
-        "in1p": {"small": VMC, "in1p": {"large": VMC, "in1p": STOP}},  # acyclic
+        "in1p": {
+            "small": VMC,
+            "in1p": {"large": VMC, "in1p": STOP},
+        },  # acyclic
     }
 
     VMC2: dict | str  # VMC2 missing from CspBook
     VMC2 = "VMC2"
-    VMC2 = {  # 1.1.3 X4
+    VMC2 = {  # 1.1.3 X4  # cyclic
         "in2p": {"large": VMC2, "small": ["out1p", VMC2]},
-        "in1p": {"small": VMC2, "in1p": {"large": VMC2, "small": ["out1p", VMC2]}},  # cyclic
+        "in1p": {
+            "small": VMC2,
+            "in1p": {"large": VMC2, "in1p": ["out1p", "out1p", "out1p", VMC2]},
+        },
     }
 
     # todo: lean deeper into Don't-Repeat-Yourself
@@ -146,16 +167,18 @@ class CspBookExamples:
     VMS2 = ["coin", {"X": {"coin": ["choc", X], "choc": ["coin", X]}}]  # 1.1.3 X6  # acyclic
     # 'VMS2 =' is explicit in CspBook·Pdf, distinct from 'VMS ='
 
-    COPYBIT = {"X": {"in_0": ["out_0", X], "in_1": ["out_1", X]}}  # 1.1.3 X7
+    COPYBIT = {"X": {"in_0": ["out_0", X], "in_1": ["out_1", X]}}  # 1.1.3 X7  # cyclic
+
+    RUNA = {"R": {"a": "R", "b": "R", "c": "R"}}  # 1.1.3 X8  # cyclic
 
     #
-    # Mutually Recursive Processes
+    # 1.1.4 Mutural Recursion
     #
 
     O1 = "O"
     L1 = "L"
 
-    DD = {"setorange": O1, "setlemon": L1}  # 1.1.4 X1
+    DD = {"setorange": O1, "setlemon": L1}  # 1.1.4 X1  # acyclic
 
     O = {"orange": O1, "setorange": O1, "setlemon": L1}  # noqa: E741 Ambiguous Variable Name 'O'
     L = {"lemon": L1, "setlemon": L1, "setorange": O1}
@@ -163,6 +186,10 @@ class CspBookExamples:
     # We say  = O O L and = L L O
     # so as to show the finite past clearly before getting into the infinite futures,
     # despite CspBook·Pdf saying these shuffled, as = O L O and as = L O L
+
+    #
+    # 1.2 Pictures (not yet implenented here)
+    #
 
 
 #
@@ -238,6 +265,21 @@ def ct_n_to_dict(n: int) -> dict:  # 1.1.4 X2  # Cyclic CT(7) called out by 1.8.
     return p
 
     # todo: think about about the .__name__ connection into Class Hope
+
+
+CspBookCornerTexts = [
+    #
+    "x → P",  # Limits on Prefix →
+    "P ; Q  # Sequential Composition not yet Implemented",
+    "P → Q  # P is not an Event",  # from the postscript of 1.1.1 X3 in CspBook·Pdf
+    "x → y  # 'y' is not an Process",
+    #
+    "x → P | y → Q | z → R",  # Limits on Choice |
+    "x → P | x → Q | z → R  # 'choc' can be chosen at most once",  # until Non-Determinism
+    "x → P | x → Q | z → z  # 'z' is not an Process",
+    "x → P | (y → Q | z → R)  # Process is not an Event to choose",
+    #
+]
 
 
 #
@@ -359,6 +401,8 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 
 
 #
+# 1.4 Implementation of processes
+#
 # Deserialize a Csp Process out of a Dict | List | Str | Callable
 # Deserialize a Dict | List | Str eagerly now, deserialize a Callable later when run
 #
@@ -378,8 +422,7 @@ def str_is_event_name(chars) -> bool:
         return True
     return False
 
-    # todo: explain why Chars here must be an Event Name
-    # todo: add failing test of:  choc → toffee
+    # todo: explain why Event Name required
 
 
 def str_is_process_name(chars) -> bool:
@@ -388,9 +431,7 @@ def str_is_process_name(chars) -> bool:
         return True
     return False
 
-    # todo: explain why Chars here must be a Process Name
-    # todo: add passing test of 'P ; Q' and failing test of:  P → Q
-    # todo: add failing test of:  choc → P | toffee → lime
+    # todo: explain why Process Name required
 
 
 class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
@@ -696,7 +737,7 @@ class Mention(Box):  # Str "X"
     def __abs__(self) -> "Process":
         """Unbox the Value"""
 
-        # g = CODE_SCOPE  # FIXME: don't loop infinitely through:  CLOCK1B = μ X • (tick → X)
+        # g = CODE_SCOPE  # FIXME: don't loop infinitely through:  CLOCK1C = μ X • (tick → X)
         # key = self.key
         # if key in g.keys():
         #     gkvalue = g[key]
@@ -879,15 +920,15 @@ def main_try() -> None:
     if main_args.c:
         raise NotImplementedError(main_args.c)
 
+    # Form 1 Scope
+
     code_scope = CODE_SCOPE
     g = code_scope
-
-    # Fill the Scope with some conventional '__...__' and a heavily abbreviated 'import csp'
 
     assert not code_scope
 
     code_scope["__annotations__"] = dict()
-    code_scope["__builtins__"] = __builtins__
+    code_scope["__builtins__"] = __builtins__  # 'code.interact' adds '__builtins__', if missing
     code_scope["__doc__"] = None
     code_scope["__name__"] = "__console__"
 
@@ -900,10 +941,10 @@ def main_try() -> None:
     code_scope["csp"] = csp  # not '["csp"] = __main__', and not 'import csp'
     code_scope["dir"] = lambda *args, **kwargs: scope_unsorted_dir(code_scope, *args, **kwargs)
 
-    # Compile each Example Process,
-    # from (Dict | List | Str), to a Process Variable with the same Name
-
     if main_args.c is None:
+
+        # Compile each Example Process,
+        # from (Dict | List | Str), to a Process Variable with the same Name
 
         from_scope = dict(vars(CspBookExamples))
         from_scope = dict(_ for _ in from_scope.items() if _[0].upper() == _[0])
@@ -914,7 +955,7 @@ def main_try() -> None:
         csp_texts = scope_compile_processes(code_scope, from_scope=from_scope)
 
         assert g["U1"] is g["STOP"], (g["U1"], g["STOP"])
-        assert g["CLOCK"] is g["CLOCK1B"], (g["CLOCK"], g["CLOCK1B"])
+        assert g["CLOCK"] is g["CLOCK1C"], (g["CLOCK"], g["CLOCK1C"])
         assert g["VMS"] is g["VMS1B"], (g["VMS"], g["VMS1B"])
 
         code_scope["CT"] = ct
@@ -947,6 +988,25 @@ def main_try() -> None:
         iprint("CT(4) =", ct(4))
         iprint("# not tracing CT(4) #")
 
+        # Require some Compile-Time Errors
+
+        iprint()
+        for text in CspBookCornerTexts:
+            iprint(text)
+            (head, sep, tail) = text.partition("#")
+
+            evallable = head.rstrip()
+            if not tail:
+                eval_(evallable)
+                continue
+
+            try:
+                eval_(evallable)
+            except Exception:
+                continue
+
+            assert False, text
+
     # Run one Interactive Console, till exit, much as if:  python3 -i csp.py
 
     if main_args.i:
@@ -954,15 +1014,13 @@ def main_try() -> None:
         iprint()
         iprint(">>> dir()")
         iprint(repr(list(code_scope.keys())))
+        iprint(">>> ")
 
         code.interact(banner="", local=code_scope, exitmsg="")  # not 'locals='
 
-        iprint("bye")
+    # Succeed
 
-    if not main_args.i:
-        print("bye")
-
-    # 'code.interact' adds '__builtins__' into the Scope
+    print("bye")
 
 
 def sketch(process) -> None:
@@ -1275,7 +1333,7 @@ def eval_(csp_text: str) -> Process:
 
     cp = Parser(csp_text)
     ok = cp.take_eval()
-    assert ok, (csp_text,)  # todo: explain why our parsing of Csp failed
+    assert ok, (csp_text,)  # todo: explain why Parse failed
 
     assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
     assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
@@ -1300,7 +1358,7 @@ def exec_(csp_text: str) -> None:
 
     cp = Parser(csp_text)
     ok = cp.take_exec()
-    assert ok, (csp_text,)  # todo: explain why our parsing of Csp failed
+    assert ok, (csp_text,)  # todo: explain why Parse failed
 
     assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
     assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
@@ -1479,7 +1537,7 @@ class Parser:
                 d[event] = process
 
             keys = list(d.keys())
-            assert keys == events, (keys, events)
+            assert keys == events, (keys, events)  # todo: explain Event Choices must be distinct
 
             deepest_take[-1] = d
 
@@ -1724,16 +1782,12 @@ if __name__ == "__main__":
 
 TESTS = """
 
-    csp.exec_('P1 = (coin → (choc → (coin → (choc → STOP))))')
-    csp.exec_('P2 = (coin → choc → coin → choc → STOP)')
-    print(P1)
-    print(P2)
-
     P1 = csp.eval_("lime → P2")
     P2 = csp.eval_("fig → STOP")
-    P1()
-    P3 = csp.eval_("P2")
-    P3 is P2
+    csp.sketch(P1)  # should be: lime, fig, BLEEP
+
+    P9 = csp.eval_('(coin → STOP)')
+    print(P9("coin"))  # could know it is STOP
 
 """
 
