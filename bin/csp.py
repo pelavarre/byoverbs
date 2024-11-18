@@ -39,6 +39,8 @@ import typing
 
 
 #
+# 1.1 Introduction
+#
 # List examples from CspBook·Pdf, but spoken as Dict, List, and Str
 #
 #   + Step across a List[Str] to reach 1 (Dict | List | Str)
@@ -188,7 +190,10 @@ class CspBookExamples:
     # despite CspBook·Pdf saying these shuffled, as = O L O and as = L O L
 
     #
-    # 1.2 Pictures (not yet implenented here)
+    # 1.2 Pictures
+    # 1.3 Laws
+    #
+    #   (nothing here yet)
     #
 
 
@@ -263,6 +268,8 @@ def ct_n_to_dict(n: int) -> dict:  # 1.1.4 X2  # Cyclic CT(7) called out by 1.8.
     p["up"].__name__ = f"CT({n + 1})"
 
     return p
+
+    # todo: compare with Lisp Label's
 
     # todo: think about about the .__name__ connection into Class Hope
 
@@ -475,6 +482,8 @@ class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
         """Offer no Menu Choices, like a Stop Process"""
 
         return list()
+
+        # CspBook·Pdf 'def menu' offers only Event Choices from a given Alphabet
 
     def after_process_of(self, choice: str) -> "Process":
         """Take no Menu Choices"""
@@ -910,6 +919,74 @@ def eq_pop(key: str, value: object | None) -> None:
 
 
 #
+# 1.5 Traces
+#
+
+# ["x", "y"]  # Csp ⟨x,y⟩
+# ["x"]  # Csp ⟨x⟩
+# []  # Csp ⟨⟩
+
+# ["coin", "choc", "coin", "choc"]  # 1.5 X1
+# ["coin", "choc", "coin"]  # 1.5 X2
+# []  # 1.5 X3
+
+# []  # 1.5 X4
+# ["in2p"], ["in1p"]
+# ["in2p", "large"], ["in2p", "small"], ["in1p", "in1p"], ["in1p", "small"]  # at CspBook·Pdf
+# ["in2p", "large"], ["in1p", "small"], ["in2p", "small"], ["in1p", "in1p"]  # at 'csp.sketch(VMC)'
+
+# ["in1p", "in1p", "in1p"]  # 1.5 X5
+
+
+#
+# 1.6 Operations on Traces
+#
+
+
+# 1.6.1 Catenation
+
+# s⌢t  # Py (s + t)
+
+# ["coin", "choc"] + ["coin", "toffee"] = ["coin", "choc", "coin", "toffee"]
+# ["in1p"] + ["in1p"] = ["in1p", "in1p"]
+# ["in1p", "in1p"] + [] = ["in1p", "in1p"]
+
+# (s + []) == ([] + s) == s  # 1.6.1 L1
+# (s + (t + u)) == ((s + t) + u)  # 1.6.1 L2
+
+# (s + t) == (s + u)  iff  (t = u)  # 1.6.1 L3
+# (s + t) == (u + t)  iff  (s = u)  # 1.6.1 L4
+# (s + t) == []  iff  ((s == []) and (t == []))  # 1.6.1 L5
+
+# 0 * t == []  # 1.6.1 L6
+# (n + 1) * t == (t + (n * t))  # 1.6.1 L7
+
+# (n + 1) * t == ((n * t) + t)  # 1.6.1 L8
+# (n + 1) * (s + t) == (s + (n * (t + s)) + t))  # 1.6.1 L9
+
+
+# 1.6.2 Restriction  # Csp (t ↾ A)
+
+assert list(_ for _ in ["around", "up", "down", "around"] if _ in ["up", "down"]) == ["up", "down"]
+
+
+# 1.6.3 Head and tail  # Csp Subscript 0  # Csp '
+# 1.6.4 Star  # Csp Superscript *
+# 1.6.5 Ordering  # Csp s ≤ t  # s is a prefix of t
+# 1.6.6 Length  # Csp Len #t  # Csp Count #(t ↾ A)
+
+
+#
+# 1.7 Implementation of Traces ('in the obvious way by lists of atoms')
+#
+# 1.8 Traces of a Process
+# 1.8.1 Laws
+# 1.8.2 Implementation
+# 1.8.3 After  # Csp P / s
+#
+
+
+#
 # Run some Self-Test's, and then emulate:  python3 -i csp.py
 #
 
@@ -1270,6 +1347,9 @@ def process_step_stdin_readline(choices) -> str:
         print("⌃D EOFError")  # as if 'except EOFError' for 'input()'
         return ""
 
+    if line.strip() == "END":  # CspBook·Pdf reserves Bleep/ Stop/ End
+        return ""
+
     # Quit when there are no Choices for stepping forward
 
     if not choices:
@@ -1291,12 +1371,14 @@ def process_step_choose_and_reprint(choices, line) -> str:
         if strip != str(choice):
             print("\x1B[A", end="")
             print(choice)
+
         return choice
 
     # Run ahead with the first whole match
 
     if strip in choices:
         choice = strip
+
         return choice
 
     # Else erase the input and run ahead with a random Choice
@@ -1304,7 +1386,10 @@ def process_step_choose_and_reprint(choices, line) -> str:
     choice = random.choice(choices)
     print("\x1B[A", end="")
     print(choice)
+
     return choice
+
+    # CspBook·Pdf says beep audibly and hang while wrong choices
 
 
 #
