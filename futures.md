@@ -958,6 +958,9 @@ screen transcripts with no lag into:  tail -F
 The Terminal Sh should tell me when we’ll first test the changes I
 just now saved into my CronTab
 
+pq -
+should be:  pbpaste
+
 
 ## Copied from
 

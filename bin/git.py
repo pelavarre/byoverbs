@@ -51,7 +51,7 @@ for X in 2023.12.15{,^{tag},^{commit},^{tree}}; do
 done
 
 
-git log --pretty=fuller --numstat --no-decorate --color-moved -p
+git log --pretty=fuller --numstat --no-decorate -p
 
 """
 

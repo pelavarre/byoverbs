@@ -1,6 +1,6 @@
 if [ -t 1 ]; then
     set -xe
-    git reflog --date=relative --numstat -1 "$@"
+    git reflog --date=relative --numstat -3 "$@"
 else
     set -xe
     git reflog --date=relative --numstat "$@"

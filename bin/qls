@@ -1,2 +1,2 @@
 set -xe
-git log --pretty=fuller --numstat --no-decorate --color-moved "$@"
+git log --pretty=fuller --numstat --no-decorate "$@"

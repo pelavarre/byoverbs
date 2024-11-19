@@ -1,2 +1,2 @@
 set -xe
-git log --pretty=fuller --decorate --color-moved -p "$@"
+git log --pretty=fuller --decorate -p "$@"

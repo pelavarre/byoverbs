@@ -18,6 +18,8 @@ examples:
   sed.py --h  # show help lines and exit (more reliable than -h)
   sed.py --  # prefix each line with "-- " and suffix each line with " --"
 
+  sed 's,^  *,,' |sed 's,  *$,,'  # strip Blanks from both Ends of each Line
+
   sed -i.bak 's,old,new,g' FILE  # Sed '-i' edits Files in place
   sed "s,.*,'&',"  # Sed Repl '&' means the Chars matched
   sed 's,^.*$,& = self.&,'  # Sed Repl '&' means the Chars matched
