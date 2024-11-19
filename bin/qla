@@ -3,7 +3,12 @@ set -e
 shline='git log --pretty=fuller --no-decorate --color-moved'
 
 if [ $# -eq 0 ]; then
-    shline="$shline --author=$(git config user.email)"
+    shline="$shline --numstat --author=$(git config user.email)"
+fi
+
+if [ $1 = '.' ]; then
+    shline="$shline --author=$(git config user.email)"  # no --numstat
+    shift
 fi
 
 while [ $# -ne 0 ]; do
