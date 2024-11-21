@@ -445,8 +445,7 @@ class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
     """List the Def's of every Process"""
 
     def __abs__(self) -> "Process":
-        """Default to say a Process is itself, aliasing no one"""
-
+        """FIXME: find words to explain def __abs__"""
         return self
 
     def __call__(self, *args, **kwargs) -> typing.Union["Process", str, None]:
@@ -460,8 +459,7 @@ class Process:  # SuperClass  # in itself, an Empty List of no Events  # []
             choices = self.menu_choices()
             if choice in choices:
                 p = self.after_process_of(choice)
-                q = p.__abs__()
-                return q
+                return p
 
             return "BLEEP"
 
@@ -502,8 +500,6 @@ SerializedEventOrProcess = EventName | SerializedProcess
 
 def to_process_if(o: Process | SerializedProcess) -> Process:
     """Return a Process unchanged, else a deserialized Process"""
-
-    g = CODE_SCOPE
 
     # Accept a Process as is
 
@@ -552,19 +548,9 @@ def to_process_if(o: Process | SerializedProcess) -> Process:
         flow = Flow(cells=o)
         return flow
 
-    # Find a Process in the Compile-Time Scope by Name now
+    # Find the Process in the Run-Time Scope by Name later
 
     assert isinstance(o, str), (type(o), o)
-
-    if o in g.keys():
-        process = g[o]
-        assert isinstance(process, Process), (process,)
-
-        nym = Mention(o, value=process)
-        return nym
-
-    # Else find the Process in the Run-Time Scope by Name later
-
     assert str_is_process_name(o), (o,)
 
     nym = Mention(o, value=StopProcess)
@@ -698,10 +684,16 @@ class Box(Process):  # List of 1 Process  # [STOP]
 
         self.value = to_process_if(value)
 
+    def __abs__(self) -> Process:
+        """Unbox the first Process boxed here (unless overriden)"""
+
+        value = self.value
+        return value
+
     def __str__(self) -> str:
         """Speak of the Value as inside Parentheses"""
 
-        value = self.value
+        value = self.__abs__()
 
         s = value.__str__()
         if not (s.startswith("(") and s.endswith(")")):
@@ -709,67 +701,25 @@ class Box(Process):  # List of 1 Process  # [STOP]
 
         return s
 
-    def __abs__(self) -> "Process":
-        """Unbox the Value"""
-
-        value = self.value
-        p = value.__abs__()
-
-        return p
-
     def menu_choices(self) -> list[str]:
         """Offer the Menu Choices of the Value"""
 
-        value = self.value
+        value = self.__abs__()
+        if value is self:
+            no_choices: list[str]
+            no_choices = list()
+            return no_choices
+
         choices = value.menu_choices()
         return choices
 
     def after_process_of(self, choice: str) -> "Process":
         """Forward a Menu Choice into the Value"""
 
-        value = self.value
+        value = self.__abs__()
+
         p = value.after_process_of(choice)
         return p
-
-
-class Mention(Box):  # Str "X"
-    """Run a Process with a Name, but without an awareness of its own Name"""
-
-    key: str
-
-    def __init__(self, key: str, value: SerializedProcess) -> None:
-        super().__init__(value)
-
-        assert key, (key,)
-        self.key = key
-
-    def __abs__(self) -> "Process":
-        """Unbox the Value"""
-
-        # g = CODE_SCOPE  # FIXME: don't loop infinitely through:  CLOCK1C = μ X • (tick → X)
-        # key = self.key
-        # if key in g.keys():
-        #     gkvalue = g[key]
-        #     if gkvalue is not self.value:
-        #         self.value = gkvalue  # todo: work out more elegantly when this happens
-
-        value = self.value
-        p = value.__abs__()
-
-        return p
-
-    # def __repr__(self) -> str:  # todo: Repr's for Process'es
-    #     key = self.key
-    #     value = self.value
-    #     s = f"Mention({key!r}, {repr(value)}) at 0x{id(self):X}"
-    #     return s
-
-    def __str__(self) -> str:
-        """Speak of the Value by Name"""
-
-        key = self.key
-        s = key
-        return s
 
 
 class Cloak(Box):  # Dict {"X": ["tick", X]}
@@ -787,17 +737,59 @@ class Cloak(Box):  # Dict {"X": ["tick", X]}
         self.value = to_process_if(value)  # replaces
         eq_pop(key, value=self)
 
-    def __abs__(self) -> "Process":
-        """Don't unbox the Value, keep it cloaked"""
-
-        return self
-
     def __str__(self) -> str:
         """Speak of the Value as self-aware:  μ X • [... X ... X ...]"""
 
         key = self.key
         value = self.value
         s = f"μ {key} • {value}"  # 'μ X • ["tick", X]'
+        return s
+
+
+class Mention(Box):  # Str "X"
+    """Run a Process with a Name, but without an awareness of its own Name"""
+
+    key: str
+
+    cloak: Cloak | None
+
+    def __init__(self, key: str, value: SerializedProcess) -> None:
+        super().__init__(value)
+
+        g = CODE_SCOPE
+
+        assert key, (key,)
+        self.key = key
+
+        self.cloak = None
+        if key in g.keys():
+            v = g[key]
+            if isinstance(v, Cloak):
+                self.cloak = v
+
+    def __abs__(self) -> Process:
+        """Unbox the present Value of the Key in the Scope"""
+
+        g = CODE_SCOPE
+
+        cloak = self.cloak
+        key = self.key
+
+        if cloak:
+            return cloak
+
+        if key not in g.keys():
+            return StopProcess
+
+        value = g[key]
+        assert isinstance(value, Process), (type(value), key)
+        return value
+
+    def __str__(self) -> str:
+        """Speak of the Value by Name"""
+
+        key = self.key
+        s = key
         return s
 
 
@@ -816,47 +808,26 @@ class Hope(Process):  # Callable
         assert func.__name__ not in hope_by_name.keys(), (func.__name__,)
         hope_by_name[func.__name__] = self
 
+    def __abs__(self) -> Process:
+        """Unbox the first Value of the Func"""
+
+        p = self.process
+        func = self.func
+
+        if not p:
+            p = to_process_if(func())
+            assert p, (p, func)
+
+            self.process = p
+
+        return p
+
     def __str__(self) -> str:
         """Speak of X marks the spot"""
 
         func = self.func
         s = func.__name__
         return s
-
-    def __abs__(self) -> "Process":
-        """Unbox the Value"""
-
-        func = self.func
-
-        p = self.process if self.process else to_process_if(func())
-        self.process = p
-
-        q = p.__abs__()
-        return q
-
-    def menu_choices(self) -> list[str]:
-        """Offer the Menu Choices of the Value"""
-
-        func = self.func
-
-        p = self.process if self.process else to_process_if(func())
-        self.process = p
-
-        choices = p.menu_choices()
-        return choices
-
-    def after_process_of(self, choice: str) -> "Process":
-        """Forward a Menu Choice into the Value"""
-
-        func = self.func
-
-        p = self.process if self.process else to_process_if(func())
-        self.process = p
-
-        q = p.after_process_of(choice)
-        return q
-
-    # todo: Class Hope works a lot like Class Box. Should merge together?
 
 
 #
@@ -1010,6 +981,7 @@ def main_try() -> None:
     code_scope["__name__"] = "__console__"
 
     csp = argparse.Namespace(  # todo: redefine 'import csp' to be something like this small
+        csp=sys.modules[__name__],
         exec_=exec_,
         eval_=eval_,
         sketch=sketch,
@@ -1155,7 +1127,7 @@ def scope_compile_processes(to_scope, from_scope) -> list[str]:
 
         if isinstance(q, Mention):  # collapses Mentions', but not Box'es nor Cloak's
             str_by_alias[k] = q.key
-            q = q.value
+            q = q.__abs__()
 
         p.value = q
         t[k] = q  # mutates t[k]
@@ -1247,28 +1219,29 @@ def process_to_afters(p: Process, limit=None, *, after: list[str] = empty_list) 
         # Visit each Choice in parallel, breadth-first
 
         for choice in choices:
-            s_after = q_after + [choice]
-
             r = q.after_process_of(choice)
             s = r.__abs__()
 
+            s_after = q_after + [choice]
+
             # Stop work after looping to reach the first compiled process
 
-            if s is q1:
+            if (r is p) or (r is q1) or (s is p) or (s is q1):  # todo: test all four?
                 afters.append(s_after + [top])
                 continue
 
             # Don't revisit the already visited
 
-            if s in processes:
+            if (r in processes) or (s in processes):
                 afters.append(s_after + [etc])
                 continue
 
             if s.menu_choices():
-                processes.append(s)  # todo: track max Processes compiled
+                processes.append(r)  # todo: track max Processes compiled
+                processes.append(s)
 
                 if limit is not None:
-                    if len(processes) > limit:
+                    if len(processes) > (2 * limit):  # count 'r', count 's'
                         return afters
 
             # Else work on
@@ -1291,20 +1264,12 @@ def process_step(p: Process) -> None:
 
     # Start a new Trace as often as we step back to the same Process
 
-    q = p.__abs__()
-
-    print("#", p)  # not q
+    print("#", p)
     print()
 
+    q = p
     q1 = q  # aliases
-    # q_list = list()
     while True:
-
-        # if q not in q_list:
-        #     q_list.append(q)
-        # else:
-        #     print("# ...")
-
         if q is q1:
             print()
 
@@ -1322,12 +1287,8 @@ def process_step(p: Process) -> None:
         assert choice, (choice, line, choices)
 
         r = q.after_process_of(choice)
-        s = r.__abs__()
 
-        q = s  # replaces
-
-        # CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-        # ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail
+        q = r  # replaces
 
     # todo: DD() prints '(setorange → O | setlemon → L)' without explaining 'O' and 'L'
 
@@ -1373,6 +1334,8 @@ def process_step_choose_and_reprint(choices, line) -> str:
             print(choice)
 
         return choice
+
+        # CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
 
     # Run ahead with the first whole match
 
@@ -1427,13 +1390,9 @@ def eval_(csp_text: str) -> Process:
 
     p = to_process_if(evallable)
 
-    q = p
-    if isinstance(p, Mention):  # collapses Mentions', but not Box'es nor Cloak's
-        q = p.__abs__()
+    process_to_afters(p)  # raises Exception if broken, now, before returning
 
-    process_to_afters(q)  # raises Exception if broken, now, before returning
-
-    return q
+    return p
 
 
 def exec_(csp_text: str) -> None:
@@ -1463,13 +1422,9 @@ def exec_(csp_text: str) -> None:
             # print(f"execcable = {execcable}")  # todo: log this Parser Result
             p = to_process_if(process)
 
-            q = p
-            if isinstance(p, Mention):  # collapses Mentions', but not Box'es nor Cloak's
-                q = p.__abs__()
+            g[name] = p
 
-            g[name] = q
-
-            process_to_afters(q)  # raises Exception if broken, now, before returning
+            process_to_afters(p)  # raises Exception if broken, now, before returning
 
             return
 
@@ -1477,11 +1432,7 @@ def exec_(csp_text: str) -> None:
 
     p = to_process_if(execcable)
 
-    q = p
-    if isinstance(p, Mention):  # collapses Mentions', but not Box'es nor Cloak's
-        q = p.__abs__()
-
-    process_to_afters(q)  # raises Exception if broken, now, before returning
+    process_to_afters(p)  # raises Exception if broken, now, before returning
 
 
 class Parser:
