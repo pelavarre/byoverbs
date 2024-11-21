@@ -177,20 +177,13 @@ class CspBookExamples:
     # 1.1.4 Mutural Recursion
     #
 
-    DD: dict | str
-    O: dict | str
-    L: dict | str
+    O1 = "O"
+    L1 = "L"
 
-    DD = "DD"
-    O = "O"  # noqa: E741 Ambiguous Variable Name 'O'
-    L = "L"
+    DD = {"setorange": O1, "setlemon": L1}  # 1.1.4 X1  # acyclic
 
-    DD = {"setorange": O, "setlemon": L}  # 1.1.4 X1  # acyclic
-    O1 = {"orange": O, "setorange": O, "setlemon": L}
-    L1 = {"lemon": L, "setlemon": L, "setorange": O}
-
-    O = "O1"  # noqa: E741 Ambiguous Variable Name 'O'
-    L = "L1"
+    O = {"orange": O1, "setorange": O1, "setlemon": L1}  # noqa: E741 Ambiguous Variable Name 'O'
+    L = {"lemon": L1, "setlemon": L1, "setorange": O1}
 
     # We say  = O O L and = L L O
     # so as to show the finite past clearly before getting into the infinite futures,
@@ -1004,6 +997,9 @@ def main_try() -> None:
 
         from_scope = dict(vars(CspBookExamples))
         from_scope = dict(_ for _ in from_scope.items() if _[0].upper() == _[0])
+
+        del from_scope["O1"]  # todo: more elegant mutual recursion
+        del from_scope["L1"]
 
         csp_texts = scope_compile_processes(code_scope, from_scope=from_scope)
 
