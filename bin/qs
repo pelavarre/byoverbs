@@ -3,10 +3,10 @@ case "$1" in
         arg1=HEAD~$1
         shift
         set -xe
-        git show --color-moved "$arg1" "$@"
+        git show "$arg1" "$@"
         ;;
     *)
         set -xe
-        git show --color-moved "$@"
+        git show "$@"
         ;;
 esac
