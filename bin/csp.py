@@ -1065,10 +1065,17 @@ def main_try() -> None:
 
     if main_args.i:
 
-        iprint()
-        iprint(">>> dir()")
-        iprint(repr(list(code_scope.keys())))
-        iprint(">>> ")
+        if main_args.c is None:
+            iprint()
+            iprint(">>> dir()")
+            iprint(repr(list(code_scope.keys())))
+            iprint(">>> ")
+            iprint(">>> # Press ⌃D to quit, press ⌃C to interrupt, press Return to send")
+            iprint(">>> # Copy what you said before you clear it away, for we lose it when you quit")
+            iprint(">>> ")
+            iprint(">>> # First try:  VMCT()")
+            iprint(">>> # After that:  csp.sketch(VMCT)")
+            iprint(">>> ")
 
         code.interact(banner="", local=code_scope, exitmsg="")  # not 'locals='
 
@@ -1270,7 +1277,6 @@ def process_step(p: Process) -> None:
     # Start a new Trace as often as we step back to the same Process
 
     print("#", p)
-    print()
 
     q = p
     q1 = q  # aliases
