@@ -28,7 +28,9 @@ import __main__
 import argparse
 import bdb
 import code
+import decimal
 import functools
+import numbers
 import pdb
 import random
 import re
@@ -59,7 +61,7 @@ import typing
 #
 
 
-PLENTY_DEPTH_5 = 5  # chooses how deep to trace an infinite Set of Processes
+PLENTY_DEPTH_7 = 7  # chooses how deep to trace an infinite Set of Processes
 
 
 class CspBookExamples:
@@ -235,20 +237,35 @@ str_ct = """
 
 
 @functools.lru_cache(maxsize=None)  # make cyclic detectable by compiling each Int only once
-def def_ct(n: int) -> "Process":
-    d = ct_n_to_dict(n)
+def def_ct(n: numbers.Number) -> "Process":
+
+    n2 = n
+    if not isinstance(n, numbers.Number):
+        try:
+            n2 = decimal.Decimal(n)
+        except decimal.InvalidOperation:
+            print(f"decimal.InvalidOperation: {n!r} is not a number", file=sys.stderr)
+            return StopProcessMention
+
+    assert isinstance(n2, (int, float, complex, decimal.Decimal)), type(n)
+
+    d = ct_n_to_dict(n2)
     p = to_process_if(d)
+
     return p
 
 
 ct = ProcessFactory(func=def_ct, chars=str_ct)
 
 
-def ct_n_to_dict(n: int) -> dict:  # 1.1.4 X2  # Cyclic CT(7) called out by 1.8.3 X5
+# 1.1.4 X2  # Cyclic CT(7) called out by 1.8.3 X5
+
+
+def ct_n_to_dict(n: int | float | complex | decimal.Decimal) -> dict:
 
     p: dict
 
-    if n == 0:
+    if n == 0:  # 'n <= 0' not defined when 'isinstance(n, complex)'
         p = {"around": lambda: ct(0), "up": lambda: ct(1)}
 
         assert p["around"].__name__ == "<lambda>", p["around"].__name__
@@ -266,12 +283,20 @@ def ct_n_to_dict(n: int) -> dict:  # 1.1.4 X2  # Cyclic CT(7) called out by 1.8.
 
     p["down"].__name__ = f"CT({n - 1})"
     p["up"].__name__ = f"CT({n + 1})"
+    if isinstance(n, decimal.Decimal):
+        p["down"].__name__ = f'CT("{n - 1}")'
+        p["up"].__name__ = f'CT("{n + 1}")'
 
     return p
 
     # todo: compare with Lisp Label's
 
     # todo: think about about the .__name__ connection into Class Hope
+
+
+#
+# Add some sad testcases, not just happy testcases, from English of CspBook·Pdf
+#
 
 
 CspBookCornerTexts = [
@@ -793,14 +818,14 @@ class Mention(Box):  # Str "X"
         return s
 
 
-class Hope(Process):  # Callable
+class Hope(Box):  # Callable
     """Run a Process defined later, by calling a Func when needed"""
 
     func: typing.Callable
     process: Process | None
 
     def __init__(self, func: typing.Callable) -> None:
-        super().__init__()
+        super().__init__(value=StopProcess)
 
         self.func = func
         self.process = None
@@ -904,7 +929,7 @@ def eq_pop(key: str, value: object | None) -> None:
 # []  # 1.5 X4
 # ["in2p"], ["in1p"]
 # ["in2p", "large"], ["in2p", "small"], ["in1p", "in1p"], ["in1p", "small"]  # at CspBook·Pdf
-# ["in2p", "large"], ["in1p", "small"], ["in2p", "small"], ["in1p", "in1p"]  # at 'csp.sketch(VMC)'
+# ["in2p", "large"], ["in1p", "small"], ["in2p", "small"], ["in1p", "in1p"]  # near 'csp.walk_(VMC)'
 
 # ["in1p", "in1p", "in1p"]  # 1.5 X5
 
@@ -972,17 +997,19 @@ def main_try() -> None:
 
     assert not code_scope
 
+    csp = argparse.Namespace(  # todo: redefine 'import csp' to be something like this small
+        csp=sys.modules[__name__],
+        exec_=exec_,
+        eval_=eval_,
+        walk_=walk_,
+    )
+
     code_scope["__annotations__"] = dict()
     code_scope["__builtins__"] = __builtins__  # 'code.interact' adds '__builtins__', if missing
     code_scope["__doc__"] = None
     code_scope["__name__"] = "__console__"
 
-    csp = argparse.Namespace(  # todo: redefine 'import csp' to be something like this small
-        csp=sys.modules[__name__],
-        exec_=exec_,
-        eval_=eval_,
-        sketch=sketch,
-    )
+    # code_scope["D"] = decimal.Decimal
 
     code_scope["csp"] = csp  # not '["csp"] = __main__', and not 'import csp'
     code_scope["dir"] = lambda *args, **kwargs: scope_unsorted_dir(code_scope, *args, **kwargs)
@@ -1016,42 +1043,23 @@ def main_try() -> None:
             assert len(cp.takes) == 1, (len(cp.takes), cp.takes)
             assert len(cp.takes[-1]) == 1, (len(cp.takes[-1]), cp.takes[-1])
 
-        # Sketch the infinity of Processes defined by 'def CT'
+        # Walk out many of the infinity of Processes defined by 'def CT'
 
         iprint()
         iprint("CT(n) =", code_scope["CT"])
 
-        assert PLENTY_DEPTH_5 == 5
-
-        limit = 5
-        afters = process_to_afters(ct(0), limit=limit)
-        iprint("\n".join(", ".join(_) for _ in afters))
-        iprint(f"# quit tracing infinite depth, after {limit} Processes #")
-
         assert code_scope["CT"] is ct, (code_scope["CT"], ct)
-
-        iprint()
-        iprint("CT(4) =", ct(4))
-        iprint("# not tracing CT(4) #")
+        if main_args.i:
+            iprint()
+            iprint("CT(0) = ", end="")
+            walk_(ct(0))
+            iprint()
+            iprint("CT(9) = ", end="")
+            walk_(ct(9))
 
         # Require some Compile-Time Errors
 
-        iprint()
-        for text in CspBookCornerTexts:
-            iprint(text)
-            (head, sep, tail) = text.partition("#")
-
-            evallable = head.rstrip()
-            if not tail:
-                eval_(evallable)
-                continue
-
-            try:
-                eval_(evallable)
-            except Exception:
-                continue
-
-            assert False, text
+        try_cspbook_corner_texts()
 
     # Run one Interactive Console, till exit, much as if:  python3 -i csp.py
 
@@ -1074,8 +1082,10 @@ def main_try() -> None:
             iprint(">>> # Copy what you said before you clear it away, for we lose it when you quit")
             iprint(">>> ")
             iprint(">>> # First try:  VMCT()")
-            iprint(">>> # After that:  csp.sketch(VMCT)")
+            iprint(">>> # After that:  csp.walk_(VMCT)")
             iprint(">>> ")
+
+            # todo: Command-Line Input History across Processes
 
         code.interact(banner="", local=code_scope, exitmsg="")  # not 'locals='
 
@@ -1084,17 +1094,44 @@ def main_try() -> None:
     print("bye")
 
 
-def sketch(process) -> None:
+def try_cspbook_corner_texts() -> None:
 
-    assert PLENTY_DEPTH_5 == 5
+    iprint()
+    for text in CspBookCornerTexts:
+        iprint(text)
+        (head, sep, tail) = text.partition("#")
 
-    limit = 5
-    afters = process_to_afters(process, limit=limit)
-    print("\n".join(", ".join(_) for _ in afters))
+        evallable = head.rstrip()
+        if not tail:
+            eval_(evallable)
+            continue
 
-    # todo: mention when the depth limit of .sketch matters
-    # todo: vary the depth of .sketch
-    # todo: visit the Process'es, don't just print them
+        try:
+            eval_(evallable)
+        except Exception:
+            continue
+
+        assert False, text
+
+
+def walk_(process) -> None:  # kin to Py 'os.walk'
+    """Print the Process and all or many of its Traces"""
+
+    print(process)
+
+    assert PLENTY_DEPTH_7 == 7
+
+    limit = 7
+    limit_plus = 7 + 1
+
+    afters = process_to_afters(process, limit=limit_plus)
+
+    print("\n".join(", ".join(_) for _ in afters[:limit]))
+    if len(afters) > limit:
+        print(f"# {limit} traces printed, more found #")
+
+    # todo: vary the depth of .walk_
+    # todo: visit the Process'es, don't just print them  # todo: what did this mean?
 
 
 def scope_unsorted_dir(scope, *args, **kwargs) -> list[str]:
@@ -1253,7 +1290,7 @@ def process_to_afters(p: Process, limit=None, *, after: list[str] = empty_list) 
                 processes.append(s)
 
                 if limit is not None:
-                    if len(processes) > (2 * limit):  # count 'r', count 's'
+                    if len(afters) > limit:
                         return afters
 
             # Else work on
@@ -1279,9 +1316,8 @@ def process_step(p: Process) -> None:
     print("#", p)
 
     q = p
-    q1 = q  # aliases
     while True:
-        if q is q1:
+        if (q is p) or (q is p.__abs__()) or (q.__abs__() is p) or (q.__abs__() is p.__abs__()):
             print()
 
         # Offer 0 or more Choices
@@ -1305,7 +1341,7 @@ def process_step(p: Process) -> None:
 
 
 def process_step_stdin_readline(choices) -> str:
-    """Return "" to quit, else a non-empty Line of Input"""
+    """Return Empty Str "" to quit, else a non-empty Line of Input"""
 
     # Quit on request
 
@@ -1388,7 +1424,7 @@ def process_step_choose_and_reprint(choices, line) -> str:
 #
 
 
-def eval_(csp_text: str) -> Process:
+def eval_(csp_text: str) -> Process:  # kin to Py 'eval'
     """Compile and run 1 Csp Evallable Instruction"""
 
     cp = Parser(csp_text)
@@ -1407,7 +1443,7 @@ def eval_(csp_text: str) -> Process:
     return p
 
 
-def exec_(csp_text: str) -> None:
+def exec_(csp_text: str) -> None:  # kin to Py 'exec'
     """Compile and run 1 Csp Execcable Instruction"""
 
     g = CODE_SCOPE
@@ -1823,19 +1859,13 @@ if __name__ == "__main__":
 
 # todo: Pull 'nope's and 'compilation failure's from 'bin/csp6.py', then retire it
 # todo: Code for showing Cyclicity, showing Acyclity, giving up after a limit?
-# todo: Command-Line Input History
 
 
 # todo: pass more interactive tests
 
 TESTS = """
 
-    P1 = csp.eval_("lime → P2")
-    P2 = csp.eval_("fig → STOP")
-    csp.sketch(P1)  # should be: lime, fig, BLEEP
-
-    P9 = csp.eval_('(coin → STOP)')
-    print(P9("coin"))  # could know it is STOP
+    ... We listed some here while they didn't work ...
 
 """
 
