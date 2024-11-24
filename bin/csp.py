@@ -1341,12 +1341,13 @@ def process_step_choose_and_reprint(choices, line) -> str:
     if len(choices) == 1:
         choice = choices[-1]
         if strip != str(choice):
-            print("\x1B[A", end="")
+            print("\x1B[A" "\x1B[K", end="")
             print(choice)
 
         return choice
 
         # CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+        # EL = "\x1B" "[" "{}A"  # CSI 04/11 Erase in Line
 
     # Run ahead with the first whole match
 
