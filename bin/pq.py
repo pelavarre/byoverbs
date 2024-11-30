@@ -95,8 +95,8 @@ import unicodedata
 
 _: object  # '_: object' tells MyPy to accept '_ =' tests across two and more Datatypes
 
-_ = dict[str, int]  # new since Oct/2020 Python 3.9
-_ = json, time
+_ = dict[str, int] | None  # new since Oct/2021 Python 3.10
+_ = json, time  # r'\bjson[.]' found in str of Py  # r'\btime[.]' for debug as yet
 
 
 if not __debug__:
@@ -1935,7 +1935,24 @@ def shadow_terminal_yolo(itext) -> str:  # st yolo
     """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
     with ShadowsTerminal() as st:
-        st.shadows_yolo()
+        st.shadows_yolo(brittle=False)
+
+    return ""
+
+
+def turtle_yolo(itext) -> str:  # turtle
+
+    turtling = os.path.exists("stdin.mkfifo") and os.path.exists("stdout.mkfifo")
+
+    if not turtling:
+        with TurtleSketchist() as ts:
+            ts.turtle_yolo()
+    else:
+        try:
+            with ShadowsTerminal() as st:
+                st.shadows_yolo(brittle=True)
+        finally:
+            print("\x1B[?25h")  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
 
     return ""
 
@@ -2121,6 +2138,8 @@ class BytesTerminal:
     kbytes_list: list[bytes]  # Bytes of each Keyboard Chord in  # KeyLogger
     sbytes_list: list[bytes]  # Bytes of each Screen Write out  # ScreenLogger
 
+    ifile_else: typing.TextIO | None
+
     #
     # Init, enter, exit, breakpoint, flush, stop, and yolo self-test
     #
@@ -2142,6 +2161,19 @@ class BytesTerminal:
 
         self.kbytes_list = list()
         self.sbytes_list = list()
+
+        #
+
+        ifile_else = None
+
+        if os.path.exists("stdin.mkfifo") and os.path.exists("stdout.mkfifo"):
+            fd = os.open("stdin.mkfifo", os.O_RDONLY | os.O_NONBLOCK)
+            ifile = os.fdopen(fd, "r")
+            assert ifile.fileno() == fd, (ifile.fileno(), fd)
+
+            ifile_else = ifile
+
+        self.ifile_else = ifile_else
 
         # todo: need .after = termios.TCSAFLUSH on large Paste crashing us
 
@@ -2363,8 +2395,8 @@ class BytesTerminal:
             if not self.kbhit(timeout=timeout):
                 return many_kbytes
 
-                # ⎋ Esc that isn't ⎋⎋ Meta Esc
-                # ⎋⎋ Meta Esc that doesn't come with more Bytes
+                # 1st loop:  ⎋ Esc that isn't ⎋⎋ Meta Esc
+                # 2nd loop:  ⎋⎋ Meta Esc that doesn't come with more Bytes
 
             kbytes2 = self.read_kchar_bytes_if()
             many_kbytes += kbytes2
@@ -2381,7 +2413,10 @@ class BytesTerminal:
         if kbytes2 == b"[":  # 01/11 ... 05/11 CSI
             assert many_kbytes.endswith(b"\x1B\x5B"), (many_kbytes,)
             if not self.kbhit(timeout=timeout):
-                return many_kbytes  # ⎋[ Meta [
+                return many_kbytes
+
+                # ⎋[ Meta Esc that doesn't come with more Bytes
+
             many_kbytes = self.read_csi_kchord_bytes_if(many_kbytes)
 
         # Succeed
@@ -2453,6 +2488,7 @@ class BytesTerminal:
         assert self.tcgetattr_else, (self.tcgetattr_else,)
 
         self.bytes_flush()  # 'read_kbyte'
+        self.yield_cpu()
         kbyte = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
 
         return kbyte
@@ -2460,19 +2496,67 @@ class BytesTerminal:
         # ⌃C comes through as b"\x03" and doesn't raise KeyboardInterrupt
         # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
 
-    def kbhit(self, timeout) -> list[int]:  # 'timeout' in seconds, None for forever
+    def yield_cpu(self) -> None:
+        """Yield the CPU to other Processes"""
+
+        ifile_else = self.ifile_else
+        stdio = self.stdio
+
+        if not ifile_else:
+            return
+
+        ifile = ifile_else
+
+        while True:
+
+            rlist: list[int] = [stdio.fileno(), ifile.fileno()]
+            wlist: list[int] = list()
+            xlist: list[int] = list()
+            timeout_eq_None = None
+
+            (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout_eq_None)
+
+            if ifile.fileno() not in alt_rlist:
+                assert stdio.fileno() in alt_rlist, (stdio.fileno(), alt_rlist, ifile.fileno())
+                return
+
+            read = ifile.read()
+
+            alt_locals: dict
+            alt_locals = dict(self=self)
+
+            result = None
+            if read.strip():
+                try:
+                    result = eval(read, globals(), alt_locals)
+                except Exception:
+                    result = traceback.format_exc()
+
+            opath = pathlib.Path("stdout.mkfifo")
+            if result is None:
+                opath.write_text("")
+            else:
+                opath.write_text(repr(result) + "")
+
+    def kbhit(self, timeout) -> bool:  # 'timeout' in seconds - 0 for now, None for forever
         """Block till next Input Byte, else till Timeout, else till forever"""
 
         stdio = self.stdio
         assert self.tcgetattr_else, (self.tcgetattr_else,)  # todo: kbhit kind of works anyhow?
 
-        rlist: list[int] = [stdio.fileno()]
+        hit = self.select_select(stdio.fileno(), timeout=timeout)
+        return hit
+
+    def select_select(self, fd, timeout) -> bool:
+
+        rlist: list[int] = [fd]
         wlist: list[int] = list()
         xlist: list[int] = list()
 
         (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout)
 
-        return alt_rlist
+        hit = bool(alt_rlist)
+        return hit
 
 
 # Name the Shifting Keys
@@ -3005,7 +3089,7 @@ class ShadowsTerminal:
         self.ck.__exit__()
         self.bt.__exit__()
 
-    def shadows_yolo(self) -> None:  # bin/pq.py styolo
+    def shadows_yolo(self, brittle) -> None:  # noqa C901 too complex  # bin/pq.py styolo
         """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
 
         st = self
@@ -3014,17 +3098,22 @@ class ShadowsTerminal:
 
         # Set up this Loop
 
-        st.str_print("Let's test Class ShadowsTerminal")
-        st.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
-        st.str_print("Press ⌃L to count Rows and Columns and say where the Cursor is")
-        st.str_print("Press ⌃C ⇧R to replace, ⌃C I to insert, ⌃C ⇧Z ⇧Q to quit")
+        if not brittle:
 
-        st.str_print()
-        st.str_print()
+            st.str_print("Let's test Class ShadowsTerminal")
+            st.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
+            st.str_print("Press ⌃L to count Rows and Columns and say where the Cursor is")
+            st.str_print("Press ⌃C ⇧R to replace, ⌃C I to insert, ⌃C ⇧Z ⇧Q to quit")
+
+            st.str_print()
+            st.str_print()
 
         # Run this Loop
 
         kchord = (b"R", "⇧R")
+        if brittle:
+            kchord = (b"", "")  # todo: who freaks over empty K Bytes, K Str?
+
         tmode = "Meta"
         while True:
             (kbytes, kstr) = kchord
@@ -3064,6 +3153,12 @@ class ShadowsTerminal:
                 st.str_meta_write(kstr)
 
                 kchord = st.ck.read_kchord_despite_kcprs(timeout=1)
+
+            if brittle:
+                if kstr_list[-1:] == ["⌃D"]:
+                    (kbytes, kstr) = kchord
+                    st.str_meta_write(kstr)
+                    break
 
             if kstr_list[-2:] == ["⇧Z", "⇧Q"]:
                 (kbytes, kstr) = kchord
@@ -6085,6 +6180,196 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 
 #
+#
+#
+
+
+class TurtleSketchist:
+
+    char_if = "*"
+    dy = 0
+    dx = 1
+
+    ymultiplier = 3
+    xmultiplier = 6
+    yxmultiplier = 1
+
+    def __enter__(self) -> "TurtleSketchist":
+
+        if os.path.exists("stdin.mkfifo"):
+            os.remove("stdin.mkfifo")
+        if os.path.exists("stdout.mkfifo"):
+            os.remove("stdout.mkfifo")
+
+        os.mkfifo("stdin.mkfifo")
+        os.mkfifo("stdout.mkfifo")
+
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+
+        if os.path.exists("stdin.mkfifo"):
+            os.remove("stdin.mkfifo")
+        if os.path.exists("stdout.mkfifo"):
+            os.remove("stdout.mkfifo")
+
+    def turtle_yolo(self) -> None:
+
+        while True:
+            print(">>> ", end="")
+            sys.stdout.flush()
+            readline = sys.stdin.readline()
+            if not readline:
+                print("bye")
+                break
+
+            py = self.readline_to_py(readline)
+            if py:
+                pathlib.Path("stdin.mkfifo").write_text(py)
+                read_text = pathlib.Path("stdout.mkfifo").read_text()
+                if read_text:
+                    print(read_text)
+
+    def readline_to_py(self, readline) -> str:  # noqa C901 complex
+
+        char_if = self.char_if
+        dy = self.dy
+        dx = self.dx
+
+        strip = readline.strip()
+        if not strip:
+            return ""
+
+        words = strip.split()
+        word0 = words[0]
+
+        if len(words) == 1:
+
+            if word0 in ("cs", "cls", "clear", "clearscreen"):
+                py = 'self.bytes_write(b"\x1B[H" b"\x1B[2J")'
+                rep = self.py_eval_to_repr(py)
+                assert not rep, (rep, py)
+
+                columns, lines = self.os_terminal_size()
+                y = 1 + (lines // 2)
+                x = 1 + (columns // 2)
+                text = f"\x1B[{y};{x}H"
+                py = f"self.bytes_write({text!r}.encode())"
+                return py
+
+            if word0 in ("fd", "forward"):
+
+                if dy and not dx:
+                    multiplier = self.ymultiplier
+                elif dx and not dy:
+                    multiplier = self.xmultiplier
+                else:
+                    multiplier = self.yxmultiplier
+
+                for _ in range(multiplier):
+
+                    text = ""
+                    if char_if:
+                        text = f"{char_if}\b"
+
+                    if dy > 0:
+                        text += f"\x1B[{dy}B"  # 04/02 Cursor Down (CUD) of N
+                    elif dy < 0:
+                        text += f"\x1B[{dy}A"  # 04/01 Cursor Up (CUU) of N
+
+                    if dx > 0:
+                        text += f"\x1B[{dx}C"  # 04/03 Cursor Forward (CUF) of N
+                    elif dx < 0:
+                        text += f"\x1B[{dx}D"  # 04/04 Cursor Backward (CUB) of N
+
+                    py = f"self.bytes_write({text!r}.encode())"
+                    rep = self.py_eval_to_repr(py)
+                    assert not rep, (rep, py)
+
+                return ""
+
+            if word0 in ("h", "help"):
+                print(
+                    "Choose from: clearscreen, forward, help, hideturtle, left, pendown, penup, right, showturtle"
+                )
+                print("Or abbreviated as: cs, fd, h, ht, lt, pd, pu, rt, st")
+                return ""
+
+            if word0 in ("ht", "hideturtle"):
+                py = 'self.bytes_write(b"\x1B[?25l")'  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
+                rep = self.py_eval_to_repr(py)
+                assert not rep, (rep, py)
+                return ""
+
+            if word0 in ("lt", "left"):
+
+                if (dy, dx) == (0, 1):
+                    (self.dy, self.dx) = (-1, 0)
+                elif (dy, dx) == (-1, 0):
+                    (self.dy, self.dx) = (0, -1)
+                elif (dy, dx) == (0, -1):
+                    (self.dy, self.dx) = (1, 0)
+                else:  # todo: more general Left Turn
+                    (self.dy, self.dx) = (0, 1)
+
+                return ""
+
+            if word0 in ("pd", "pendown"):
+                self.char_if = "*"
+                return ""
+
+            if word0 in ("pu", "penup"):
+                self.char_if = ""
+                return ""
+
+            if word0 in ("rt", "right"):
+
+                if (dy, dx) == (0, 1):
+                    (self.dy, self.dx) = (1, 0)
+                elif (dy, dx) == (1, 0):
+                    (self.dy, self.dx) = (0, -1)
+                elif (dy, dx) == (0, -1):
+                    (self.dy, self.dx) = (-1, 0)
+                else:  # todo: more general Right Turn
+                    (self.dy, self.dx) = (0, 1)
+
+                return ""
+
+            if word0 in ("st", "showturtle"):
+                py = 'self.bytes_write(b"\x1B[?25h")'  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+                rep = self.py_eval_to_repr(py)
+                assert not rep, (rep, py)
+                return ""
+
+        return readline
+
+    def py_eval_to_repr(self, py) -> str:
+
+        pathlib.Path("stdin.mkfifo").write_text(py)
+        read_text = pathlib.Path("stdout.mkfifo").read_text()
+
+        return read_text
+
+    #
+    #
+    #
+
+    def os_terminal_size(self) -> tuple[int, int]:
+
+        py = "os.get_terminal_size()"
+        rep = self.py_eval_to_repr(py)
+
+        regex = r"os.terminal_size[(]columns=([0-9]+), lines=([0-9]+)[)]"
+        m = re.fullmatch(regex, rep)
+        assert m, (m, py, rep)
+        columns, lines = m.groups()
+
+        size = os.terminal_size([int(columns), int(lines)])
+
+        return size
+
+
+#
 # Amp up Import TextWrap
 #
 
@@ -6357,6 +6642,8 @@ CUED_PY_LINES_TEXT = r"""
     otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
 
     otext = pq.shadow_terminal_yolo(itext)  # st yolo  # styolo
+
+    otext = pq.turtle_yolo(itext)  # turtle yolo
 
     otext = re.sub(r"(.)", repl=r"\1 ", string=itext).rstrip()  # sub  # repl
 
@@ -6657,15 +6944,15 @@ ITEXT_PY_GRAFS_TEXT = """
 """
 
 #
-# crthin to:  http://codereviews/r/190588/diff
-# crthin from:  https://codereviews.example.com/r/190588/diff/8/#index_header
+# crthin to:  http://codereviews/r/123456/diff
+# crthin from:  https://codereviews.example.com/r/123456/diff/8/#index_header
 #
 # glink to:  https://docs.google.com/document/d/$HASH
 # glink from:  https://docs.google.com/document/d/$HASH/edit?usp=sharing
 # glink from:  https://docs.google.com/document/d/$HASH/edit#gid=0'
 #
-# jkthin to:  http://63xJenkins
-# jkwide to:  https://63xjenkins.dev.example.com
+# jkthin to:  http://123Jenkins
+# jkwide to:  https://123jenkins.dev.example.com
 #
 # jkey to:  PROJ-12345
 # jlink to:  https://jira.example.com/browse/PROJ-12345
