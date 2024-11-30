@@ -368,7 +368,7 @@ def parse_csp_py_args_else() -> argparse.Namespace:
     doc = __main__.__doc__
     assert doc, (doc,)
 
-    parser = doc_to_parser(doc, add_help=True, epilog_at="examples:")
+    parser = doc_to_parser(doc, add_help=True, startswith="examples:")
 
     c_help = "compile & run a line of CSP notation (may be empty)"
     i_help = "run the Python Repl to inspect interactively"
@@ -384,7 +384,7 @@ def parse_csp_py_args_else() -> argparse.Namespace:
     # works much like:  python3 --
 
 
-def doc_to_parser(doc: str, add_help: bool, epilog_at: str) -> argparse.ArgumentParser:
+def doc_to_parser(doc: str, add_help: bool, startswith: str) -> argparse.ArgumentParser:
     """Form an ArgParse ArgumentParser out of the Doc, often the Main Doc"""
 
     assert doc
@@ -395,12 +395,12 @@ def doc_to_parser(doc: str, add_help: bool, epilog_at: str) -> argparse.Argument
     prog = usage.split()[1]
     description = lines[2]
 
-    epilog = strip[strip.index(epilog_at) :]
+    epilog = strip[strip.index(startswith) :]
 
     parser = argparse.ArgumentParser(
         prog=prog,
         description=description,
-        add_help=True,
+        add_help=add_help,
         formatter_class=argparse.RawTextHelpFormatter,
         epilog=epilog,
     )
