@@ -38,7 +38,10 @@ import sys
 
 import byotools as byo
 
-_: object  # '_: object' gets MyPy to let us run fail-fast tests
+
+_: object  # '_: object' tells MyPy to accept '_ =' tests across two and more Datatypes
+
+
 _ = dict[str, int] | None  # new since Oct/2021 Python 3.10
 
 

@@ -32,7 +32,11 @@ import zoneinfo
 assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 
 
-_: object  # '_: object' gets MyPy to let us run fail-fast tests
+_: object  # '_: object' tells MyPy to accept '_ =' tests across two and more Datatypes
+
+
+_ = re.fullmatch  # new since Mar/2014 Python 3.4
+
 
 # Ubuntu 2018 Long-Term-Stable (LTS)
 
