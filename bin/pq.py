@@ -6220,21 +6220,31 @@ class TurtleClient:
         getsignal = signal.getsignal(signal.SIGINT)
         self.getsignal = getsignal
 
-    def breakpoint(self) -> None:
-        getsignal = self.getsignal
+    def do_reset(self) -> None:
 
-        breakpoint()
-        pass
+        self.char_if = "*"
+        self.dy = -1
+        self.dx = 0
 
-        signal.signal(signal.SIGINT, getsignal)
+        self.ymultiplier = 3
+        self.xmultiplier = 6
+        self.yxmultiplier = 1
+
+        self.do_penup()
+        self.do_home()
+        self.do_pendown()
+
+    #
+    #
+    #
 
     def turtle_yolo(self) -> None:
 
-        readline = "clearscreen"
-        print(self.ps1 + readline)
-        py = self.readline_to_py(readline)
-        rep = self.py_eval_to_repr(py)
-        assert not rep, (rep,)
+        for readline in ("clearscreen", "reset"):
+            print(self.ps1 + readline)
+            py = self.readline_to_py(readline)
+            rep = self.py_eval_to_repr(py)
+            assert not rep, (rep,)
 
         while True:
             print(self.ps1, end="")
@@ -6257,6 +6267,12 @@ class TurtleClient:
                 if read_text:
                     print(read_text)
 
+    def str_write(self, text) -> None:
+
+        py = f"self.bytes_write({text!r}.encode())"
+        rep = self.py_eval_to_repr(py)
+        assert not rep, (rep, py)
+
     def py_eval_to_repr(self, py) -> str:
 
         try:
@@ -6269,135 +6285,218 @@ class TurtleClient:
 
         return read_text
 
+    def breakpoint(self) -> None:
+        getsignal = self.getsignal
+
+        breakpoint()
+        pass
+
+        signal.signal(signal.SIGINT, getsignal)
+
+    #
+    #
+    #
+
+    def to_func_by_verb(self) -> dict[str, typing.Callable]:
+
+        d = {
+            "bk": self.do_backward,
+            "back": self.do_backward,
+            "backward": self.do_backward,
+            "clear": self.do_clearscreen,
+            "clearscreen": self.do_clearscreen,
+            "cls": self.do_clearscreen,
+            "cs": self.do_clearscreen,
+            "fd": self.do_forward,
+            "forward": self.do_forward,
+            "h": self.do_help,
+            "help": self.do_help,
+            "home": self.do_home,
+            "hideturtle": self.do_hideturtle,
+            "ht": self.do_hideturtle,
+            "left": self.do_left,
+            "lt": self.do_left,
+            "pd": self.do_pendown,
+            "pendown": self.do_pendown,
+            "penup": self.do_penup,
+            "pu": self.do_penup,
+            "reset": self.do_reset,
+            "right": self.do_right,
+            "rt": self.do_right,
+            "st": self.do_showturtle,
+            "showturtle": self.do_showturtle,
+        }
+
+        return d
+
     def readline_to_py(self, readline) -> str:  # noqa C901 complex
 
-        char_if = self.char_if
-        dy = self.dy
-        dx = self.dx
+        func_by_verb = self.to_func_by_verb()
 
         strip = readline.strip()
         if not strip:
             return ""
 
         words = strip.split()
-        word0 = words[0]
+        verb = words[0].casefold()
 
-        if len(words) == 1:
+        if len(words) != 1:
+            return readline
 
-            if word0 in ("cs", "cls", "clear", "clearscreen"):
-                py = 'self.bytes_write(b"\x1B[H" b"\x1B[2J")'
-                rep = self.py_eval_to_repr(py)
-                assert not rep, (rep, py)
+        if verb not in func_by_verb:
+            return readline
 
-                columns, lines = self.os_terminal_size()
-                y = 1 + (lines // 2)
-                x = 1 + (columns // 2)
-                text = f"\x1B[{y};{x}H"
-                py = f"self.bytes_write({text!r}.encode())"
-                return py
+        func = func_by_verb[verb]
+        func()
 
-            if word0 in ("fd", "forward"):
+        return ""
 
-                if dy and not dx:
-                    multiplier = self.ymultiplier
-                elif dx and not dy:
-                    multiplier = self.xmultiplier
-                else:
-                    multiplier = self.yxmultiplier
+    #
+    #
+    #
 
-                for _ in range(multiplier):
+    def do_backward(self) -> None:
 
-                    text = ""
-                    if char_if:
-                        text = f"{char_if}\b"
+        char_if = self.char_if
+        dy = -self.dy  # negated
+        dx = -self.dx  # negated
 
-                    if dy > 0:
-                        text += f"\x1B[{dy}B"  # 04/02 Cursor Down (CUD) of N
-                    elif dy < 0:
-                        text += f"\x1B[{-dy}A"  # 04/01 Cursor Up (CUU) of N
+        self.str_write("\b")
 
-                    if dx > 0:
-                        text += f"\x1B[{dx}C"  # 04/03 Cursor Forward (CUF) of N
-                    elif dx < 0:
-                        text += f"\x1B[{-dx}D"  # 04/04 Cursor Backward (CUB) of N
+        if dy and not dx:
+            multiplier = self.ymultiplier
+        elif dx and not dy:
+            multiplier = self.xmultiplier
+        else:
+            multiplier = self.yxmultiplier
 
-                    py = f"self.bytes_write({text!r}.encode())"
-                    rep = self.py_eval_to_repr(py)
-                    assert not rep, (rep, py)
+        for _ in range(multiplier):
 
-                return ""
+            text = ""
+            if char_if:
+                text = f"{char_if}\b"
 
-            if word0 in ("h", "help"):
-                print(
-                    "Choose from: clearscreen, forward, help, hideturtle, home, left, pendown, penup, right, showturtle"
-                )
-                print("Or abbreviated as: cs, fd, h, ht, lt, pd, pu, rt, st")
-                return ""
+            if dy > 0:
+                text += f"\x1B[{dy}B"  # 04/02 Cursor Down (CUD) of N
+            elif dy < 0:
+                text += f"\x1B[{-dy}A"  # 04/01 Cursor Up (CUU) of N
 
-            if word0 in ("ht", "hideturtle"):
-                py = 'self.bytes_write(b"\x1B[?25l")'  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
-                rep = self.py_eval_to_repr(py)
-                assert not rep, (rep, py)
-                return ""
+            if dx > 0:
+                text += f"\x1B[{dx}C"  # 04/03 Cursor Forward (CUF) of N
+            elif dx < 0:
+                text += f"\x1B[{-dx}D"  # 04/04 Cursor Backward (CUB) of N
 
-            if word0 == "home":
+            self.str_write(text)
 
-                assert self.char_if == ""  # todo: Home draws a Line while Pen Down
+    def do_clearscreen(self) -> None:
 
-                columns, lines = self.os_terminal_size()
-                y = 1 + (lines // 2)
-                x = 1 + (columns // 2)
-                text = f"\x1B[{y};{x}H"
-                py = f"self.bytes_write({text!r}.encode())"
-                rep = self.py_eval_to_repr(py)
-                assert not rep, (rep, py)
+        text = "\x1B[H" "\x1B[2J"  # CUP 1 1, ED 2
+        self.str_write(text)  # todo: preserve Setxy despite ClearScreen
 
-                self.dy = -1
-                self.dx = 0
+    def do_forward(self) -> None:
 
-                return ""
+        char_if = self.char_if
+        dy = self.dy
+        dx = self.dx
 
-            if word0 in ("lt", "left"):
+        # self.str_write("\b")  # nope, unlike .do_backward
 
-                if (dy, dx) == (0, 1):
-                    (self.dy, self.dx) = (-1, 0)
-                elif (dy, dx) == (-1, 0):
-                    (self.dy, self.dx) = (0, -1)
-                elif (dy, dx) == (0, -1):
-                    (self.dy, self.dx) = (1, 0)
-                else:  # todo: more general Left Turn
-                    (self.dy, self.dx) = (0, 1)
+        if dy and not dx:
+            multiplier = self.ymultiplier
+        elif dx and not dy:
+            multiplier = self.xmultiplier
+        else:
+            multiplier = self.yxmultiplier
 
-                return ""
+        for _ in range(multiplier):
 
-            if word0 in ("pd", "pendown"):
-                self.char_if = "*"
-                return ""
+            text = ""
+            if char_if:
+                text = f"{char_if}\b"
 
-            if word0 in ("pu", "penup"):
-                self.char_if = ""
-                return ""
+            if dy > 0:
+                text += f"\x1B[{dy}B"  # 04/02 Cursor Down (CUD) of N
+            elif dy < 0:
+                text += f"\x1B[{-dy}A"  # 04/01 Cursor Up (CUU) of N
 
-            if word0 in ("rt", "right"):
+            if dx > 0:
+                text += f"\x1B[{dx}C"  # 04/03 Cursor Forward (CUF) of N
+            elif dx < 0:
+                text += f"\x1B[{-dx}D"  # 04/04 Cursor Backward (CUB) of N
 
-                if (dy, dx) == (0, 1):
-                    (self.dy, self.dx) = (1, 0)
-                elif (dy, dx) == (1, 0):
-                    (self.dy, self.dx) = (0, -1)
-                elif (dy, dx) == (0, -1):
-                    (self.dy, self.dx) = (-1, 0)
-                else:  # todo: more general Right Turn
-                    (self.dy, self.dx) = (0, 1)
+            self.str_write(text)
 
-                return ""
+    def do_help(self) -> None:
 
-            if word0 in ("st", "showturtle"):
-                py = 'self.bytes_write(b"\x1B[?25h")'  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
-                rep = self.py_eval_to_repr(py)
-                assert not rep, (rep, py)
-                return ""
+        print(
+            "Choose from: clearscreen, forward, help, hideturtle, home, left, pendown, penup, right, showturtle"
+        )
 
-        return readline
+        print("Or abbreviated as: cs, fd, h, ht, home, lt, pd, pu, rt, st")
+
+    def do_home(self) -> None:
+
+        assert self.char_if == ""  # todo: Home draws a Line while Pen Down
+
+        columns, lines = self.os_terminal_size()
+
+        y = 1 + (lines // 2)
+        x = 1 + (columns // 2)
+        text = f"\x1B[{y};{x}H"
+        self.str_write(text)
+
+        self.dy = -1
+        self.dx = 0
+
+    def do_hideturtle(self) -> None:
+
+        text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
+        self.str_write(text)
+
+    def do_left(self) -> None:
+
+        dy = self.dy
+        dx = self.dx
+
+        if (dy, dx) == (0, 1):
+            (self.dy, self.dx) = (-1, 0)
+        elif (dy, dx) == (-1, 0):
+            (self.dy, self.dx) = (0, -1)
+        elif (dy, dx) == (0, -1):
+            (self.dy, self.dx) = (1, 0)
+        elif (dy, dx) == (1, 0):
+            (self.dy, self.dx) = (0, 1)
+        else:
+            assert False  # todo: more general Left Turn
+
+    def do_pendown(self) -> None:
+
+        self.char_if = "*"
+
+    def do_penup(self) -> None:
+
+        self.char_if = ""
+
+    def do_right(self) -> None:
+
+        dy = self.dy
+        dx = self.dx
+
+        if (dy, dx) == (0, 1):
+            (self.dy, self.dx) = (1, 0)
+        elif (dy, dx) == (1, 0):
+            (self.dy, self.dx) = (0, -1)
+        elif (dy, dx) == (0, -1):
+            (self.dy, self.dx) = (-1, 0)
+        elif (dy, dx) == (-1, 0):
+            (self.dy, self.dx) = (0, 1)
+        else:
+            assert False  # todo: more general Right Turn
+
+    def do_showturtle(self) -> None:
+
+        text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+        self.str_write(text)
 
     #
     #
