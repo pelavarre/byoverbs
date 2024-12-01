@@ -1959,7 +1959,7 @@ def turtle_yolo(itext) -> str:  # turtle
     try:
         if not turtling:
             tc = TurtleClient()
-            tc.turtle_yolo()
+            tc.turtle_client_yolo()
         else:
             print("\x1B[?25h")  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
             try:
@@ -3125,11 +3125,9 @@ class ShadowsTerminal:
             st.str_print()
             st.str_print()
 
-        # Run this Loop
+        # Run this Loop  # todo: option to start with Meta, would it be:  kchord = (b"", "")
 
         kchord = (b"R", "⇧R")
-        if brittle:
-            kchord = (b"", "")  # todo: who freaks over empty K Bytes, K Str?
 
         tmode = "Meta"
         while True:
@@ -6197,8 +6195,28 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 
 #
+# Paint Turtle Character Graphics onto a Terminal Screen
 #
+
+
 #
+# todo: Args & KwArgs for Funcs
+# todo: multiple Calls per Line
+#
+# todo: NE SE SW NW Headings for the Turtle
+# todo: Arbitrary Headings for the Turtle
+#
+# todo: log the named-pipe work well enough to explain its hangs
+# todo: prompts placed correctly in the echo of multiple lines of Input
+#
+# todo: draw with ← ↑ → ↓ according to the Turtle's Heading
+#
+
+
+TurtleNorth = (0, -1)
+TurtleEast = (1, 0)
+TurtleSouth = (0, 1)
+TurtleWest = (-1, 0)
 
 
 Turtle = unicodedata.lookup("Turtle")  # 🐢
@@ -6209,8 +6227,8 @@ class TurtleClient:
     pendown = False
     penchar = "*"
 
-    dy = -1
-    dx = 0
+    dx = TurtleNorth[0]
+    dy = TurtleNorth[-1]
 
     ymultiplier = 3
     xmultiplier = 6
@@ -6227,28 +6245,31 @@ class TurtleClient:
         self.pendown = False
         self.penchar = "*"
 
-        self.dy = -1
-        self.dx = 0
+        self.dx = TurtleNorth[0]
+        self.dy = TurtleNorth[-1]
 
-        self.ymultiplier = 3
-        self.xmultiplier = 6
-        self.yxmultiplier = 1
+        print(f"pendown={self.pendown}" f" penchar={self.penchar}" f" dx={self.dx}" f" dy={self.dy}")
 
-        self.do_penup()
+        self.pendown = False
         self.do_home()
-        self.do_pendown()
+        self.pendown = True
 
-    #
-    #
-    #
+    def turtle_client_yolo(self) -> None:
 
-    def turtle_yolo(self) -> None:
+        #
+
+        readline = 'self.str_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
+        py = self.readline_to_py(readline)
+        rep = self.py_eval_to_repr(py)
+        assert not rep, (rep,)
 
         for readline in ("clearscreen", "reset"):
             print(self.ps1 + readline)
             py = self.readline_to_py(readline)
             rep = self.py_eval_to_repr(py)
             assert not rep, (rep,)
+
+        #
 
         while True:
             print(self.ps1, end="")
@@ -6266,40 +6287,38 @@ class TurtleClient:
 
             py = self.readline_to_py(readline)
             if py:
-                pathlib.Path("stdin.mkfifo").write_text(py)
-                read_text = pathlib.Path("stdout.mkfifo").read_text()
-                if read_text:
-                    print(read_text)
-
-    def str_write(self, text) -> None:
-
-        py = f"self.bytes_write({text!r}.encode())"
-        rep = self.py_eval_to_repr(py)
-        assert not rep, (rep, py)
-
-    def py_eval_to_repr(self, py) -> str:
-
-        try:
-            pathlib.Path("stdin.mkfifo").write_text(py)
-        except BrokenPipeError:
-            print("BrokenPipeError", file=sys.stderr)
-            sys.exit()  # exits zero to shrug off BrokenPipeError
-
-        read_text = pathlib.Path("stdout.mkfifo").read_text()
-
-        return read_text
-
-    def breakpoint(self) -> None:
-        getsignal = self.getsignal
-
-        breakpoint()
-        pass
-
-        signal.signal(signal.SIGINT, getsignal)
+                rep = self.py_eval_to_repr(py)
+                if rep:
+                    print(rep)
 
     #
+    # Eval 1 Line of Input
     #
-    #
+
+    def readline_to_py(self, readline) -> str:
+
+        func_by_verb = self.to_func_by_verb()
+
+        strip = readline.strip()
+        if not strip:
+            return ""
+
+        if strip.startswith("#"):
+            return ""
+
+        words = strip.split()
+        verb = words[0].casefold()
+
+        if len(words) != 1:
+            return readline
+
+        if verb not in func_by_verb:
+            return readline
+
+        func = func_by_verb[verb]
+        func()
+
+        return ""
 
     def to_func_by_verb(self) -> dict[str, typing.Callable]:
 
@@ -6328,37 +6347,18 @@ class TurtleClient:
             "right": self.do_right,
             "rt": self.do_right,
             "st": self.do_showturtle,
+            "seth": self.do_setheading,
+            "setheading": self.do_setheading,
             "setpc": self.do_setpencolor,
             "setpencolor": self.do_setpencolor,
+            "setxy": self.do_setxy,
             "showturtle": self.do_showturtle,
         }
 
         return d
 
-    def readline_to_py(self, readline) -> str:
-
-        func_by_verb = self.to_func_by_verb()
-
-        strip = readline.strip()
-        if not strip:
-            return ""
-
-        words = strip.split()
-        verb = words[0].casefold()
-
-        if len(words) != 1:
-            return readline
-
-        if verb not in func_by_verb:
-            return readline
-
-        func = func_by_verb[verb]
-        func()
-
-        return ""
-
     #
-    #
+    # Mess with 1 Turtle
     #
 
     def do_backward(self) -> None:
@@ -6434,11 +6434,24 @@ class TurtleClient:
 
     def do_help(self) -> None:
 
-        print(
-            "Choose from: clearscreen, forward, help, hideturtle, home, left, pendown, penup, right, showturtle"
-        )
+        func_by_verb = self.to_func_by_verb()
 
-        print("Or abbreviated as: cs, fd, h, ht, home, lt, pd, pu, rt, st")
+        items_by_func = collections.defaultdict(list)
+        for item in func_by_verb.items():
+            (verb, func) = item
+            items_by_func[func].append(item)
+
+        verbs = list()
+        grunts = list()
+        for func, items in items_by_func.items():
+            keys = list(_[0] for _ in items)
+            keys.sort(key=len)
+            verbs.append(keys[-1])
+            if len(keys) > 1:
+                grunts.extend(keys[:-1])
+
+        print("Choose from:", ", ".join(sorted(verbs)))
+        print("Or abbreviated as:", ", ".join(sorted(grunts)))
 
     def do_home(self) -> None:
 
@@ -6446,15 +6459,8 @@ class TurtleClient:
             print("NotImplementedError: Home while Pen Down")
             return
 
-        columns, lines = self.os_terminal_size()
-
-        y = 1 + (lines // 2)
-        x = 1 + (columns // 2)
-        text = f"\x1B[{y};{x}H"
-        self.str_write(text)
-
-        self.dy = -1
-        self.dx = 0
+        self.do_setxy()
+        self.do_setheading()
 
     def do_hideturtle(self) -> None:
 
@@ -6466,46 +6472,59 @@ class TurtleClient:
         dy = self.dy
         dx = self.dx
 
-        if (dy, dx) == (0, 1):
-            (self.dy, self.dx) = (-1, 0)
-        elif (dy, dx) == (-1, 0):
-            (self.dy, self.dx) = (0, -1)
-        elif (dy, dx) == (0, -1):
-            (self.dy, self.dx) = (1, 0)
-        elif (dy, dx) == (1, 0):
-            (self.dy, self.dx) = (0, 1)
+        if (dx, dy) == TurtleNorth:
+            (self.dx, self.dy) = TurtleWest
+        elif (dx, dy) == TurtleWest:
+            (self.dx, self.dy) = TurtleSouth
+        elif (dx, dy) == TurtleSouth:
+            (self.dx, self.dy) = TurtleEast
+        elif (dx, dy) == TurtleEast:
+            (self.dx, self.dy) = TurtleNorth
+
         else:
             assert False  # todo: more general Left Turn
 
-        print(f"dx={self.dx} dy={self.dy}")
+        print(f"dx={self.dx} dy={self.dy}  # was {dx} {dy}")
 
     def do_pendown(self) -> None:
 
+        pendown = self.pendown
         self.pendown = True
-        print(f"pendown={self.pendown}")
+        print(f"pendown={self.pendown}  # was {pendown}")
 
     def do_penup(self) -> None:
 
+        pendown = self.pendown
         self.pendown = False
-        print(f"pendown={self.pendown}")
+        print(f"pendown={self.pendown}  # was {pendown}")
 
     def do_right(self) -> None:
 
         dy = self.dy
         dx = self.dx
 
-        if (dy, dx) == (0, 1):
-            (self.dy, self.dx) = (1, 0)
-        elif (dy, dx) == (1, 0):
-            (self.dy, self.dx) = (0, -1)
-        elif (dy, dx) == (0, -1):
-            (self.dy, self.dx) = (-1, 0)
-        elif (dy, dx) == (-1, 0):
-            (self.dy, self.dx) = (0, 1)
+        if (dx, dy) == TurtleNorth:
+            (self.dx, self.dy) = TurtleEast
+        elif (dx, dy) == TurtleEast:
+            (self.dx, self.dy) = TurtleSouth
+        elif (dx, dy) == TurtleSouth:
+            (self.dx, self.dy) = TurtleWest
+        elif (dx, dy) == TurtleWest:
+            (self.dx, self.dy) = TurtleNorth
+
         else:
             assert False  # todo: more general Right Turn
 
-        print(f"dx={self.dx} dy={self.dy}")
+        print(f"dx={self.dx} dy={self.dy}  # was {dx} {dy}")
+
+    def do_setheading(self) -> None:
+
+        dy = self.dy
+        dx = self.dx
+
+        (self.dx, self.dy) = TurtleNorth
+
+        print(f"dx={self.dx} dy={self.dy}  # was {dx} {dy}")
 
     def do_setpencolor(self) -> None:
 
@@ -6514,7 +6533,23 @@ class TurtleClient:
         alt_penchar = "!" if (penchar == "~") else chr(ord(penchar) + 1)
         self.penchar = alt_penchar
 
-        print(f"penchar={self.penchar!r}")
+        print(f"penchar={self.penchar!r}  # was {penchar!r}")
+
+    def do_setxy(self) -> None:
+
+        if self.pendown:
+            print("NotImplementedError: SetXY while Pen Down")
+            return
+
+        columns, lines = self.os_terminal_size()
+
+        x = 1 + (columns // 2)
+        y = 1 + (lines // 2)
+
+        text = f"\x1B[{y};{x}H"
+        self.str_write(text)
+
+        print(f"x={x} y={y}")  # todo: "  # was {x} {y}")
 
     def do_showturtle(self) -> None:
 
@@ -6522,8 +6557,34 @@ class TurtleClient:
         self.str_write(text)
 
     #
+    # Layer thinly over 1 ShadowsTerminal, found at the far side of 2 Named Pipes
     #
-    #
+
+    def breakpoint(self) -> None:
+        getsignal = self.getsignal
+
+        breakpoint()
+        pass
+
+        signal.signal(signal.SIGINT, getsignal)
+
+    def str_write(self, text) -> None:
+
+        py = f"self.str_write({text!r})"
+        rep = self.py_eval_to_repr(py)
+        assert not rep, (rep, py)
+
+    def py_eval_to_repr(self, py) -> str:
+
+        try:
+            pathlib.Path("stdin.mkfifo").write_text(py)
+        except BrokenPipeError:
+            print("BrokenPipeError", file=sys.stderr)
+            sys.exit()  # exits zero to shrug off BrokenPipeError
+
+        read_text = pathlib.Path("stdout.mkfifo").read_text()
+
+        return read_text
 
     def os_terminal_size(self) -> tuple[int, int]:
 
