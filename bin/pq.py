@@ -65,6 +65,7 @@ examples:
 
 import __main__
 import argparse
+import ast
 import bdb
 import collections
 import dataclasses
@@ -6200,16 +6201,13 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 
 #
-# todo: Args & KwArgs for Funcs
-# todo: multiple Calls per Line
-#
 # todo: NE SE SW NW Headings for the Turtle
 # todo: Arbitrary Headings for the Turtle
 #
 # todo: log the named-pipe work well enough to explain its hangs
 # todo: prompts placed correctly in the echo of multiple lines of Input
 #
-# todo: draw with ← ↑ → ↓ according to the Turtle's Heading
+# todo: KwArgs for Funcs
 #
 
 
@@ -6254,14 +6252,15 @@ class TurtleClient:
         self.do_home()
         self.pendown = True
 
-    def turtle_client_yolo(self) -> None:
+        self.do_showturtle()
+
+    def turtle_client_yolo(self) -> None:  # noqa C901 complex
 
         #
 
-        readline = 'self.str_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
-        py = self.readline_to_py(readline)
+        py = 'self.str_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
         rep = self.py_eval_to_repr(py)
-        assert not rep, (rep,)
+        assert not rep, (rep, py)
 
         for readline in ("clearscreen", "reset"):
             print(self.ps1 + readline)
@@ -6289,15 +6288,21 @@ class TurtleClient:
             if py:
                 rep = self.py_eval_to_repr(py)
                 if rep:
-                    print(rep)
+                    if not rep.startswith("'Traceback (most recent call last):"):  # todo: weak
+                        print(rep)
+                    else:
+                        try:
+                            print(eval(rep))
+                        except Exception:
+                            print(rep)
 
     #
     # Eval 1 Line of Input
     #
 
-    def readline_to_py(self, readline) -> str:
+    def readline_to_py(self, readline) -> str:  # noqa C901 complex
 
-        func_by_verb = self.to_func_by_verb()
+        # Drop a mostly blank Line
 
         strip = readline.strip()
         if not strip:
@@ -6306,22 +6311,93 @@ class TurtleClient:
         if strip.startswith("#"):
             return ""
 
-        words = strip.split()
-        verb = words[0].casefold()
+        # Split the 1 Line into its widest Py Expressions from the Left
 
-        if len(words) != 1:
-            return readline
+        pys = list()
+        tail = strip
+        while tail:
+            prefixes = list()
+            for index in range(0, len(tail)):
+                length = index + 1
 
-        if verb not in func_by_verb:
-            return readline
+                prefix = tail[:length]
+                try:
+                    ast.literal_eval(prefix)
+                    prefixes.append(prefix)
+                except ValueError:
+                    prefixes.append(prefix)
+                except SyntaxError:
+                    continue
 
-        func = func_by_verb[verb]
-        func()
+            if not prefixes:
+                print(f"{tail=} {strip=}  # no prefixes")
+                return strip
+
+            py = prefixes[-1]
+            pys.append(py)
+
+            tail = tail[len(py) :]
+
+        assert "".join(pys) == strip, (pys, strip)
+
+        # print(f"{pys=}")
+
+        # Split the 1 Line into a Series of 1 or more Py Calls
+
+        calls = list()
+
+        call: list
+        call = list()
+
+        for py in pys:
+            try:
+                arg = ast.literal_eval(py)
+                if not call:
+                    return strip
+                call.append(arg)
+            except ValueError:
+                if call:
+                    calls.append(list(call))
+                    call.clear()
+                call.append(py.strip())
+            except SyntaxError:
+                assert False, (py, pys, strip)
+
+        if call:
+            calls.append(list(call))
+            call.clear()
+
+        # print(f"{calls=}")
+
+        # Interpret the 1 Line
+
+        func_by_verb = self.to_func_by_verb()
+
+        for call in calls:
+            verb = call[0]
+            args = call[1:]
+            if verb in func_by_verb:
+                func = func_by_verb[verb]
+                try:
+                    func(*args)
+                except Exception:
+                    format_exc = traceback.format_exc()
+                    line = format_exc.splitlines()[-1]
+                    print(line)
+                    return ""
+            else:
+                py = f"{verb}({', '.join(repr(_) for _ in args)})"
+                rep = self.py_eval_to_repr(py)
+                if rep:
+                    print(rep)
+
+        # Succeed
 
         return ""
 
     def to_func_by_verb(self) -> dict[str, typing.Callable]:
 
+        d: dict[str, typing.Callable]
         d = {
             "bk": self.do_backward,
             "back": self.do_backward,
@@ -6467,6 +6543,8 @@ class TurtleClient:
         text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
         self.str_write(text)
 
+        # todo: trace Turtle IsVisible
+
     def do_left(self) -> None:
 
         dy = self.dy
@@ -6519,18 +6597,21 @@ class TurtleClient:
 
     def do_setheading(self) -> None:
 
-        dy = self.dy
         dx = self.dx
+        dy = self.dy
 
         (self.dx, self.dy) = TurtleNorth
 
         print(f"dx={self.dx} dy={self.dy}  # was {dx} {dy}")
 
-    def do_setpencolor(self) -> None:
+    def do_setpencolor(self, arg=None) -> None:
 
         penchar = self.penchar
 
-        alt_penchar = "!" if (penchar == "~") else chr(ord(penchar) + 1)
+        alt_penchar = arg
+        if arg is None:
+            alt_penchar = "!" if (penchar == "~") else chr(ord(penchar) + 1)
+
         self.penchar = alt_penchar
 
         print(f"penchar={self.penchar!r}  # was {penchar!r}")
@@ -6551,10 +6632,14 @@ class TurtleClient:
 
         print(f"x={x} y={y}")  # todo: "  # was {x} {y}")
 
+        # todo: trace Turtle X Y
+
     def do_showturtle(self) -> None:
 
         text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
         self.str_write(text)
+
+        # todo: trace Turtle IsVisible
 
     #
     # Layer thinly over 1 ShadowsTerminal, found at the far side of 2 Named Pipes
