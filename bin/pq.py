@@ -1942,17 +1942,34 @@ def shadow_terminal_yolo(itext) -> str:  # st yolo
 
 def turtle_yolo(itext) -> str:  # turtle
 
-    turtling = os.path.exists("stdin.mkfifo") and os.path.exists("stdout.mkfifo")
-
-    if not turtling:
-        with TurtleSketchist() as ts:
-            ts.turtle_yolo()
+    turtling = False
+    if not os.path.exists("stdin.mkfifo"):
+        mkfifo_pathnames = ["stdin.mkfifo"]
+    elif not os.path.exists("stdout.mkfifo"):
+        mkfifo_pathnames = ["stdout.mkfifo"]
+        turtling = True
     else:
-        try:
-            with ShadowsTerminal() as st:
-                st.shadows_yolo(brittle=True)
-        finally:
+        os.remove("stdin.mkfifo")
+        os.remove("stdout.mkfifo")
+        mkfifo_pathnames = ["stdin.mkfifo"]
+
+    for pathname in mkfifo_pathnames:
+        os.mkfifo(pathname)
+
+    try:
+        if not turtling:
+            tc = TurtleClient()
+            tc.turtle_yolo()
+        else:
             print("\x1B[?25h")  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+            try:
+                with ShadowsTerminal() as st:
+                    st.shadows_yolo(brittle=True)
+            finally:
+                print("\x1B[?25h")  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+    finally:
+        for pathname in mkfifo_pathnames:
+            os.remove(pathname)
 
     return ""
 
@@ -6184,44 +6201,54 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 
 
-class TurtleSketchist:
+Turtle = unicodedata.lookup("Turtle")  # 🐢
+
+
+class TurtleClient:
 
     char_if = "*"
-    dy = 0
-    dx = 1
+    dy = -1
+    dx = 0
 
     ymultiplier = 3
     xmultiplier = 6
     yxmultiplier = 1
 
-    def __enter__(self) -> "TurtleSketchist":
+    ps1 = f"{Turtle}? "
 
-        if os.path.exists("stdin.mkfifo"):
-            os.remove("stdin.mkfifo")
-        if os.path.exists("stdout.mkfifo"):
-            os.remove("stdout.mkfifo")
+    def __init__(self) -> None:
+        getsignal = signal.getsignal(signal.SIGINT)
+        self.getsignal = getsignal
 
-        os.mkfifo("stdin.mkfifo")
-        os.mkfifo("stdout.mkfifo")
+    def breakpoint(self) -> None:
+        getsignal = self.getsignal
 
-        return self
+        breakpoint()
+        pass
 
-    def __exit__(self, *exc_info) -> None:
-
-        if os.path.exists("stdin.mkfifo"):
-            os.remove("stdin.mkfifo")
-        if os.path.exists("stdout.mkfifo"):
-            os.remove("stdout.mkfifo")
+        signal.signal(signal.SIGINT, getsignal)
 
     def turtle_yolo(self) -> None:
 
+        readline = "clearscreen"
+        print(self.ps1 + readline)
+        py = self.readline_to_py(readline)
+        rep = self.py_eval_to_repr(py)
+        assert not rep, (rep,)
+
         while True:
-            print(">>> ", end="")
+            print(self.ps1, end="")
             sys.stdout.flush()
-            readline = sys.stdin.readline()
+            try:
+                readline = sys.stdin.readline()
+            except KeyboardInterrupt:
+                print(" KeyboardInterrupt")
+                self.breakpoint()
+                continue
+
             if not readline:
                 print("bye")
-                break
+                sys.exit()
 
             py = self.readline_to_py(readline)
             if py:
@@ -6229,6 +6256,18 @@ class TurtleSketchist:
                 read_text = pathlib.Path("stdout.mkfifo").read_text()
                 if read_text:
                     print(read_text)
+
+    def py_eval_to_repr(self, py) -> str:
+
+        try:
+            pathlib.Path("stdin.mkfifo").write_text(py)
+        except BrokenPipeError:
+            print("BrokenPipeError", file=sys.stderr)
+            sys.exit()  # exits zero to shrug off BrokenPipeError
+
+        read_text = pathlib.Path("stdout.mkfifo").read_text()
+
+        return read_text
 
     def readline_to_py(self, readline) -> str:  # noqa C901 complex
 
@@ -6275,12 +6314,12 @@ class TurtleSketchist:
                     if dy > 0:
                         text += f"\x1B[{dy}B"  # 04/02 Cursor Down (CUD) of N
                     elif dy < 0:
-                        text += f"\x1B[{dy}A"  # 04/01 Cursor Up (CUU) of N
+                        text += f"\x1B[{-dy}A"  # 04/01 Cursor Up (CUU) of N
 
                     if dx > 0:
                         text += f"\x1B[{dx}C"  # 04/03 Cursor Forward (CUF) of N
                     elif dx < 0:
-                        text += f"\x1B[{dx}D"  # 04/04 Cursor Backward (CUB) of N
+                        text += f"\x1B[{-dx}D"  # 04/04 Cursor Backward (CUB) of N
 
                     py = f"self.bytes_write({text!r}.encode())"
                     rep = self.py_eval_to_repr(py)
@@ -6290,7 +6329,7 @@ class TurtleSketchist:
 
             if word0 in ("h", "help"):
                 print(
-                    "Choose from: clearscreen, forward, help, hideturtle, left, pendown, penup, right, showturtle"
+                    "Choose from: clearscreen, forward, help, hideturtle, home, left, pendown, penup, right, showturtle"
                 )
                 print("Or abbreviated as: cs, fd, h, ht, lt, pd, pu, rt, st")
                 return ""
@@ -6299,6 +6338,23 @@ class TurtleSketchist:
                 py = 'self.bytes_write(b"\x1B[?25l")'  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
                 rep = self.py_eval_to_repr(py)
                 assert not rep, (rep, py)
+                return ""
+
+            if word0 == "home":
+
+                assert self.char_if == ""  # todo: Home draws a Line while Pen Down
+
+                columns, lines = self.os_terminal_size()
+                y = 1 + (lines // 2)
+                x = 1 + (columns // 2)
+                text = f"\x1B[{y};{x}H"
+                py = f"self.bytes_write({text!r}.encode())"
+                rep = self.py_eval_to_repr(py)
+                assert not rep, (rep, py)
+
+                self.dy = -1
+                self.dx = 0
+
                 return ""
 
             if word0 in ("lt", "left"):
@@ -6342,13 +6398,6 @@ class TurtleSketchist:
                 return ""
 
         return readline
-
-    def py_eval_to_repr(self, py) -> str:
-
-        pathlib.Path("stdin.mkfifo").write_text(py)
-        read_text = pathlib.Path("stdout.mkfifo").read_text()
-
-        return read_text
 
     #
     #
