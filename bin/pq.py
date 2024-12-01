@@ -6204,6 +6204,8 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 # todo: NE SE SW NW Headings for the Turtle
 # todo: Arbitrary Headings for the Turtle
 #
+# todo: disentangle from Pq PbCopy/ PbPaste, especially when outside macOS
+#
 # todo: log the named-pipe work well enough to explain its hangs
 # todo: prompts placed correctly in the echo of multiple lines of Input
 #
@@ -6610,6 +6612,8 @@ class TurtleClient:
 
         alt_penchar = arg
         if arg is None:
+            assert isinstance(penchar, str), (type(penchar), penchar)
+            assert len(penchar) == 1, (len(penchar), penchar)
             alt_penchar = "!" if (penchar == "~") else chr(ord(penchar) + 1)
 
         self.penchar = alt_penchar
