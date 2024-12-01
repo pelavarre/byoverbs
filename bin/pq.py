@@ -2023,11 +2023,14 @@ class ReprLogger:
 #
 #   ⌃G ⌃H ⌃I ⌃J ⌃M ⌃[   \a \b \t \n \r \e
 #
+#   and then the @ABCDEGHIJKLMPSTZdhlnq forms of ⎋[ Csi, without R t, are
+#
 #   ⎋[A ↑  ⎋[B ↓  ⎋[C →  ⎋[D ←
 #   ⎋[I Tab  ⎋[Z ⇧Tab
-#   ⎋[d row-go  ⎋[G column-go
+#   ⎋[d row-go  ⎋[G column-go  ⎋[H row-column-go
 #
 #   ⎋[M rows-delete  ⎋[L rows-insert  ⎋[P chars-delete  ⎋[@ chars-insert
+#   ⎋[J after-erase  ⎋[1J before-erase  ⎋[2J screen-erase  ⎋[3J scrollback-erase
 #   ⎋[K tail-erase  ⎋[1K head-erase  ⎋[2K row-erase
 #   ⎋[T scrolls-down  ⎋[S scrolls-up
 #
@@ -2037,7 +2040,9 @@ class ReprLogger:
 #   ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange
 #   ⎋[m plain
 #
-#   ⎋[6n call for ⎋[{y};{x}R response
+#   ⎋[6n call for ⎋[{y};{x}R  ⎋[18t call for ⎋[{rows};{columns}t
+#
+#   ⎋[E repeat \r\n
 #
 
 
@@ -2110,7 +2115,7 @@ CPR_Y_X_REGEX = r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 Active [Cursor] Pos R
 assert CSI_EXTRAS == "".join(chr(_) for _ in range(0x20, 0x40))  # r"[ -?]", no "@"
 CSI_P_F_REGEX = r"^\x1B\[([ -?])*(.)$"  # CSI Intermediate/ Parameter Bytes and Final Byte
 
-MACOS_TERMINAL_CSI_FINAL_BYTES = "@ABCDEGHIKLMPSTZdhlnqt"
+MACOS_TERMINAL_CSI_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlnq"
 
 
 #
@@ -3213,7 +3218,7 @@ class ShadowsTerminal:
         """Say if writing Screen Bytes signals their meaning well"""
 
         assert CSI_P_F_REGEX == r"^\x1B\[([ -?])*(.)$"  # r"[ -?]", no "@"
-        assert MACOS_TERMINAL_CSI_FINAL_BYTES == "@ABCDEGHIKLMPSTZdhlnqt"
+        assert MACOS_TERMINAL_CSI_FINAL_BYTES == "@ABCDEGHIJKLMPSTZdhlnq"
 
         if schars.isprintable():
             return True
@@ -3233,7 +3238,7 @@ class ShadowsTerminal:
             if (p + f) in ("5n", "6n", "18t"):  # todo: list these more in common
                 return True
 
-            if f in "@ABCDEGHIKLMPSTZdhlnqt":
+            if f in "@ABCDEGHIJKLMPSTZdhlnq":
                 return True
 
                 # most of these have corner cases of no visible effect
@@ -6264,11 +6269,12 @@ class TurtleClient:
         rep = self.py_eval_to_repr(py)
         assert not rep, (rep, py)
 
-        for readline in ("clearscreen", "reset"):
-            print(self.ps1 + readline)
-            py = self.readline_to_py(readline)
-            rep = self.py_eval_to_repr(py)
-            assert not rep, (rep,)
+        # # for readline in ("clearscreen", "reset"):
+        # for readline in ("reset",):
+        #     print(self.ps1 + readline)
+        #     py = self.readline_to_py(readline)
+        #     rep = self.py_eval_to_repr(py)
+        #     assert not rep, (rep,)
 
         #
 
@@ -6474,7 +6480,7 @@ class TurtleClient:
 
     def do_clearscreen(self) -> None:
 
-        text = "\x1B[H" "\x1B[2J"  # CUP 1 1, ED 2
+        text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head  # 2 All # 3 Scrollback
         self.str_write(text)  # todo: preserve Setxy despite ClearScreen
 
     def do_forward(self) -> None:
