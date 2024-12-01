@@ -6206,7 +6206,9 @@ Turtle = unicodedata.lookup("Turtle")  # 🐢
 
 class TurtleClient:
 
-    char_if = "*"
+    pendown = False
+    penchar = "*"
+
     dy = -1
     dx = 0
 
@@ -6222,7 +6224,9 @@ class TurtleClient:
 
     def do_reset(self) -> None:
 
-        self.char_if = "*"
+        self.pendown = False
+        self.penchar = "*"
+
         self.dy = -1
         self.dx = 0
 
@@ -6324,12 +6328,14 @@ class TurtleClient:
             "right": self.do_right,
             "rt": self.do_right,
             "st": self.do_showturtle,
+            "setpc": self.do_setpencolor,
+            "setpencolor": self.do_setpencolor,
             "showturtle": self.do_showturtle,
         }
 
         return d
 
-    def readline_to_py(self, readline) -> str:  # noqa C901 complex
+    def readline_to_py(self, readline) -> str:
 
         func_by_verb = self.to_func_by_verb()
 
@@ -6357,11 +6363,11 @@ class TurtleClient:
 
     def do_backward(self) -> None:
 
-        char_if = self.char_if
+        pendown = self.pendown
+        penchar = self.penchar
+
         dy = -self.dy  # negated
         dx = -self.dx  # negated
-
-        self.str_write("\b")
 
         if dy and not dx:
             multiplier = self.ymultiplier
@@ -6373,8 +6379,8 @@ class TurtleClient:
         for _ in range(multiplier):
 
             text = ""
-            if char_if:
-                text = f"{char_if}\b"
+            if pendown:
+                text = f"{penchar}\b"
 
             if dy > 0:
                 text += f"\x1B[{dy}B"  # 04/02 Cursor Down (CUD) of N
@@ -6395,11 +6401,11 @@ class TurtleClient:
 
     def do_forward(self) -> None:
 
-        char_if = self.char_if
+        pendown = self.pendown
+        penchar = self.penchar
+
         dy = self.dy
         dx = self.dx
-
-        # self.str_write("\b")  # nope, unlike .do_backward
 
         if dy and not dx:
             multiplier = self.ymultiplier
@@ -6411,8 +6417,8 @@ class TurtleClient:
         for _ in range(multiplier):
 
             text = ""
-            if char_if:
-                text = f"{char_if}\b"
+            if pendown:
+                text = f"{penchar}\b"
 
             if dy > 0:
                 text += f"\x1B[{dy}B"  # 04/02 Cursor Down (CUD) of N
@@ -6436,7 +6442,9 @@ class TurtleClient:
 
     def do_home(self) -> None:
 
-        assert self.char_if == ""  # todo: Home draws a Line while Pen Down
+        if self.pendown:
+            print("NotImplementedError: Home while Pen Down")
+            return
 
         columns, lines = self.os_terminal_size()
 
@@ -6469,13 +6477,17 @@ class TurtleClient:
         else:
             assert False  # todo: more general Left Turn
 
+        print(f"dx={self.dx} dy={self.dy}")
+
     def do_pendown(self) -> None:
 
-        self.char_if = "*"
+        self.pendown = True
+        print(f"pendown={self.pendown}")
 
     def do_penup(self) -> None:
 
-        self.char_if = ""
+        self.pendown = False
+        print(f"pendown={self.pendown}")
 
     def do_right(self) -> None:
 
@@ -6492,6 +6504,17 @@ class TurtleClient:
             (self.dy, self.dx) = (0, 1)
         else:
             assert False  # todo: more general Right Turn
+
+        print(f"dx={self.dx} dy={self.dy}")
+
+    def do_setpencolor(self) -> None:
+
+        penchar = self.penchar
+
+        alt_penchar = "!" if (penchar == "~") else chr(ord(penchar) + 1)
+        self.penchar = alt_penchar
+
+        print(f"penchar={self.penchar!r}")
 
     def do_showturtle(self) -> None:
 
