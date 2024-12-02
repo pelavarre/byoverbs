@@ -1275,10 +1275,10 @@ VIM_SCRAPS = """  # todo: migrate/ delete
 
     with open("/dev/tty", "rb") as ttyin:
         fd = ttyin.fileno()
-        (columns, rows) = os.get_terminal_size(fd)
+        (x_columns, y_rows) = os.get_terminal_size(fd)
 
-    assert columns >= 20  # vs Mac Sh Terminal Columns >= 20
-    assert rows >= 5  # vs Mac Sh Terminal Rows >= 5
+    assert x_columns >= 20  # vs Mac Sh Terminal Columns >= 20
+    assert y_rows >= 5  # vs Mac Sh Terminal Rows >= 5
 
     # todo: print the input that fits, to screen - even to last column & row
     # todo: shadow the print, then edit it
@@ -2023,7 +2023,7 @@ class ReprLogger:
 #
 #   ⌃G ⌃H ⌃I ⌃J ⌃M ⌃[   \a \b \t \n \r \e
 #
-#   and then the @ABCDEGHIJKLMPSTZdhlnq forms of ⎋[ Csi, without R t, are
+#   and then the @ABCDEGHIJKLMPSTZdhlmnq forms of ⎋[ Csi, without R t } ~, are
 #
 #   ⎋[A ↑  ⎋[B ↓  ⎋[C →  ⎋[D ←
 #   ⎋[I Tab  ⎋[Z ⇧Tab
@@ -2034,7 +2034,7 @@ class ReprLogger:
 #   ⎋[K tail-erase  ⎋[1K head-erase  ⎋[2K row-erase
 #   ⎋[T scrolls-down  ⎋[S scrolls-up
 #
-#   ⎋[4h insert  ⎋[6 q bar  ⎋[4l replace  ⎋[4 q skid  ⎋[ q unstyled
+#   ⎋[4h insert  ⎋[4l replace  ⎋[6 q bar  ⎋[4 q skid  ⎋[ q unstyled
 #
 #   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline
 #   ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange
@@ -2043,6 +2043,8 @@ class ReprLogger:
 #   ⎋[6n call for ⎋[{y};{x}R  ⎋[18t call for ⎋[{rows};{columns}t
 #
 #   ⎋[E repeat \r\n
+#
+#   and also VT420 had DECIC ⎋['} col-insert, DECDC ⎋['~ col-delete
 #
 
 
@@ -2088,6 +2090,8 @@ ICH_X = "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
 IL_Y = "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 DL_Y = "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 DCH_X = "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
+DECIC_X = "\x1B" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
+DECDC_X = "\x1B" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
 
 EL_P = "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head  # 2 Row
 
@@ -2097,11 +2101,13 @@ SD_Y = "\x1B" "[" "{}T"  # CSI 05/04 Scroll Down  # Insert Top Lines
 RM_IRM = "\x1B" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
 SM_IRM = "\x1B" "[" "4h"  # CSI 06/08 4 Set Mode Insert/ Replace
 
+SGR = "\x1B" "[" "{}m"  # CSI 06/13 Select Graphic Rendition
+
 DECSCUSR = "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
 DECSCUSR_SKID = "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
 DECSCUSR_BAR = "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
 
-# sort the quoted Str above mostly by the CSI Final Byte:  A, B, C, D, G, Z, d, etc
+# sort the quoted Str above mostly by the CSI Final Byte:  A, B, C, D, G, Z, m, etc
 
 # the 02/00 ' ' of the CSI ' q' is its only 'Intermediate Byte'
 
@@ -2115,7 +2121,7 @@ CPR_Y_X_REGEX = r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 Active [Cursor] Pos R
 assert CSI_EXTRAS == "".join(chr(_) for _ in range(0x20, 0x40))  # r"[ -?]", no "@"
 CSI_P_F_REGEX = r"^\x1B\[([ -?])*(.)$"  # CSI Intermediate/ Parameter Bytes and Final Byte
 
-MACOS_TERMINAL_CSI_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlnq"
+MACOS_TERMINAL_CSI_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlmnq"
 
 
 #
@@ -2580,6 +2586,80 @@ class BytesTerminal:
 
         hit = bool(alt_rlist)
         return hit
+
+    def columns_delete_n(self, n) -> None:  # a la VT420 DECDC ⎋['~
+        """Delete N Columns (but snap the Cursor back to where it started)"""
+
+        fd = self.fd
+
+        assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+
+        (x_columns, y_rows) = os.get_terminal_size(fd)
+        (y_row, x_column) = self.write_dsr_read_kcpr_y_x()
+
+        for y in range(1, y_rows + 1):
+            ctext = "\x1B" "[" f"{y}d"
+            ctext += "\x1B" "[" f"{n}P"
+            self.str_write(ctext)
+
+        ctext = "\x1B" "[" f"{y_row}d"
+        self.str_write(ctext)
+
+    def columns_insert_n(self, n) -> None:  # a la VT420 DECIC ⎋['}
+        """Insert N Columns (but snap the Cursor back to where it started)"""
+
+        fd = self.fd
+
+        assert ICH_X == "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+
+        (x_columns, y_rows) = os.get_terminal_size(fd)
+        (y_row, x_column) = self.write_dsr_read_kcpr_y_x()
+
+        for y in range(1, y_rows + 1):
+            ctext = "\x1B" "[" f"{y}d"
+            ctext += "\x1B" "[" f"{n}@"
+            self.str_write(ctext)
+
+        ctext = "\x1B" "[" f"{y_row}d"
+        self.str_write(ctext)
+
+    def write_dsr_read_kcpr_y_x(self) -> tuple[int, int]:  # todo: mix well with other reader/ writer
+        """Write 1 Device-Status-Request (DSR), read 1 Cursor-Position-Report (KCPR)"""
+
+        fd = self.fd
+
+        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
+        self.str_write("\x1B" "[" "6n")
+
+        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
+
+        csi_kbytes = os.read(fd, 2)
+        assert csi_kbytes == b"\x1B[", (csi_kbytes,)
+
+        y_kbytes = b""
+        while True:
+            kbyte = os.read(fd, 1)
+            if kbyte not in b"0123456789":
+                break
+            y_kbytes += kbyte
+
+        assert kbyte == b";"
+
+        x_kbytes = b""
+        while True:
+            kbyte = os.read(fd, 1)
+            if kbyte not in b"0123456789":
+                break
+            x_kbytes += kbyte
+
+        assert kbyte == b"R"
+
+        row_y = int(y_kbytes)
+        column_x = int(x_kbytes)
+
+        return (row_y, column_x)
 
 
 # Name the Shifting Keys
@@ -3206,6 +3286,9 @@ class ShadowsTerminal:
             (kbytes, kstr) = kchord
             schars = kbytes.decode()  # rarely raises UnicodeDecodeError
 
+            if self.str_write_if(schars):
+                continue
+
             writable = self.schars_to_writable(schars)
             if not writable:
                 break
@@ -3214,11 +3297,36 @@ class ShadowsTerminal:
 
         return kchord
 
+    def str_write_if(self, schars) -> bool:
+        """Say if called BytesTerminal to emulate writing Screen Chars"""
+
+        bt = self.bt
+
+        assert DECIC_X == "\x1B" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
+        assert DECDC_X == "\x1B" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
+
+        if not schars.startswith("\x1B["):
+            return False
+
+        if schars.endswith("'}"):
+            digits = schars[len("\x1B[") : -len("'}")]
+            n = int(digits) if digits else 1
+            bt.columns_insert_n(n)
+            return True
+
+        if schars.endswith("'~"):
+            digits = schars[len("\x1B[") : -len("'~")]
+            n = int(digits) if digits else 1
+            bt.columns_delete_n(n)
+            return True
+
+        return False
+
     def schars_to_writable(self, schars) -> bool:
         """Say if writing Screen Bytes signals their meaning well"""
 
         assert CSI_P_F_REGEX == r"^\x1B\[([ -?])*(.)$"  # r"[ -?]", no "@"
-        assert MACOS_TERMINAL_CSI_FINAL_BYTES == "@ABCDEGHIJKLMPSTZdhlnq"
+        assert MACOS_TERMINAL_CSI_FINAL_BYTES == "@ABCDEGHIJKLMPSTZdhlmnq"
 
         if schars.isprintable():
             return True
@@ -3238,7 +3346,7 @@ class ShadowsTerminal:
             if (p + f) in ("5n", "6n", "18t"):  # todo: list these more in common
                 return True
 
-            if f in "@ABCDEGHIJKLMPSTZdhlnq":
+            if f in "@ABCDEGHIJKLMPSTZdhlmnq" + "}~":
                 return True
 
                 # most of these have corner cases of no visible effect
@@ -6260,6 +6368,10 @@ class TurtleClient:
         self.pendown = True
 
         self.do_showturtle()
+
+        py = 'self.str_write("\x1B" "[" "m")'  # CSI 06/13
+        rep = self.py_eval_to_repr(py)
+        assert not rep, (rep, py)
 
     def turtle_client_yolo(self) -> None:  # noqa C901 complex
 
