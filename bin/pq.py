@@ -6317,11 +6317,25 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 # todo: NE SE SW NW Headings for the Turtle
 # todo: Arbitrary Headings for the Turtle
 #
-# todo: disentangle from Pq PbCopy/ PbPaste, especially when outside macOS
+# todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpc "🟢"
+# todo: pasting such as LargeGreenCircle into ⇧R of 'pq turtle', 'pq st yolo', etc
+#
+# todo: more bits of Turtle State on Screen somehow
+# todo: do & undo for Turtle work
 #
 # todo: log the named-pipe work well enough to explain its hangs
-# todo: prompts placed correctly in the echo of multiple lines of Input
+# todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
+# todo: have the BytesTerminal say when to yield, but yield in the ShadowsTerminal
+# todo: move the VT420 DECDC ⎋['~ and DECIC ⎋['} emulations up into the ShadowsTerminal
 #
+# todo: escape more robustly into Python Exec & Eval, such as explicit func(arg) calls
+# todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
+# todo: prompts placed correctly in the echo of multiple lines of Input
+# todo: Command Input Line History
+#
+# todo: disentangle from Pq PbCopy/ PbPaste, especially when outside macOS
+#
+# reconcile with Python "import turtle" Graphics on TkInter
 # todo: KwArgs for Funcs
 #
 
@@ -6347,6 +6361,8 @@ class TurtleClient:
     xmultiplier = 6
     yxmultiplier = 1
 
+    sleep = (100 / 3) / 1000
+
     ps1 = f"{Turtle}? "
 
     def __init__(self) -> None:
@@ -6361,7 +6377,15 @@ class TurtleClient:
         self.dx = TurtleNorth[0]
         self.dy = TurtleNorth[-1]
 
-        print(f"pendown={self.pendown}" f" penchar={self.penchar}" f" dx={self.dx}" f" dy={self.dy}")
+        self.sleep = (100 / 3) / 1000
+
+        print(
+            f"pendown={self.pendown}"
+            f" penchar={self.penchar}"
+            f" dx={self.dx}"
+            f" dy={self.dy}"
+            f" sleep={self.sleep}"
+        )
 
         self.pendown = False
         self.do_home()
@@ -6559,11 +6583,14 @@ class TurtleClient:
 
     def do_backward(self) -> None:
 
+        dx = self.dx
+        dy = self.dy
+        penchar = self.penchar
+        pendown = self.pendown
+        sleep = self.sleep
+
         pendown = self.pendown
         penchar = self.penchar
-
-        dy = -self.dy  # negated
-        dx = -self.dx  # negated
 
         if dy and not dx:
             multiplier = self.ymultiplier
@@ -6572,21 +6599,26 @@ class TurtleClient:
         else:
             multiplier = self.yxmultiplier
 
+        bdx = -dx
+        bdy = -dy
+
         for _ in range(multiplier):
 
             text = ""
             if pendown:
                 text = f"{penchar}\b"
 
-            if dy > 0:
-                text += f"\x1B[{dy}B"  # 04/02 Cursor Down (CUD) of N
-            elif dy < 0:
-                text += f"\x1B[{-dy}A"  # 04/01 Cursor Up (CUU) of N
+            time.sleep(sleep)
 
-            if dx > 0:
-                text += f"\x1B[{dx}C"  # 04/03 Cursor Forward (CUF) of N
-            elif dx < 0:
-                text += f"\x1B[{-dx}D"  # 04/04 Cursor Backward (CUB) of N
+            if bdy > 0:
+                text += f"\x1B[{bdy}B"  # 04/02 Cursor Down (CUD) of N
+            elif bdy < 0:
+                text += f"\x1B[{-bdy}A"  # 04/01 Cursor Up (CUU) of N
+
+            if bdx > 0:
+                text += f"\x1B[{bdx}C"  # 04/03 Cursor Forward (CUF) of N
+            elif bdx < 0:
+                text += f"\x1B[{-bdx}D"  # 04/04 Cursor Backward (CUB) of N
 
             self.str_write(text)
 
@@ -6597,11 +6629,11 @@ class TurtleClient:
 
     def do_forward(self) -> None:
 
-        pendown = self.pendown
-        penchar = self.penchar
-
-        dy = self.dy
         dx = self.dx
+        dy = self.dy
+        penchar = self.penchar
+        pendown = self.pendown
+        sleep = self.sleep
 
         if dy and not dx:
             multiplier = self.ymultiplier
@@ -6615,6 +6647,8 @@ class TurtleClient:
             text = ""
             if pendown:
                 text = f"{penchar}\b"
+
+            time.sleep(sleep)
 
             if dy > 0:
                 text += f"\x1B[{dy}B"  # 04/02 Cursor Down (CUD) of N
@@ -6728,8 +6762,9 @@ class TurtleClient:
 
         penchar = self.penchar
 
-        alt_penchar = arg
-        if arg is None:
+        if arg is not None:
+            alt_penchar = arg
+        else:
             assert isinstance(penchar, str), (type(penchar), penchar)
             assert len(penchar) == 1, (len(penchar), penchar)
             alt_penchar = "!" if (penchar == "~") else chr(ord(penchar) + 1)
