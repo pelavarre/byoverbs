@@ -1,4 +1,4 @@
-# rtboxbox.logo
+# fdboxbox.logo
 
 # Draw two ← ↑ → ↓ square'ish boxes, concentrically, clockwise
 
@@ -24,5 +24,5 @@ setpc '*'
 ht
 
 
-# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/rtboxbox.logo
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/fdboxbox.logo
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
