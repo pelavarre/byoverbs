@@ -1,0 +1,28 @@
+# ltboxbox.logo
+
+# Draw two ← ↑ → ↓ square'ish boxes, concentrically, anticlockwise
+
+
+st
+pd
+
+setpc '↓' bk lt
+setpc '→' bk lt
+setpc '↑' bk lt
+setpc '←' bk lt
+
+pu lt fd rt pd
+
+setpc '↓' bk bk lt
+setpc '→' bk bk bk lt
+setpc '↑' bk bk bk lt
+setpc '←' bk bk bk lt
+setpc '↓' bk
+
+pu rt fd lt
+setpc '*'
+ht
+
+
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/ltboxbox.logo
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

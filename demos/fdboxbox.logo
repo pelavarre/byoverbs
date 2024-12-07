@@ -1,0 +1,28 @@
+# rtboxbox.logo
+
+# Draw two ← ↑ → ↓ square'ish boxes, concentrically, clockwise
+
+
+st
+pd
+
+setpc '↑' fd rt
+setpc '→' fd rt
+setpc '↓' fd rt
+setpc '←' fd rt
+
+pu lt fd rt pd
+
+setpc '↑' fd fd rt
+setpc '→' fd fd fd rt
+setpc '↓' fd fd fd rt
+setpc '←' fd fd fd rt
+setpc '↑' fd
+
+pu rt fd lt
+setpc '*'
+ht
+
+
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/rtboxbox.logo
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -6322,17 +6322,20 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 # todo: have the BytesTerminal say when to yield, but yield in the ShadowsTerminal
 # todo: move the VT420 DECDC ⎋['~ and DECIC ⎋['} emulations up into the ShadowsTerminal
 #
+# todo: log the named-pipe work well enough to explain its hangs
+# todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
+#
 
+#
+# todo: hide the turtle only till its next move  # 🐢 HideTurtle WhileStill
+# todo: more bits of Turtle State on Screen somehow
+# todo: do & undo for Turtle work
 #
 # todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpc "🟢"
 # todo: pasting such as LargeGreenCircle into ⇧R of 'pq turtle', 'pq st yolo', etc
 #
-# todo: more bits of Turtle State on Screen somehow
-# todo: do & undo for Turtle work
-#
-# todo: log the named-pipe work well enough to explain its hangs
-# todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
-#
+# todo: "-" negation signs in place of "~" negation signs
+# todo: literal arguments, like have 'help h' mean 'help "h"'
 # todo: escape more robustly into Python Exec & Eval, such as explicit func(arg) calls
 # todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
 # todo: prompts placed correctly in the echo of multiple lines of Input
@@ -6355,24 +6358,37 @@ TurtleNorth = 0  # 0° of North Up Clockwise
 class TurtleClient:
     """Run at Keyboard and Screen as a Shell, to command 1 Turtle via two MkFifo"""
 
-    ps1 = f"{Turtle}? "
+    ps1 = f"{Turtle}? "  # prompt for Turtle Client Shell
 
-    heading = TurtleNorth
+    heading: float  # stride direction
+    stride: float  # stride size
 
-    stride = 10  # how far each Forward/ Backward step goes
-    penchar = "*"
-    pendown = False
-    sleep = (100 / 3) / 1000  # ~33ms
+    penchar: str  # mark to print at each step
+    pendown: bool  # printing marks, or not
+    sleep: float  # time between marks
+
+    # todo: .stride vs Logo SetStepSize
+    # todo: .sleep vs Logo SetSpeed, SetVelocity, Wait
+    # todo: .sleep vs Python Turtle screen.delay
+
+    def __init__(self) -> None:
+
+        self.reinit()
+
+    def reinit(self) -> None:
+
+        self.heading = TurtleNorth
+        self.stride = 10
+
+        self.penchar = "*"
+        self.pendown = False
+        # self.sleep = 1 / 30  # happiest? for:  fdboxbox.logo
+        self.sleep = 1 / 100  # happiest? for:  headings.logo
 
     def do_reset(self) -> None:
         """Warp the Turtle to Home, but do Not clear the Screen"""
 
-        self.heading = TurtleNorth
-
-        self.stride = 10
-        self.penchar = "*"
-        self.pendown = False
-        self.sleep = (100 / 3) / 1000
+        self.reinit()
 
         print(
             f"heading={self.heading}"
@@ -6477,7 +6493,10 @@ class TurtleClient:
 
         assert "".join(pys) == strip, (pys, strip)
 
-        # print(f"{pys=}")
+        # print(f"{pys=}")  # FIXME: '-' negative signs in place of '~' negation signs
+        # breakpoint()
+
+        alt_pys = list(_.replace("~", "-") for _ in pys)  # todo: '-' marks for Int Literals
 
         # Split the 1 Line into a Series of 1 or more Py Calls
 
@@ -6486,7 +6505,7 @@ class TurtleClient:
         call: list
         call = list()
 
-        for py in pys:
+        for py in alt_pys:
             try:
                 arg = ast.literal_eval(py)
                 if not call:
@@ -6563,6 +6582,7 @@ class TurtleClient:
             "st": self.do_showturtle,  #
             "seth": self.do_setheading,  #
             "setheading": self.do_setheading,
+            "sethertz": self.do_sethertz,
             "setpc": self.do_setpencolor,  #
             "setpencolor": self.do_setpencolor,
             "setxy": self.do_setxy,
@@ -6575,10 +6595,11 @@ class TurtleClient:
     # Mess with 1 Turtle
     #
 
-    def do_backward(self) -> None:  # as if do_bk, do_back
+    def do_backward(self, stride=None) -> None:  # as if do_bk, do_back
         """Move the Turtle backwards along its Heading, tracing a Trail if Pen Down"""
 
-        self.do_bresenham_segment(-self.stride)
+        float_stride = self.stride if (stride is None) else float(stride)
+        self.do_bresenham_stride(-float_stride)
 
     def do_clearscreen(self) -> None:  # as if do_cs, do_cls do_clear
         """Write Spaces over every Character of every Screen Row and Column"""
@@ -6588,13 +6609,26 @@ class TurtleClient:
 
         # just the Screen, not also its Scrollback
 
-    def do_forward(self) -> None:  # as if do_fd
+    def do_forward(self, stride=None) -> None:  # as if do_fd
         """Move the Turtle forwards along its Heading, tracing a Trail if Pen Down"""
 
-        self.do_bresenham_segment(+self.stride)
+        float_stride = +self.stride if (stride is None) else float(+stride)
+        self.do_bresenham_stride(float_stride)
 
-    def do_help(self) -> None:  # as if do_h
+    def do_help(self, pattern=None) -> None:  # as if do_h
         """List the Command Verbs"""
+
+        (verbs, grunts) = self._sliced_to_verbs_grunts_(pattern)
+        if not verbs:
+            assert not grunts, (pattern, verbs, grunts)
+            print(f"{pattern!r} not found in Turtle Command Verbs")
+            return
+
+        print("Choose from:", ", ".join(sorted(verbs)))
+        print("Or abbreviated as:", ", ".join(sorted(grunts)))
+
+    def _sliced_to_verbs_grunts_(self, pattern) -> tuple[list[str], list[str]]:
+        """List the Abbreviations or Verbs that contain the Arg"""  # pattern=None matches All Verbs
 
         func_by_verb = self.to_func_by_verb()
 
@@ -6608,19 +6642,20 @@ class TurtleClient:
         for func, items in items_by_func.items():
             keys = list(_[0] for _ in items)
             keys.sort(key=len)
-            verbs.append(keys[-1])
-            if len(keys) > 1:
-                grunts.extend(keys[:-1])
 
-        print("Choose from:", ", ".join(sorted(verbs)))
-        print("Or abbreviated as:", ", ".join(sorted(grunts)))
+            choices = list(keys)
+            if pattern is not None:
+                choices = list(_ for _ in keys if pattern in _)
+
+            if choices:
+                verbs.append(choices[-1])
+                if len(keys) > 1:
+                    grunts.extend(choices[:-1])
+
+        return (verbs, grunts)
 
     def do_home(self) -> None:
-        """Move the Turtle to its Home, tracing a Trail if Pen Down"""
-
-        if self.pendown:
-            print("NotImplementedError: Home while Pen Down")
-            return
+        """Move the Turtle to its Home and turn it North, tracing a Trail if Pen Down"""
 
         self.do_setxy()  # todo: different Homes for different Turtles
         self.do_setheading()
@@ -6633,12 +6668,13 @@ class TurtleClient:
 
         # todo: client shadow trace Turtle IsVisible
 
-    def do_left(self) -> None:  # as if do_lt
+    def do_left(self, angle=None) -> None:  # as if do_lt
         """Turn the Turtle anticlockwise, by a 90° Right Angle, or some other Angle"""
 
         heading = self.heading  # turning anticlockwise
-        self.heading = (heading - 90) % 360  # 360° Circle
 
+        float_angle = 90e0 if (angle is None) else float(angle)
+        self.heading = (heading - float_angle) % 360  # 360° Circle
         print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
     def do_pendown(self) -> None:  # as if do_pd
@@ -6648,6 +6684,8 @@ class TurtleClient:
         self.pendown = True
         print(f"pendown={self.pendown}  # was {pendown}")
 
+        # todo: calculated boolean args for pd pu ht st
+
     def do_penup(self) -> None:  # as if do_pu
         """Plan to Not leave a Trail as the Turtle moves"""
 
@@ -6655,28 +6693,43 @@ class TurtleClient:
         self.pendown = False
         print(f"pendown={self.pendown}  # was {pendown}")
 
-    def do_right(self) -> None:  # as if do_rt
+    def do_right(self, angle=None) -> None:  # as if do_rt
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
 
         heading = self.heading  # turning clockwise
-        self.heading = (heading + 90) % 360  # 360° Circle
 
+        float_angle = 90e0 if (angle is None) else float(angle)
+        self.heading = (heading + float_angle) % 360  # 360° Circle
         print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
-    def do_setheading(self) -> None:  # as if do_seth
+    def do_setheading(self, angle=None) -> None:  # as if do_seth
         """Turn the Turtle to move 0° North, or to some other Heading"""
 
         heading = self.heading  # turning North
+
         self.heading = TurtleNorth
         print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
-    def do_setpencolor(self, arg=None) -> None:  # as if do_setpc
+    def do_sethertz(self, hertz=None) -> None:
+
+        sleep = self.sleep
+
+        sleep_ = 0e0
+        float_hertz = 100e0 if (hertz is None) else float(hertz)
+        if float_hertz:
+            sleep_ = 1 / float_hertz
+
+        self.sleep = sleep_
+
+        print(f"sleep={self.sleep}s  # was {sleep}s")
+
+    def do_setpencolor(self, ch=None) -> None:  # as if do_setpc
         """Choose which Character to draw with"""  # todo: Choose Color/ Char separately
 
         penchar = self.penchar
 
-        if arg is not None:
-            alt_penchar = arg
+        if ch is not None:
+            alt_penchar = str(ch)  # todo: cope with len(ch) != 1 for PenChar
         else:
             assert isinstance(penchar, str), (type(penchar), penchar)
             assert len(penchar) == 1, (len(penchar), penchar)
@@ -6686,24 +6739,40 @@ class TurtleClient:
 
         print(f"penchar={self.penchar!r}  # was {penchar!r}")
 
-    def do_setxy(self) -> None:
-        """Choose which Character to draw with"""  # todo: Choose Color/ Char separately
+    def do_setxy(self, x=None, y=None) -> None:
+        """Move the Turtle to an X Y Point, tracing a Trail if Pen Down"""
 
-        if self.pendown:
-            print("NotImplementedError: SetXY while Pen Down")
-            return
+        float_x = 0 if (x is None) else float(x)
+        float_y = 0 if (y is None) else float(y)
 
-        columns, lines = self.os_terminal_size()
+        # Find the Cursor
 
-        x = 1 + (columns // 2)
-        y = 1 + (lines // 2)
+        py = "self.write_dsr_read_kcpr_y_x()"
+        rep = self.py_eval_to_repr(py)
+        kcpr_y_x = ast.literal_eval(rep)
 
-        text = f"\x1B[{y};{x}H"
-        self.str_write(text)
+        (y_row, x_column) = kcpr_y_x
+        assert isinstance(y_row, int), (type(y_row), y_row)
+        assert isinstance(x_column, int), (type(x_column), x_column)
 
-        print(f"x={x} y={y}")  # todo: "  # was {x} {y}")
+        # Find the Center of Screen
 
-        # todo: trace Turtle X Y
+        x_columns, y_lines = self.os_terminal_size()
+        cx = 1 + (x_columns // 2)
+        cy = 1 + (y_lines // 2)
+
+        # Go somewhere
+
+        x1 = x_column - cx
+        y1 = -(y_row - cy)
+
+        x2 = float_x
+        y2 = float_y / 2  # / 2 for rectangular pixels
+
+        self.do_bresenham_segment(x1=int(x1), y1=int(y1), x2=int(x2), y2=int(y2))
+
+        # todo: client shadow trace Turtle X Y
+        # todo: setx without setxy, sety without setxy
 
     def do_showturtle(self) -> None:
         """Start showing where the Turtle is"""
@@ -6717,8 +6786,8 @@ class TurtleClient:
     # Move the Turtle along the Line of its Heading
     #
 
-    def do_bresenham_segment(self, stride) -> None:
-        """Step forwards, or backwards, through (Row, Column) choices"""
+    def do_bresenham_stride(self, stride) -> None:
+        """Step forwards, or backwards, along the Heading"""
 
         heading = self.heading  # 0° North Up Clockwise
 
@@ -6734,8 +6803,15 @@ class TurtleClient:
         x = x1 + (stride * math.cos(math.radians(angle)))  # destination
         y = y1 + (stride * math.sin(math.radians(angle)) / 2)  # / 2 for rectangular pixels
 
-        x2 = int(x)
-        y2 = int(y)
+        x2 = round(x)
+        y2 = round(y)
+
+        self.do_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
+
+        # FIXME: calc Stride X1 Y1 vs an origin of 0, 0 Center, not from Lower Left Screen
+
+    def do_bresenham_segment(self, x1, y1, x2, y2) -> None:
+        """Step forwards, or backwards, through (Row, Column) choices"""
 
         print(f"{x1=} {y1=}  {x2=} {y2=}")
 
@@ -6859,9 +6935,9 @@ class TurtleClient:
         regex = r"os.terminal_size[(]columns=([0-9]+), lines=([0-9]+)[)]"
         m = re.fullmatch(regex, rep)
         assert m, (m, py, rep)
-        columns, lines = m.groups()
+        x_columns, y_lines = m.groups()
 
-        size = os.terminal_size([int(columns), int(lines)])
+        size = os.terminal_size([int(x_columns), int(y_lines)])
 
         return size
 
