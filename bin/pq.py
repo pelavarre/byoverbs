@@ -75,6 +75,7 @@ import importlib
 import io
 import itertools
 import json
+import math
 import os
 import pathlib
 import pdb
@@ -2586,6 +2587,10 @@ class BytesTerminal:
 
         hit = bool(alt_rlist)
         return hit
+
+    #
+    # Emulate a more functional Terminal
+    #
 
     def columns_delete_n(self, n) -> None:  # a la VT420 DECDC ⎋['~
         """Delete N Columns (but snap the Cursor back to where it started)"""
@@ -6314,8 +6319,10 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 
 
 #
-# todo: NE SE SW NW Headings for the Turtle
-# todo: Arbitrary Headings for the Turtle
+# todo: have the BytesTerminal say when to yield, but yield in the ShadowsTerminal
+# todo: move the VT420 DECDC ⎋['~ and DECIC ⎋['} emulations up into the ShadowsTerminal
+#
+
 #
 # todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpc "🟢"
 # todo: pasting such as LargeGreenCircle into ⇧R of 'pq turtle', 'pq st yolo', etc
@@ -6325,8 +6332,6 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 # todo: log the named-pipe work well enough to explain its hangs
 # todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
-# todo: have the BytesTerminal say when to yield, but yield in the ShadowsTerminal
-# todo: move the VT420 DECDC ⎋['~ and DECIC ⎋['} emulations up into the ShadowsTerminal
 #
 # todo: escape more robustly into Python Exec & Eval, such as explicit func(arg) calls
 # todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
@@ -6340,93 +6345,80 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 
 
-TurtleNorth = (0, -1)
-TurtleEast = (1, 0)
-TurtleSouth = (0, 1)
-TurtleWest = (-1, 0)
-
-
+DegreeSign = unicodedata.lookup("Degree Sign")  # °
 Turtle = unicodedata.lookup("Turtle")  # 🐢
 
 
+TurtleNorth = 0  # 0° of North Up Clockwise
+
+
 class TurtleClient:
-
-    pendown = False
-    penchar = "*"
-
-    dx = TurtleNorth[0]
-    dy = TurtleNorth[-1]
-
-    ymultiplier = 3
-    xmultiplier = 6
-    yxmultiplier = 1
-
-    sleep = (100 / 3) / 1000
+    """Run at Keyboard and Screen as a Shell, to command 1 Turtle via two MkFifo"""
 
     ps1 = f"{Turtle}? "
 
-    def __init__(self) -> None:
-        getsignal = signal.getsignal(signal.SIGINT)
-        self.getsignal = getsignal
+    heading = TurtleNorth
+
+    stride = 10  # how far each Forward/ Backward step goes
+    penchar = "*"
+    pendown = False
+    sleep = (100 / 3) / 1000  # ~33ms
 
     def do_reset(self) -> None:
+        """Warp the Turtle to Home, but do Not clear the Screen"""
 
-        self.pendown = False
+        self.heading = TurtleNorth
+
+        self.stride = 10
         self.penchar = "*"
-
-        self.dx = TurtleNorth[0]
-        self.dy = TurtleNorth[-1]
-
+        self.pendown = False
         self.sleep = (100 / 3) / 1000
 
         print(
-            f"pendown={self.pendown}"
+            f"heading={self.heading}"
+            f" stride={self.stride}"
             f" penchar={self.penchar}"
-            f" dx={self.dx}"
-            f" dy={self.dy}"
+            f" pendown={self.pendown}"
             f" sleep={self.sleep}"
         )
 
-        self.pendown = False
         self.do_home()
-        self.pendown = True
-
         self.do_showturtle()
 
         py = 'self.str_write("\x1B" "[" "m")'  # CSI 06/13
         rep = self.py_eval_to_repr(py)
         assert not rep, (rep, py)
 
-    def turtle_client_yolo(self) -> None:  # noqa C901 complex
+        py = 'self.str_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
+        rep = self.py_eval_to_repr(py)
+        assert not rep, (rep, py)
 
-        #
+    def turtle_client_yolo(self) -> None:
+        """Read 1 Line, Eval it, Print its result, Loop (REPL Chat)"""
+
+        # Cancel the Vi choice of a Cursor Style
 
         py = 'self.str_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
         rep = self.py_eval_to_repr(py)
         assert not rep, (rep, py)
 
-        # # for readline in ("clearscreen", "reset"):
-        # for readline in ("reset",):
-        #     print(self.ps1 + readline)
-        #     py = self.readline_to_py(readline)
-        #     rep = self.py_eval_to_repr(py)
-        #     assert not rep, (rep,)
-
-        #
+        # Prompt & read 1 Line from Keyboard, till ⌃D pressed to quit
 
         while True:
             print(self.ps1, end="")
             sys.stdout.flush()
             try:
                 readline = sys.stdin.readline()
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:  # mostly shrugs off ⌃C SigInt
                 print(" KeyboardInterrupt")
                 self.breakpoint()
                 continue
 
-            if not readline:
-                print("bye")
+            if not readline:  # accepts ⌃D Tty End
+                print("bye")  # not from "bye", "end", "exit", "quit", ...
                 sys.exit()
+
+            # Prompt & read 1 Line from Keyboard, till ⌃D Tty End pressed to quit
 
             py = self.readline_to_py(readline)
             if py:
@@ -6583,44 +6575,7 @@ class TurtleClient:
 
     def do_backward(self) -> None:
 
-        dx = self.dx
-        dy = self.dy
-        penchar = self.penchar
-        pendown = self.pendown
-        sleep = self.sleep
-
-        pendown = self.pendown
-        penchar = self.penchar
-
-        if dy and not dx:
-            multiplier = self.ymultiplier
-        elif dx and not dy:
-            multiplier = self.xmultiplier
-        else:
-            multiplier = self.yxmultiplier
-
-        bdx = -dx
-        bdy = -dy
-
-        for _ in range(multiplier):
-
-            text = ""
-            if pendown:
-                text = f"{penchar}\b"
-
-            time.sleep(sleep)
-
-            if bdy > 0:
-                text += f"\x1B[{bdy}B"  # 04/02 Cursor Down (CUD) of N
-            elif bdy < 0:
-                text += f"\x1B[{-bdy}A"  # 04/01 Cursor Up (CUU) of N
-
-            if bdx > 0:
-                text += f"\x1B[{bdx}C"  # 04/03 Cursor Forward (CUF) of N
-            elif bdx < 0:
-                text += f"\x1B[{-bdx}D"  # 04/04 Cursor Backward (CUB) of N
-
-            self.str_write(text)
+        self.do_bresenham_segment(-self.stride)
 
     def do_clearscreen(self) -> None:
 
@@ -6629,38 +6584,7 @@ class TurtleClient:
 
     def do_forward(self) -> None:
 
-        dx = self.dx
-        dy = self.dy
-        penchar = self.penchar
-        pendown = self.pendown
-        sleep = self.sleep
-
-        if dy and not dx:
-            multiplier = self.ymultiplier
-        elif dx and not dy:
-            multiplier = self.xmultiplier
-        else:
-            multiplier = self.yxmultiplier
-
-        for _ in range(multiplier):
-
-            text = ""
-            if pendown:
-                text = f"{penchar}\b"
-
-            time.sleep(sleep)
-
-            if dy > 0:
-                text += f"\x1B[{dy}B"  # 04/02 Cursor Down (CUD) of N
-            elif dy < 0:
-                text += f"\x1B[{-dy}A"  # 04/01 Cursor Up (CUU) of N
-
-            if dx > 0:
-                text += f"\x1B[{dx}C"  # 04/03 Cursor Forward (CUF) of N
-            elif dx < 0:
-                text += f"\x1B[{-dx}D"  # 04/04 Cursor Backward (CUB) of N
-
-            self.str_write(text)
+        self.do_bresenham_segment(+self.stride)
 
     def do_help(self) -> None:
 
@@ -6701,22 +6625,10 @@ class TurtleClient:
 
     def do_left(self) -> None:
 
-        dy = self.dy
-        dx = self.dx
+        heading = self.heading  # turning anticlockwise
+        self.heading = (heading - 90) % 360  # 90° Right Angle  # 360° Circle
 
-        if (dx, dy) == TurtleNorth:
-            (self.dx, self.dy) = TurtleWest
-        elif (dx, dy) == TurtleWest:
-            (self.dx, self.dy) = TurtleSouth
-        elif (dx, dy) == TurtleSouth:
-            (self.dx, self.dy) = TurtleEast
-        elif (dx, dy) == TurtleEast:
-            (self.dx, self.dy) = TurtleNorth
-
-        else:
-            assert False  # todo: more general Left Turn
-
-        print(f"dx={self.dx} dy={self.dy}  # was {dx} {dy}")
+        print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
     def do_pendown(self) -> None:
 
@@ -6732,31 +6644,16 @@ class TurtleClient:
 
     def do_right(self) -> None:
 
-        dy = self.dy
-        dx = self.dx
+        heading = self.heading  # turning clockwise
+        self.heading = (heading + 90) % 360  # 90° Right Angle  # 360° Circle
 
-        if (dx, dy) == TurtleNorth:
-            (self.dx, self.dy) = TurtleEast
-        elif (dx, dy) == TurtleEast:
-            (self.dx, self.dy) = TurtleSouth
-        elif (dx, dy) == TurtleSouth:
-            (self.dx, self.dy) = TurtleWest
-        elif (dx, dy) == TurtleWest:
-            (self.dx, self.dy) = TurtleNorth
-
-        else:
-            assert False  # todo: more general Right Turn
-
-        print(f"dx={self.dx} dy={self.dy}  # was {dx} {dy}")
+        print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
     def do_setheading(self) -> None:
 
-        dx = self.dx
-        dy = self.dy
-
-        (self.dx, self.dy) = TurtleNorth
-
-        print(f"dx={self.dx} dy={self.dy}  # was {dx} {dy}")
+        heading = self.heading  # turning North
+        self.heading = TurtleNorth
+        print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
     def do_setpencolor(self, arg=None) -> None:
 
@@ -6799,11 +6696,115 @@ class TurtleClient:
         # todo: trace Turtle IsVisible
 
     #
+    # Move the Turtle along the Line of its Heading
+    #
+
+    def do_bresenham_segment(self, stride) -> None:
+        """Step forwards, or backwards, through (Row, Column) choices"""
+
+        heading = self.heading  # 0° North Up Clockwise
+
+        py = "self.write_dsr_read_kcpr_y_x()"
+        rep = self.py_eval_to_repr(py)
+        kcpr_y_x = ast.literal_eval(rep)
+        (y_row, x_column) = kcpr_y_x
+
+        angle = (90 - heading) % 360  # converts to 0° East Anticlockwise
+        x1 = x_column
+        y1 = -y_row
+
+        x = x1 + (stride * math.cos(math.radians(angle)))  # destination
+        y = y1 + (stride * math.sin(math.radians(angle)) / 2)  # / 2 for rectangular pixels
+
+        x2 = int(x)
+        y2 = int(y)
+
+        print(f"{x1=} {y1=}  {x2=} {y2=}")
+
+        x2x1 = abs(x2 - x1)  # distance
+        y2y1 = abs(y2 - y1)
+
+        sx = 1 if (x1 < x2) else -1  # steps towards X2 from X1
+        sy = 1 if (y1 < y2) else -1  # steps towards Y2 from y1
+
+        e = x2x1 - y2y1  # Bresenham's Error Measure
+
+        wx = x = x1
+        wy = y = y1
+        while True:
+
+            self.do_jump_punch(int(wx), wy=int(-wy), x=int(x), y=int(-y))
+            if (x == x2) and (y == y2):
+                break
+
+            wx = x
+            wy = y
+
+            ee = 2 * e
+            dx = ee < x2x1
+            dy = ee > -y2y1
+            assert dx or dy, (dx, dy, x, y, ee, x2x1, y2y1, x1, y1)
+
+            if dy:
+                e -= y2y1
+                x += sx
+            if dx:
+                e += x2x1
+                y += sy
+
+            assert (x, y) != (wx, wy)
+
+        # Wikipedia > https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+
+        # To: Perplexity·Ai
+        #
+        #   When I'm drawing a line across a pixellated display,
+        #   what's the most ordinary way
+        #   to turn my y = a*x + b equation into a list of pixels to turn on?
+        #
+
+        # todo: scale for rectangular pixels
+        # todo: keep y x state between segments for more true angles
+
+    def do_jump_punch(self, wx, wy, x, y) -> None:
+
+        pendown = self.pendown
+        penchar = self.penchar
+        sleep = self.sleep
+
+        # print(f"{x} {y}")
+
+        if wx < x:
+            x_text = f"\x1B[{x - wx}C"  # CSI 04/03 Cursor [Forward] Right
+        elif wx > x:
+            x_text = f"\x1B[{wx - x}D"  # CSI 04/04 Cursor [Backward] Left
+        else:
+            x_text = ""
+
+        if wy < y:
+            y_text = f"\x1B[{y - wy}B"  # CSI 04/02 Cursor [Down] Next
+        elif wy > y:
+            y_text = f"\x1B[{wy - y}A"  # CSI 04/01 Cursor [Up] Previous
+        else:
+            y_text = ""
+
+        text = f"{y_text}{x_text}"
+        if pendown:
+            pc_text = "\b"
+            text = f"{y_text}{x_text}{penchar}{pc_text}"
+
+        self.str_write(text)
+
+        time.sleep(sleep)
+
+    #
     # Layer thinly over 1 ShadowsTerminal, found at the far side of 2 Named Pipes
     #
 
     def breakpoint(self) -> None:
-        getsignal = self.getsignal
+        """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
+
+        getsignal = signal.getsignal(signal.SIGINT)
 
         breakpoint()
         pass
