@@ -2082,7 +2082,7 @@ VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 # CUP_1_X = "\x1B" "[" ";{}H"  # CSI 04/08 Cursor Position
 CUP_Y_X = "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
 
-ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head  # 2 All # 3 Scrollback
+ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
 
 CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation  # "\t" is Pn 1
 CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
@@ -2094,7 +2094,7 @@ DCH_X = "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
 DECIC_X = "\x1B" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
 DECDC_X = "\x1B" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
 
-EL_P = "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head  # 2 Row
+EL_P = "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
 
 SU_Y = "\x1B" "[" "{}S"  # CSI 05/03 Scroll Up   # Insert Bottom Lines
 SD_Y = "\x1B" "[" "{}T"  # CSI 05/04 Scroll Down  # Insert Top Lines
@@ -6437,6 +6437,7 @@ class TurtleClient:
     #
 
     def readline_to_py(self, readline) -> str:  # noqa C901 complex
+        """Eval 1 Line of Input"""
 
         # Drop a mostly blank Line
 
@@ -6532,36 +6533,37 @@ class TurtleClient:
         return ""
 
     def to_func_by_verb(self) -> dict[str, typing.Callable]:
+        """Say how to spell each Command Verb"""
 
         d: dict[str, typing.Callable]
-        d = {
-            "bk": self.do_backward,
-            "back": self.do_backward,
+        d = {  # func by verb, but with an extra '#" mark when func name != verb
+            "bk": self.do_backward,  #
+            "back": self.do_backward,  #
             "backward": self.do_backward,
-            "clear": self.do_clearscreen,
+            "clear": self.do_clearscreen,  #
             "clearscreen": self.do_clearscreen,
-            "cls": self.do_clearscreen,
-            "cs": self.do_clearscreen,
-            "fd": self.do_forward,
+            "cls": self.do_clearscreen,  #
+            "cs": self.do_clearscreen,  #
+            "fd": self.do_forward,  #
             "forward": self.do_forward,
-            "h": self.do_help,
+            "h": self.do_help,  #
             "help": self.do_help,
             "home": self.do_home,
             "hideturtle": self.do_hideturtle,
-            "ht": self.do_hideturtle,
+            "ht": self.do_hideturtle,  #
             "left": self.do_left,
-            "lt": self.do_left,
-            "pd": self.do_pendown,
+            "lt": self.do_left,  #
+            "pd": self.do_pendown,  #
             "pendown": self.do_pendown,
             "penup": self.do_penup,
-            "pu": self.do_penup,
+            "pu": self.do_penup,  #
             "reset": self.do_reset,
             "right": self.do_right,
-            "rt": self.do_right,
-            "st": self.do_showturtle,
-            "seth": self.do_setheading,
+            "rt": self.do_right,  #
+            "st": self.do_showturtle,  #
+            "seth": self.do_setheading,  #
             "setheading": self.do_setheading,
-            "setpc": self.do_setpencolor,
+            "setpc": self.do_setpencolor,  #
             "setpencolor": self.do_setpencolor,
             "setxy": self.do_setxy,
             "showturtle": self.do_showturtle,
@@ -6573,20 +6575,26 @@ class TurtleClient:
     # Mess with 1 Turtle
     #
 
-    def do_backward(self) -> None:
+    def do_backward(self) -> None:  # as if do_bk, do_back
+        """Move the Turtle backwards along its Heading, tracing a Trail if Pen Down"""
 
         self.do_bresenham_segment(-self.stride)
 
-    def do_clearscreen(self) -> None:
+    def do_clearscreen(self) -> None:  # as if do_cs, do_cls do_clear
+        """Write Spaces over every Character of every Screen Row and Column"""
 
-        text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head  # 2 All # 3 Scrollback
+        text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
         self.str_write(text)  # todo: preserve Setxy despite ClearScreen
 
-    def do_forward(self) -> None:
+        # just the Screen, not also its Scrollback
+
+    def do_forward(self) -> None:  # as if do_fd
+        """Move the Turtle forwards along its Heading, tracing a Trail if Pen Down"""
 
         self.do_bresenham_segment(+self.stride)
 
-    def do_help(self) -> None:
+    def do_help(self) -> None:  # as if do_h
+        """List the Command Verbs"""
 
         func_by_verb = self.to_func_by_verb()
 
@@ -6608,54 +6616,62 @@ class TurtleClient:
         print("Or abbreviated as:", ", ".join(sorted(grunts)))
 
     def do_home(self) -> None:
+        """Move the Turtle to its Home, tracing a Trail if Pen Down"""
 
         if self.pendown:
             print("NotImplementedError: Home while Pen Down")
             return
 
-        self.do_setxy()
+        self.do_setxy()  # todo: different Homes for different Turtles
         self.do_setheading()
 
-    def do_hideturtle(self) -> None:
+    def do_hideturtle(self) -> None:  # as if do_ht
+        """Stop showing where the Turtle is"""
 
         text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
         self.str_write(text)
 
-        # todo: trace Turtle IsVisible
+        # todo: client shadow trace Turtle IsVisible
 
-    def do_left(self) -> None:
+    def do_left(self) -> None:  # as if do_lt
+        """Turn the Turtle anticlockwise, by a 90° Right Angle, or some other Angle"""
 
         heading = self.heading  # turning anticlockwise
-        self.heading = (heading - 90) % 360  # 90° Right Angle  # 360° Circle
+        self.heading = (heading - 90) % 360  # 360° Circle
 
         print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
-    def do_pendown(self) -> None:
+    def do_pendown(self) -> None:  # as if do_pd
+        """Plan to leave a Trail as the Turtle moves"""
 
         pendown = self.pendown
         self.pendown = True
         print(f"pendown={self.pendown}  # was {pendown}")
 
-    def do_penup(self) -> None:
+    def do_penup(self) -> None:  # as if do_pu
+        """Plan to Not leave a Trail as the Turtle moves"""
 
         pendown = self.pendown
         self.pendown = False
         print(f"pendown={self.pendown}  # was {pendown}")
 
-    def do_right(self) -> None:
+    def do_right(self) -> None:  # as if do_rt
+        """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
 
         heading = self.heading  # turning clockwise
-        self.heading = (heading + 90) % 360  # 90° Right Angle  # 360° Circle
+        self.heading = (heading + 90) % 360  # 360° Circle
 
         print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
-    def do_setheading(self) -> None:
+    def do_setheading(self) -> None:  # as if do_seth
+        """Turn the Turtle to move 0° North, or to some other Heading"""
 
         heading = self.heading  # turning North
         self.heading = TurtleNorth
         print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
-    def do_setpencolor(self, arg=None) -> None:
+    def do_setpencolor(self, arg=None) -> None:  # as if do_setpc
+        """Choose which Character to draw with"""  # todo: Choose Color/ Char separately
 
         penchar = self.penchar
 
@@ -6671,6 +6687,7 @@ class TurtleClient:
         print(f"penchar={self.penchar!r}  # was {penchar!r}")
 
     def do_setxy(self) -> None:
+        """Choose which Character to draw with"""  # todo: Choose Color/ Char separately
 
         if self.pendown:
             print("NotImplementedError: SetXY while Pen Down")
@@ -6689,11 +6706,12 @@ class TurtleClient:
         # todo: trace Turtle X Y
 
     def do_showturtle(self) -> None:
+        """Start showing where the Turtle is"""
 
         text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
         self.str_write(text)
 
-        # todo: trace Turtle IsVisible
+        # todo: client shadow trace Turtle IsVisible
 
     #
     # Move the Turtle along the Line of its Heading
@@ -6767,6 +6785,7 @@ class TurtleClient:
         # todo: keep y x state between segments for more true angles
 
     def do_jump_punch(self, wx, wy, x, y) -> None:
+        """Move the Turtle by 1 Column or 1 Row or both, and leave a Mark if Pen Down"""
 
         pendown = self.pendown
         penchar = self.penchar
@@ -6812,12 +6831,14 @@ class TurtleClient:
         signal.signal(signal.SIGINT, getsignal)
 
     def str_write(self, text) -> None:
+        """Write the Text remotely, at the Turtle"""
 
         py = f"self.str_write({text!r})"
         rep = self.py_eval_to_repr(py)
         assert not rep, (rep, py)
 
     def py_eval_to_repr(self, py) -> str:
+        """Eval the Python remotely, inside the Turtle, and return the Repr of the Result"""
 
         try:
             pathlib.Path("stdin.mkfifo").write_text(py)
@@ -6830,6 +6851,7 @@ class TurtleClient:
         return read_text
 
     def os_terminal_size(self) -> tuple[int, int]:
+        """Sample the Terminal Width and Height remotely, inside the Turtle"""
 
         py = "os.get_terminal_size()"
         rep = self.py_eval_to_repr(py)
