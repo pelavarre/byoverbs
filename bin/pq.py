@@ -1645,12 +1645,13 @@ def pathlib_create_pbpaste_bin() -> None:
 
 
 #
-# Amp up Import TermIOs, Tty
+# Explore working with a Terminal like Vi, Emacs, Screen, & Ssh do
 #
 
 
 #
-# Demo's of:  pq em vi
+# Till we paused work on Class LineTerminal
+# Lots worked at:  pq em vi
 #
 #   Emacs  ⎋< ⎋> ⎋G⎋G ⎋GG ⎋GTab ⎋R
 #   Emacs  ⌃A ⌃B ⌃D ⌃E ⌃F ⌃K ⌃N ⌃O ⌃P
@@ -1673,7 +1674,7 @@ def pathlib_create_pbpaste_bin() -> None:
 #
 
 #
-# Todo's that watch the Screen more closely
+# pq-vi Todo's that watch the Screen more closely
 #
 #   Vim . to repeat Emacs ⌃D ⌃K ⌃O or Vim > < C D
 #   Vim . with Arg to repeat more than once
@@ -1724,7 +1725,7 @@ def pathlib_create_pbpaste_bin() -> None:
 #
 
 #
-# Pq Fixes:
+# pq-vi Pq Fixes:
 #
 #   More friction vs quitting without calling ⎋⇧M or ⎋⇧L K etc to keep the lower Rows of the Screen
 #
@@ -1734,7 +1735,7 @@ def pathlib_create_pbpaste_bin() -> None:
 #
 
 #
-# More Todo's:
+# pq-vi More Todo's:
 #
 #   Multiple Screens across Terminals or inside one Terminal
 #   Multiple Keyboards across Terminals, even cross Guests
@@ -1752,7 +1753,7 @@ def pathlib_create_pbpaste_bin() -> None:
 #
 
 #
-# Todo's that take Keyboard Input
+# pq-vi Todo's that take Keyboard Input
 #
 #   Logo Turtle Ascii-Graphics
 #
@@ -1794,7 +1795,7 @@ def pathlib_create_pbpaste_bin() -> None:
 #
 
 #
-# Python ToDo's
+# pq-vi Python ToDo's
 #
 #   Refactor to solve the various No-Q-A C901 Too-Complex
 #
@@ -2151,6 +2152,11 @@ MACOS_TERMINAL_CSI_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlmnq"
 #
 #   termios.TCSADRAIN doesn't drop Queued Input but blocks till Queued Output gone
 #   termios.TCSAFLUSH drops Queued Input and blocks till Queued Output gone
+#
+
+
+#
+# Amp up Import TermIOs, Tty
 #
 
 
@@ -6318,36 +6324,6 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 
 
-#
-# todo: have the BytesTerminal say when to yield, but yield in the ShadowsTerminal
-# todo: move the VT420 DECDC ⎋['~ and DECIC ⎋['} emulations up into the ShadowsTerminal
-#
-# todo: log the named-pipe work well enough to explain its hangs
-# todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
-#
-
-#
-# todo: hide the turtle only till its next move  # 🐢 HideTurtle WhileStill
-# todo: more bits of Turtle State on Screen somehow
-# todo: do & undo for Turtle work
-#
-# todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpc "🟢"
-# todo: pasting such as LargeGreenCircle into ⇧R of 'pq turtle', 'pq st yolo', etc
-#
-# todo: "-" negation signs in place of "~" negation signs
-# todo: literal arguments, like have 'help h' mean 'help "h"'
-# todo: escape more robustly into Python Exec & Eval, such as explicit func(arg) calls
-# todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
-# todo: prompts placed correctly in the echo of multiple lines of Input
-# todo: Command Input Line History
-#
-# todo: disentangle from Pq PbCopy/ PbPaste, especially when outside macOS
-#
-# reconcile with Python "import turtle" Graphics on TkInter
-# todo: KwArgs for Funcs
-#
-
-
 DegreeSign = unicodedata.lookup("Degree Sign")  # °
 Turtle = unicodedata.lookup("Turtle")  # 🐢
 
@@ -6599,13 +6575,13 @@ class TurtleClient:
         """Move the Turtle backwards along its Heading, tracing a Trail if Pen Down"""
 
         float_stride = self.stride if (stride is None) else float(stride)
-        self.do_bresenham_stride(-float_stride)
+        self.punch_bresenham_stride(-float_stride)
 
     def do_clearscreen(self) -> None:  # as if do_cs, do_cls do_clear
         """Write Spaces over every Character of every Screen Row and Column"""
 
         text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
-        self.str_write(text)  # todo: preserve Setxy despite ClearScreen
+        self.str_write(text)
 
         # just the Screen, not also its Scrollback
 
@@ -6613,7 +6589,7 @@ class TurtleClient:
         """Move the Turtle forwards along its Heading, tracing a Trail if Pen Down"""
 
         float_stride = +self.stride if (stride is None) else float(+stride)
-        self.do_bresenham_stride(float_stride)
+        self.punch_bresenham_stride(float_stride)
 
     def do_help(self, pattern=None) -> None:  # as if do_h
         """List the Command Verbs"""
@@ -6745,31 +6721,12 @@ class TurtleClient:
         float_x = 0 if (x is None) else float(x)
         float_y = 0 if (y is None) else float(y)
 
-        # Find the Cursor
+        (x1, y1) = self.os_terminal_x_y()
 
-        py = "self.write_dsr_read_kcpr_y_x()"
-        rep = self.py_eval_to_repr(py)
-        kcpr_y_x = ast.literal_eval(rep)
+        x2 = round(float_x)
+        y2 = round(float_y / 2)  # / 2 for rectangular pixels
 
-        (y_row, x_column) = kcpr_y_x
-        assert isinstance(y_row, int), (type(y_row), y_row)
-        assert isinstance(x_column, int), (type(x_column), x_column)
-
-        # Find the Center of Screen
-
-        x_columns, y_lines = self.os_terminal_size()
-        cx = 1 + (x_columns // 2)
-        cy = 1 + (y_lines // 2)
-
-        # Go somewhere
-
-        x1 = x_column - cx
-        y1 = -(y_row - cy)
-
-        x2 = float_x
-        y2 = float_y / 2  # / 2 for rectangular pixels
-
-        self.do_bresenham_segment(x1=int(x1), y1=int(y1), x2=int(x2), y2=int(y2))
+        self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
 
         # todo: client shadow trace Turtle X Y
         # todo: setx without setxy, sety without setxy
@@ -6786,34 +6743,33 @@ class TurtleClient:
     # Move the Turtle along the Line of its Heading
     #
 
-    def do_bresenham_stride(self, stride) -> None:
+    def punch_bresenham_stride(self, stride) -> None:
         """Step forwards, or backwards, along the Heading"""
 
         heading = self.heading  # 0° North Up Clockwise
 
-        py = "self.write_dsr_read_kcpr_y_x()"
-        rep = self.py_eval_to_repr(py)
-        kcpr_y_x = ast.literal_eval(rep)
-        (y_row, x_column) = kcpr_y_x
+        (x1, y1) = self.os_terminal_x_y()
 
         angle = (90 - heading) % 360  # converts to 0° East Anticlockwise
-        x1 = x_column
-        y1 = -y_row
-
         x = x1 + (stride * math.cos(math.radians(angle)))  # destination
         y = y1 + (stride * math.sin(math.radians(angle)) / 2)  # / 2 for rectangular pixels
 
-        x2 = round(x)
+        x2 = round(x)  # todo: keep unrounded y x between Segments for more true angles?
         y2 = round(y)
 
-        self.do_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
+        self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
 
-        # FIXME: calc Stride X1 Y1 vs an origin of 0, 0 Center, not from Lower Left Screen
+        # todo: keep y x state between Segments for more true angles?
 
-    def do_bresenham_segment(self, x1, y1, x2, y2) -> None:
+    def punch_bresenham_segment(self, x1: int, y1: int, x2: int, y2: int) -> None:
         """Step forwards, or backwards, through (Row, Column) choices"""
 
-        print(f"{x1=} {y1=}  {x2=} {y2=}")
+        assert isinstance(x1, int), (type(x1), x1)
+        assert isinstance(y1, int), (type(y1), y1)
+        assert isinstance(y2, int), (type(y2), y2)
+        assert isinstance(x2, int), (type(x2), x2)
+
+        print(f"{x1=} {y1=} ({2*y1}e0)  {x2=} {y2=} ({2*y2}e0)")
 
         x2x1 = abs(x2 - x1)  # distance
         y2y1 = abs(y2 - y1)
@@ -6827,7 +6783,7 @@ class TurtleClient:
         wy = y = y1
         while True:
 
-            self.do_jump_punch(int(wx), wy=int(-wy), x=int(x), y=int(-y))
+            self.jump_then_punch(wx, wy=-wy, x=x, y=-y)
             if (x == x2) and (y == y2):
                 break
 
@@ -6857,11 +6813,8 @@ class TurtleClient:
         #   to turn my y = a*x + b equation into a list of pixels to turn on?
         #
 
-        # todo: scale for rectangular pixels
-        # todo: keep y x state between segments for more true angles
-
-    def do_jump_punch(self, wx, wy, x, y) -> None:
-        """Move the Turtle by 1 Column or 1 Row or both, and leave a Mark if Pen Down"""
+    def jump_then_punch(self, wx, wy, x, y) -> None:
+        """Move the Turtle by 1 Column or 1 Row or both, and punch out a Mark if Pen Down"""
 
         pendown = self.pendown
         penchar = self.penchar
@@ -6926,6 +6879,32 @@ class TurtleClient:
 
         return read_text
 
+    def os_terminal_x_y(self) -> tuple[int, int]:
+        """Sample the X Y Position remotely, inside the Turtle"""
+
+        # Find the Cursor
+
+        py = "self.write_dsr_read_kcpr_y_x()"
+        rep = self.py_eval_to_repr(py)
+        kcpr_y_x = ast.literal_eval(rep)
+
+        (y_row, x_column) = kcpr_y_x
+        assert isinstance(y_row, int), (type(y_row), y_row)
+        assert isinstance(x_column, int), (type(x_column), x_column)
+
+        # Find the Center of Screen
+
+        x_columns, y_lines = self.os_terminal_size()
+        cx = 1 + (x_columns // 2)
+        cy = 1 + (y_lines // 2)
+
+        # Say how far away from Center the Cursor is, on a plane of Y is Up and X is Right
+
+        x1 = x_column - cx
+        y1 = -(y_row - cy)
+
+        return (x1, y1)
+
     def os_terminal_size(self) -> tuple[int, int]:
         """Sample the Terminal Width and Height remotely, inside the Turtle"""
 
@@ -6940,6 +6919,66 @@ class TurtleClient:
         size = os.terminal_size([int(x_columns), int(y_lines)])
 
         return size
+
+
+#
+# 🐢 Bug Fixes  # todo
+#
+# todo: solve the thin grey flats left on screen behind:  cs setxy 10 10 home
+#
+# todo: log the named-pipe work well enough to explain its hangs
+# todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
+#
+# todo: disentangle from Pq PbCopy/ PbPaste, especially when outside macOS
+#
+
+#
+# 🐢 Python Makeovers  # todo
+#
+# todo: have the BytesTerminal say when to yield, but yield in the ShadowsTerminal
+# todo: move the VT420 DECDC ⎋['~ and DECIC ⎋['} emulations up into the ShadowsTerminal
+#
+# todo: reconcile with Python "import turtle" Graphics on TkInter
+# todo: reconsole with FMSLogo https://fmslogo.sourceforge.io/manual/where-to-start.html
+
+#
+# 🐢 Turtle Commands  # todo
+#
+# todo: random moves
+# todo: cyclic moves in Color, in Pen Down
+# todo: arc(angle, radius) with a design for center & end-position
+# todo: collisions, gravity, friction
+#
+# todo: beep less arcanely than via self.str_write "\a"
+# todo: color less arcanely than via self.str_write "\x1B[36m"
+#   as with  ⎋[31m red  ⎋[32m green  ⎋[36m cyan  ⎋[38;5;130m orange
+# todo: hide the turtle only till its next move  # 🐢 HideTurtle WhileStill
+#
+
+#
+# 🐢 Turtle Graphics Engine  # todo
+#
+# todo: more bits of Turtle State on Screen somehow
+# todo: more perceptible Screen State, such as the Chars there already
+# todo: do & undo for Turtle work
+#
+# todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpc "🟢"
+# todo: pasting such as LargeGreenCircle into ⇧R of 'pq turtle', 'pq st yolo', etc
+#
+
+#
+# 🐢 Turtle Chat Engine  # todo
+#
+# todo: "-" negation signs in place of "~" negation signs
+# todo: literal arguments, like have 'help h' mean 'help "h"'
+#
+# todo: escape more robustly into Python Exec & Eval, such as explicit func(arg) calls
+# todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
+# todo: prompts placed correctly in the echo of multiple lines of Input
+# todo: Command Input Line History
+#
+# todo: KwArgs for Funcs
+#
 
 
 #
