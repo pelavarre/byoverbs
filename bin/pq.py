@@ -6341,6 +6341,7 @@ class TurtleClient:
 
     penchar: str  # mark to print at each step
     pendown: bool  # printing marks, or not
+    hiding: bool  # hiding the Turtle, or not
     sleep: float  # time between marks
 
     # todo: .stride vs Logo SetStepSize
@@ -6358,6 +6359,7 @@ class TurtleClient:
 
         self.penchar = "*"
         self.pendown = False
+        self.hiding = False
         # self.sleep = 1 / 30  # happiest? for:  fdboxbox.logo
         self.sleep = 1 / 100  # happiest? for:  headings.logo
 
@@ -6365,8 +6367,11 @@ class TurtleClient:
         """Warp the Turtle to Home, but do Not clear the Screen"""
 
         self.reinit()
+        self.do_hideturtle()
+        self.do_home()
+        self.do_showturtle()
 
-        print(
+        print(  # no matter if changed, or not changed
             f"heading={self.heading}"
             f" stride={self.stride}"
             f" penchar={self.penchar}"
@@ -6374,10 +6379,7 @@ class TurtleClient:
             f" sleep={self.sleep}"
         )
 
-        self.do_home()
-        self.do_showturtle()
-
-        py = 'self.str_write("\x1B" "[" "m")'  # CSI 06/13
+        py = 'self.str_write("\x1B" "[" "m")'  # CSI 06/13 Select Graphic Rendition (SGR)
         rep = self.py_eval_to_repr(py)
         assert not rep, (rep, py)
 
@@ -6389,6 +6391,7 @@ class TurtleClient:
         """Read 1 Line, Eval it, Print its result, Loop (REPL Chat)"""
 
         # Cancel the Vi choice of a Cursor Style
+        # Trust Vi to have already chosen ShowTurtle & no SGR
 
         py = 'self.str_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
         rep = self.py_eval_to_repr(py)
@@ -6459,7 +6462,7 @@ class TurtleClient:
                     continue
 
             if not prefixes:
-                print(f"{tail=} {strip=}  # no prefixes")
+                # print(f"{tail=} {strip=}  # no prefixes")
                 return strip
 
             py = prefixes[-1]
@@ -6639,10 +6642,14 @@ class TurtleClient:
     def do_hideturtle(self) -> None:  # as if do_ht
         """Stop showing where the Turtle is"""
 
+        hiding = self.hiding
+
         text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
         self.str_write(text)
 
-        # todo: client shadow trace Turtle IsVisible
+        self.hiding = True
+        if self.hiding != hiding:
+            print(f"hiding={self.hiding}  # was {hiding}")
 
     def do_left(self, angle=None) -> None:  # as if do_lt
         """Turn the Turtle anticlockwise, by a 90° Right Angle, or some other Angle"""
@@ -6651,14 +6658,16 @@ class TurtleClient:
 
         float_angle = 90e0 if (angle is None) else float(angle)
         self.heading = (heading - float_angle) % 360  # 360° Circle
-        print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
+        if self.heading != heading:
+            print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
     def do_pendown(self) -> None:  # as if do_pd
         """Plan to leave a Trail as the Turtle moves"""
 
         pendown = self.pendown
         self.pendown = True
-        print(f"pendown={self.pendown}  # was {pendown}")
+        if self.pendown != pendown:
+            print(f"pendown={self.pendown}  # was {pendown}")
 
         # todo: calculated boolean args for pd pu ht st
 
@@ -6667,7 +6676,8 @@ class TurtleClient:
 
         pendown = self.pendown
         self.pendown = False
-        print(f"pendown={self.pendown}  # was {pendown}")
+        if self.pendown != pendown:
+            print(f"pendown={self.pendown}  # was {pendown}")
 
     def do_right(self, angle=None) -> None:  # as if do_rt
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
@@ -6676,7 +6686,8 @@ class TurtleClient:
 
         float_angle = 90e0 if (angle is None) else float(angle)
         self.heading = (heading + float_angle) % 360  # 360° Circle
-        print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
+        if self.heading != heading:
+            print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
     def do_setheading(self, angle=None) -> None:  # as if do_seth
         """Turn the Turtle to move 0° North, or to some other Heading"""
@@ -6684,7 +6695,8 @@ class TurtleClient:
         heading = self.heading  # turning North
 
         self.heading = TurtleNorth
-        print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
+        if self.heading != heading:
+            print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
     def do_sethertz(self, hertz=None) -> None:
 
@@ -6697,7 +6709,8 @@ class TurtleClient:
 
         self.sleep = sleep_
 
-        print(f"sleep={self.sleep}s  # was {sleep}s")
+        if self.sleep != sleep:
+            print(f"sleep={self.sleep}s  # was {sleep}s")
 
     def do_setpencolor(self, ch=None) -> None:  # as if do_setpc
         """Choose which Character to draw with"""  # todo: Choose Color/ Char separately
@@ -6713,7 +6726,8 @@ class TurtleClient:
 
         self.penchar = alt_penchar
 
-        print(f"penchar={self.penchar!r}  # was {penchar!r}")
+        if self.penchar != penchar:
+            print(f"penchar={self.penchar!r}  # was {penchar!r}")
 
     def do_setxy(self, x=None, y=None) -> None:
         """Move the Turtle to an X Y Point, tracing a Trail if Pen Down"""
@@ -6734,10 +6748,14 @@ class TurtleClient:
     def do_showturtle(self) -> None:
         """Start showing where the Turtle is"""
 
+        hiding = self.hiding
+
         text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
         self.str_write(text)
 
-        # todo: client shadow trace Turtle IsVisible
+        self.hiding = False
+        if self.hiding != hiding:
+            print(f"hiding={self.hiding}  # was {hiding}")
 
     #
     # Move the Turtle along the Line of its Heading
@@ -6816,6 +6834,7 @@ class TurtleClient:
     def jump_then_punch(self, wx, wy, x, y) -> None:
         """Move the Turtle by 1 Column or 1 Row or both, and punch out a Mark if Pen Down"""
 
+        hiding = self.hiding
         pendown = self.pendown
         penchar = self.penchar
         sleep = self.sleep
@@ -6843,7 +6862,8 @@ class TurtleClient:
 
         self.str_write(text)
 
-        time.sleep(sleep)
+        if not hiding:
+            time.sleep(sleep)
 
     #
     # Layer thinly over 1 ShadowsTerminal, found at the far side of 2 Named Pipes
@@ -6971,6 +6991,8 @@ class TurtleClient:
 #
 # todo: "-" negation signs in place of "~" negation signs
 # todo: literal arguments, like have 'help h' mean 'help "h"'
+#
+# todo: nonliteral arguments  # 'heading', 'position', 'isvisible', etc
 #
 # todo: escape more robustly into Python Exec & Eval, such as explicit func(arg) calls
 # todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
