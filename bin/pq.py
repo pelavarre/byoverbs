@@ -6863,9 +6863,9 @@ class TurtleClient:
         x2 = round(float_x__)
         y2 = round(float_y__)
 
-        fuzzing1 = False  # shows why Round over Int at X2 Y2, for 'headings.logo' etc
-        if fuzzing1:  # fail test of:  cs  pu home reset pd  rt rt fd  rt fd 400
-            print(f"FUZZING1 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x_} {float_y_} FUZZING1")
+        fuzz1 = False  # shows why Round over Int at X2 Y2, for 'headings.logo'
+        if fuzz1:  # fail test of:  cs  pu home reset pd  rt rt fd  rt fd 400
+            print(f"FUZZ1 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x_} {float_y_} FUZZ1")
             x2 = int(float_x_)
             y2 = int(float_y_)
 
@@ -6874,9 +6874,9 @@ class TurtleClient:
         self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
         print(f"float {float_x} {float_y} {float_x__} {float_y__}")
 
-        fuzzing2 = False  # shows why Precise Y X Shadows, for such as Pentagon:  cs reset pd  fd rt 72
-        if fuzzing2:  # fail test of:  cs  pu home reset pd  rt rt fd  rt fd 400
-            print(f"FUZZING2 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x__} {float_y__} FUZZING2")
+        fuzz2 = False  # shows why Precise Y X Shadows, for Pentagon:  cs reset pd  fd rt 72
+        if fuzz2:  # fail test of:  cs  pu home reset pd  rt rt fd  rt fd 400
+            print(f"FUZZ2 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x__} {float_y__} FUZZ2")
             float_x__ = float(x2)
             float_y__ = float(y2)
 
@@ -7109,8 +7109,7 @@ def print_if(*args, **kwargs) -> None:
 #
 # todo: solve why ↓ ↑ Keys too small when drawn by:  demos/arrow-keys.logo
 #
-# todo: log the named-pipe mkfifo work well enough to explain its hangs @ Linux & macOS
-# todo: add lots of prints to Server & Clients till it makes sense
+# todo: repro/ fix remaining occasional hangs in the named-pipe mkfifo of Linux & macOS
 # todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
 #
 # todo: disentangle from Pq PbCopy/ PbPaste, especially when outside macOS
