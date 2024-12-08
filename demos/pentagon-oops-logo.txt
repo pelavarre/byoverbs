@@ -1,16 +1,22 @@
+# pentagon-oops-logo.txt
 
-# clearscreen reset pendown
-# fd rt 72
-
-
-            ***
-       *****   **
-    ***          *
-    *             **
-    *               *
-    *             **
-    ***          *
-    *  *****   **
-            ***
+# Remember how an 'fd rt 72' Pentagon doesn't close on itself,
+#   when you draw it with fuzzier int's in place of sharper float's
 
 
+# clearscreen reset pendown  # fd rt 72
+
+
+                ***
+           *****   **
+        ***          *
+        *             **
+        *               *
+        *             **
+        ***          *
+        *  *****   **
+                ***
+
+
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/pentagon-oops-logo.txt
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

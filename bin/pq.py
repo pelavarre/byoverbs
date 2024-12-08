@@ -6327,14 +6327,13 @@ DegreeSign = unicodedata.lookup("Degree Sign")  # °
 Turtle = unicodedata.lookup("Turtle")  # 🐢
 
 
-TurtleNorth = 0  # 0° of North Up Clockwise
-
-
 class TurtleClient:
     """Run at Keyboard and Screen as a Shell, to command 1 Turtle via two MkFifo"""
 
     ps1 = f"{Turtle}? "  # prompt for Turtle Client Shell
 
+    float_x: float  # sub-pixel shadow of horizontal position
+    float_y: float  # sub-pixel shadow of vertical position
     heading: float  # stride direction
     stride: float  # stride size
 
@@ -6353,8 +6352,10 @@ class TurtleClient:
 
     def reinit(self) -> None:
 
-        self.heading = TurtleNorth
-        self.stride = 100
+        self.float_x = 0e0
+        self.float_y = 0e0
+        self.heading = 0e0  # 0° of North Up Clockwise
+        self.stride = 100e0
 
         self.penchar = "*"
         self.pendown = False
@@ -6439,13 +6440,14 @@ class TurtleClient:
         if not strip:
             return ""
 
-        if strip.startswith("#"):
+        part = strip.partition("#")[0].strip()
+        if not part:
             return ""
 
         # Split the 1 Line into its widest Py Expressions from the Left
 
         pys = list()
-        tail = strip
+        tail = part
         while tail:
             prefixes = list()
             for index in range(0, len(tail)):
@@ -6461,15 +6463,15 @@ class TurtleClient:
                     continue
 
             if not prefixes:
-                # print(f"{tail=} {strip=}  # no prefixes")
-                return strip
+                # print(f"{tail=} {part=}  # no prefixes")
+                return part
 
             py = prefixes[-1]
             pys.append(py)
 
             tail = tail[len(py) :]
 
-        assert "".join(pys) == strip, (pys, strip)
+        assert "".join(pys) == part, (pys, part)
 
         # print(f"{pys=}")  # FIXME: '-' negative signs in place of '~' negation signs
         # breakpoint()
@@ -6630,7 +6632,7 @@ class TurtleClient:
     def do_forward(self, stride=None) -> None:  # as if do_fd
         """Move the Turtle forwards along its Heading, tracing a Trail if Pen Down"""
 
-        float_stride = +self.stride if (stride is None) else float(+stride)
+        float_stride = self.stride if (stride is None) else float(stride)
         self.punch_bresenham_stride(float_stride)
 
     def do_help(self, pattern=None) -> None:  # as if do_h
@@ -6733,7 +6735,8 @@ class TurtleClient:
 
         heading = self.heading  # turning North
 
-        self.heading = TurtleNorth
+        float_angle = 0e0 if (angle is None) else float(angle)  # 0° of North Up Clockwise
+        self.heading = float_angle % 360  # 360° Circle
         if self.heading != heading:
             print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
@@ -6771,17 +6774,19 @@ class TurtleClient:
     def do_setxy(self, x=None, y=None) -> None:
         """Move the Turtle to an X Y Point, tracing a Trail if Pen Down"""
 
-        float_x = 0 if (x is None) else float(x)
-        float_y = 0 if (y is None) else float(y)
+        float_x = 0e0 if (x is None) else float(x)
+        float_y = 0e0 if (y is None) else float(y)
 
         (x1, y1) = self.os_terminal_x_y()
 
         x2 = round(float_x / 10)  # / 10 to a screen of a few large pixels
-        y2 = round(float_y / 10 / 2)  # / 2 for rectangular pixels
+        y2 = round(float_y / 10 / 2)  # / 2 for thin pixels
 
         self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
 
-        # todo: client shadow trace Turtle X Y
+        self.float_x = float_x  # not 'float_x_'
+        self.float_y = float_y  # not 'float_y_'
+
         # todo: setx without setxy, sety without setxy
 
     def do_showturtle(self) -> None:
@@ -6808,17 +6813,24 @@ class TurtleClient:
         heading = self.heading  # 0° North Up Clockwise
 
         (x1, y1) = self.os_terminal_x_y()
+        float_x = self.float_x
+        float_y = self.float_y
+        assert (x1 == round(float_x)) and (y1 == round(float_y)), (x1, float_x, y1, float_y)
 
         angle = (90 - heading) % 360  # converts to 0° East Anticlockwise
-        x = x1 + (stride_ * math.cos(math.radians(angle)))  # destination
-        y = y1 + (stride_ * math.sin(math.radians(angle)) / 2)  # / 2 for rectangular pixels
+        float_x_ = float_x + (stride_ * math.cos(math.radians(angle)))  # destination
+        float_x_ = round(float_x_, 10)  # todo: how round should our Float Maths be?
+        float_y_ = float_y + (stride_ * math.sin(math.radians(angle)) / 2)  # / 2 for thin pixels
+        float_y_ = round(float_y_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
 
-        x2 = round(x)  # todo: keep unrounded y x between Segments for more true angles?
-        y2 = round(y)
+        x2 = round(float_x_)  # todo: keep unrounded y x between Segments for more true angles?
+        y2 = round(float_y_)
 
         self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
+        print(f"float {float_x} {float_y} {float_x_} {float_y_}")
 
-        # todo: keep y x state between Segments for more true angles?
+        self.float_x = float_x_
+        self.float_y = float_y_
 
     def punch_bresenham_segment(self, x1: int, y1: int, x2: int, y2: int) -> None:
         """Step forwards, or backwards, through (Row, Column) choices"""
@@ -6947,6 +6959,9 @@ class TurtleClient:
     def os_terminal_x_y(self) -> tuple[int, int]:
         """Sample the X Y Position remotely, inside the Turtle"""
 
+        float_x = self.float_x
+        float_y = self.float_y
+
         # Find the Cursor
 
         (y_row, x_column) = self.os_terminal_y_row_x_column()
@@ -6961,6 +6976,18 @@ class TurtleClient:
 
         x1 = x_column - cx
         y1 = -(y_row - cy)
+
+        # Snap the Shadow to the Cursor Row-Column, if the Cursor moved
+
+        if (x1 != round(float_x)) or (y1 != round(float_y)):
+            float_x_ = float(x1)  # 'explicit is better than implicit'
+            float_y_ = float(y1)
+
+            print(f"snap to {float_x_} {float_y_} from {float_x} {float_y}")
+            self.float_x = float_x_
+            self.float_y = float_y_
+
+        # Succeed
 
         return (x1, y1)
 
@@ -7046,7 +7073,7 @@ class TurtleClient:
 # todo: take Heading in from Vi
 # todo: compose the Logo Command that sums up the Vi choices
 #
-# todo: Ellipse etc via SetScrunch to tweak our fixed '/ 2 for rectangular pixels'
+# todo: Ellipse etc via SetScrunch to tweak our fixed '/ 2 for thin pixels'
 #
 # todo: thicker Pixels and/or thicker Pens
 #
