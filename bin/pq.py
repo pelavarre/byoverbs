@@ -6355,7 +6355,7 @@ class TurtleClient:
     def reinit(self) -> None:
 
         self.heading = TurtleNorth
-        self.stride = 10
+        self.stride = 100
 
         self.penchar = "*"
         self.pendown = False
@@ -6410,8 +6410,8 @@ class TurtleClient:
                 continue
 
             if not readline:  # accepts ⌃D Tty End
-                print("bye")  # not from "bye", "end", "exit", "quit", ...
-                sys.exit()
+                self.do_bye()
+                assert False  # unreached
 
             # Prompt & read 1 Line from Keyboard, till ⌃D Tty End pressed to quit
 
@@ -6540,6 +6540,7 @@ class TurtleClient:
             "bk": self.do_backward,  #
             "back": self.do_backward,  #
             "backward": self.do_backward,
+            "bye": self.do_bye,
             "clear": self.do_clearscreen,  #
             "clearscreen": self.do_clearscreen,
             "cls": self.do_clearscreen,  #
@@ -6581,6 +6582,12 @@ class TurtleClient:
 
         float_stride = self.stride if (stride is None) else float(stride)
         self.punch_bresenham_stride(-float_stride)
+
+    def do_bye(self) -> None:
+        """Quit the Turtle Chat"""
+
+        print("bye")  # not from "bye", "end", "exit", "quit", ...
+        sys.exit()
 
     def do_clearscreen(self) -> None:  # as if do_cs, do_cls do_clear
         """Write Spaces over every Character of every Screen Row and Column"""
@@ -6739,8 +6746,8 @@ class TurtleClient:
 
         (x1, y1) = self.os_terminal_x_y()
 
-        x2 = round(float_x)
-        y2 = round(float_y / 2)  # / 2 for rectangular pixels
+        x2 = round(float_x / 10)  # / 10 to a screen of a few large pixels
+        y2 = round(float_y / 10 / 2)  # / 2 for rectangular pixels
 
         self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
 
@@ -6766,13 +6773,15 @@ class TurtleClient:
     def punch_bresenham_stride(self, stride) -> None:
         """Step forwards, or backwards, along the Heading"""
 
+        stride_ = float(stride) / 10  # / 10 to a screen of a few large pixels
+
         heading = self.heading  # 0° North Up Clockwise
 
         (x1, y1) = self.os_terminal_x_y()
 
         angle = (90 - heading) % 360  # converts to 0° East Anticlockwise
-        x = x1 + (stride * math.cos(math.radians(angle)))  # destination
-        y = y1 + (stride * math.sin(math.radians(angle)) / 2)  # / 2 for rectangular pixels
+        x = x1 + (stride_ * math.cos(math.radians(angle)))  # destination
+        y = y1 + (stride_ * math.sin(math.radians(angle)) / 2)  # / 2 for rectangular pixels
 
         x2 = round(x)  # todo: keep unrounded y x between Segments for more true angles?
         y2 = round(y)
@@ -6789,7 +6798,7 @@ class TurtleClient:
         assert isinstance(y2, int), (type(y2), y2)
         assert isinstance(x2, int), (type(x2), x2)
 
-        print(f"{x1=} {y1=} ({2*y1}e0)  {x2=} {y2=} ({2*y2}e0)")
+        print(f"{x1=} {y1=} ({2 * y1}e0)  {x2=} {y2=} ({2 * y2}e0)")
 
         x2x1 = abs(x2 - x1)  # distance
         y2y1 = abs(y2 - y1)
@@ -6948,6 +6957,9 @@ class TurtleClient:
 #
 # todo: solve the thin grey flats left on screen behind:  cs setxy 10 10 home
 #
+# todo: solve why ↓ ↑ Keys too small when drawn by:  demos/arrow-keys.logo
+# todo: solve why Pentagon doesn't close when drawn as in:  demos/pentagon-oops-logo.txt
+#
 # todo: log the named-pipe work well enough to explain its hangs
 # todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
 #
@@ -6960,25 +6972,53 @@ class TurtleClient:
 # todo: have the BytesTerminal say when to yield, but yield in the ShadowsTerminal
 # todo: move the VT420 DECDC ⎋['~ and DECIC ⎋['} emulations up into the ShadowsTerminal
 #
-# todo: reconcile with Python "import turtle" Graphics on TkInter
-# todo: reconsole with FMSLogo https://fmslogo.sourceforge.io/manual/where-to-start.html
+
+#
+# 🐢 Turtle Demos  # todo
+#
+# todo: colorful spirography
+# todo: abs square:  cs reset pd  setxy 0 100  setxy 100 100  setxy 100 0  setxy 0 0
+#
 
 #
 # 🐢 Turtle Commands  # todo
 #
 # todo: random moves
-# todo: cyclic moves in Color, in Pen Down
+# todo: cyclic moves in Color, in Pen Down, and help catalog more than 8 Colors
+# todo: Pen Colors that mix with the Screen: PenPaint/ PenReverse/ PenErase
+# todo: hide the turtle only till its next move  # 🐢 HideTurtle WhileStill
+#
+# todo: circles, ellipses
 # todo: arc(angle, radius) with a design for center & end-position
+# todo: arcs with more args at https://fmslogo.sourceforge.io/manual/command-ellipsearc.html
 # todo: collisions, gravity, friction
 #
+# todo: Logo verb 'label' to mean our self.str_write
 # todo: beep less arcanely than via self.str_write "\a"
 # todo: color less arcanely than via self.str_write "\x1B[36m"
 #   as with  ⎋[31m red  ⎋[32m green  ⎋[36m cyan  ⎋[38;5;130m orange
-# todo: hide the turtle only till its next move  # 🐢 HideTurtle WhileStill
+#
+# todo: scroll and resize the window
 #
 
 #
 # 🐢 Turtle Graphics Engine  # todo
+#
+# todo: take Heading in from Vi
+# todo: compose the Logo Command that sums up the Vi choices
+#
+# todo: Ellipse etc via SetScrunch to tweak our fixed '/ 2 for rectangular pixels'
+#
+# todo: thicker Pixels and/or thicker Pens
+#
+# todo: z-layers, like one out front with more fun Cursors as Turtle
+# todo: fill and clear to collision, with colors, with patterns
+# todo: 3D Turtle position & trace
+#
+# todo: cap cursor position at edges, wrap cursor at edges, error at edges
+# todo: draw on a Canvas larger than the screen
+# todo: checkpoint/ commit/ restore the Canvas
+# todo: export the Canvas as .typescript, styled & colored
 #
 # todo: more bits of Turtle State on Screen somehow
 # todo: more perceptible Screen State, such as the Chars there already
@@ -6995,13 +7035,32 @@ class TurtleClient:
 # todo: literal arguments, like have 'help h' mean 'help "h"'
 #
 # todo: nonliteral arguments  # 'heading', 'position', 'isvisible', etc
+# todo: deal with Logo Legacy of 'func nary' vs '(func nary and more and more)'
 #
 # todo: escape more robustly into Python Exec & Eval, such as explicit func(arg) calls
 # todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
+#
 # todo: prompts placed correctly in the echo of multiple lines of Input
 # todo: Command Input Line History
 #
 # todo: KwArgs for Funcs
+# todo: VsCode for .logo, for .lgo, ...
+#
+# todo: reconcile with Python "import turtle" Graphics on TkInter
+#
+
+#
+# 🐢 Turtle Chat References
+#
+#   FMSLogo for Linux Wine/ Windows (does the Linux Wine work?)
+#   https://fmslogo.sourceforge.io
+#   https://fmslogo.sourceforge.io/manual/where-to-start.html
+#
+#   UCBLogo for Linux/ macOS/ Windows <- USA > U of California Berkeley (UCB)
+#   https://people.eecs.berkeley.edu/~bh/logo.html
+#
+#   References listed by https://people.eecs.berkeley.edu/~bh/other-logos.html
+#   References listed by https://fmslogo.sourceforge.io/manual/where-to-start.html
 #
 
 

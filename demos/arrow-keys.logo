@@ -1,0 +1,40 @@
+# arrow-keys.logo
+
+# Draw the ← ↓ → and ↑ Keys of a MacBook Keyboard
+
+cs reset
+
+# Draw the → Key to the right of Center
+
+st pd seth
+fd rt 120  fd rt 120  fd rt 120
+pu ht home
+
+# Draw the ← Key far away at the Left
+
+lt fd 300
+
+st pd seth
+fd lt 120  fd lt 120  fd lt 120
+pu ht home
+
+# Draw the ↓ Key in the Middle, between the ← Key and the the → Key
+
+lt fd 200
+rt fd 80  # not 100 while the ↓ and ↑ drawn small
+
+st pd seth rt
+fd rt 120  fd rt 120  fd rt 120
+pu ht home
+
+# Draw the ↑ Key above the rest
+
+lt fd 200
+rt fd fd 80  # not 100 while the ↓ and ↑ drawn small
+
+st pd seth rt
+fd lt 120  fd lt 120  fd lt 120
+pu ht home
+
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/arrow-keys.logo
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git
