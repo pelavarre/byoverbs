@@ -3,6 +3,9 @@
 # Draw two ← ↑ → ↓ square'ish boxes, concentrically, clockwise
 
 
+clearscreen reset pendown
+
+
 st
 pd
 

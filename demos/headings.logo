@@ -3,9 +3,10 @@
 
 # Draw Lines of 30°, 45°, 60°, and 90° in each Quadrant
 
-cs reset
 
-sethertz 100  # sethertz 1000  # sethertz 0  # those others often choke
+clearscreen reset pendown
+sethertz 1000
+
 
 pu home pd fd 300
 pu home pd rt 30 fd 300

@@ -2197,13 +2197,19 @@ class BytesTerminal:
         self.kbytes_list = list()
         self.sbytes_list = list()
 
-        #
+        # Attach a Debug Client if nearby
+        # todo: define a Cli Option to refuse/ demand a nearby Debug Client
 
         ifile_else = None
 
         if os.path.exists("stdin.mkfifo") and os.path.exists("stdout.mkfifo"):
+
+            print_if("Server Open Pathname")
             fd = os.open("stdin.mkfifo", os.O_RDONLY | os.O_NONBLOCK)
+
+            print_if("Server Open File Descriptor Entry")
             ifile = os.fdopen(fd, "r")
+            print_if("Server Open File Descriptor Exit")
             assert ifile.fileno() == fd, (ifile.fileno(), fd)
 
             ifile_else = ifile
@@ -2549,13 +2555,34 @@ class BytesTerminal:
             xlist: list[int] = list()
             timeout_eq_None = None
 
+            print_if("Server Select Entry")
             (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout_eq_None)
+            print_if("")
+            print_if(f"Server Select Exit: {alt_rlist}")
 
             if ifile.fileno() not in alt_rlist:
                 assert stdio.fileno() in alt_rlist, (stdio.fileno(), alt_rlist, ifile.fileno())
                 return
 
+            # opener1 = ""  # "<client>"
+            # closer1 = ""  # "<tneilc>"
+
+            print_if("Server Read Entry")
             read = ifile.read()
+            if not read:
+                print_if("False Select Select Oh Well Continue")
+                continue
+            print_if(f"Server Read Exit text={read!r}")
+
+            # assert read.startswith(opener1), (read, opener1)
+            # assert read.endswith(closer1), (read, closer1)
+
+            # read_core = read[len(opener1) : -len(closer1)]
+
+            read_core = read
+
+            # opener2 = ""  # "<server>"
+            # closer2 = ""  # "<revres>"
 
             alt_locals: dict
             alt_locals = dict(self=self)
@@ -2563,15 +2590,22 @@ class BytesTerminal:
             result = None
             if read.strip():
                 try:
-                    result = eval(read, globals(), alt_locals)
+                    result = eval(read_core, globals(), alt_locals)
                 except Exception:
                     result = traceback.format_exc()
 
+            text = repr(result)  # even when 'None'
+            assert text, (text, result)
+
             opath = pathlib.Path("stdout.mkfifo")
-            if result is None:
-                opath.write_text("")
-            else:
-                opath.write_text(repr(result) + "")
+            print_if(f"Server Write {text=}")
+            opath.write_text(text)
+            # try:
+            # opath.write_text(opener2 + text + closer2)
+            # except BrokenPipeError:  # todo: predict how many BrokenPipeError's the Server must survive
+            #     print_if("Server 2nd Write")
+            #     opath.write_text(opener2 + text + closer2)
+            print_if("Server Write Exit")
 
     def kbhit(self, timeout) -> bool:  # 'timeout' in seconds - 0 for now, None for forever
         """Block till next Input Byte, else till Timeout, else till forever"""
@@ -6409,6 +6443,8 @@ class TurtleClient:
                 self.breakpoint()
                 continue
 
+            print_if(f"{readline=}")
+
             if not readline:  # accepts ⌃D Tty End
                 self.do_bye()
                 assert False  # unreached
@@ -6425,7 +6461,8 @@ class TurtleClient:
                         try:
                             print(eval(rep))
                         except Exception:
-                            print(rep)
+                            traceback.print_exc()
+                            # print(rep)  # FIXME
 
     #
     # Eval 1 Line of Input
@@ -6942,19 +6979,39 @@ class TurtleClient:
     def py_eval_to_repr(self, py) -> str:
         """Eval the Python remotely, inside the Turtle, and return the Repr of the Result"""
 
+        # opener1 = ""  # "<client>"
+        # closer1 = ""  # "<tneilc>"
+
+        print_if(f"Client Write text={py!r}")
         try:
+            # pathlib.Path("stdin.mkfifo").write_text(opener1 + py + closer1)
             pathlib.Path("stdin.mkfifo").write_text(py)
         except BrokenPipeError:
             print("BrokenPipeError", file=sys.stderr)
             sys.exit()  # exits zero to shrug off BrokenPipeError
 
+        # opener2 = ""  # "<server>"
+        # closer2 = ""  # "<revres>"
+
+        print_if("Client Read Entry")
         read_text = pathlib.Path("stdout.mkfifo").read_text()
-        if read_text.startswith("'Traceback (most recent call last):\\n"):
-            exc_text = ast.literal_eval(read_text)
+        print_if(f"Client Read Exit text={read_text!r}")
+
+        # assert read_text.startswith(opener2), (opener2, read_text)
+        # assert read_text.endswith(closer2), (closer2, read_text)
+        # read_core = read_text[len(opener2) : -len(closer2)]
+
+        read_core = read_text
+
+        if read_core == "None":
+            return ""  # todo: think more about encodings of None
+
+        if read_core.startswith("'Traceback (most recent call last):\\n"):
+            exc_text = ast.literal_eval(read_core)
             print(exc_text, file=sys.stderr)
             return ""
 
-        return read_text
+        return read_core
 
     def os_terminal_x_y(self) -> tuple[int, int]:
         """Sample the X Y Position remotely, inside the Turtle"""
@@ -7020,15 +7077,24 @@ class TurtleClient:
         return size
 
 
+def print_if(*args, **kwargs) -> None:
+    """Print, if debugging"""
+
+    verbose = False
+    if verbose:
+        print(*args, **kwargs, end="\r\n", file=sys.stderr)
+        sys.stderr.flush()  # todo: measure when flush needed
+
+
 #
 # 🐢 Bug Fixes  # todo
 #
 # todo: solve the thin grey flats left on screen behind:  cs setxy 10 10 home
 #
 # todo: solve why ↓ ↑ Keys too small when drawn by:  demos/arrow-keys.logo
-# todo: solve why Pentagon doesn't close when drawn as in:  demos/pentagon-oops-logo.txt
 #
-# todo: log the named-pipe work well enough to explain its hangs
+# todo: log the named-pipe mkfifo work well enough to explain its hangs @ Linux & macOS
+# todo: add lots of prints to Server & Clients till it makes sense
 # todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
 #
 # todo: disentangle from Pq PbCopy/ PbPaste, especially when outside macOS
@@ -7044,8 +7110,13 @@ class TurtleClient:
 #
 # 🐢 Turtle Demos  # todo
 #
+# todo: demo bugs fixed lately - Large Headings.logo for round vs trunc
+# todo: demo bugs fixed lately - Pentagon vs too frequently snapping X Y
+#
 # todo: colorful spirography
 # todo: abs square:  cs reset pd  setxy 0 100  setxy 100 100  setxy 100 0  setxy 0 0
+# todo: multiple Procs per File via TO <name>, then dents, optional END
+# todo: one large single File of many Logo Procs
 #
 
 #
@@ -7061,6 +7132,7 @@ class TurtleClient:
 # todo: arcs with more args at https://fmslogo.sourceforge.io/manual/command-ellipsearc.html
 # todo: collisions, gravity, friction
 #
+# todo: context of Color Delay etc Space for Forward & Turn, like into irregular dance beat
 # todo: color less arcanely than via self.str_write "\x1B[36m"
 #   as with  ⎋[31m red  ⎋[32m green  ⎋[36m cyan  ⎋[38;5;130m orange
 #
@@ -7073,12 +7145,14 @@ class TurtleClient:
 # todo: take Heading in from Vi
 # todo: compose the Logo Command that sums up the Vi choices
 #
+# todo: Large Window vs SetScrunch, such as a large Headings.logo
 # todo: Ellipse etc via SetScrunch to tweak our fixed '/ 2 for thin pixels'
-#
-# todo: thicker Pixels and/or thicker Pens
+# todo: Log Scale SetScrunch in Y or X or both
+# todo: thicker X Y Pixels and/or thicker X Y Pens
 #
 # todo: z-layers, like one out front with more fun Cursors as Turtle
 # todo: fill and clear to collision, with colors, with patterns
+# todo: plot Fonts of Characters
 # todo: 3D Turtle position & trace
 #
 # todo: cap cursor position at edges, wrap cursor at edges, error at edges
@@ -7124,6 +7198,7 @@ class TurtleClient:
 #
 #   UCBLogo for Linux/ macOS/ Windows <- USA > U of California Berkeley (UCB)
 #   https://people.eecs.berkeley.edu/~bh/logo.html
+#   https://people.eecs.berkeley.edu/~bh/usermanual [.txt]
 #
 #   References listed by https://people.eecs.berkeley.edu/~bh/other-logos.html
 #   References listed by https://fmslogo.sourceforge.io/manual/where-to-start.html
