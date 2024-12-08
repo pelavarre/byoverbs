@@ -100,7 +100,6 @@ _: object  # '_: object' tells MyPy to accept '_ =' tests across two and more Da
 _ = dict[str, int] | None  # new since Oct/2021 Python 3.10
 _ = json, time  # r'\bjson[.]' found in str of Py  # r'\btime[.]' for debug as yet
 
-
 if not __debug__:
     raise NotImplementedError(str((__debug__,)))  # "'python3' better than 'python3 -O'"
 
@@ -6540,6 +6539,7 @@ class TurtleClient:
             "bk": self.do_backward,  #
             "back": self.do_backward,  #
             "backward": self.do_backward,
+            "beep": self.do_beep,
             "bye": self.do_bye,
             "clear": self.do_clearscreen,  #
             "clearscreen": self.do_clearscreen,
@@ -6552,6 +6552,7 @@ class TurtleClient:
             "home": self.do_home,
             "hideturtle": self.do_hideturtle,
             "ht": self.do_hideturtle,  #
+            "label": self.do_label,
             "left": self.do_left,
             "lt": self.do_left,  #
             "pd": self.do_pendown,  #
@@ -6582,6 +6583,35 @@ class TurtleClient:
 
         float_stride = self.stride if (stride is None) else float(stride)
         self.punch_bresenham_stride(-float_stride)
+
+    def do_beep(self) -> None:
+        """Ring the Terminal Alarm Bell once, remotely inside the Turtle"""
+
+        text = "\a"  # Alarm Bell
+        self.str_write(text)
+
+        # todo: sleep here, do Not return, until after the Bell is done ringing
+
+    def do_label(self, *args) -> None:
+        """Write 0 or more Args"""
+
+        heading = self.heading
+        if round(heading) != 90:
+            print("NotImplementedError: Printing Labels for Headings other than 90° East")
+            return
+
+            # todo: Printing Labels for 180° South Heading
+            # todo: Printing Labels for Headings other than 90° East and 180° South
+
+        (y_row, x_column) = self.os_terminal_y_row_x_column()
+
+        line = " ".join(str(_) for _ in args)
+        line += f"\x1B[{y_row};{x_column}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
+        line += "\n"  # just Line-Feed \n without Carriage-Return \r
+
+        self.str_write(line)
+
+        # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
 
     def do_bye(self) -> None:
         """Quit the Turtle Chat"""
@@ -6907,6 +6937,10 @@ class TurtleClient:
             sys.exit()  # exits zero to shrug off BrokenPipeError
 
         read_text = pathlib.Path("stdout.mkfifo").read_text()
+        if read_text.startswith("'Traceback (most recent call last):\\n"):
+            exc_text = ast.literal_eval(read_text)
+            print(exc_text, file=sys.stderr)
+            return ""
 
         return read_text
 
@@ -6915,13 +6949,7 @@ class TurtleClient:
 
         # Find the Cursor
 
-        py = "self.write_dsr_read_kcpr_y_x()"
-        rep = self.py_eval_to_repr(py)
-        kcpr_y_x = ast.literal_eval(rep)
-
-        (y_row, x_column) = kcpr_y_x
-        assert isinstance(y_row, int), (type(y_row), y_row)
-        assert isinstance(x_column, int), (type(x_column), x_column)
+        (y_row, x_column) = self.os_terminal_y_row_x_column()
 
         # Find the Center of Screen
 
@@ -6935,6 +6963,19 @@ class TurtleClient:
         y1 = -(y_row - cy)
 
         return (x1, y1)
+
+    def os_terminal_y_row_x_column(self) -> tuple[int, int]:
+        """Sample the Row-Column Position remotely, inside the Turtle"""
+
+        py = "self.write_dsr_read_kcpr_y_x()"
+        rep = self.py_eval_to_repr(py)
+        kcpr_y_x = ast.literal_eval(rep)
+
+        (y_row, x_column) = kcpr_y_x
+        assert isinstance(y_row, int), (type(y_row), y_row)
+        assert isinstance(x_column, int), (type(x_column), x_column)
+
+        return (y_row, x_column)
 
     def os_terminal_size(self) -> tuple[int, int]:
         """Sample the Terminal Width and Height remotely, inside the Turtle"""
@@ -6993,8 +7034,6 @@ class TurtleClient:
 # todo: arcs with more args at https://fmslogo.sourceforge.io/manual/command-ellipsearc.html
 # todo: collisions, gravity, friction
 #
-# todo: Logo verb 'label' to mean our self.str_write
-# todo: beep less arcanely than via self.str_write "\a"
 # todo: color less arcanely than via self.str_write "\x1B[36m"
 #   as with  ⎋[31m red  ⎋[32m green  ⎋[36m cyan  ⎋[38;5;130m orange
 #
