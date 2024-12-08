@@ -6511,8 +6511,10 @@ class TurtleClient:
         for call in calls:
             verb = call[0]
             args = call[1:]
-            if verb in func_by_verb:
-                func = func_by_verb[verb]
+
+            iverb = verb.casefold()
+            if iverb in func_by_verb:
+                func = func_by_verb[iverb]
                 try:
                     func(*args)
                 except Exception:
@@ -6521,7 +6523,7 @@ class TurtleClient:
                     print(line)
                     return ""
             else:
-                py = f"{verb}({', '.join(repr(_) for _ in args)})"
+                py = f"{iverb}({', '.join(repr(_) for _ in args)})"
                 rep = self.py_eval_to_repr(py)
                 if rep:
                     print(rep)
