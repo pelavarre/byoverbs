@@ -6856,18 +6856,34 @@ class TurtleClient:
 
         angle = (90 - heading) % 360  # converts to 0° East Anticlockwise
         float_x_ = float_x + (stride_ * math.cos(math.radians(angle)))  # destination
-        float_x_ = round(float_x_, 10)  # todo: how round should our Float Maths be?
+        float_x__ = round(float_x_, 10)  # todo: how round should our Float Maths be?
         float_y_ = float_y + (stride_ * math.sin(math.radians(angle)) / 2)  # / 2 for thin pixels
-        float_y_ = round(float_y_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
+        float_y__ = round(float_y_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
 
-        x2 = round(float_x_)  # todo: keep unrounded y x between Segments for more true angles?
-        y2 = round(float_y_)
+        x2 = round(float_x__)
+        y2 = round(float_y__)
+
+        fuzzing1 = False  # shows why Round over Int at X2 Y2, for 'headings.logo' etc
+        if fuzzing1:  # fail test of:  cs  pu home reset pd  rt rt fd  rt fd 400
+            print(f"FUZZING1 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x_} {float_y_} FUZZING1")
+            x2 = int(float_x_)
+            y2 = int(float_y_)
+
+            # should look like:  cs  reset pd  setpc '.'  pu setxy ~400 ~100  pd rt fd 400 lt fd
 
         self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
-        print(f"float {float_x} {float_y} {float_x_} {float_y_}")
+        print(f"float {float_x} {float_y} {float_x__} {float_y__}")
 
-        self.float_x = float_x_
-        self.float_y = float_y_
+        fuzzing2 = False  # shows why Precise Y X Shadows, for such as Pentagon:  cs reset pd  fd rt 72
+        if fuzzing2:  # fail test of:  cs  pu home reset pd  rt rt fd  rt fd 400
+            print(f"FUZZING2 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x__} {float_y__} FUZZING2")
+            float_x__ = float(x2)
+            float_y__ = float(y2)
+
+            # should look like:  cs  reset pd  setpc '.'  pu setxy ~400 ~100  pd rt fd 400 lt fd
+
+        self.float_x = float_x__
+        self.float_y = float_y__
 
     def punch_bresenham_segment(self, x1: int, y1: int, x2: int, y2: int) -> None:
         """Step forwards, or backwards, through (Row, Column) choices"""
@@ -7117,6 +7133,8 @@ def print_if(*args, **kwargs) -> None:
 # todo: abs square:  cs reset pd  setxy 0 100  setxy 100 100  setxy 100 0  setxy 0 0
 # todo: multiple Procs per File via TO <name>, then dents, optional END
 # todo: one large single File of many Logo Procs
+#
+# todo: test bounds collisions, such as:  cs reset pd  setxy 530 44  lt fd 300
 #
 
 #
