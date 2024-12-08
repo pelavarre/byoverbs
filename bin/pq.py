@@ -2550,18 +2550,25 @@ class BytesTerminal:
 
         while True:
 
-            rlist: list[int] = [stdio.fileno(), ifile.fileno()]
-            wlist: list[int] = list()
-            xlist: list[int] = list()
-            timeout_eq_None = None
+            rlist0: list[int] = [stdio.fileno(), ifile.fileno()]
+            wlist0: list[int] = list()
+            xlist0: list[int] = list()
 
-            print_if("Server Select Entry")
-            (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout_eq_None)
+            print_if("Server Select 0 Entry")
+            timeout_eq_0 = 0
+            (rlist1, _, _) = select.select(rlist0, wlist0, xlist0, timeout_eq_0)
+            if not rlist1:
+                # self.bytes_flush()
+
+                print_if("Server Select None Entry")
+                timeout_eq_None = None
+                (rlist1, _, _) = select.select(rlist0, wlist0, xlist0, timeout_eq_None)
+
             print_if("")
-            print_if(f"Server Select Exit: {alt_rlist}")
+            print_if(f"Server Select Exit: {rlist1}")
 
-            if ifile.fileno() not in alt_rlist:
-                assert stdio.fileno() in alt_rlist, (stdio.fileno(), alt_rlist, ifile.fileno())
+            if ifile.fileno() not in rlist1:
+                assert stdio.fileno() in rlist1, (stdio.fileno(), rlist1, ifile.fileno())
                 return
 
             # opener1 = ""  # "<client>"
@@ -2606,6 +2613,8 @@ class BytesTerminal:
             #     print_if("Server 2nd Write")
             #     opath.write_text(opener2 + text + closer2)
             print_if("Server Write Exit")
+
+            # self.bytes_flush()
 
     def kbhit(self, timeout) -> bool:  # 'timeout' in seconds - 0 for now, None for forever
         """Block till next Input Byte, else till Timeout, else till forever"""
@@ -6601,6 +6610,8 @@ class TurtleClient:
             "reset": self.do_reset,
             "right": self.do_right,
             "rt": self.do_right,  #
+            "s": self.do_sleep,  #
+            "sleep": self.do_sleep,
             "st": self.do_showturtle,  #
             "seth": self.do_setheading,  #
             "setheading": self.do_setheading,
@@ -6838,6 +6849,18 @@ class TurtleClient:
         if self.hiding != hiding:
             print(f"hiding={self.hiding}  # was {hiding}")
 
+        # Forward 0 leaves a Mark to show the Turtle was Here
+        # SetXY leaves a Mark to show the X=0 Y=0 Home
+
+    def do_sleep(self) -> None:
+        """Hold the Turtle still for a moment"""
+
+        sleep = self.sleep
+        print(f"Sleeping {sleep}s because SetHertz")
+        time.sleep(sleep)
+
+        # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s
+
     #
     # Move the Turtle along the Line of its Heading
     #
@@ -6849,10 +6872,14 @@ class TurtleClient:
 
         heading = self.heading  # 0° North Up Clockwise
 
+        # Choose the Starting Point
+
         (x1, y1) = self.os_terminal_x_y()
         float_x = self.float_x
         float_y = self.float_y
         assert (x1 == round(float_x)) and (y1 == round(float_y)), (x1, float_x, y1, float_y)
+
+        # Choose the Ending Point
 
         angle = (90 - heading) % 360  # converts to 0° East Anticlockwise
         float_x_ = float_x + (stride_ * math.cos(math.radians(angle)))  # destination
@@ -6863,24 +6890,38 @@ class TurtleClient:
         x2 = round(float_x__)
         y2 = round(float_y__)
 
-        fuzz1 = False  # shows why Round over Int at X2 Y2, for 'headings.logo'
-        if fuzz1:  # fail test of:  cs  pu home reset pd  rt rt fd  rt fd 400
+        # Option to show why Round over Int at X2 Y2
+
+        fuzz1 = True
+        fuzz1 = False
+        if fuzz1:
             print(f"FUZZ1 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x_} {float_y_} FUZZ1")
             x2 = int(float_x_)
             y2 = int(float_y_)
 
-            # should look like:  cs  reset pd  setpc '.'  pu setxy ~400 ~100  pd rt fd 400 lt fd
+            # got:  cs  pu home reset pd  rt rt fd  rt fd 400
+            # wanted:  cs  reset pd  setpc '.'  pu setxy ~400 ~100  pd rt fd 400 lt fd
+            # surfaced by:  demos/headings.logo
+
+        # Draw the Line Segment to X2 Y2 from X1 Y1
 
         self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
         print(f"float {float_x} {float_y} {float_x__} {float_y__}")
 
-        fuzz2 = False  # shows why Precise Y X Shadows, for Pentagon:  cs reset pd  fd rt 72
-        if fuzz2:  # fail test of:  cs  pu home reset pd  rt rt fd  rt fd 400
+        # Option to show why keep up Precise X Y Shadows in .float_x .float_y
+
+        fuzz2 = True
+        fuzz2 = False
+        if fuzz2:  # fail test of:  cs  reset pd  fd rt 72  fd rt 72  fd rt 72  fd rt 72  fd rt 72
             print(f"FUZZ2 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x__} {float_y__} FUZZ2")
             float_x__ = float(x2)
             float_y__ = float(y2)
 
-            # should look like:  cs  reset pd  setpc '.'  pu setxy ~400 ~100  pd rt fd 400 lt fd
+            # got Pentagon overshot:  cs  reset pd  fd rt 72  fd rt 72  fd rt 72  fd rt 72  fd rt 72
+            # got Octogon overshot:  cs  reset pd  rep 8 [fd rt 45]
+            # wanted close like:  cs  reset pd  fd rt 120  fd rt 120  fd rt 120
+            # wanted close like:  cs  reset pd  rep 4 [fd rt 90]
+            # surfaced by:  walking polygons
 
         self.float_x = float_x__
         self.float_y = float_y__
@@ -7109,6 +7150,8 @@ def print_if(*args, **kwargs) -> None:
 #
 # todo: solve why ↓ ↑ Keys too small when drawn by:  demos/arrow-keys.logo
 #
+# todo: solve ⌘K vs Turtle Server
+#
 # todo: repro/ fix remaining occasional hangs in the named-pipe mkfifo of Linux & macOS
 # todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
 #
@@ -7126,20 +7169,22 @@ def print_if(*args, **kwargs) -> None:
 # 🐢 Turtle Demos  # todo
 #
 # todo: demo bugs fixed lately - Large Headings.logo for round vs trunc
-# todo: demo bugs fixed lately - Pentagon vs too frequently snapping X Y
 #
 # todo: colorful spirography
 # todo: abs square:  cs reset pd  setxy 0 100  setxy 100 100  setxy 100 0  setxy 0 0
 # todo: multiple Procs per File via TO <name>, then dents, optional END
 # todo: one large single File of many Logo Procs
 #
-# todo: test bounds collisions, such as:  cs reset pd  setxy 530 44  lt fd 300
-#
+# todo: test bounds collisions
+#   cs reset pd  pu setxy 530 44 pd  lt fd 300
+#       skips the column inside the right edge ?!
 
 #
 # 🐢 Turtle Commands  # todo
 #
-# todo: random moves
+# todo: solve Flush & Sleep such that we can demo ht st blinking of the Turtle
+# todo: learn 🐢 Fd 0 does a punch, as if a Label 'c' of 1 Char without moving Turtle
+# todo: random moves, seeded random
 # todo: cyclic moves in Color, in Pen Down, and help catalog more than 8 Colors
 # todo: Pen Colors that mix with the Screen: PenPaint/ PenReverse/ PenErase
 # todo: hide the turtle only till its next move  # 🐢 HideTurtle WhileStill
@@ -7172,7 +7217,7 @@ def print_if(*args, **kwargs) -> None:
 # todo: plot Fonts of Characters
 # todo: 3D Turtle position & trace
 #
-# todo: cap cursor position at edges, wrap cursor at edges, error at edges
+# todo: edge cap cursor position, wrap, bounce, whine, stop
 # todo: draw on a Canvas larger than the screen
 # todo: checkpoint/ commit/ restore the Canvas
 # todo: export the Canvas as .typescript, styled & colored
@@ -7201,6 +7246,7 @@ def print_if(*args, **kwargs) -> None:
 # todo: Command Input Line History
 #
 # todo: KwArgs for Funcs
+# todo: or teach 🐢 Label to take a last arg of "" as an ask for no newline?
 # todo: VsCode for .logo, for .lgo, ...
 #
 # todo: reconcile with Python "import turtle" Graphics on TkInter
@@ -7211,7 +7257,7 @@ def print_if(*args, **kwargs) -> None:
 #
 #   FMSLogo for Linux Wine/ Windows (does the Linux Wine work?)
 #   https://fmslogo.sourceforge.io
-#   https://fmslogo.sourceforge.io/manual/where-to-start.html
+#   https://fmslogo.sourceforge.io/manual/index.html
 #
 #   UCBLogo for Linux/ macOS/ Windows <- USA > U of California Berkeley (UCB)
 #   https://people.eecs.berkeley.edu/~bh/logo.html
