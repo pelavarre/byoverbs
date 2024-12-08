@@ -2,14 +2,17 @@
 
 
 #
-# Run from the Sh Command Line
+# Help ship our Code early & often
 #
 
 
 # Show examples and exit
 #
-#   cat Makefile |expand |grep '^[^ :]*:' |grep -v '^[.]PHONY:' |cut -d: -f1
-#   # don't help with:  default, black, flake8, mypy, shellcheck, selftest, p.py
+# Do help with:  help, pips, push, pass, bin, dotfiles, slow
+# Don't help with:  default, h, black, flake8, mypy, shellcheck, selftest, p.py
+#
+# Do consider helping with all of
+#       cat Makefile |expand |grep '^[^ :]*:' |grep -v '^[.]PHONY:' |cut -d: -f1
 #
 
 default:
@@ -19,7 +22,7 @@ default:
 	@echo
 	@echo 'make pips  # rewrites ~/.pyvenvs/pips/'
 	@echo 'make push  # restyles & tests the source, then tells you to push it'
-	@echo "make soon  # restyles & tests the source, but doesn't say push it"
+	@echo "make pass  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo 'make bin  # puts bin dir files under test at home bin dir'
 	@echo 'make dotfiles  # updates local dotfiles dir from home dot files'
@@ -31,10 +34,13 @@ default:
 
 # Show help lines and exit
 
+h: help
+	:
+
 help:
 	@echo
 	@echo
-	@echo 'usage: make [help|push]'
+	@echo 'usage: make [help|pips|push|pass|bin|dotfiles|slow]'
 	@echo
 	@echo 'work to add Code into GitHub ByoVerbs'
 	@echo
@@ -45,7 +51,7 @@ help:
 	@echo
 	@echo '  make pips  # rewrites ~/.pyvenvs/pips/'
 	@echo '  make push  # restyles & tests the source, then tells you to push it'
-	@echo "  make soon  # restyles & tests the source, but doesn't say push it"
+	@echo "  make pass  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo '  make bin  # puts bin dir files under test at home bin dir'
 	@echo '  make dotfiles  # updates local dotfiles dir from home dot files'
@@ -72,7 +78,7 @@ pips: ~/.pyvenvs/pips/
 
 # Restyle & test the source, then tell me to push it
 
-push: soon
+push: pass
 	ssh-add -D
 	ssh-add ~/.ssh/github.id_rsa
 	: did you mean:  git push
@@ -82,7 +88,7 @@ push: soon
 	ssh-add -D
 	:
 
-soon: black flake8 mypy shellcheck selftest
+pass: black flake8 mypy shellcheck selftest
 	:
 	demos/last2lines.py ./ bin/ demos/
 	:
