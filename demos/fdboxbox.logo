@@ -9,21 +9,21 @@ clearscreen reset pendown
 st
 pd
 
-setpc '↑' fd rt
-setpc '→' fd rt
-setpc '↓' fd rt
-setpc '←' fd rt
+setpch '↑' fd rt
+setpch '→' fd rt
+setpch '↓' fd rt
+setpch '←' fd rt
 
 pu lt fd rt pd
 
-setpc '↑' fd fd rt
-setpc '→' fd fd fd rt
-setpc '↓' fd fd fd rt
-setpc '←' fd fd fd rt
-setpc '↑' fd
+setpch '↑' fd fd rt
+setpch '→' fd fd fd rt
+setpch '↓' fd fd fd rt
+setpch '←' fd fd fd rt
+setpch '↑' fd
 
 pu rt fd lt
-setpc '*'
+setpch '*'
 ht
 
 

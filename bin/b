@@ -1,7 +1,7 @@
 D=$(dirname "$0")
 if [ $# -eq 0 ]; then
     set -xe
-    make soon
+    make pass
 else
     set -xe
     echo |python3 -m pdb "$@"

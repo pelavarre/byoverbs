@@ -6403,8 +6403,9 @@ class TurtleClient:
         self.penchar = "*"
         self.pendown = False
         self.hiding = False
-        # self.sleep = 1 / 30  # happiest? for:  fdboxbox.logo
-        self.sleep = 1 / 100  # happiest? for:  headings.logo
+
+        hertz = 1000e0
+        self.sleep = 1 / hertz
 
     def do_reset(self) -> None:
         """Warp the Turtle to Home, but do Not clear the Screen"""
@@ -6470,8 +6471,8 @@ class TurtleClient:
                         try:
                             print(eval(rep))
                         except Exception:
-                            traceback.print_exc()
-                            # print(rep)  # FIXME
+                            # traceback.print_exc()  # todo: log the Traceback of Exc
+                            print(rep)
 
     #
     # Eval 1 Line of Input
@@ -6616,8 +6617,8 @@ class TurtleClient:
             "seth": self.do_setheading,  #
             "setheading": self.do_setheading,
             "sethertz": self.do_sethertz,
-            "setpc": self.do_setpencolor,  #
-            "setpencolor": self.do_setpencolor,
+            "setpch": self.do_setpenpunch,  #
+            "setpenpunch": self.do_setpenpunch,
             "setxy": self.do_setxy,
             "showturtle": self.do_showturtle,
         }
@@ -6793,7 +6794,7 @@ class TurtleClient:
         sleep = self.sleep
 
         sleep_ = 0e0
-        float_hertz = 100e0 if (hertz is None) else float(hertz)
+        float_hertz = 1000e0 if (hertz is None) else float(hertz)
         if float_hertz:
             sleep_ = 1 / float_hertz
 
@@ -6802,8 +6803,8 @@ class TurtleClient:
         if self.sleep != sleep:
             print(f"sleep={self.sleep}s  # was {sleep}s")
 
-    def do_setpencolor(self, ch=None) -> None:  # as if do_setpc
-        """Choose which Character to draw with"""  # todo: Choose Color/ Char separately
+    def do_setpenpunch(self, ch=None) -> None:  # as if do_setpch
+        """Choose which Character to draw with"""
 
         penchar = self.penchar
 
@@ -6900,7 +6901,7 @@ class TurtleClient:
             y2 = int(float_y_)
 
             # got:  cs  pu home reset pd  rt rt fd  rt fd 400
-            # wanted:  cs  reset pd  setpc '.'  pu setxy ~400 ~100  pd rt fd 400 lt fd
+            # wanted:  cs  reset pd  setpch '.'  pu setxy ~400 ~100  pd rt fd 400 lt fd
             # surfaced by:  demos/headings.logo
 
         # Draw the Line Segment to X2 Y2 from X1 Y1
@@ -7226,7 +7227,7 @@ def print_if(*args, **kwargs) -> None:
 # todo: more perceptible Screen State, such as the Chars there already
 # todo: do & undo for Turtle work
 #
-# todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpc "🟢"
+# todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpch "🟢"
 # todo: pasting such as LargeGreenCircle into ⇧R of 'pq turtle', 'pq st yolo', etc
 #
 

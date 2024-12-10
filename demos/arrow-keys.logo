@@ -23,7 +23,8 @@ pu ht home
 # Draw the ↓ Key in the Middle, between the ← Key and the the → Key
 
 lt fd 200
-rt fd 80  # not 100 while the ↓ and ↑ drawn small
+# rt fd 80  # not 100 while the ↓ and ↑ drawn small
+rt fd  # aligned top while the ↓ and ↑ drawn small
 
 st pd seth rt
 fd rt 120  fd rt 120  fd rt 120
@@ -37,6 +38,7 @@ rt fd fd 80  # not 100 while the ↓ and ↑ drawn small
 st pd seth rt
 fd lt 120  fd lt 120  fd lt 120
 pu ht home
+
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/arrow-keys.logo
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

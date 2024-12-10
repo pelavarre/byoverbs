@@ -5,7 +5,6 @@
 
 
 clearscreen reset pendown
-sethertz 1000
 
 
 pu home pd fd 300
@@ -29,7 +28,7 @@ pu home pd rt 270 rt 45 fd 300
 pu home pd rt 270 rt 60 fd 300
 
 pu home pd
-setpc '+' setxy setpc
+setpch '+' setxy setpch
 ht
 
 
