@@ -24,7 +24,9 @@ setpch '↓' bk
 
 pu rt fd lt
 setpch '*'
-ht
+
+
+reset tada
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/bkboxbox.logo

@@ -70,6 +70,7 @@ import bdb
 import collections
 import dataclasses
 import datetime as dt
+import decimal
 import difflib
 import importlib
 import io
@@ -6380,14 +6381,13 @@ class TurtleClient:
     heading: float  # stride direction
     stride: float  # stride size
 
+    penmode: str  # last ⎋[m Select Graphic Rendition (SGR) chosen for PenChar
     penchar: str  # mark to print at each step
     pendown: bool  # printing marks, or not
     hiding: bool  # hiding the Turtle, or not
     sleep: float  # time between marks
 
-    # todo: .stride vs Logo SetStepSize
-    # todo: .sleep vs Logo SetSpeed, SetVelocity, Wait
-    # todo: .sleep vs Python Turtle screen.delay
+    tada_func_else: typing.Callable | None  # runs once before taking next Command
 
     def __init__(self) -> None:
 
@@ -6400,12 +6400,15 @@ class TurtleClient:
         self.heading = 0e0  # 0° of North Up Clockwise
         self.stride = 100e0
 
+        self.penmode = ""
         self.penchar = "*"
         self.pendown = False
         self.hiding = False
 
         hertz = 1000e0
         self.sleep = 1 / hertz
+
+        self.tada_func_else = None
 
     def do_reset(self) -> None:
         """Warp the Turtle to Home, but do Not clear the Screen"""
@@ -6481,6 +6484,9 @@ class TurtleClient:
     def readline_to_py(self, readline) -> str:  # noqa C901 complex
         """Eval 1 Line of Input"""
 
+        func_by_verb = self.to_func_by_verb()
+        tada_func_else = self.tada_func_else
+
         # Drop a mostly blank Line
 
         strip = readline.strip()
@@ -6527,22 +6533,40 @@ class TurtleClient:
 
         # Split the 1 Line into a Series of 1 or more Py Calls
 
-        calls = list()
-
-        call: list
+        call: list[object | None]
         call = list()
 
+        calls: list[list[object | None]]
+        calls = list()
+
         for py in alt_pys:
+
+            # Add each evallable Arg
+
             try:
                 arg = ast.literal_eval(py)
                 if not call:
-                    return strip
+                    call.append("print")  # todo: "printrepr" when Args of no Func?
                 call.append(arg)
+
+            # Add each unquoted Str
+
             except ValueError:
-                if call:
-                    calls.append(list(call))
-                    call.clear()
-                call.append(py.strip())
+                word = py.strip()
+                iword = word.casefold()
+                if iword not in func_by_verb.keys():
+                    call.append(word)
+
+                # Begin again with each unquoted Verb
+
+                else:
+                    if call:
+                        calls.append(list(call))
+                        call.clear()
+                    call.append(py.strip())
+
+            # Trust earlier Code to have ducked every Syntax Error
+
             except SyntaxError:
                 assert False, (py, pys, strip)
 
@@ -6550,15 +6574,26 @@ class TurtleClient:
             calls.append(list(call))
             call.clear()
 
-        # print(f"{calls=}")
+        if not calls:
+            return ""
 
-        # Interpret the 1 Line
+        # Exit a Tada Pause between Calls
 
-        func_by_verb = self.to_func_by_verb()
+        if tada_func_else:
+            tada_func = tada_func_else
+
+            self.tada_func_else = None
+
+            tada_func()
+
+        # Make each Call in order
 
         for call in calls:
             verb = call[0]
             args = call[1:]
+
+            assert verb, (verb, call, calls, readline)
+            assert isinstance(verb, str), (type(verb), verb, call, calls, readline)
 
             iverb = verb.casefold()
             if iverb in func_by_verb:
@@ -6604,10 +6639,12 @@ class TurtleClient:
             "label": self.do_label,
             "left": self.do_left,
             "lt": self.do_left,  #
+            "p": self.do_print,  # as per Pdb precedent
             "pd": self.do_pendown,  #
             "pendown": self.do_pendown,
             "penup": self.do_penup,
             "pu": self.do_penup,  #
+            "print": self.do_print,
             "reset": self.do_reset,
             "right": self.do_right,
             "rt": self.do_right,  #
@@ -6617,10 +6654,13 @@ class TurtleClient:
             "seth": self.do_setheading,  #
             "setheading": self.do_setheading,
             "sethertz": self.do_sethertz,
+            "setpc": self.do_setpencolor,  #
             "setpch": self.do_setpenpunch,  #
+            "setpencolor": self.do_setpencolor,
             "setpenpunch": self.do_setpenpunch,
             "setxy": self.do_setxy,
             "showturtle": self.do_showturtle,
+            "tada": self.do_tada,
         }
 
         return d
@@ -6769,6 +6809,11 @@ class TurtleClient:
         if self.pendown != pendown:
             print(f"pendown={self.pendown}  # was {pendown}")
 
+    def do_print(self, *args) -> None:  # as if do_p
+        """Print the Str of each Arg, separated by Spaces, and then 1 Line_Break"""
+
+        print(*args)
+
     def do_right(self, angle=None) -> None:  # as if do_rt
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
 
@@ -6793,32 +6838,96 @@ class TurtleClient:
 
         sleep = self.sleep
 
-        sleep_ = 0e0
+        sleep1 = 0e0
         float_hertz = 1000e0 if (hertz is None) else float(hertz)
         if float_hertz:
-            sleep_ = 1 / float_hertz
+            sleep1 = 1 / float_hertz
 
-        self.sleep = sleep_
+        self.sleep = sleep1
 
-        if self.sleep != sleep:
-            print(f"sleep={self.sleep}s  # was {sleep}s")
+        if sleep1 != sleep:
+            print(f"sleep={sleep1}s  # was {sleep}s")
+
+    def do_setpencolor(self, color=None) -> None:  # as if do_setpcv
+        """Choose which Color to draw with"""
+
+        penmode = self.penmode
+
+        floatish = isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
+        if color is None:
+            penmode1 = ""
+        elif floatish or isinstance(color, decimal.Decimal):
+            penmode1 = self.rgb_to_penmode(rgb=int(color))
+        elif isinstance(color, str):
+            if color.casefold == "None":
+                penmode1 = ""
+            else:
+                penmode1 = self.colorname_to_penmode(colorname=color)
+        else:
+            assert False, (type(color), color)
+
+        py = f"self.str_write({penmode1!r})"
+        rep = self.py_eval_to_repr(py)
+        assert not rep, (rep, py)
+
+        self.penmode = penmode1
+
+        if penmode1 != penmode:
+            print(f"penmode={penmode1!r} because {color!r}  # was {penmode!r}")
+
+    rgb_by_name = {
+        "white": 0xFFFFFF,
+        "magenta": 0xFF00FF,
+        "blue": 0x0000FF,
+        "cyan": 0x00FFFF,
+        "green": 0x00FF00,
+        "yellow": 0xFFFF00,
+        "red": 0xFF0000,
+        "black": 0x000000,
+    }
+
+    ansi_by_rgb = {  # CSI 06/13 Select Graphic Rendition (SGR)  # 30+ Display Foreground Color
+        0xFFFFFF: "\x1B[37m",
+        0xFF00FF: "\x1B[35m",
+        0x0000FF: "\x1B[34m",
+        0x00FFFF: "\x1B[36m",
+        0x00FF00: "\x1B[32m",
+        0xFFFF00: "\x1B[33m",
+        0xFF0000: "\x1B[31m",
+        0x000000: "\x1B[30m",
+    }
+
+    def colorname_to_penmode(self, colorname) -> str:
+        rgb = self.rgb_by_name[colorname.casefold()]
+        penmode = self.ansi_by_rgb[rgb]
+        return penmode
+
+    def rgb_to_penmode(self, rgb) -> str:
+        penmode = self.ansi_by_rgb[rgb]
+        return penmode
 
     def do_setpenpunch(self, ch=None) -> None:  # as if do_setpch
-        """Choose which Character to draw with"""
+        """Choose which Character to draw with, or default to '*'"""
 
         penchar = self.penchar
 
-        if ch is not None:
-            alt_penchar = str(ch)  # todo: cope with len(ch) != 1 for PenChar
+        floatish = isinstance(ch, float) or isinstance(ch, int) or isinstance(ch, bool)
+        if ch is None:
+            penchar1 = "*"
+        elif floatish or isinstance(ch, decimal.Decimal):
+            penchar1 = chr(int(ch))  # not much test of '\0' yet
+        elif isinstance(ch, str):
+            assert len(ch) == 1, (len(ch), ch)
+            penchar1 = ch
         else:
-            assert isinstance(penchar, str), (type(penchar), penchar)
-            assert len(penchar) == 1, (len(penchar), penchar)
-            alt_penchar = "!" if (penchar == "~") else chr(ord(penchar) + 1)
+            assert False, (type(ch), ch)
 
-        self.penchar = alt_penchar
+        self.penchar = penchar1
 
-        if self.penchar != penchar:
-            print(f"penchar={self.penchar!r}  # was {penchar!r}")
+        if penchar1 != penchar:
+            print(f"penchar={penchar1!r}  # was {penchar!r}")
+
+        # todo: With SetPenColor Forward 1:  "!" if (penchar == "~") else chr(ord(penchar) + 1)
 
     def do_setxy(self, x=None, y=None) -> None:
         """Move the Turtle to an X Y Point, tracing a Trail if Pen Down"""
@@ -6861,6 +6970,18 @@ class TurtleClient:
         time.sleep(sleep)
 
         # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s
+
+    def do_tada(self) -> None:
+        """Hide the Turtle, but only until next Call"""
+
+        text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
+        self.str_write(text)
+
+        def tada_func() -> None:
+            text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+            self.str_write(text)
+
+        self.tada_func_else = tada_func
 
     #
     # Move the Turtle along the Line of its Heading
@@ -7233,7 +7354,7 @@ def print_if(*args, **kwargs) -> None:
 
 #
 # 🐢 Turtle Chat Engine  # todo
-#
+
 # todo: "-" negation signs in place of "~" negation signs
 # todo: literal arguments, like have 'help h' mean 'help "h"'
 #
@@ -7251,6 +7372,9 @@ def print_if(*args, **kwargs) -> None:
 # todo: VsCode for .logo, for .lgo, ...
 #
 # todo: reconcile with Python "import turtle" Graphics on TkInter
+# todo: .sleep vs Python Turtle screen.delay
+# todo: .stride vs Logo SetStepSize
+# todo: .sleep vs Logo SetSpeed, SetVelocity, Wait
 #
 
 #

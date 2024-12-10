@@ -37,7 +37,9 @@ rt fd fd 80  # not 100 while the ↓ and ↑ drawn small
 
 st pd seth rt
 fd lt 120  fd lt 120  fd lt 120
-pu ht home
+
+
+reset tada
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/arrow-keys.logo
