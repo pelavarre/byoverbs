@@ -966,8 +966,7 @@ widely adopt:  ⌃C Sig Int, ⌃D Tty End
 
 ### 14 - Fourteenth Traunch
 
-pq -
-should be:  + pbpaste
+Ayup let's start again, again
 
 
 ## Copied from

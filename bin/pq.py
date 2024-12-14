@@ -395,6 +395,9 @@ class PyExecQueryResult:
         elif (not ipulls) and (opushes == ["oobject"]):  # pq pi
             pass
 
+        elif py_graf == self.PbPastePyGraf:
+            pass
+
         else:
             assert len(ipulls) == 1, (ipulls, opushes, py_graf)
             assert len(opushes) == 1, (ipulls, opushes, py_graf)
@@ -451,6 +454,8 @@ class PyExecQueryResult:
     # Parse some Py Code and compose the rest       # todo: resolve the noqa C901
     #
 
+    PbPastePyGraf = ['pathlib.Path("/dev/stdout").write_bytes(ibytes)']
+
     def find_and_form_py_lines(self) -> tuple[list[str], list[str], list[str]]:  # noqa C901
         """Parse some Py Code and compose the rest"""
 
@@ -475,15 +480,21 @@ class PyExecQueryResult:
 
         # Define the minimal Positional Arg
 
+        assert self.PbPastePyGraf == ['pathlib.Path("/dev/stdout").write_bytes(ibytes)']
+
         if not py_graf:
             if pq_words == ["-"]:
-                if stdin_isatty:  # pq -  # pq - |
-                    pq_words = "cat -".split()  # mutates
+                if stdin_isatty:
+                    if not stdout_isatty:  # pq - |
+                        pq_words = "cat -".split()  # mutates .pq_words
+                    else:  # pq -
+                        py_graf = self.PbPastePyGraf
+                        print("+ pbpaste", file=sys.stderr)
                 else:
                     if not stdout_isatty:  # |pq - |
-                        pq_words = "tee >(pbcopy) | sponge".split()  # mutates
+                        pq_words = "tee >(pbcopy) | sponge".split()  # mutates .pq_words
                     else:  # |pq -
-                        pq_words = "olines = ilines".split()  # mutates
+                        pq_words = "olines = ilines".split()  # mutates .pq_words
                         self.stdout_isatty = False  # mutates  # todo: ick, ugh, yuck
 
         # Search for one Py Graf matching the Cues (but reject many if found)
@@ -634,37 +645,38 @@ class PyExecQueryResult:
 
         #
 
-        py_graf = list()
+        py_graf_ = list()
 
         if "oline" in opushes:
-            py_graf.append(dent + "olines.append(oline)")
+            py_graf_.append(dent + "olines.append(oline)")
 
         py_words = "olines oline".split()
         if any((_ in opushes) for _ in py_words):
-            py_graf.append(r'otext = "\n".join(olines) + "\n"')
+            py_graf_.append(r'otext = "\n".join(olines) + "\n"')
 
         if "oobject" in opushes:
-            py_graf.append(r'otext = str(oobject) + "\n"')
+            py_graf_.append(r'otext = str(oobject) + "\n"')
 
         if "iolines" in ipulls:
-            py_graf.append(r'otext = "\n".join(iolines) + "\n"')
-            py_graf.extend(self.form_write_text_py_graf())
+            py_graf_.append(r'otext = "\n".join(iolines) + "\n"')
+            py_graf_.extend(self.form_write_text_py_graf())
 
         if "stdout" in ipulls:
             if stdout_isatty:
-                py_graf.append("otext = stdout.getvalue()")
-                py_graf.extend(self.form_write_text_py_graf())
+                if py_graf != self.PbPastePyGraf:
+                    py_graf_.append("otext = stdout.getvalue()")
+                    py_graf_.extend(self.form_write_text_py_graf())
 
         py_words = "otext olines oline oobject".split()
         if any((_ in opushes) for _ in py_words):
-            py_graf.extend(self.form_write_text_py_graf())
+            py_graf_.extend(self.form_write_text_py_graf())
 
         if "obytes" in opushes:
-            py_graf.extend(self.form_write_bytes_py_graf())
+            py_graf_.extend(self.form_write_bytes_py_graf())
 
         #
 
-        return py_graf
+        return py_graf_
 
     def form_read_bytes_py_graf(self) -> list[str]:
         """Plan to read Bytes before the chosen Py Graf"""
@@ -768,7 +780,7 @@ class PyExecQueryResult:
             opath = pathlib.Path("~/.ssh/pbpaste.bin")
             opath.write_text(otext)
 
-        """
+        """  # todo: should Text BrokenPipeError sys.exit nonzero?
 
         btext = textwrap.dedent(bdented).strip()
         blines = btext.splitlines()
@@ -811,7 +823,7 @@ class PyExecQueryResult:
             opath = pathlib.Path("~/.ssh/pbpaste.bin")
             opath.write_bytes(obytes)
 
-        """
+        """  # todo: should Bytes BrokenPipeError sys.exit nonzero?
 
         btext = textwrap.dedent(bdented).strip()
         blines = btext.splitlines()
@@ -1726,6 +1738,8 @@ def pathlib_create_pbpaste_bin() -> None:
 
 #
 # pq-vi Pq Fixes:
+#
+#   Our Vi ⇧| should leave the Buffer unchanged when Nonzero Exit Code and No Stdout
 #
 #   More friction vs quitting without calling ⎋⇧M or ⎋⇧L K etc to keep the lower Rows of the Screen
 #
@@ -7268,16 +7282,14 @@ def print_if(*args, **kwargs) -> None:
 #
 # 🐢 Bug Fixes  # todo
 #
-# todo: solve the thin grey flats left on screen behind:  cs setxy 10 10 home
-#
-# todo: solve why ↓ ↑ Keys too small when drawn by:  demos/arrow-keys.logo
-#
-# todo: solve ⌘K vs Turtle Server
-#
 # todo: repro/ fix remaining occasional hangs in the named-pipe mkfifo of Linux & macOS
 # todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
 #
-# todo: disentangle from Pq PbCopy/ PbPaste, especially when outside macOS
+# todo: solve the thin grey flats left on screen behind:  cs setxy 10 10 home
+# todo: solve why ↓ ↑ Keys too small when drawn by:  demos/arrow-keys.logo
+# todo: solve ⌘K vs Turtle Server
+#
+# todo: solve outside macOS, like disentangle from Pq PbCopy/ PbPaste
 #
 
 #
@@ -7358,8 +7370,13 @@ def print_if(*args, **kwargs) -> None:
 # todo: "-" negation signs in place of "~" negation signs
 # todo: literal arguments, like have 'help h' mean 'help "h"'
 #
+# todo: rep n for rep n [fd fd.d rt rt.angle]
+# todo: get/set of default args, such as fd.y and fd.heading
 # todo: nonliteral arguments  # 'heading', 'position', 'isvisible', etc
 # todo: deal with Logo Legacy of 'func nary' vs '(func nary and more and more)'
+#
+# todo: pinned sampling, such as list of variables to watch
+# todo: mouse-click (or key chord) to unfold/ fold the values watched
 #
 # todo: escape more robustly into Python Exec & Eval, such as explicit func(arg) calls
 # todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
