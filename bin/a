@@ -1,14 +1,36 @@
-if [ $# -eq 0 ]; then
+if [ $# -eq 0 ]; then  # |a
+
     set -xe
-    awk '{print $NF}'  # last word per line
-else
-    index=$1
-    shift
-    if [ "$index" -lt 0 ]; then
+    awk '{print $NF}'
+
+elif [ $# -eq 1 ]; then
+
+    if [[ "$1" =~ ^[0-9] ]]; then  # |a 2
         set -xe
-        awk "$@" '{print $(NF + 1 + '"$index"')}'  # word -1, -2, etc
-    else
+        awk '{print $'"$1"'}'
+    elif [[ "$1" =~ ^-[0-9] ]]; then  # |a -3
         set -xe
-        awk "$@" '{print $'"$index"'}' # word 1, 2, etc, if not 0 for all words
+        awk '{print $(NF + 1 + '"$1"')}'
+    else  # |a -F/
+        set -xe
+        awk "$@" '{print $NF}'
     fi
+
+else
+
+    if [[ "$1" =~ ^[0-9] ]]; then  # |a 2 -F.
+        index="$1"
+        shift
+        set -xe
+        awk "$@" '{print $'"$index"'}'
+    elif [[ "$1" =~ ^-[0-9] ]]; then  # |a -2 -F.
+        set -xe
+        index="$1"
+        shift
+        awk "$@" '{print $(NF + 1 + '"$index"')}'
+    else  # |a -vORS='$\n'
+        set -xe
+        awk "$@" '{print $NF}'
+    fi
+
 fi
