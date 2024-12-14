@@ -25,6 +25,12 @@ examples:
   :
   : Classic Mac OS, Mac OS X, OS X, macOS
   :
+  : Oct/2010 Lion OS X 10.7  # major release date
+  : Jul/2012 Mountain Lion OS X 10.8  # major release date
+  : Jun/2013 Mavericks OS X 10.9  # major release date
+  : Jun/2014 Yosemite OS X 10.10  # major release date
+  : Jun/2015 El Capitan OS X 10.11  # major release date
+
   : Sep/2016 Sierra macOS 10.12  # major release date
   : Sep/2017 High Sierra macOS 10.13  # major release date
   : Sep/2018 Mojave macOS 10.14  # major release date
@@ -36,6 +42,10 @@ examples:
   : Oct/2023 Sonoma macOS 14  # major release date
   :
 """
+
+# Our 'OS X' Dates comes from 2024/Dec Perplexity·Ai, not from my personal witness
+# They tell me Lion OS X came out twice, once as '10.7' per se, then again later as '10.7.5'
+
 
 import __main__
 import subprocess

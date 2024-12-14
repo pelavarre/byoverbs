@@ -961,6 +961,18 @@ just now saved into my CronTab
 pq -
 should be:  pbpaste
 
+widely adopt:  ⌃C Sig Int, ⌃D Tty End
+
+|a -F/
+should mean |awk -F/ '{print $NF}'
+but all that's working is:  |a -1 -F/
+
+
+### 14 - Fourteenth Traunch
+
+pq -
+should be:  + pbpaste
+
 
 ## Copied from
 
