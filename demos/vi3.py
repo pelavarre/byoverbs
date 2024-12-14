@@ -2081,7 +2081,7 @@ class ChordsTerminal:
             if enough_holds and (len(peeks) < len(enough_holds)):
                 old_peeks_bytearray = enough_holds[len(peeks) :]
                 old_peeks = bytes(old_peeks_bytearray)
-                # to do: more carefully place bytearray/ bytes boundary above
+                # todo: more carefully place bytearray/ bytes boundary above
 
                 peeks.extend(old_peeks)
                 assert old_peeks and isinstance(old_peeks, bytes), repr(old_peeks)

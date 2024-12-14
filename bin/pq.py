@@ -254,7 +254,8 @@ class PyExecQueryResult:
 
         try:
             for importable in importables:
-                importlib.import_module(importable)
+                importable_ = "datetime" if importable == "dt" else importable
+                importlib.import_module(importable_)
             exec(py_text, globals(), alt_locals)  # because "i'm feeling lucky"
         except Exception:
             print((3 * "\n") + py_text + (2 * "\n"), file=sys.stderr)
@@ -627,6 +628,8 @@ class PyExecQueryResult:
         if "stdout" in ipulls:
             if not stdout_isatty:
                 py_graf.append("stdout = sys.stdout")
+            else:
+                py_graf.append("stdout = io.StringIO()")  # for |pq ts
 
         if "stdin" in ipulls:
             if not stdin_isatty:
@@ -1896,6 +1899,8 @@ def xeditline() -> list[str]:
 def ex_macros(ilines) -> list[str]:
     """Edit in the way of Emacs"""
 
+    print("'pq em' presently doesn't work, we have only:  pq st")
+
     olines = kmap_lt_run_till_quit(ilines, kmap="Emacs")
 
     return olines
@@ -1903,6 +1908,8 @@ def ex_macros(ilines) -> list[str]:
 
 def visual_ex(ilines) -> list[str]:
     """Edit in the way of Ex Vim"""
+
+    print("'pq vi' presently doesn't work, we have only:  pq st")
 
     olines = kmap_lt_run_till_quit(ilines, kmap="Vim")
 
@@ -7651,7 +7658,7 @@ CUED_PY_LINES_TEXT = r"""
 
     oobject = len(itext.splitlines())  # lines len  # |wc -l  # wc l  # wcl
 
-    oobject = math.e  # math.e
+    oobject = math.e  # math.e  # not 'pq e' alone
 
     oobject = math.pi  # pi
 
@@ -7682,7 +7689,7 @@ CUED_PY_LINES_TEXT = r"""
 
     otext = json.dumps(json.loads(itext), indent=2) + "\n"  # |jq .  # jq
 
-    otext = pq.shadow_terminal_yolo(itext)  # st yolo  # styolo
+    otext = pq.shadow_terminal_yolo(itext)  # st  # st yolo  # styolo
 
     otext = pq.turtle_yolo(itext)  # turtle yolo
 
@@ -7753,8 +7760,8 @@ CUED_PY_GRAFS_TEXT = r"""
     # closed # close  # ends last line with "\n"
     otext = itext if itext.endswith("\n") else (itext + "\n")
 
-    # collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen  # u
-    olines = list(dict((_, _) for _ in ilines).keys())  # unsort  # unsorted  # dedupe
+    # counter  # set set set  # uniq  # uniq_everseen  # u  # uu
+    olines = collections.Counter(ilines).keys()  # unsort  # unsorted  # dedupe
 
     # decomment  # |sed 's,#.*,,' |sed 's, *$,,'  # |grep .
     dlines = list()

@@ -966,7 +966,11 @@ widely adopt:  ⌃C Sig Int, ⌃D Tty End
 
 ### 14 - Fourteenth Traunch
 
-Ayup let's start again, again
+fh ...
+could mean:  fh |tac |uu |tac |g ...
+
+|pq u
+should mean the '|uniq' that is not 'collections.Counter(ilines).keys()'
 
 
 ## Copied from

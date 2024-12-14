@@ -502,7 +502,7 @@ class ViTerminal:
             line = ct.readline()
             splits.extend(line.split())
 
-    def splits_splitbot(self, splits):  # to do: no longer correct-at-a-glance
+    def splits_splitbot(self, splits):  # todo: no longer correct-at-a-glance
         """Split out the Bot of the first Key Chords"""
 
         bot_by_chars = self.bot_by_chars

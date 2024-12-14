@@ -159,6 +159,7 @@ echo -n abc |bin/pq.py -q --py >/dev/tty
 (set -xe; bin/pq.py -q --py supercalifragilistic || echo + exit $?)
 :
 
+func em
 func head
 func head tail
 # func jq  # nope, tested separately
@@ -167,11 +168,14 @@ func find dirs
 func find dots
 func ls
 func ls dots
+func st
 func tail
 func tail -r
 func tac
 # func tee  # |pq tee| could mean |tee /dev/tty |
-func uniq
+func ts
+func uniq  # todo: match '|uniq' not '|pq uu'
+func vi
 func wc c
 func wc l
 func wc m
@@ -184,14 +188,15 @@ func a  # |pq a ...| could mean not |awk '{print $NF}' |
 # func e  # bin/e did relate to:  emacs -nw --no-splash --eval '(menu-bar-mode -1)'
 func f
 # func g  # bin/g did relate to:  grep -e -h -i -n
-func h  # to do: '|head' scaled with stty size
+func h  # todo: '|head' scaled with stty size
 func ht
 # func j  # nope, tested separately
 # func p  # bin/p did relate to:  python3 -m pdb
 # func q  # bin/q did relate to:  git
 func s
-func t  # to do: '|tail' scaled with stty size
-func u
+func t  # todo: '|tail' scaled with stty size
+func u  # todo: match '|uniq' not '|pq uu'
+func uu
 func x
 
 # bin/:h did relate to:  short wide Landscape Terminal Sh

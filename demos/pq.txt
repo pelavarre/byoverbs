@@ -2,17 +2,24 @@
 + :
 ++ echo http://example.com
 ++ bin/pq.py -q --py
-+ pq chill
++ pq chillx
 
-# chill
+# chillx
 assert iline.startswith("http")  # "https", "http", etc
 assert " " not in iline
-oline = iline.replace("://", " :// ").replace(".", " . ").rstrip()
+ioline = iline
+ioline = ioline.replace("/x.com/", "/twitter.com/")
+count_eq_3 = 3
+ioline = ioline.replace("/", " /", count_eq_3)
+ioline = ioline.replace(".", " . ").rstrip()
+count_eq_1 = 1
+ioline = ioline.replace(": / /", " :// ", count_eq_1).rstrip()
+oline = ioline
 
 + T=
 ++ echo http://example.com
 ++ bin/pq.py --yolo
-+ pq chill
++ pq chillx
 + T='http :// example . com'
 ++ echo http :// example . com
 ++ bin/pq.py -q --py
@@ -275,8 +282,8 @@ oline = repr(iline)  # repr  # undo 'ast.literal_eval'  # |sed "s,.*,'&',"
 + set -xe
 + bin/pq.py -q --py set
 
-# collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen
-olines = list(dict((_, _) for _ in ilines).keys())  # unsort  # unsorted  # dedupe
+# counter  # set set set  # uniq  # uniq_everseen  # u  # uu
+olines = collections.Counter(ilines).keys()  # unsort  # unsorted  # dedupe
 
 + func split
 + set -xe
@@ -338,7 +345,7 @@ otext = "\n".join(olines) + "\n"
 + set -xe
 + bin/pq.py -q --py end
 
-olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
+olines = ilines  # olines = ilines  # olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
 
 + func lower
 + set -xe
@@ -374,13 +381,13 @@ random.shuffle(iolines) # shuffle  # shuffled
 + set -xe
 + bin/pq.py -q --py sort
 
-iolines.sort()  # sort  # sorted sorted  # s s s s s s s
+iolines.sort()  # sort  # sorted sorted  # s s s s s s s s s s
 
 + func sponge
 + set -xe
 + bin/pq.py -q --py sponge
 
-obytes = ibytes  # sponged  # sponge
+obytes = ibytes  # sponged  # sponge  # obytes = ibytes
 
 + func strip
 + set -xe
@@ -439,7 +446,7 @@ oline = (4 * " ") + iline  # dent  # dented  # textwrap.dented
 + set -xe
 + bin/pq.py -q --py ended
 
-olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
+olines = ilines  # olines = ilines  # olines = ilines  # end  # ended  # chr ended  # ends every line with "\n"
 
 + func framed
 + set -xe
@@ -482,13 +489,13 @@ iolines.reverse()  # reverse  # reversed  # |tac  # |tail -r  # tail r
 + set -xe
 + bin/pq.py -q --py sorted
 
-iolines.sort()  # sort  # sorted sorted  # s s s s s s s
+iolines.sort()  # sort  # sorted sorted  # s s s s s s s s s s
 
 + func sponged
 + set -xe
 + bin/pq.py -q --py sponged
 
-obytes = ibytes  # sponged  # sponge
+obytes = ibytes  # sponged  # sponge  # obytes = ibytes
 
 + func shuffled
 + set -xe
@@ -548,7 +555,31 @@ otext = " ".join(itext)  # space
 + set -xe
 + bin/pq.py -q --py e
 
-oobject = math.e  # e e e e e e e
+# !  # "  # $  # %  # &  # '  # (  # )  # *  # + + +  # ,  # - - -  # . . . . . . .  # /
+# 0  # 1 1  # 2 2  # 3 3  # 4  # 5 5  # 6 6  # 7  # 8  # 9  # :  # ;  # <  # =  # >  # ?
+# @
+# b b b
+# d d d d d d d d
+# e e e e e e
+# g g
+# i i i i i i i i i i i
+# j j
+# k
+# l l l l l l l
+# m m m
+# o o o o o o
+# p p p p p p
+# q
+# r r r r r r r r r
+# v v
+# w w w w
+# y y y
+# z
+# {  # | |  # }  # ~
+sys.stderr.write("Pq today defines a, c, f, h, n, s, t, u, x\n")  # and also '-'
+sys.stderr.write("Pq today doesn't define b, d, e, g, i, j, k, l, m, o, p, q, r, v, w, y, z\n")
+olines = ilines[0:0]
+sys.exit(1)
 
 + func pi
 + set -xe
@@ -591,7 +622,7 @@ irun = subprocess.run(["pbpaste"], capture_output=True, text=True, check=True)
 itext = irun.stdout
 iolines = itext.splitlines()
 
-iolines.sort()  # sort  # sorted sorted  # s s s s s s s
+iolines.sort()  # sort  # sorted sorted  # s s s s s s s s s s
 
 otext = "\n".join(iolines) + "\n"
 subprocess.run(["pbcopy"], input=otext, text=True, check=True)
@@ -601,7 +632,14 @@ subprocess.run(["pbcopy"], input=otext, text=True, check=True)
 + :
 + bin/pq.py -q --py -
 
-obytes = ibytes
+# c c c c  # cat cat  # cat - >/dev/null
+_ = itext
+sys.stderr.write("Press ⌃C, or Return ⌃D, to quit\n")
+try:
+    otext = pathlib.Path("/dev/tty").read_text()
+except KeyboardInterrupt:
+    sys.stderr.write("\nKeyboardInterrupt\n")
+    otext = ""
 
 + echo -n abc
 + bin/pq.py -q --py
@@ -622,18 +660,24 @@ pq.py: No Py Grafs found by ['supercalifragilistic']
 + echo + exit 2
 + exit 2
 + :
++ func em
++ set -xe
++ bin/pq.py -q --py em
+
+olines = pq.ex_macros(ilines)  # em em  # ema  # emac  # emacs
+
 + func head
 + set -xe
 + bin/pq.py -q --py head
 
-# head head  # h h h h h h
-olines = ilines[:10]
+# head head  # h h h h h h h h h
+olines = ilines[:10]  # could be (Terminal Lines // 3)
 
 + func head tail
 + set -xe
 + bin/pq.py -q --py head tail
 
-# head tail  # h t  # h t  # h t  # h t  # h t  # ht ht
+# head tail  # h t  # h t  # h t  # h t  # h t  # h t  # h t  # h t  # ht ht
 ipairs = list(enumerate(ilines, start=1))
 plines = list(f"{_[0]:6}  {_[-1]}" for _ in ipairs[:3])
 plines.append("...")
@@ -698,12 +742,18 @@ olines = sorted(_ for _ in os.listdir() if not _.startswith("."))
 # ls dots
 olines = sorted(os.listdir())  # still no [os.curdir, os.pardir]
 
++ func st
++ set -xe
++ bin/pq.py -q --py st
+
+otext = pq.shadow_terminal_yolo(itext)  # st  # st yolo  # styolo
+
 + func tail
 + set -xe
 + bin/pq.py -q --py tail
 
-# tail tail  # t t t t t t t t t
-olines = ilines[-10:]
+# tail tail  # t t t t t t t t t t t t t t t t t t
+olines = ilines[-10:]  # could be (Terminal Lines // 3)
 
 + func tail -r
 + set -xe
@@ -717,12 +767,32 @@ iolines.reverse()  # reverse  # reversed  # |tac  # |tail -r  # tail r
 
 iolines.reverse()  # reverse  # reversed  # |tac  # |tail -r  # tail r
 
++ func ts
++ set -xe
++ bin/pq.py -q --py ts
+
+# ts  # |ts
+while True:
+    readline = stdin.readline()
+    if not readline:
+        break
+    iline = readline.splitlines()[0]
+    ts = dt.datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S.%f %z")
+    print(f"{ts}  {iline}", file=stdout)
+    stdout.flush()
+
 + func uniq
 + set -xe
 + bin/pq.py -q --py uniq
 
-# collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen
-olines = list(dict((_, _) for _ in ilines).keys())  # unsort  # unsorted  # dedupe
+# counter  # set set set  # uniq  # uniq_everseen  # u  # uu
+olines = collections.Counter(ilines).keys()  # unsort  # unsorted  # dedupe
+
++ func vi
++ set -xe
++ bin/pq.py -q --py vi
+
+olines = pq.visual_ex(ilines)  # vi  # vim  # em vi  # em/vi
 
 + func wc c
 + set -xe
@@ -784,14 +854,14 @@ olines = flines
 + set -xe
 + bin/pq.py -q --py h
 
-# head head  # h h h h h h
-olines = ilines[:10]
+# head head  # h h h h h h h h h
+olines = ilines[:10]  # could be (Terminal Lines // 3)
 
 + func ht
 + set -xe
 + bin/pq.py -q --py ht
 
-# head tail  # h t  # h t  # h t  # h t  # h t  # ht ht
+# head tail  # h t  # h t  # h t  # h t  # h t  # h t  # h t  # h t  # ht ht
 ipairs = list(enumerate(ilines, start=1))
 plines = list(f"{_[0]:6}  {_[-1]}" for _ in ipairs[:3])
 plines.append("...")
@@ -802,21 +872,28 @@ olines = plines
 + set -xe
 + bin/pq.py -q --py s
 
-iolines.sort()  # sort  # sorted sorted  # s s s s s s s
+iolines.sort()  # sort  # sorted sorted  # s s s s s s s s s s
 
 + func t
 + set -xe
 + bin/pq.py -q --py t
 
-# tail tail  # t t t t t t t t t
-olines = ilines[-10:]
+# tail tail  # t t t t t t t t t t t t t t t t t t
+olines = ilines[-10:]  # could be (Terminal Lines // 3)
 
 + func u
 + set -xe
 + bin/pq.py -q --py u
 
-# collections.Counter.keys  # counter  # set set set  # uniq  # uniq_everseen
-olines = list(dict((_, _) for _ in ilines).keys())  # unsort  # unsorted  # dedupe
+# counter  # set set set  # uniq  # uniq_everseen  # u  # uu
+olines = collections.Counter(ilines).keys()  # unsort  # unsorted  # dedupe
+
++ func uu
++ set -xe
++ bin/pq.py -q --py uu
+
+# counter  # set set set  # uniq  # uniq_everseen  # u  # uu
+olines = collections.Counter(ilines).keys()  # unsort  # unsorted  # dedupe
 
 + func x
 + set -xe

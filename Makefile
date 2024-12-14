@@ -8,11 +8,13 @@
 
 # Show examples and exit
 #
-# Do help with:  help, pips, push, pass, bin, dotfiles, slow
+# Do help with:  help, pips, push, smoke, bin, dotfiles, slow
 # Don't help with:  default, h, black, flake8, mypy, shellcheck, selftest, p.py
 #
 # Do consider helping with all of
-#       cat Makefile |expand |grep '^[^ :]*:' |grep -v '^[.]PHONY:' |cut -d: -f1
+#
+#	cat Makefile |expand |grep '^[^ :]*:' |grep -v '^[.]PHONY:' |cut -d: -f1 \
+#       |grep -v -e^{help,pips,push,smoke,bin,dotfiles,slow}$
 #
 
 default:
@@ -22,7 +24,7 @@ default:
 	@echo
 	@echo 'make pips  # rewrites ~/.pyvenvs/pips/'
 	@echo 'make push  # restyles & tests the source, then tells you to push it'
-	@echo "make pass  # restyles & tests the source, but doesn't say push it"
+	@echo "make smokle  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo 'make bin  # puts bin dir files under test at home bin dir'
 	@echo 'make dotfiles  # updates local dotfiles dir from home dot files'
@@ -35,12 +37,12 @@ default:
 # Show help lines and exit
 
 h: help
-	:
+	@
 
 help:
 	@echo
 	@echo
-	@echo 'usage: make [help|pips|push|pass|bin|dotfiles|slow]'
+	@echo 'usage: make [help|pips|push|smoke|bin|dotfiles|slow]'
 	@echo
 	@echo 'work to add Code into GitHub ByoVerbs'
 	@echo
@@ -51,7 +53,7 @@ help:
 	@echo
 	@echo '  make pips  # rewrites ~/.pyvenvs/pips/'
 	@echo '  make push  # restyles & tests the source, then tells you to push it'
-	@echo "  make pass  # restyles & tests the source, but doesn't say push it"
+	@echo "  make smoke  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo '  make bin  # puts bin dir files under test at home bin dir'
 	@echo '  make dotfiles  # updates local dotfiles dir from home dot files'
@@ -78,7 +80,7 @@ pips: ~/.pyvenvs/pips/
 
 # Restyle & test the source, then tell me to push it
 
-push: pass
+push: smoke
 	ssh-add -D
 	ssh-add ~/.ssh/github.id_rsa
 	: did you mean:  git push
@@ -88,7 +90,7 @@ push: pass
 	ssh-add -D
 	:
 
-pass: black flake8 mypy shellcheck selftest
+smoke: black flake8 mypy shellcheck selftest
 	:
 	demos/last2lines.py ./ bin/ demos/
 	:

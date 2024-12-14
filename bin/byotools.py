@@ -355,8 +355,8 @@ def ast_func_to_py(func) -> str:
 
     # finds wrong Func or no Func when source isn't Black'ened, such as:  def func ():
 
-    # to do: AttributeError at func=sys.exit, etc
-    # to do: TypeError at each Func in dir(google), if those existed
+    # todo: AttributeError at func=sys.exit, etc
+    # todo: TypeError at each Func in dir(google), if those existed
 
 
 #

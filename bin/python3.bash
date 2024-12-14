@@ -1,8 +1,7 @@
 #!/bin/bash
 
 #
-# to do: more elegantly resolve
-#
+# todo: more elegantly resolve the
 # shellcheck disable=SC2086  # Double quote to prevent globbing and word splitting
 #
 

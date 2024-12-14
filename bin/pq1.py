@@ -73,7 +73,7 @@ examples:
   pq help  # fails, but dumps vocabulary
 """
 
-# to do: clash w expectation of remove only 4 Columns at:  pq dedent
+# todo: clash w expectation of remove only 4 Columns at:  pq dedent
 
 # code reviewed by People, Black, Flake8, & MyPy
 
