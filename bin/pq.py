@@ -6667,6 +6667,8 @@ class TurtleClient:
             "penup": self.do_penup,
             "pu": self.do_penup,  #
             "print": self.do_print,
+            "rep": self.do_repeat,  #
+            "repeat": self.do_repeat,
             "reset": self.do_reset,
             "right": self.do_right,
             "rt": self.do_right,  #
@@ -6835,6 +6837,17 @@ class TurtleClient:
         """Print the Str of each Arg, separated by Spaces, and then 1 Line_Break"""
 
         print(*args)
+
+    def do_repeat(self, count=None) -> None:  # as if do_rep
+        """Run some instructions a chosen number of times, often less or more than once"""
+
+        count = 1 if (count is None) else int(count)
+        if count:
+
+            angle = 360 / count
+            for _ in range(count):
+                self.do_forward()
+                self.do_right(angle)
 
     def do_right(self, angle=None) -> None:  # as if do_rt
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
@@ -7291,6 +7304,10 @@ def print_if(*args, **kwargs) -> None:
 # 🐢 Bug Fixes  # todo
 #
 #
+# todo: solve the thin grey flats left on screen behind:  cs reset pu  sethertz 10 rep 8
+# also differs by Hertz:  cs reset pu  sethertz rep 8
+# also: cs pu setxy 50 50 home
+#
 # todo: solve why ↓ ↑ Keys too small - rounding trouble?:  demos/arrow-keys.logo
 #
 #
@@ -7307,7 +7324,6 @@ def print_if(*args, **kwargs) -> None:
 # todo: repro/ fix remaining occasional hangs in the named-pipe mkfifo of Linux & macOS
 # todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
 #
-# todo: solve the thin grey flats left on screen behind:  cs setxy 10 10 home
 # todo: solve ⌘K vs Turtle Server - record the input, fix the output, especially wide prompts
 #
 
@@ -7392,7 +7408,7 @@ def print_if(*args, **kwargs) -> None:
 # 🐢 Turtle Chat Engine  # todo
 #
 #
-# todo: rep n for rep n [fd fd.d rt rt.angle]
+# todo: "sethertz" with no args when no change, still say where we are
 # todo: \e escapes in Str
 # todo: "-" negation signs in place of "~" negation signs
 # todo: kebab-case as a string becomes "kebab case"
@@ -7400,9 +7416,10 @@ def print_if(*args, **kwargs) -> None:
 # todo: input Py lines:  ;sys.version_info[:3]  # ;breakpoint()
 # todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
 #
+#
 # todo: prompts placed correctly in the echo of multiple lines of Input
 #
-#
+# todo: rep n [fd fd.d rt rt.angle]
 # todo: get/set of default args, such as fd.d and rt.angle
 # todo: 'setpch' to .punch or pen.char or what?
 # todo: nonliteral (getter) arguments  # 'heading', 'position', 'isvisible', etc
