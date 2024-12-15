@@ -1,2 +1,3 @@
 set -xe
+find . -type p  # Git Status insists on leaving Named Pipes unmentioned
 git status --ignored --short "$@"
