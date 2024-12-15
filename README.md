@@ -15,7 +15,7 @@ Contents
 - [Help us please](#help-us-please)
 
 <!-- I'd fear people need the headings numbered, if it were just me -->
-<!-- VsCode autogenerates this Table-of-Contents. Maybe people will cope -->
+<!-- VsCode autogenerates this unnumbered Table-of-Contents. Maybe people will cope -->
 
 ## Welcome
 
@@ -48,7 +48,7 @@ You should feel we've invited you to improve it
 ~~ Sherry Turkle (@/sturkle)
 
 Scroll on down now to glance over my ongoing Projects at Home
-<!-- Click through to see more -->
+<!-- Click through to see more: how to Turtle, how to |pq| and |pq -|, ... -->
 
 **Links**
 
@@ -88,13 +88,11 @@ such as select Blank Space to see it is encoded as Space or Tab and so on
 But to roll your own, you need a Terminal Driver.
 Well, I've got that here, built for macOS & Linux,
 built out from what I remember of 1989,
-built on top of Import of "select, signal, termios, tty"
-
+built on top of Import of "select, signal, termios, tty".
 I have kept the Terminal Driver running,
 for the Logo Turtles call on it to paint Pixels on Screen.
 But presently I don't have the Emacs, Less, Sh Screen, Ssh, and Vi
-running above the Terminal Driver
-
+running above the Terminal Driver.
 Back at some old Git Hashes,
 I can show us delightfully low Less latencies.
 I can show us Key Maps for Emacs/ Less/ Vi too.
@@ -127,19 +125,21 @@ I build my Sh Pipes out of single Letters
 + |v is for Vi
 + |x is for XArgs
 
-Those are the Sh Pipe Filters that I write most often,
-but I practically always only call on them to run composed together with other Sh Verbs
+Those are the Sh Pipe Filters that I run most often
 
-Like it should be easy for you to look back over your own Sh Input Line History,
+Like you can pop the ten most common Words out of a Folder of \*.\* Files
+
+    cat *.* |tr ' \t' '\n' |g . |s |u |sort -nr |h
+
+
+Like you can look back over your own Sh Input Line History,
 and drop the Duplicates,
-but keep the Last Duplicate, not the First Duplicate
-
-It is easy for me
-
+but keep the Last Duplicate, not the First Duplicate.
 I build the key fragment of that Sh Pipe out of other abbreviations, more than one Letter each
 
     |tac |uu |tac |
 
+Easy quick for me
 
 ## Roll your own Sh Verbs
 
@@ -170,7 +170,7 @@ show you in real time on screen at Stderr what you're doing
 
 My Git Aliases spell out for me and for you watching over my shoulder the tricks I've found
 
-    cat - && git clean -dffxq  # destroys the Files not yet git-add'ed
+    cat - && git clean -dffxq  # destroys the Files not yet git-add'ed, without backup
     cat - && git reset --hard @{upstream}  # buries Commits in the Git Reflog, loses the rest
     git show --pretty= --name-only  # so very often all you need to know
 
@@ -187,11 +187,53 @@ It might be that no one can write a Cheat Sheet that's much help to anyone else.
 The Cheat Sheet is a record of how you put Syntax into your Brain.
 Maybe that's different than how everyone else puts Syntax into their Brains.
 Or maybe it's the same.
-Let's find out
+<!-- Let's find out -->
 
 I'm working on Cheat Sheets for Emacs, Git, Less, Make, Sh itself, Sh Screen, Ssh, & Vi
 
 Let's talk
+
+In Slack, I know we don't celebrate enough
+and the Slack ⌘/ Keyboard Shortcuts, Slack ⌘K Switch To Channel, 
+Slack ⌘[ Go > History > Back,
+Slack ⌘] Go > History > Forward
+
+In VsCode, I know we don't celebrate enough
+⌘P Go To File and ⌘K ⌘S Preferences: Open Keyboard Shortcuts.
+We more only teach ⇧⌘P Show All Commands
+
+An example is
+
+    printf '\e[18t' && read
+
+I know what that does because I have my Cheat Sheet for the
+Control & Escape Sequences you can type into an unlocked Terminal
+
+    ⌃G ⌃H ⌃I ⌃J ⌃M ⌃[   \a \b \t \n \r \e
+
+    and then the @ABCDEGHIJKLMPSTZdhlmnq forms of ⎋[ Csi, without R t } ~, are
+
+    ⎋[A ↑  ⎋[B ↓  ⎋[C →  ⎋[D ←
+    ⎋[I Tab  ⎋[Z ⇧Tab
+    ⎋[d row-go  ⎋[G column-go  ⎋[H row-column-go
+
+    ⎋[M rows-delete  ⎋[L rows-insert  ⎋[P chars-delete  ⎋[@ chars-insert
+    ⎋[J after-erase  ⎋[1J before-erase  ⎋[2J screen-erase  ⎋[3J scrollback-erase
+    ⎋[K tail-erase  ⎋[1K head-erase  ⎋[2K row-erase
+    ⎋[T scrolls-down  ⎋[S scrolls-up
+
+    ⎋[4h insert  ⎋[4l replace  ⎋[6 q bar  ⎋[4 q skid  ⎋[ q unstyled
+
+    ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[7m reverse/inverse
+    ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange
+    ⎋[m plain
+
+    ⎋[6n call for ⎋[{y};{x}R  ⎋[18t call for ⎋[{rows};{columns}t
+
+    ⎋[E repeat \r\n
+
+    and also VT420 had DECIC ⎋['} col-insert, DECDC ⎋['~ col-delete
+
 
 
 ## Write your own Dot Files
@@ -205,6 +247,13 @@ Let's find out
 I'm working on Dot Files for Bash, Emacs, Git, HushLogin, Vi, & Zsh
 
 Let's talk
+
+Key for my Sh Dot Files is logging an infinite history of Input Lines and then navigating it well.
+⌃R to search back works by default.
+⌃S to undo ⌃R might work only if you add: stty -ixon.
+Learning : to tag the left of your raw Input Line let's you choose your own Search Keys
+
+    : twitter && ping x.com |head -1
 
 **Links**
 
