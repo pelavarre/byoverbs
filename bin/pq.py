@@ -6388,8 +6388,9 @@ KDO_ONLY_WITHOUT_ARG_FUNCS = [
 #
 
 
-DegreeSign = unicodedata.lookup("Degree Sign")  # °
-Turtle = unicodedata.lookup("Turtle")  # 🐢
+DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
+FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
+Turtle = unicodedata.lookup("Turtle")  # 🐢 U+01F422
 
 
 class TurtleClient:
@@ -6422,7 +6423,7 @@ class TurtleClient:
         self.stride = 100e0
 
         self.penmode = ""
-        self.penchar = "*"  # "\x1B[7m "
+        self.penchar = FullBlock
         self.pendown = False
         self.hiding = False
 
@@ -6934,7 +6935,7 @@ class TurtleClient:
 
         floatish = isinstance(ch, float) or isinstance(ch, int) or isinstance(ch, bool)
         if ch is None:
-            penchar1 = "*"  # "\x1B[7m "
+            penchar1 = FullBlock
         elif floatish or isinstance(ch, decimal.Decimal):
             penchar1 = chr(int(ch))  # not much test of '\0' yet
         elif isinstance(ch, str):
@@ -7345,7 +7346,8 @@ def print_if(*args, **kwargs) -> None:
 #
 # todo: do & redo & undo for Turtle work
 #
-# # todo: take Heading in from Vi
+# todo: take end-of-Tada in from Vi
+# todo: take Heading in from Vi
 # todo: compose the Logo Command that sums up the Vi choices
 #
 # todo: draw on a Canvas larger than the screen
@@ -7356,8 +7358,6 @@ def print_if(*args, **kwargs) -> None:
 #
 # 🐢 Turtle Graphics Engine  # todo
 #
-#
-# default to U+2588 Full Block, no longer "*"  # setpch "\u2588"
 #
 # talk up gDoc for export
 # work up export to gDoc tech for ending color without spacing to right of screen
