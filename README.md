@@ -30,7 +30,7 @@ But by the day, I stream insights in real-time into Futures·Md, as they bubble 
 Solutions I more drop into Scraps·Txt.
 The Code comes to me first, the English Words to speak of it come much later.
 Day shift, I work on a MacBook, mostly in Sh Terminals, mostly Ssh'ed into Linuxes,
-with my huge [bin/](bin) Folder of 200+ extra Sh Verbs, added to the far end of my Sh Path.
+with my huge Bin Folder of 200+ extra Sh Verbs, added to the far end of my Sh Path.
 This File is the ReadMe·Md of the Bring-Your-Own Verbs (BYO Verbs) Git Repository at GitHub.
 
 I love the words people speak well of dreams like mine
@@ -51,9 +51,12 @@ Scroll on down now to glance over my ongoing Projects at Home
 <!-- Click through to see more -->
 
 **Footnotes**<br>
-ByoVerbs > [Futures·Md](futures.md)<br>
-ByoVerbs > [ReadMe·Md](readme.md)<br>
-ByoVerbs > [Scraps·Txt](scraps.txt)<br>
+ByoVerbs > [Bin Folder](bin)<br>
+ByoVerbs > [Demos Folder](demos)<br>
+ByoVerbs > [DotFiles Folder](dotfiles)<br>
+ByoVerbs > [Futures·Md File](futures.md)<br>
+ByoVerbs > [ReadMe·Md File](readme.md)<br>
+ByoVerbs > [Scraps·Txt File](scraps.txt)<br>
 Twitter > [Omar Rizwan 2024-Dec-12](https://twitter.com/rsnous/status/1867221875543162944)<br>
 
 ## Cook up your own Logo Turtles
