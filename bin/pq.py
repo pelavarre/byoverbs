@@ -2059,7 +2059,7 @@ class ReprLogger:
 #
 #   ⎋[4h insert  ⎋[4l replace  ⎋[6 q bar  ⎋[4 q skid  ⎋[ q unstyled
 #
-#   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline
+#   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[7m reverse/inverse
 #   ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange
 #   ⎋[m plain
 #
@@ -6422,7 +6422,7 @@ class TurtleClient:
         self.stride = 100e0
 
         self.penmode = ""
-        self.penchar = "*"
+        self.penchar = "*"  # "\x1B[7m "
         self.pendown = False
         self.hiding = False
 
@@ -6934,11 +6934,11 @@ class TurtleClient:
 
         floatish = isinstance(ch, float) or isinstance(ch, int) or isinstance(ch, bool)
         if ch is None:
-            penchar1 = "*"
+            penchar1 = "*"  # "\x1B[7m "
         elif floatish or isinstance(ch, decimal.Decimal):
             penchar1 = chr(int(ch))  # not much test of '\0' yet
         elif isinstance(ch, str):
-            assert len(ch) == 1, (len(ch), ch)
+            assert len(ch) == 1, (len(ch), ch)  # todo: unlock vs require Len 1 after dropping Sgr's
             penchar1 = ch
         else:
             assert False, (type(ch), ch)
@@ -6990,7 +6990,7 @@ class TurtleClient:
         print(f"Sleeping {sleep}s because SetHertz")
         time.sleep(sleep)
 
-        # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s
+        # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s  st
 
     def do_tada(self) -> None:
         """Hide the Turtle, but only until next Call"""
@@ -7289,46 +7289,145 @@ def print_if(*args, **kwargs) -> None:
 #
 # 🐢 Bug Fixes  # todo
 #
+#
+# todo: solve why ↓ ↑ Keys too small - rounding trouble?:  demos/arrow-keys.logo
+#
+#
+# todo: solve run 'pq.py' easily outside macOS, like disentangle from Pq PbCopy/ PbPaste
+# todo: stop clearing the Os Copy-Paste Buffer as part of quitting normally
+#
+# todo: test bounds collisions
+#   cs reset pd  pu setxy 530 44 pd  lt fd 300
+#       skips the column inside the right edge ?!
+#
+# todo: strip out the Sgr and then limit "setpch" to 1 Char
+# todo: unlock Verb for less limited experimentation
+#
 # todo: repro/ fix remaining occasional hangs in the named-pipe mkfifo of Linux & macOS
 # todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
 #
 # todo: solve the thin grey flats left on screen behind:  cs setxy 10 10 home
-# todo: solve why ↓ ↑ Keys too small when drawn by:  demos/arrow-keys.logo
-# todo: solve ⌘K vs Turtle Server
-#
-# todo: solve outside macOS, like disentangle from Pq PbCopy/ PbPaste
-#
-
-#
-# 🐢 Python Makeovers  # todo
-#
-# todo: have the BytesTerminal say when to yield, but yield in the ShadowsTerminal
-# todo: move the VT420 DECDC ⎋['~ and DECIC ⎋['} emulations up into the ShadowsTerminal
+# todo: solve ⌘K vs Turtle Server - record the input, fix the output, especially wide prompts
 #
 
 #
 # 🐢 Turtle Demos  # todo
 #
-# todo: demo bugs fixed lately - Large Headings.logo for round vs trunc
 #
+# todo: 'cs ...' to choose a next demo of a shuffle
+# todo: 'import filename' or 'load filename' to fetch & run a particular file
+#
+#
+# todo: early visual wows of a twitch stream
 # todo: colorful spirography
-# todo: abs square:  cs reset pd  setxy 0 100  setxy 100 100  setxy 100 0  setxy 0 0
-# todo: multiple Procs per File via TO <name>, then dents, optional END
-# todo: one large single File of many Logo Procs
+# todo: 'batteries included better than homemade'
 #
-# todo: test bounds collisions
-#   cs reset pd  pu setxy 530 44 pd  lt fd 300
-#       skips the column inside the right edge ?!
+# todo: demo bugs fixed lately - Large Headings.logo for '.round()' vs '.trunc()'
+#
+# todo: one large single File of many Logo Procs, via:  def <name> [ ... ]
+# todo: multiple Procs per File via TO <name>, then dents, optional END
+#
+# todo: abs square:  cs reset pd  setxy 0 100  setxy 100 100  setxy 100 0  setxy 0 0
+# todo: blink turtle:  sethertz 5  st s ht s  st s ht s  st s ht s  st
+# todo: 🐢 Fd 0 does a punch, as if a Label 'c' of 1 Char without moving Turtle
+# todo: 🐢 Tada exists
+#
 
 #
-# 🐢 Turtle Commands  # todo
+# 🐢 Turtle Shadow Engine  # todo
 #
-# todo: solve Flush & Sleep such that we can demo ht st blinking of the Turtle
-# todo: learn 🐢 Fd 0 does a punch, as if a Label 'c' of 1 Char without moving Turtle
+#
+# z layer "█@" for a Turtle with 8 Headings
+# todo: z-layers, like one out front with more fun Cursors as Turtle
+#
+#
+# todo: fill and clear to collision, with colors, with patterns
+#
+# todo: do & redo & undo for Turtle work
+#
+# # todo: take Heading in from Vi
+# todo: compose the Logo Command that sums up the Vi choices
+#
+# todo: draw on a Canvas larger than the screen
+# todo: checkpoint/ commit/ restore the Canvas
+# todo: export the Canvas as .typescript, styled & colored
+#
+
+#
+# 🐢 Turtle Graphics Engine  # todo
+#
+#
+# default to U+2588 Full Block, no longer "*"  # setpch "\u2588"
+#
+# talk up gDoc for export
+# work up export to gDoc tech for ending color without spacing to right of screen
+#
+# todo: edge cap cursor position, wrap, bounce, whine, stop
+#
+#
+# todo: plot Fonts of Characters
+#
+#
+# todo: label "\e[41m" cs - does work, fill screen w background colour, do we like that?
+#
+# todo: thicker X Y Pens, especially the squarish 2X 1Y
+# todo: thinner X Y Pens, especially the 0.5X 1Y of U+2584 Lower, U+2580 Upper
+# todo: thicker X Y Pixels
+#
+# todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpch "🟢"
+# todo: pasting such as LargeGreenCircle into ⇧R of 'pq turtle', 'pq st yolo', etc
+#
+# todo: Large Window vs SetScrunch, such as a large Headings.logo
+# todo: Ellipse etc via SetScrunch to tweak our fixed '/ 2 for thin pixels'
+# todo: Log Scale SetScrunch in Y or X or both
+#
+# todo: more bits of Turtle State on Screen somehow
+# todo: more perceptible Screen State, such as the Chars there already
+#
+#
+# todo: 3D Turtle position & trace
+#
+
+#
+# 🐢 Turtle Chat Engine  # todo
+#
+#
+# todo: rep n for rep n [fd fd.d rt rt.angle]
+# todo: \e escapes in Str
+# todo: "-" negation signs in place of "~" negation signs
+# todo: input Sh lines:  !uname  # !ls  # !cat - >/dev/null  # !zsh
+# todo: input Py lines:  ;sys.version_info[:3]  # ;breakpoint()
+# todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
+#
+#
+# todo: prompts placed correctly in the echo of multiple lines of Input
+#
+#
+# todo: get/set of default args, such as fd.d and rt.angle
+# todo: 'setpch' to .punch or pen.char or what?
+# todo: nonliteral (getter) arguments  # 'heading', 'position', 'isvisible', etc
+# todo: deal with Logo Legacy of 'func nary' vs '(func nary and more and more)'
+#
+# todo: pinned sampling, such as list of variables to watch
+# todo: mouse-click (or key chord) to unfold/ fold the values watched
+#
+# todo: escape more robustly into Python Exec & Eval, such as explicit func(arg) calls
+#
+# todo: Command Input Line History
+# todo: Command Input Word Tab-Completions
+#
+# todo: KwArgs for Funcs
+# todo: or teach 🐢 Label to take a last arg of "" as an ask for no newline?
+# todo: VsCode for .logo, for .lgo, ...
+#
+# todo: reconcile with Python "import turtle" Graphics on TkInter
+# todo: .sleep vs Python Turtle screen.delay
+# todo: .stride vs Logo SetStepSize
+# todo: .sleep vs Logo SetSpeed, SetVelocity, Wait
+#
 # todo: random moves, seeded random
 # todo: cyclic moves in Color, in Pen Down, and help catalog more than 8 Colors
 # todo: Pen Colors that mix with the Screen: PenPaint/ PenReverse/ PenErase
-# todo: hide the turtle only till its next move  # 🐢 HideTurtle WhileStill
 #
 # todo: circles, ellipses
 # todo: arc(angle, radius) with a design for center & end-position
@@ -7339,66 +7438,14 @@ def print_if(*args, **kwargs) -> None:
 # todo: color less arcanely than via self.str_write "\x1B[36m"
 #   as with  ⎋[31m red  ⎋[32m green  ⎋[36m cyan  ⎋[38;5;130m orange
 #
-# todo: scroll and resize the window
+# todo: scroll and resize and reposition the window
 #
 
 #
-# 🐢 Turtle Graphics Engine  # todo
+# 🐢 Python Makeovers  # todo
 #
-# todo: take Heading in from Vi
-# todo: compose the Logo Command that sums up the Vi choices
-#
-# todo: Large Window vs SetScrunch, such as a large Headings.logo
-# todo: Ellipse etc via SetScrunch to tweak our fixed '/ 2 for thin pixels'
-# todo: Log Scale SetScrunch in Y or X or both
-# todo: thicker X Y Pixels and/or thicker X Y Pens
-#
-# todo: z-layers, like one out front with more fun Cursors as Turtle
-# todo: fill and clear to collision, with colors, with patterns
-# todo: plot Fonts of Characters
-# todo: 3D Turtle position & trace
-#
-# todo: edge cap cursor position, wrap, bounce, whine, stop
-# todo: draw on a Canvas larger than the screen
-# todo: checkpoint/ commit/ restore the Canvas
-# todo: export the Canvas as .typescript, styled & colored
-#
-# todo: more bits of Turtle State on Screen somehow
-# todo: more perceptible Screen State, such as the Chars there already
-# todo: do & undo for Turtle work
-#
-# todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpch "🟢"
-# todo: pasting such as LargeGreenCircle into ⇧R of 'pq turtle', 'pq st yolo', etc
-#
-
-#
-# 🐢 Turtle Chat Engine  # todo
-
-# todo: "-" negation signs in place of "~" negation signs
-# todo: literal arguments, like have 'help h' mean 'help "h"'
-#
-# todo: rep n for rep n [fd fd.d rt rt.angle]
-# todo: get/set of default args, such as fd.y and fd.heading
-# todo: nonliteral arguments  # 'heading', 'position', 'isvisible', etc
-# todo: deal with Logo Legacy of 'func nary' vs '(func nary and more and more)'
-#
-# todo: pinned sampling, such as list of variables to watch
-# todo: mouse-click (or key chord) to unfold/ fold the values watched
-#
-# todo: escape more robustly into Python Exec & Eval, such as explicit func(arg) calls
-# todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
-#
-# todo: prompts placed correctly in the echo of multiple lines of Input
-# todo: Command Input Line History
-#
-# todo: KwArgs for Funcs
-# todo: or teach 🐢 Label to take a last arg of "" as an ask for no newline?
-# todo: VsCode for .logo, for .lgo, ...
-#
-# todo: reconcile with Python "import turtle" Graphics on TkInter
-# todo: .sleep vs Python Turtle screen.delay
-# todo: .stride vs Logo SetStepSize
-# todo: .sleep vs Logo SetSpeed, SetVelocity, Wait
+# todo: have the BytesTerminal say when to yield, but yield in the ShadowsTerminal
+# todo: move the VT420 DECDC ⎋['~ and DECIC ⎋['} emulations up into the ShadowsTerminal
 #
 
 #

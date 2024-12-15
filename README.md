@@ -1,6 +1,6 @@
 # byoverbs
 
-Your workflow inside you Sh Terminal can run better, after you pour this kind of oil into it.
+Your workflow inside you Sh Terminal can run more smoothly, after you pour this kind of oil into it.
 We give you Sh Scripts and Py Scripts to download, or to copy-edit, so they start helping you work.
 
 ## Show, not tell

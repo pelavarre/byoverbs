@@ -529,7 +529,7 @@ def to_process_if(o: Process | SerializedProcess) -> Process:
     # Accept a Process as is
 
     if isinstance(o, Process):
-        return o  # todo: 'better copied than aliased' vs .to_process_if
+        return o  # todo: 'copied better than aliased' vs .to_process_if
 
     # Accept a Callable to hold for now, to run later
 
