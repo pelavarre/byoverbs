@@ -1,2 +1,2 @@
 set -xe
-grep -Ri "$@"
+grep -Ri --color=auto "$@"

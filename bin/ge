@@ -1,6 +1,6 @@
 set -e
 
-shline='grep -i '
+shline='grep -i --color=auto '
     while [ $# -ne 0 ]; do
         case "$1" in
             -*)

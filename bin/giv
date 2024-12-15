@@ -1,2 +1,2 @@
 set -xe
-grep -v "$@"
+grep -v --color=auto "$@"
