@@ -50,14 +50,17 @@ You should feel we've invited you to improve it
 Scroll on down now to glance over my ongoing Projects at Home
 <!-- Click through to see more -->
 
-**Footnotes**<br>
-ByoVerbs > [Bin Folder](bin)<br>
-ByoVerbs > [Demos Folder](demos)<br>
-ByoVerbs > [DotFiles Folder](dotfiles)<br>
-ByoVerbs > [Futures·Md File](futures.md)<br>
-ByoVerbs > [ReadMe·Md File](readme.md)<br>
-ByoVerbs > [Scraps·Txt File](scraps.txt)<br>
-Twitter > [Omar Rizwan 2024-Dec-12](https://twitter.com/rsnous/status/1867221875543162944)<br>
+**Links**
+
+ByoVerbs > [Bin/](bin) Folder<br>
+ByoVerbs > [Demos/](demos) Folder<br>
+ByoVerbs > [DotFiles/](dotfiles) Folder<br>
+
+ByoVerbs > [Futures·Md](futures.md) File<br>
+ByoVerbs > [ReadMe·Md](readme.md) File<br>
+ByoVerbs > [Scraps·Txt](scraps.txt) File<br>
+
+Twitter > [Omar Rizwan 2024-Dec-12](https://twitter.com/rsnous/status/1867221875543162944) Tweet<br>
 
 ## Cook up your own Logo Turtles
 
@@ -68,7 +71,8 @@ Let's solve Python "Batteries Included" for Logo Turtles
 + Let my people type Commands without Arguments. Don't force people to learn Punctuation early
 + Let my people choose their own Default Arguments. Don't force people to like our Choices
 
-**Footnotes**<br>
+**Links**
+
 Wikipedia > [Batteries Included](https://en.wikipedia.org/wiki/Batteries_Included)<br>
 Wikipedia > [Logo Programming Language](https://en.wikipedia.org/wiki/Logo_(programming_language))<br>
 Wikipedia > [Turtle Graphics](https://en.wikipedia.org/wiki/Turtle_graphics)<br>
@@ -132,7 +136,7 @@ but keep the Last Duplicate, not the First Duplicate
 
 It is easy for me
 
-I build the key fragment of that Sh Pipe out of more than one Letter each
+I build the key fragment of that Sh Pipe out of other abbreviations, more than one Letter each
 
     |tac |uu |tac |
 
@@ -150,6 +154,11 @@ I've tuned the defaults so I more get what I want,
 without me first having to remember the intricate Syntax
 that they invented long ago to let you call for a huge pile of things I practically never do want
 
+**Links**
+
+ByoVerbs > Bin > [Cal·Py](bin/cal.py)<br>
+
+
 
 ## Smooth out your own Git Command-Line-Interface (CLI)
 
@@ -166,6 +175,10 @@ My Git Aliases spell out for me and for you watching over my shoulder the tricks
     git show --pretty= --name-only  # so very often all you need to know
 
 And so on
+
+**Links**
+
+ByoVerbs > [Bin/](bin/) Folder<br>
 
 
 ## Write your own Cheat Sheets
@@ -193,6 +206,10 @@ I'm working on Dot Files for Bash, Emacs, Git, HushLogin, Vi, & Zsh
 
 Let's talk
 
+**Links**
+
+ByoVerbs > [DotFiles/](dotfiles) Folder<br>
+
 
 ## Write your own Notes
 
@@ -207,23 +224,37 @@ And my "alfa.py --" gives me the most usual way I call you,
 though sometimes I spell that out more explicity as "alfa.py --yolo".
 And my "alfa.py --help" gives me my notes
 
-My 75+ "bin/*.py" Files are examples, often woefully incomplete.
-One of the better examples is my "bin/python3.py".
+My 75+ "bin/*.py" Files are examples,
+often woefully incomplete till you mention you want more from one of them
+
+One of the better examples is my Python3·Py.
 It reminds me how to spell the more forgettable Python Easter Eggs
 
     python3 -i -c ''
     python3 -c 'import this' |tail +3 |cat -n |expand
 
-And my "bin/python3.py" also reminds me
-when the different 3.2.1 "Major-Minor-Micro" Version Numbers reached me,
-like so I can know how old some of your Python Code is,
+And this Python3·Py reminds me
+which Koans we've left out of the Zen of Python so far
+
++ 'batteries included better than homemade'
++ 'copied better than aliased'
++ 'ordered better than muddled'
++ 'python3' better than 'python3 -O'
+
+And this Python3·Py reminds me
+when the different 3.2.1 "Major-Minor-Micro" Version Numbers came out and reached me too.
+Like so I can know how old some of your Python Code is,
 when measured by a merely standard Calendar
+
+**Links**
+
+ByoVerbs > Bin > [Python3·Py](bin/python3.py)<br>
 
 
 ## Help us please
 
 You know you've got thoughts.
-Please do speak out
+Please do speak the out loud as words
 
 + LinkedIn > [pelavarre](https://www.linkedin.com/in/pelavarre)<br>
 + Mastodon > [pelavarre](https://social.vivaldi.net/@pelavarre)<br>
