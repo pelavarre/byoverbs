@@ -7304,9 +7304,10 @@ def print_if(*args, **kwargs) -> None:
 # 🐢 Bug Fixes  # todo
 #
 #
-# todo: solve the thin grey flats left on screen behind:  cs reset pu  sethertz 10 rep 8
-# also differs by Hertz:  cs reset pu  sethertz rep 8
-# also: cs pu setxy 50 50 home
+# todo: solve the thin flats left on screen behind:  reset cs pu  sethertz 10 rep 8
+# also differs by Hertz:  reset cs pu  sethertz rep 8
+# also:  sethertz cs pu setxy 250 250  sethertz 100 home
+# also:  sethertz cs pu setxy 0 210  sethertz 100 home
 #
 # todo: solve why ↓ ↑ Keys too small - rounding trouble?:  demos/arrow-keys.logo
 #
@@ -7315,7 +7316,7 @@ def print_if(*args, **kwargs) -> None:
 # todo: stop clearing the Os Copy-Paste Buffer as part of quitting normally
 #
 # todo: test bounds collisions
-#   cs reset pd  pu setxy 530 44 pd  lt fd 300
+#   reset cs pd  pu setxy 530 44 pd  lt fd 300
 #       skips the column inside the right edge ?!
 #
 # todo: strip out the Sgr and then limit "setpch" to 1 Char
@@ -7344,7 +7345,7 @@ def print_if(*args, **kwargs) -> None:
 # todo: one large single File of many Logo Procs, via:  def <name> [ ... ]
 # todo: multiple Procs per File via TO <name>, then dents, optional END
 #
-# todo: abs square:  cs reset pd  setxy 0 100  setxy 100 100  setxy 100 0  setxy 0 0
+# todo: abs square:  reset cs pd  setxy 0 100  setxy 100 100  setxy 100 0  setxy 0 0
 # todo: blink turtle:  sethertz 5  st s ht s  st s ht s  st s ht s  st
 # todo: 🐢 Fd 0 does a punch, as if a Label 'c' of 1 Char without moving Turtle
 # todo: 🐢 Tada exists
@@ -7356,6 +7357,7 @@ def print_if(*args, **kwargs) -> None:
 #
 # z layer "█@" for a Turtle with 8 Headings
 # todo: z-layers, like one out front with more fun Cursors as Turtle
+# todo: thinner X Y Pixels & Pens, especially the 0.5X 1Y of U+2584 Lower, U+2580 Upper
 #
 #
 # todo: fill and clear to collision, with colors, with patterns
@@ -7387,7 +7389,6 @@ def print_if(*args, **kwargs) -> None:
 # todo: label "\e[41m" cs - does work, fill screen w background colour, do we like that?
 #
 # todo: thicker X Y Pens, especially the squarish 2X 1Y
-# todo: thinner X Y Pens, especially the 0.5X 1Y of U+2584 Lower, U+2580 Upper
 # todo: thicker X Y Pixels
 #
 # todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpch "🟢"

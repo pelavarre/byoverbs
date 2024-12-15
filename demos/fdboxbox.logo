@@ -3,7 +3,7 @@
 # Draw two ← ↑ → ↓ square'ish boxes, concentrically, clockwise
 
 
-clearscreen reset pendown
+reset clearscreen pendown
 
 
 st

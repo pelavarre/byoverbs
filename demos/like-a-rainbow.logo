@@ -4,7 +4,7 @@
 # Draw Concentric Arcs of Red Yellow Green Cyan Blue Magenta
 
 
-clearscreen reset pendown
+reset clearscreen pendown
 
 
 setpc red

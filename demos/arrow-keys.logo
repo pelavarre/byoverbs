@@ -3,7 +3,7 @@
 # Draw the ← ↓ → and ↑ Keys of a MacBook Keyboard
 
 
-clearscreen reset pendown
+reset clearscreen pendown
 
 
 # Draw the → Key to the right of Center

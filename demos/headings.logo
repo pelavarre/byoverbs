@@ -4,7 +4,7 @@
 # Draw Lines of 30°, 45°, 60°, and 90° in each Quadrant
 
 
-clearscreen reset pendown
+reset clearscreen pendown
 
 
 pu home pd fd 300
