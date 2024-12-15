@@ -1,162 +1,234 @@
+<!-- omit in toc -->
 # byoverbs
 
-Your workflow inside you Sh Terminal can run more smoothly, after you pour this kind of oil into it.
-We give you Sh Scripts and Py Scripts to download, or to copy-edit, so they start helping you work.
+Contents
 
-## Show, not tell
+- [Welcome](#welcome)
+- [Cook up your own Logo Turtles](#cook-up-your-own-logo-turtles)
+- [Roll your own Emacs, Less, Sh Screen, Ssh, Vi](#roll-your-own-emacs-less-sh-screen-ssh-vi)
+- [Roll your own Sh Pipes](#roll-your-own-sh-pipes)
+- [Roll your own Sh Verbs](#roll-your-own-sh-verbs)
+- [Smooth out your own Git Command-Line-Interface (CLI)](#smooth-out-your-own-git-command-line-interface-cli)
+- [Write your own Cheat Sheets](#write-your-own-cheat-sheets)
+- [Write your own Dot Files](#write-your-own-dot-files)
+- [Write your own Notes](#write-your-own-notes)
+- [Help us please](#help-us-please)
 
-Go ahead, add these Sh Verbs into your Sh Path,
-out past the end where they don't disrupt any Sh Verbs you already have installed:
+<!-- I'd fear people need the headings numbered, if it were just me -->
+<!-- VsCode autogenerates this Table-of-Contents. Maybe people will cope -->
 
-    mkdir ~/Public/
-    cd ~/Public/
+## Welcome
 
-    rm -fr byoverbs/
-    git clone https://github.com/pelavarre/byoverbs.git
+This Repo is my pile of **actions your computer should make easy for you**
 
-    export PATH="${PATH:+$PATH:}$HOME/Public/byoverbs/bin"
+I work for fun and for hire on "Direct Manipulation & Live Programming projects".
+My thanks to Omar Rizwan for the phrase.
 
-Add them in, try them out, and you'll like them.
+My first puzzle here is how to stop losing new insights.
+What works for me is that first, I chat with you a bit here, calmly, up front.
+But by the day, I stream insights in real-time into Futures·Md, as they bubble up out of my brain.
+Solutions I more drop into Scraps·Txt.
+The Code comes to me first, the English Words to speak of it come much later.
+Day shift, I work on a MacBook, mostly in Sh Terminals, mostly Ssh'ed into Linuxes,
+with my huge [bin/](bin) Folder of 200+ extra Sh Verbs, added to the far end of my Sh Path.
+This File is the ReadMe·Md of the Bring-Your-Own Verbs (BYO Verbs) Git Repository at GitHub.
 
-## Sh Scripts to fork
+I love the words people speak well of dreams like mine
 
-You can correct the wrong defaults of Sh Verbs.
-They don't have to stay poorly thought out, unadapted to your workflow.
++ I'm always looking to fill in my knowledge gaps of the things already up helping me work.
+I'm often not really looking to learn from scratch
+~~ Julia Evans (@/b0rk)
 
-One example is the Sh Verb:  ls
++ You should feel agency and power, when you work with your thing.
+You should feel you can change it.
+You should feel we've invited you to improve it
+~~ Cristóbal Sciutto (@/tobyshooters)
 
-Choose Args well,
-when no Args given,
-here '-hlaF -rt':
++ We love the things we think with
+~~ Sherry Turkle (@/sturkle)
 
-<pre>
-% <strong>lsa</strong>
-+ ls -hlAF -rt
-total 0
-drwxr-xr-x  13 jqdoe  staff   416B Dec 18 15:56 byoverbs/
-%
-</pre>
+Scroll on down now to glance over my ongoing Projects at Home
+<!-- Click through to see more -->
 
-Choose Args well,
-when 1 Arg given by typing 1 Arg Pattern,
-here again '-hlaF -rt':
+**Footnotes**<br>
+ByoVerbs > [Futures·Md](futures.md)<br>
+ByoVerbs > [ReadMe·Md](readme.md)<br>
+ByoVerbs > [Scraps·Txt](scraps.txt)<br>
+Twitter > [Omar Rizwan 2024-Dec-12](https://twitter.com/rsnous/status/1867221875543162944)<br>
 
-<pre>
-% <strong>lsa *</strong>
-+ ls -hlAF -rt byoverbs
-total 72
--rw-r--r--    1 jqdoe  staff   4.3K Dec 18 15:56 Makefile
--rw-r--r--    1 jqdoe  staff   2.2K Dec 18 15:56 README.md
--rw-r--r--    1 jqdoe  staff   9.9K Dec 18 15:56 ReadmeSlowly.md
-drwxr-xr-x  188 jqdoe  staff   5.9K Dec 18 15:56 bin/
-drwxr-xr-x    7 jqdoe  staff   224B Dec 18 15:56 bugs/
-drwxr-xr-x   29 jqdoe  staff   928B Dec 18 15:56 demos/
-drwxr-xr-x    5 jqdoe  staff   160B Dec 18 15:56 docs/
-drwxr-xr-x   10 jqdoe  staff   320B Dec 18 15:56 dotfiles/
--rw-r--r--    1 jqdoe  staff    11K Dec 18 15:56 futures.md
-drwxr-xr-x    3 jqdoe  staff    96B Dec 18 15:56 pwnme/
-drwxr-xr-x   12 jqdoe  staff   384B Dec 18 15:56 .git/
-%
-</pre>
+## Cook up your own Logo Turtles
 
-Choose Args well,
-when More Args given by typing out 2 Args in full,
-here now '-dhlaF -rt':
+A Logo Turtle is a Sh Terminal Cursor, but with a Heading that isn't always only 90° East on a flat plane
 
-<pre>
-% <strong>lsa byoverbs/.git byoverbs/docs</strong>
-+ ls -AdhlF -rt ...
-drwxr-xr-x   5 plavarre  staff   160B Dec 18 15:56 byoverbs/docs/
-drwxr-xr-x  12 plavarre  staff   384B Dec 18 15:56 byoverbs/.git/
-%
-</pre>
-<=
+Let's solve Python "Batteries Included" for Logo Turtles
++ Run reasonably well in an ordinary Terminal built into macOS. Don't force people to add on Graphics Software
++ Let my people type Commands without Arguments. Don't force people to learn Punctuation early
++ Let my people choose their own Default Arguments. Don't force people to like our Choices
 
-Our examples above come from inside a setup for test, specifically running after
+**Footnotes**<br>
+Wikipedia > [Batteries Included](https://en.wikipedia.org/wiki/Batteries_Included)<br>
+Wikipedia > [Logo Programming Language](https://en.wikipedia.org/wiki/Logo_(programming_language))<br>
+Wikipedia > [Turtle Graphics](https://en.wikipedia.org/wiki/Turtle_graphics)<br>
 
-    mkdir dir/
-    cd dir/
-    git clone https://github.com/pelavarre/byoverbs.git
 
-We keep the [code inside](bin/lsa) brutally simple on purpose.
-The Sh Syntax is the Sh Syntax, but its thinking is reliably simple.
-Add in '-hlAF -rt' as your defaults for 0 or 1 Args given.
-Add in '-dhlAF -rt' as your default for More Args given.
-And every time tell you what happened:
-don't make you reread the Code,
-not until you need to remember why it does what it does.
+## Roll your own Emacs, Less, Sh Screen, Ssh, Vi
 
-## Py Scripts to fork
+Until you roll your own,
+your Keyboard-to-Screen latencies run ridiculously high (10X?),
+and your features fall short of modern VsCode,
+such as select Blank Space to see it is encoded as Space or Tab and so on
 
-Put your Examples, your Notes, and your Defaults for a Sh Verb
-just one Choice away from you inside of a corresponding Py File.
+But to roll your own, you need a Terminal Driver.
+Well, I've got that here, built for macOS & Linux,
+built out from what I remember of 1989,
+built on top of Import of "select, signal, termios, tty"
 
-Show your Examples for 'ls' when you call 'ls.py' with no Args,
-as L S Dot Tab Return:
+I have kept the Terminal Driver running,
+for the Logo Turtles call on it to paint Pixels on Screen.
+But presently I don't have the Emacs, Less, Sh Screen, Ssh, and Vi
+running above the Terminal Driver
 
-<pre>
-% <strong>ls.py</strong>
+Back at some old Git Hashes,
+I can show us delightfully low Less latencies.
+I can show us Key Maps for Emacs/ Less/ Vi too.
+I can also show us "import pty" mostly does the work of Sh Screen and Ssh,
+but there's an unsolved bug in Term Cap negotiations
+that rudely cuts back Vi's default choice of Color Palette to like 8 Colors
 
-ls.py -- |cat -  # runs the Code for:  ls -1
-ls.py --py |cat -  # shows the Code for:  ls -1
+I've borrowed Windows machines from friends often enough to believe
+we could solve Windows on top of a base of Windows "import mscvrt".
+But I have no free-of-charge way to test Windows frequently, until you give me one
 
-ls.py -al  # runs the Code for:  ls -al
-...
-</pre>
+## Roll your own Sh Pipes
 
-Show your Notes, a heavier Man Page apart from Examples,
-when you call 'ls.py' with the conventional '--h' Python Arg:
+I build my Sh Pipes out of single Letters
 
-<pre>
-% <strong>ls.py --h</strong>
-usage: ls.py [--help] [-a] [-d] [-1 | -C | -m | -l | -lh | --full-time] [--py]
-            [TOP ...]
++ |a is for Awk
++ |c is for Cat
++ |d is for Diff
++ |e is for Emacs
++ |f is for Find
++ |g is for Grep
++ |h is for Head
++ |n is for |cat -n |expand
++ |p is for Python, but doesn't make me type out "import" statements
++ |q is for Git, because G was taken
++ |s is for Sort
++ |t is for Tail
++ |u is for Uniq
++ |uu is for the kind of Uniq that doesn't first sort the Data
++ |v is for Vi
++ |x is for XArgs
 
-show the files and dirs inside of dirs
+Those are the Sh Pipe Filters that I write most often,
+but I practically always only call on them to run composed together with other Sh Verbs
 
-positional arguments:
-TOP          the name of a dir or file to show
+Like it should be easy for you to look back over your own Sh Input Line History,
+and drop the Duplicates,
+but keep the Last Duplicate, not the First Duplicate
 
-options:
---help       show this help message and exit
--a           show '.*' hidden files and dirs too
--d           show the top dirs as items of a higher dir, not their insides
--1           show as one column of file or dir names (default for Stdout Pipe)
--C           show as columns of names (default for Stdout Tty)
--m           show as lines of comma separated names
--l           show as many columns of one file or dir per line
--lh          like -l but round off byte (B) counts to k M G T P E Z Y R Q etc
---full-time  like -l but detail date/time as "%Y-%m-%d %H:%M:%S.%f %z"
---py         show the code without running it
-</pre>
+It is easy for me
 
-Show your chosen Defaults,
-when you call 'ls.py'
-with the explicit conventional '--' Sh Arg that means no more Option Switches
+I build the key fragment of that Sh Pipe out of more than one Letter each
 
-<pre>
-% <strong>ls.py -- |cat -</strong>
-+ ls.py -1 --
-byoverbs
-%
-</pre>
+    |tac |uu |tac |
+
+
+## Roll your own Sh Verbs
+
+Now and again I work on replacing the Sh Verbs with fresh Python
+that you could edit to suit you
+
+Maybe the only piece of that I really still have going now is my "cal.py".
+I practically never want to look at only 1 Month.
+I'm most commonly looking like back 14 Days or ahead 14 Days.
+Pretty often I want to see 3 Months.
+I've tuned the defaults so I more get what I want,
+without me first having to remember the intricate Syntax
+that they invented long ago to let you call for a huge pile of things I practically never do want
+
+
+## Smooth out your own Git Command-Line-Interface (CLI)
+
+My ~70 Git Command Aliases show up as "bin/q*"
+
+I'd push them into a ~/.gitconfig File,
+except I don't know how to make that kind of Git Alias
+show you in real time on screen at Stderr what you're doing
+
+My Git Aliases spell out for me and for you watching over my shoulder the tricks I've found
+
+    cat - && git clean -dffxq  # destroys the Files not yet git-add'ed
+    cat - && git reset --hard @{upstream}  # buries Commits in the Git Reflog, loses the rest
+    git show --pretty= --name-only  # so very often all you need to know
+
+And so on
+
+
+## Write your own Cheat Sheets
+
+It might be that no one can write a Cheat Sheet that's much help to anyone else.
+The Cheat Sheet is a record of how you put Syntax into your Brain.
+Maybe that's different than how everyone else puts Syntax into their Brains.
+Or maybe it's the same.
+Let's find out
+
+I'm working on Cheat Sheets for Emacs, Git, Less, Make, Sh itself, Sh Screen, Ssh, & Vi
+
+Let's talk
+
+
+## Write your own Dot Files
+
+It might be that no one can write a Dot File that's much help to anyone else.
+The Dot File is a record of which Configuration Settings you flipped out of Default.
+Maybe that's different than what choices everyone else makes.
+Or maybe it's the same.
+Let's find out
+
+I'm working on Dot Files for Bash, Emacs, Git, HushLogin, Vi, & Zsh
+
+Let's talk
+
+
+## Write your own Notes
+
+What I want from a Man Page are my examples and my notes of how to run your program
+
+Like say you write some Program and you name it Alfa and you set up "man alfa" or "alfa --help" to give me a copy of your Man Page.
+Yea.
+That does me almost no good
+
+What does me good is for me to write an "alfa.py" that gives me my examples.
+And my "alfa.py --" gives me the most usual way I call you,
+though sometimes I spell that out more explicity as "alfa.py --yolo".
+And my "alfa.py --help" gives me my notes
+
+My 75+ "bin/*.py" Files are examples, often woefully incomplete.
+One of the better examples is my "bin/python3.py".
+It reminds me how to spell the more forgettable Python Easter Eggs
+
+    python3 -i -c ''
+    python3 -c 'import this' |tail +3 |cat -n |expand
+
+And my "bin/python3.py" also reminds me
+when the different 3.2.1 "Major-Minor-Micro" Version Numbers reached me,
+like so I can know how old some of your Python Code is,
+when measured by a merely standard Calendar
 
 
 ## Help us please
 
-Please give us words to help more people start to get it
+You know you've got thoughts.
+Please do speak out
 
-LinkedIn
-> https://www.linkedin.com/in/pelavarre
++ LinkedIn > [pelavarre](https://www.linkedin.com/in/pelavarre)<br>
++ Mastodon > [pelavarre](https://social.vivaldi.net/@pelavarre)<br>
++ Twitter > [pelavarre](https://twitter.com/intent/tweet?text=/@PELaVarre)<br>
 
-Mastodon
-> https://social.vivaldi.net/@pelavarre
 
-Twitter
-> https://twitter.com/intent/tweet?text=/@PELaVarre
-
+<!-- omit in toc -->
 ## Copied from
 
-Posted as:  https://github.com/pelavarre/byoverbs/blob/main/README.md
-<br>
-Copied from:  git clone https://github.com/pelavarre/byoverbs.git
+Posted as:  https://github.com/pelavarre/byoverbs/blob/main/README.md<br>
+Copied from:  git clone https://github.com/pelavarre/byoverbs.git<br>
