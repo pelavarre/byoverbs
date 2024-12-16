@@ -135,9 +135,14 @@ echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 echo
 
 
-# Track rejected Python install patches
+# Shrug off more Sourcelines added later
+
+return
+
+
+# Git-Track rejected Python install patches
 #
-#   PATH="/Library/Frameworks/Python.framework/Versions/3.12/bin:${PATH}"
+#   PATH="/Library/Frameworks/Python.framework/Versions/3.13/bin:${PATH}"
 #   export PATH
 #
 

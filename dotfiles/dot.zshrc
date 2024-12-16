@@ -43,9 +43,9 @@ zmodload zsh/deltochar  # not yet found in Bash
 bindkey "\ez" zap-to-char  # ⌥Z for Zsh, like Emacs, but ignores case and keeps char
 
 
-# Look out mainly here for Bots jumping in to edit the Dot Files in your Home
+# Shrug off more Sourcelines added later
 
-:
+return
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot-zshrc

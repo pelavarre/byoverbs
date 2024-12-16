@@ -186,5 +186,10 @@ echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 echo
 
 
+# Shrug off more Sourcelines added later
+
+return
+
+
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.bash_profile
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

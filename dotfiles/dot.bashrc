@@ -53,9 +53,9 @@ function precmd () {  # a la Zsh 'function precmd', run before each "$PS1"
 PROMPT_COMMAND="precmd;$PROMPT_COMMAND"
 
 
-# Look out mainly here for Bots jumping in to edit the Dot Files in your Home
+# Shrug off more Sourcelines added later
 
-:
+return
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.bashrc
