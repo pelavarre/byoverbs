@@ -7301,6 +7301,16 @@ def print_if(*args, **kwargs) -> None:
 
 
 #
+# 🐢 My Guesses of Main Causes of loss in Net Promoter Score (NPS) # todo
+#
+# todo: the - key doesn’t work yet to negate numbers
+# todo: can't paste the drawing back into the Terminal
+# todo: hangs now and again
+# todo: details still churning for the resulting drawing
+#
+
+
+#
 # 🐢 Bug Fixes  # todo
 #
 #
