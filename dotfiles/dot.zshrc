@@ -21,8 +21,11 @@ fi
 function ps1 () {
     if [ "$PS1" != '%% %B' ]; then
         PS1='%% %B'
+        POSTEDIT=$'\e[m'  # '%b' to turn off '%B' doesn't work here
+        _=$POSTEDIT
     else
         PS1=$OLDPS1
+        unset POSTEDIT
     fi
 }
 
