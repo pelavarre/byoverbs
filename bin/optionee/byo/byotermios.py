@@ -442,5 +442,5 @@ if __name__ == "__main__":
     # todo: more test of Option and Command and Fn
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/optionee/byo/
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/optionee/byo/
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

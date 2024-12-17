@@ -697,5 +697,5 @@ main()
 # todo: Castling, En Passant, Check, Checkmate, Stalemate, Promotion
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/tree/main/demos/replit·com
+# posted as:  https://github.com/pelavarre/byoverbs/tree/main/demos/replit·com
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

@@ -236,5 +236,5 @@ class ArgumentParser(argparse.ArgumentParser):
 # def parser_add_subparser(parser, doc)  # FIXME
 
 
-# posted into:  https://github.com/pelavarre/byoverbs/blob/main/bin/optionee/byo/
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/optionee/byo/
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

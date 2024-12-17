@@ -121,12 +121,6 @@ def visit_py_find(find) -> None:
     wtext = rtext
     if tail != repl:
 
-        if tail.replace("posted into", "posted as") == repl:
-            rindex = rtext.rindex("posted into")
-            wtext = rtext[:rindex] + rtext[rindex:].replace("posted into", "posted as")
-            path.write_text(wtext)
-            return
-
         if rtext:
             edits.append(find)
             wtext = rtext + repl
