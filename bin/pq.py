@@ -6396,7 +6396,8 @@ Turtle = unicodedata.lookup("Turtle")  # 🐢 U+01F422
 class TurtleClient:
     """Run at Keyboard and Screen as a Shell, to command 1 Turtle via two MkFifo"""
 
-    ps1 = f"{Turtle}? "  # prompt for Turtle Client Shell
+    ps1 = f"{Turtle}? \x1B[1m"  # prompt for Turtle Client Shell  # \e1m Bold Sgr
+    after_ps1 = "\x1B[m"  # \em Plain Sgr
 
     float_x: float  # sub-pixel shadow of horizontal position
     float_y: float  # sub-pixel shadow of vertical position
@@ -6469,6 +6470,7 @@ class TurtleClient:
         # Prompt & read 1 Line from Keyboard, till ⌃D pressed to quit
 
         while True:
+            print()
             print(self.ps1, end="")
             sys.stdout.flush()
             try:
@@ -6477,6 +6479,8 @@ class TurtleClient:
                 print(" KeyboardInterrupt")
                 self.breakpoint()
                 continue
+
+            print(self.after_ps1, end="")
 
             print_if(f"{readline=}")
 
