@@ -6570,6 +6570,8 @@ class TurtleClient:
         calls: list[list[object | None]]
         calls = list()
 
+        calculated_call_ids = list()
+
         for py in pys:
 
             # Add each evallable Arg
@@ -6579,10 +6581,24 @@ class TurtleClient:
                 if not call:
                     call.append("print")  # todo: "printrepr" when Args of no Func?
                 call.append(arg)
+                continue
 
             # Add each unquoted Str
 
             except ValueError:
+
+                # Take an eval'able Expression as its value
+
+                try:
+                    evalled = eval(py)
+                    call.append(evalled)
+                    calculated_call_ids.append(id(call))
+                    continue
+                except Exception:
+                    pass
+
+                # Take an undefined Name as if it were a Case-Respecting Quoted String
+
                 word = py.strip()
                 iword = word.casefold()
                 if iword not in func_by_verb.keys():
@@ -6592,8 +6608,8 @@ class TurtleClient:
 
                 else:
                     if call:
-                        calls.append(list(call))
-                        call.clear()
+                        calls.append(call)
+                        call = list()  # replace
                     call.append(py.strip())
 
             # Trust earlier Code to have ducked every Syntax Error
@@ -6602,8 +6618,8 @@ class TurtleClient:
                 assert False, (py, pys, strip)
 
         if call:
-            calls.append(list(call))
-            call.clear()
+            calls.append(call)
+            call = list()  # unneeded
 
         if not calls:
             return ""
@@ -6622,6 +6638,9 @@ class TurtleClient:
         for call in calls:
             verb = call[0]
             args = call[1:]
+
+            if id(call) in calculated_call_ids:
+                print(f"{verb}({", ".join(repr(_) for _ in args)})")
 
             assert verb, (verb, call, calls, readline)
             assert isinstance(verb, str), (type(verb), verb, call, calls, readline)
