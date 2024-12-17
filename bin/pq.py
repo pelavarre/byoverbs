@@ -6533,10 +6533,13 @@ class TurtleClient:
                 length = index + 1
 
                 prefix = tail[:length]
+                evallable = prefix.replace("-", "~")  # refuse '-' as bin op, accept as unary op
                 try:
-                    ast.literal_eval(prefix)
+                    ast.literal_eval(evallable)
+                    # print(f"{prefix=}  # Literal")
                     prefixes.append(prefix)
                 except ValueError:
+                    # print(f"{prefix=}  # ValueError")
                     prefixes.append(prefix)
                 except SyntaxError:
                     continue
@@ -6552,10 +6555,8 @@ class TurtleClient:
 
         assert "".join(pys) == part, (pys, part)
 
-        # print(f"{pys=}")  # FIXME: '-' negative signs in place of '~' negation signs
+        # print(f"{pys=}")
         # breakpoint()
-
-        alt_pys = list(_.replace("~", "-") for _ in pys)  # todo: '-' marks for Int Literals
 
         # Split the 1 Line into a Series of 1 or more Py Calls
 
@@ -6565,7 +6566,7 @@ class TurtleClient:
         calls: list[list[object | None]]
         calls = list()
 
-        for py in alt_pys:
+        for py in pys:
 
             # Add each evallable Arg
 
@@ -7307,7 +7308,6 @@ def print_if(*args, **kwargs) -> None:
 #
 # 🐢 My Guesses of Main Causes of loss in Net Promoter Score (NPS) # todo
 #
-# todo: the - key doesn’t work yet to negate numbers
 # todo: can't paste the drawing back into the Terminal
 # todo: hangs now and again
 # todo: details still churning for the resulting drawing
@@ -7425,7 +7425,6 @@ def print_if(*args, **kwargs) -> None:
 #
 # todo: "sethertz" with no args when no change, still say where we are
 # todo: \e escapes in Str
-# todo: "-" negation signs in place of "~" negation signs
 # todo: kebab-case as a string becomes "kebab case"
 # todo: input Sh lines:  !uname  # !ls  # !cat - >/dev/null  # !zsh
 # todo: input Py lines:  ;sys.version_info[:3]  # ;breakpoint()
