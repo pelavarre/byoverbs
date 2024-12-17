@@ -6533,7 +6533,11 @@ class TurtleClient:
                 length = index + 1
 
                 prefix = tail[:length]
-                evallable = prefix.replace("-", "~")  # refuse '-' as bin op, accept as unary op
+
+                evallable = prefix
+                evallable = evallable.replace("-", "~")  # refuse '-' as bin op, accept as unary op
+                evallable = evallable.replace("+", "~")  # refuse '+' as bin op, accept as unary op
+
                 try:
                     ast.literal_eval(evallable)
                     # print(f"{prefix=}  # Literal")
