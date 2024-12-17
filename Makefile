@@ -103,6 +103,29 @@ smoke: black flake8 mypy shellcheck selftest
 	git describe --always --dirty
 	:
 
+ssh-start-work:
+	ssh-add $$(ls ~/.ssh/id_* |grep -v '[.]')
+	ssh-add -l
+	:
+
+ssh-end-work:
+	FF=$$(ssh-add -l |cut -d' ' -f3 |grep "$$HOME/.ssh/id_"); \
+	if [ -n "$$FF" ]; then \
+	    echo ssh-add -d $$FF; \
+	fi
+	ssh-add -l
+	:
+
+ssh-start-home:
+	ssh-add ~/.ssh/github.id_rsa
+	ssh-add -l
+	:
+
+ssh-end-home:
+	ssh-add -d ~/.ssh/github.id_rsa
+	ssh-add -l
+	:
+
 # todo: no 'last2lines' cover for:  git grep -l 'posted as' |grep -v .py$
 
 
