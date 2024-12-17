@@ -6870,12 +6870,14 @@ class TurtleClient:
         """Run some instructions a chosen number of times, often less or more than once"""
 
         count = 1 if (count is None) else int(count)
-        if count:
-
+        if not count:
+            self.do_forward(0)  # punches the initial pixel without moving on
+            self.do_right(0)  # mostly harmless
+        else:
             angle = 360 / count
             for _ in range(count):
-                self.do_forward()
-                self.do_right(angle)
+                self.do_forward()  # the traditional [fd rt]
+                self.do_right(angle)  # not the countercultural [rt fd]
 
     def do_right(self, angle=None) -> None:  # as if do_rt
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
@@ -7446,7 +7448,6 @@ def print_if(*args, **kwargs) -> None:
 # 🐢 Turtle Chat Engine  # todo
 #
 #
-# todo: "sethertz" with no args when no change, still say where we are
 # todo: \e escapes in Str
 # todo: kebab-case as a string becomes "kebab case"
 # todo: input Sh lines:  !uname  # !ls  # !cat - >/dev/null  # !zsh
@@ -7458,6 +7459,7 @@ def print_if(*args, **kwargs) -> None:
 #
 # todo: rep n [fd fd.d rt rt.angle]
 # todo: get/set of default args, such as fd.d and rt.angle
+# todo: printing diffs only vs say where we are, such as "rt 0" or "sethertz"
 # todo: 'setpch' to .punch or pen.char or what?
 # todo: nonliteral (getter) arguments  # 'heading', 'position', 'isvisible', etc
 # todo: deal with Logo Legacy of 'func nary' vs '(func nary and more and more)'
