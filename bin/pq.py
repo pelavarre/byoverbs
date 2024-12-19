@@ -80,6 +80,7 @@ import math
 import os
 import pathlib
 import pdb
+import platform
 import re
 import select
 import shlex
@@ -1966,13 +1967,25 @@ def shadow_terminal_yolo(itext) -> str:  # st yolo
 
 def turtle_yolo(itext) -> str:  # turtle
 
+    module = sys.modules[__name__]
+    assert module.w_open_else is None, (w_open_else, module)
+
+    hostname = platform.node()
+    debug = hostname.startswith("plavarre")
+
     turtling = False
     if not os.path.exists("stdin.mkfifo"):
+        if debug:
+            setattr(module, "w_open_else", open("pq.turtle.client.log", "a"))
         mkfifo_pathnames = ["stdin.mkfifo"]
     elif not os.path.exists("stdout.mkfifo"):
+        if debug:
+            setattr(module, "w_open_else", open("pq.turtle.server.log", "a"))
         mkfifo_pathnames = ["stdout.mkfifo"]
         turtling = True
     else:
+        if debug:
+            setattr(module, "w_open_else", open("pq.turtle.client.log", "a"))
         os.remove("stdin.mkfifo")
         os.remove("stdout.mkfifo")
         mkfifo_pathnames = ["stdin.mkfifo"]
@@ -2599,7 +2612,7 @@ class BytesTerminal:
             print_if("Server Read Entry")
             read = ifile.read()
             if not read:
-                print_if("False Select Select Oh Well Continue")
+                print_if("False Read Promise from Select Select Oh Well Continue")
                 continue
             print_if(f"Server Read Exit text={read!r}")
 
@@ -6423,7 +6436,7 @@ class TurtleClient:
         self.heading = 0e0  # 0° of North Up Clockwise
         self.stride = 100e0
 
-        self.penmode = ""
+        self.penmode = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
         self.penchar = FullBlock
         self.pendown = False
         self.hiding = False
@@ -6433,11 +6446,14 @@ class TurtleClient:
 
         self.tada_func_else = None
 
+        # macOS Terminal Sh launch doesn't clear the Graphic Rendition, Cursor Style, etc
+
     def do_reset(self) -> None:
         """Warp the Turtle to Home, but do Not clear the Screen"""
 
         self.reinit()
         self.do_hideturtle()
+        self.do_setpencolor()
         self.do_home()
         self.do_showturtle()
 
@@ -6449,15 +6465,11 @@ class TurtleClient:
             f" sleep={self.sleep}"
         )
 
-        py = 'self.str_write("\x1B" "[" "m")'  # CSI 06/13 Select Graphic Rendition (SGR)
-        rep = self.py_eval_to_repr(py)
-        assert not rep, (rep, py)
-
         py = 'self.str_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
         rep = self.py_eval_to_repr(py)
         assert not rep, (rep, py)
 
-    def turtle_client_yolo(self) -> None:
+    def turtle_client_yolo(self) -> None:  # noqa # too complex (11  # FIXME
         """Read 1 Line, Eval it, Print its result, Loop (REPL Chat)"""
 
         # Cancel the Vi choice of a Cursor Style
@@ -6500,14 +6512,17 @@ class TurtleClient:
                         try:
                             print(eval(rep))
                         except Exception:
-                            # traceback.print_exc()  # todo: log the Traceback of Exc
+                            hostname = platform.node()
+                            debug = hostname.startswith("plavarre")
+                            if debug:
+                                traceback.print_exc()  # todo: log the Traceback of Exc
                             print(rep)
 
     #
     # Eval 1 Line of Input
     #
 
-    def readline_to_py(self, readline) -> str:  # noqa C901 complex
+    def readline_to_py(self, readline) -> str:  # noqa C901 complex  # FIXME
         """Eval 1 Line of Input"""
 
         func_by_verb = self.to_func_by_verb()
@@ -6574,7 +6589,8 @@ class TurtleClient:
 
         for py in pys:
 
-            # Add each evallable Arg
+            # Add a Literal Arg,
+            # or guess Printing wanted if no Verb before Literal Args
 
             try:
                 arg = ast.literal_eval(py)
@@ -6583,11 +6599,20 @@ class TurtleClient:
                 call.append(arg)
                 continue
 
-            # Add each unquoted Str
+            # Begin again with each unquoted Verb
 
             except ValueError:
 
-                # Take an eval'able Expression as its value
+                word = py.strip()
+                iword = word.casefold()
+                if iword in func_by_verb.keys():
+                    if call:
+                        calls.append(call)
+                        call = list()  # replace
+                    call.append(py.strip())
+                    continue
+
+                # Take an eval'able Expression as its own Literal Value
 
                 try:
                     evalled = eval(py)
@@ -6599,20 +6624,10 @@ class TurtleClient:
 
                 # Take an undefined Name as if it were a Case-Respecting Quoted String
 
-                word = py.strip()
-                iword = word.casefold()
-                if iword not in func_by_verb.keys():
-                    call.append(word)
+                call.append(word)
+                continue
 
-                # Begin again with each unquoted Verb
-
-                else:
-                    if call:
-                        calls.append(call)
-                        call = list()  # replace
-                    call.append(py.strip())
-
-            # Trust earlier Code to have ducked every Syntax Error
+            # Demand that no Syntax Error escaped earlier Guards
 
             except SyntaxError:
                 assert False, (py, pys, strip)
@@ -6650,7 +6665,14 @@ class TurtleClient:
                 func = func_by_verb[iverb]
                 try:
                     func(*args)
+
                 except Exception:
+                    hostname = platform.node()
+                    debug = hostname.startswith("plavarre")
+                    if debug:
+                        traceback.print_exc()  # todo: log the Traceback of Exc
+                        return ""
+
                     format_exc = traceback.format_exc()
                     line = format_exc.splitlines()[-1]
                     print(line)
@@ -6668,51 +6690,52 @@ class TurtleClient:
     def to_func_by_verb(self) -> dict[str, typing.Callable]:
         """Say how to spell each Command Verb"""
 
+        keys = list()
+
         d: dict[str, typing.Callable]
-        d = {  # func by verb, but with an extra '#" mark when func name != verb
-            "bk": self.do_backward,  #
-            "back": self.do_backward,  #
-            "backward": self.do_backward,
-            "beep": self.do_beep,
-            "bye": self.do_bye,
-            "clear": self.do_clearscreen,  #
-            "clearscreen": self.do_clearscreen,
-            "cls": self.do_clearscreen,  #
-            "cs": self.do_clearscreen,  #
-            "fd": self.do_forward,  #
-            "forward": self.do_forward,
-            "h": self.do_help,  #
-            "help": self.do_help,
+        d = dict()
+
+        func_by_join = self.to_func_by_join()
+        for join, func in func_by_join.items():
+            func_verbs = join.split()
+            keys.extend(func_verbs)
+            for verb in func_verbs:
+                d[verb] = func
+
+        collisions = list(_ for _ in collections.Counter(keys).items() if _[-1] != 1)
+        assert not collisions, (collisions,)
+
+        return d
+
+    def to_func_by_join(self) -> dict[str, typing.Callable]:
+        """Choose 1 or more spellings for each 🐢 Command Verb"""
+
+        d: dict[str, typing.Callable]
+        d = {
+            "backward back bk": self.do_backward,
+            "beep b": self.do_beep,
+            "bye exit quit": self.do_bye,
+            "clearscreen clear cls cs": self.do_clearscreen,
+            "forward fd": self.do_forward,
+            "help h": self.do_help,
             "home": self.do_home,
-            "hideturtle": self.do_hideturtle,
-            "ht": self.do_hideturtle,  #
-            "label": self.do_label,
-            "left": self.do_left,
-            "lt": self.do_left,  #
-            "p": self.do_print,  # as per Pdb precedent
-            "pd": self.do_pendown,  #
-            "pendown": self.do_pendown,
-            "penup": self.do_penup,
-            "pu": self.do_penup,  #
-            "print": self.do_print,
-            "rep": self.do_repeat,  #
-            "repeat": self.do_repeat,
+            "hideturtle ht": self.do_hideturtle,
+            "label lb": self.do_label,
+            "left lt": self.do_left,
+            "pendown pd": self.do_pendown,
+            "penup pu": self.do_penup,
+            "print p": self.do_print,
+            "repeat rep": self.do_repeat,
             "reset": self.do_reset,
-            "right": self.do_right,
-            "rt": self.do_right,  #
-            "s": self.do_sleep,  #
-            "sleep": self.do_sleep,
-            "st": self.do_showturtle,  #
-            "seth": self.do_setheading,  #
-            "setheading": self.do_setheading,
-            "sethertz": self.do_sethertz,
-            "setpc": self.do_setpencolor,  #
-            "setpch": self.do_setpenpunch,  #
-            "setpencolor": self.do_setpencolor,
-            "setpenpunch": self.do_setpenpunch,
-            "setxy": self.do_setxy,
-            "showturtle": self.do_showturtle,
-            "tada": self.do_tada,
+            "right rt": self.do_right,
+            "sleep s": self.do_sleep,
+            "setheading seth": self.do_setheading,
+            "sethertz hz": self.do_sethertz,
+            "setpencolor setpc": self.do_setpencolor,
+            "setpenpunch setpch": self.do_setpenpunch,
+            "setxy xy": self.do_setxy,
+            "showturtle st": self.do_showturtle,
+            "tada t": self.do_tada,
         }
 
         return d
@@ -6782,8 +6805,13 @@ class TurtleClient:
         (verbs, grunts) = self._sliced_to_verbs_grunts_(pattern)
         if not verbs:
             assert not grunts, (pattern, verbs, grunts)
-            print(f"{pattern!r} not found in Turtle Command Verbs")
+            print(f"Chars {pattern!r} not found in Turtle Command Verbs")
             return
+
+        if not pattern:
+            verbs.remove("bye")  # drops test-ending 'bye' etc from tests of almost-all Verbs
+            grunts.remove("exit")
+            grunts.remove("quit")
 
         print("Choose from:", ", ".join(sorted(verbs)))
         print("Or abbreviated as:", ", ".join(sorted(grunts)))
@@ -6791,27 +6819,18 @@ class TurtleClient:
     def _sliced_to_verbs_grunts_(self, pattern) -> tuple[list[str], list[str]]:
         """List the Abbreviations or Verbs that contain the Arg"""  # pattern=None matches All Verbs
 
-        func_by_verb = self.to_func_by_verb()
-
-        items_by_func = collections.defaultdict(list)
-        for item in func_by_verb.items():
-            (verb, func) = item
-            items_by_func[func].append(item)
+        func_by_join = self.to_func_by_join()
 
         verbs = list()
         grunts = list()
-        for func, items in items_by_func.items():
-            keys = list(_[0] for _ in items)
-            keys.sort(key=len)
+        for join, func in func_by_join.items():
+            func_verbs = join.split()
+            verbs.append(func_verbs[0])
+            grunts.extend(func_verbs[1:])
 
-            choices = list(keys)
-            if pattern is not None:
-                choices = list(_ for _ in keys if pattern in _)
-
-            if choices:
-                verbs.append(choices[-1])
-                if len(keys) > 1:
-                    grunts.extend(choices[:-1])
+        if pattern is not None:
+            verbs[::] = list(_ for _ in verbs if pattern in _)
+            grunts[::] = list(_ for _ in grunts if pattern in _)
 
         return (verbs, grunts)
 
@@ -6920,18 +6939,19 @@ class TurtleClient:
 
         floatish = isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
         if color is None:
-            penmode1 = ""
+            penmode1 = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
         elif floatish or isinstance(color, decimal.Decimal):
             penmode1 = self.rgb_to_penmode(rgb=int(color))
         elif isinstance(color, str):
-            if color.casefold == "None":
-                penmode1 = ""
+            if color.casefold() == "None".casefold():
+                penmode1 = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
             else:
                 penmode1 = self.colorname_to_penmode(colorname=color)
         else:
             assert False, (type(color), color)
 
         py = f"self.str_write({penmode1!r})"
+
         rep = self.py_eval_to_repr(py)
         assert not rep, (rep, py)
 
@@ -6963,7 +6983,13 @@ class TurtleClient:
     }
 
     def colorname_to_penmode(self, colorname) -> str:
-        rgb = self.rgb_by_name[colorname.casefold()]
+
+        casefold = colorname.casefold()
+        colornames = sorted(_.title() for _ in self.rgb_by_name.keys())
+        if casefold not in self.rgb_by_name.keys():
+            raise KeyError(f"{colorname!r} not in {colornames}")
+
+        rgb = self.rgb_by_name[casefold]
         penmode = self.ansi_by_rgb[rgb]
         return penmode
 
@@ -6982,7 +7008,7 @@ class TurtleClient:
         elif floatish or isinstance(ch, decimal.Decimal):
             penchar1 = chr(int(ch))  # not much test of '\0' yet
         elif isinstance(ch, str):
-            assert len(ch) == 1, (len(ch), ch)  # todo: unlock vs require Len 1 after dropping Sgr's
+            # assert len(ch) == 1, (len(ch), ch)  # todo: unlock vs require Len 1 after dropping Sgr's
             penchar1 = ch
         else:
             assert False, (type(ch), ch)
@@ -7191,8 +7217,8 @@ class TurtleClient:
 
         text = f"{y_text}{x_text}"
         if pendown:
-            pc_text = "\b"
-            text = f"{y_text}{x_text}{penchar}{pc_text}"
+            pc_text = penchar + (len(penchar) * "\b")
+            text = f"{y_text}{x_text}{pc_text}"
 
         self.str_write(text)
 
@@ -7321,13 +7347,18 @@ class TurtleClient:
         return size
 
 
+w_open_else: typing.TextIO | None
+w_open_else = None
+
+
 def print_if(*args, **kwargs) -> None:
     """Print, if debugging"""
 
-    verbose = False
-    if verbose:
-        print(*args, **kwargs, end="\r\n", file=sys.stderr)
-        sys.stderr.flush()  # todo: measure when flush needed
+    if w_open_else:
+        file_ = w_open_else
+
+        print(*args, **kwargs, end="\r\n", file=file_)
+        file_.flush()  # todo: measure when no flush needed by (file_ is sys.stderr)
 
 
 #
@@ -7371,6 +7402,9 @@ def print_if(*args, **kwargs) -> None:
 # 🐢 Turtle Demos  # todo
 #
 #
+# todo: Write a Tutorial
+#
+#
 # todo: 'cs ...' to choose a next demo of a shuffle
 # todo: 'import filename' or 'load filename' to fetch & run a particular file
 #
@@ -7385,9 +7419,11 @@ def print_if(*args, **kwargs) -> None:
 # todo: multiple Procs per File via TO <name>, then dents, optional END
 #
 # todo: abs square:  reset cs pd  setxy 0 100  setxy 100 100  setxy 100 0  setxy 0 0
-# todo: blink turtle:  sethertz 5  st s ht s  st s ht s  st s ht s  st
-# todo: 🐢 Fd 0 does a punch, as if a Label 'c' of 1 Char without moving Turtle
-# todo: 🐢 Tada exists
+# todo: blink xy:  sethertz 5  st s ht s  st s ht s  st s ht s  st
+# todo: blink heading:  sethertz 5  pu  st s ht s  bk 10 st s ht s  fd 20 st s ht s  bk 10 st s ht s  st
+# todo: smoke tests of call the Grunts & Verbs as cited by:  help
+#
+# garbled to do was: 🐢 Tada exists
 #
 
 #
@@ -7416,6 +7452,10 @@ def print_if(*args, **kwargs) -> None:
 # 🐢 Turtle Graphics Engine  # todo
 #
 #
+# todo: t.penchars should stay as the Chars only, but we always ⎋[Y;XH to where we were
+#
+# todo: thicker X Y Pixels
+#
 # talk up gDoc for export
 # work up export to gDoc tech for ending color without spacing to right of screen
 #
@@ -7428,7 +7468,6 @@ def print_if(*args, **kwargs) -> None:
 # todo: label "\e[41m" cs - does work, fill screen w background colour, do we like that?
 #
 # todo: thicker X Y Pens, especially the squarish 2X 1Y
-# todo: thicker X Y Pixels
 #
 # todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpch "🟢"
 # todo: pasting such as LargeGreenCircle into ⇧R of 'pq turtle', 'pq st yolo', etc
@@ -7454,8 +7493,12 @@ def print_if(*args, **kwargs) -> None:
 # todo: input Py lines:  ;sys.version_info[:3]  # ;breakpoint()
 # todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
 #
+# todo: tweak the fd.d to hold diameter constant in 🐢 rep n abbreviation of rep n [fd fd.d rt rt.angle]
 #
 # todo: prompts placed correctly in the echo of multiple lines of Input
+#
+#
+# todo: or teach 🐢 Label to take a last arg of "" as an ask for no newline?
 #
 # todo: rep n [fd fd.d rt rt.angle]
 # todo: get/set of default args, such as fd.d and rt.angle
@@ -7499,6 +7542,13 @@ def print_if(*args, **kwargs) -> None:
 
 #
 # 🐢 Python Makeovers  # todo
+#
+#
+# todo: factor out Class Turtle, think into running more than one
+# todo: factor out 'import uturtle' as a copy of 'pq.py' created when needed
+# todo: def efprint1(self, form, **kwargs) at uturtle.Turtle for printing its Fields
+# todo: print only first and then changes in the form result
+#
 #
 # todo: have the BytesTerminal say when to yield, but yield in the ShadowsTerminal
 # todo: move the VT420 DECDC ⎋['~ and DECIC ⎋['} emulations up into the ShadowsTerminal
