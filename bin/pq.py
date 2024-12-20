@@ -7374,6 +7374,10 @@ def print_if(*args, **kwargs) -> None:
 # 🐢 Bug Fixes  # todo
 #
 #
+# todo: tweak up 'make push' to depend on:  ssh-end-work, ssh-start-home
+# but inside call on ssh-end-home, ssh-start-work
+#
+#
 # todo: solve the thin flats left on screen behind:  reset cs pu  sethertz 10 rep 8
 # also differs by Hertz:  reset cs pu  sethertz rep 8
 # also:  sethertz cs pu setxy 250 250  sethertz 100 home
@@ -7497,6 +7501,9 @@ def print_if(*args, **kwargs) -> None:
 #
 # todo: prompts placed correctly in the echo of multiple lines of Input
 #
+# todo: 🐢 Pin to drop a pin (in float precision!)
+# todo: 🐢 Go to get back to it
+# todo: 🐢 Pin that has a name, and list them at 🐢 Go, and delete them if pinned twice in same place
 #
 # todo: or teach 🐢 Label to take a last arg of "" as an ask for no newline?
 #
