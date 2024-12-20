@@ -81,13 +81,11 @@ pips: ~/.pyvenvs/pips/
 # Restyle & test the source, then tell me to push it
 
 push: smoke
-	ssh-add -D
-	ssh-add ~/.ssh/github.id_rsa
 	: did you mean:  git push
 	: press ⌃D to execute, or ⌃C to quit
 	cat - >/dev/null
+	ssh-add -l ||:
 	git push
-	ssh-add -D
 	:
 
 smoke: black flake8 mypy shellcheck selftest
@@ -101,29 +99,6 @@ smoke: black flake8 mypy shellcheck selftest
 	git log --oneline --no-decorate -1
 	git status --short --ignored
 	git describe --always --dirty
-	:
-
-ssh-start-work:
-	ssh-add $$(ls ~/.ssh/id_* |grep -v '[.]')
-	ssh-add -l
-	:
-
-ssh-end-work:
-	FF=$$(ssh-add -l |cut -d' ' -f3 |grep "$$HOME/.ssh/id_"); \
-	if [ -n "$$FF" ]; then \
-	    echo ssh-add -d $$FF; \
-	fi
-	ssh-add -l
-	:
-
-ssh-start-home:
-	ssh-add ~/.ssh/github.id_rsa
-	ssh-add -l
-	:
-
-ssh-end-home:
-	ssh-add -d ~/.ssh/github.id_rsa
-	ssh-add -l
 	:
 
 # todo: no 'last2lines' cover for:  git grep -l 'posted as' |grep -v .py$
