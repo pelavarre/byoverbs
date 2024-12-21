@@ -1,0 +1,6 @@
+D=$(dirname "$0")
+if [ $# -eq 0 ]; then
+    python3 "$D"/turtling.py --yolo
+else
+    python3 "$D"/turtling.py "$@"
+fi
