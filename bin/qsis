@@ -1,3 +1,13 @@
+# if [ "$(find . -type p)" ]; then
+
 set -xe
-find . -type p  # Git Status insists on leaving Named Pipes unmentioned
+find . -type p
 git status --ignored --short "$@"
+
+# else
+#     set -xe
+#     git status --ignored --short "$@"
+# fi
+
+# Git Clean destroys otherwise-empty Dirs that contain Named Pipes, like at:  git clean -dffxq
+# Git Status does not in itself mention Named Pipes as polluting the Clone or due for destruction
