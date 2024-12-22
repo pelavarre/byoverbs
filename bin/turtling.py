@@ -570,7 +570,7 @@ class BytesTerminal:
 
         # Block to fetch at least 1 Byte
 
-        kbytes1 = self.read_kchar_bytes_if()
+        kbytes1 = self.read_kchar_bytes_if()  # for .read_kchord_bytes_if
 
         many_kbytes = kbytes1
         if kbytes1 != b"\x1B":
@@ -585,13 +585,13 @@ class BytesTerminal:
                 # 1st loop:  ⎋ Esc that isn't ⎋⎋ Meta Esc
                 # 2nd loop:  ⎋⎋ Meta Esc that doesn't come with more Bytes
 
-            kbytes2 = self.read_kchar_bytes_if()
+            kbytes2 = self.read_kchar_bytes_if()  # for .read_kchord_bytes_if
             many_kbytes += kbytes2
             if kbytes2 != b"\x1B":
                 break
 
         if kbytes2 == b"O":  # 01/11 04/15 SS3
-            kbytes3 = self.read_kchar_bytes_if()
+            kbytes3 = self.read_kchar_bytes_if()  # for .read_kchord_bytes_if
             many_kbytes += kbytes3  # rarely in range(0x20, 0x40) CSI_EXTRAS
             return many_kbytes
 
@@ -620,11 +620,11 @@ class BytesTerminal:
 
         many_kchord_bytes = kbytes
         while True:
-            kbytes = self.read_kchar_bytes_if()  # replaces
-            many_kchord_bytes += kbytes
+            kbytes_ = self.read_kchar_bytes_if()  # for .read_kchord_bytes_if via .read_csi_...
+            many_kchord_bytes += kbytes_
 
-            if len(kbytes) == 1:  # as when ord(kbytes.encode()) < 0x80
-                kord = kbytes[-1]
+            if len(kbytes_) == 1:  # as when ord(kbytes_.encode()) < 0x80
+                kord = kbytes_[-1]
                 if 0x20 <= kord < 0x40:  # !"#$%&'()*+,-./0123456789:;<=>?
                     continue  # Parameter/ Intermediate Bytes in CSI_EXTRAS
 
@@ -650,7 +650,7 @@ class BytesTerminal:
 
         kbytes = b""
         while True:  # till KChar Bytes complete
-            kbyte = self.read_kbyte()  # todo: test end-of-input
+            kbyte = self.read_kbyte()  # for .read_kchar_bytes_if  # todo: test end-of-input
             assert kbyte, (kbyte,)
             kbytes += kbyte
 
@@ -674,8 +674,7 @@ class BytesTerminal:
         fd = self.fd
         assert self.tcgetattr_else, (self.tcgetattr_else,)
 
-        self.bytes_flush()  # 'read_kbyte'
-        self.yield_cpu()
+        self.bytes_flush()  # for 'read_kbyte'
         kbyte = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
 
         return kbyte
@@ -683,103 +682,17 @@ class BytesTerminal:
         # ⌃C comes through as b"\x03" and doesn't raise KeyboardInterrupt
         # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
 
-    def yield_cpu(self) -> None:
-        """Yield the CPU to other Processes"""
-
-        ifile_else = self.ifile_else
-        stdio = self.stdio
-
-        if not ifile_else:
-            return
-
-        ifile = ifile_else
-
-        while True:
-
-            rlist0: list[int] = [stdio.fileno(), ifile.fileno()]
-            wlist0: list[int] = list()
-            xlist0: list[int] = list()
-
-            print_if("Server Select 0 Entry")
-            timeout_eq_0 = 0
-            (rlist1, _, _) = select.select(rlist0, wlist0, xlist0, timeout_eq_0)
-            if not rlist1:
-                # self.bytes_flush()
-
-                print_if("Server Select None Entry")
-                timeout_eq_None = None
-                (rlist1, _, _) = select.select(rlist0, wlist0, xlist0, timeout_eq_None)
-
-            print_if("")
-            print_if(f"Server Select Exit: {rlist1}")
-
-            if ifile.fileno() not in rlist1:
-                assert stdio.fileno() in rlist1, (stdio.fileno(), rlist1, ifile.fileno())
-                return
-
-            # opener1 = ""  # "<client>"
-            # closer1 = ""  # "<tneilc>"
-
-            print_if("Server Read Entry")
-            read = ifile.read()
-            if not read:
-                print_if("False Read Promise from Select Select Oh Well Continue")
-                continue
-            print_if(f"Server Read Exit text={read!r}")
-
-            # assert read.startswith(opener1), (read, opener1)
-            # assert read.endswith(closer1), (read, closer1)
-
-            # read_core = read[len(opener1) : -len(closer1)]
-
-            read_core = read
-
-            # opener2 = ""  # "<server>"
-            # closer2 = ""  # "<revres>"
-
-            alt_locals: dict
-            alt_locals = dict(self=self)
-
-            result = None
-            if read.strip():
-                try:
-                    result = eval(read_core, globals(), alt_locals)
-                except Exception:
-                    result = traceback.format_exc()
-
-            text = repr(result)  # even when 'None'
-            assert text, (text, result)
-
-            opath = pathlib.Path("stdout.mkfifo")
-            print_if(f"Server Write {text=}")
-            opath.write_text(text)
-            # try:
-            # opath.write_text(opener2 + text + closer2)
-            # except BrokenPipeError:  # todo: predict how many BrokenPipeError's the Server must survive
-            #     print_if("Server 2nd Write")
-            #     opath.write_text(opener2 + text + closer2)
-            print_if("Server Write Exit")
-
-            # self.bytes_flush()
-
     def kbhit(self, timeout) -> bool:  # 'timeout' in seconds - 0 for now, None for forever
         """Block till next Input Byte, else till Timeout, else till forever"""
 
-        stdio = self.stdio
-        assert self.tcgetattr_else, (self.tcgetattr_else,)  # todo: kbhit kind of works anyhow?
+        fd = self.fd
+        assert self.tcgetattr_else, (
+            self.tcgetattr_else,
+        )  # todo: when kbhit says if readline won't block
 
-        hit = self.select_select(stdio.fileno(), timeout=timeout)
-        return hit
+        (r, w, x) = select.select([fd], [], [], timeout)
+        hit = fd in r
 
-    def select_select(self, fd, timeout) -> bool:
-
-        rlist: list[int] = [fd]
-        wlist: list[int] = list()
-        xlist: list[int] = list()
-
-        (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout)
-
-        hit = bool(alt_rlist)
         return hit
 
     #
@@ -864,15 +777,15 @@ class BytesTerminal:
 # Name the Shifting Keys
 # Meta hides inside macOS Terminal > Settings > Keyboard > Use Option as Meta Key
 
-Meta = "\N{Broken Circle With Northwest Arrow}"  # ⎋
-Control = "\N{Up Arrowhead}"  # ⌃
-Option = "\N{Option Key}"  # ⌥
-Shift = "\N{Upwards White Arrow}"  # ⇧
-Command = "\N{Place of Interest Sign}"  # ⌘  # Super  # Windows
+Meta = unicodedata.lookup("Broken Circle With Northwest Arrow")  # ⎋
+Control = unicodedata.lookup("Up Arrowhead")  # ⌃
+Option = unicodedata.lookup("Option Key")  # ⌥
+Shift = unicodedata.lookup("Upwards White Arrow")  # ⇧
+Command = unicodedata.lookup("Place of Interest Sign")  # ⌘  # Super  # Windows
 # 'Fn'
 
 
-# Define ⌃Q ⌃V and  ⌃V ⌃Q
+# Define ⌃Q ⌃V and ⌃V ⌃Q
 # to strongly abbreviate a few of the KCAP_BY_KCHARS Values
 
 KCAP_QUOTE_BY_STR = {
