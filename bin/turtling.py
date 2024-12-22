@@ -1383,6 +1383,420 @@ class ShadowsTerminal:
 
 
 #
+# Trade Texts across a pair of Named Pipes at macOS or Linux
+#
+
+
+class TurtlingFifosProxy:  # todo: rename vs TurtlingFifosProxy
+    """Trade Texts between Processes across a pair of Named Pipes at macOS or Linux"""
+
+    finds: list[str]
+    pid: int
+    fds: list[int]
+    hits: int
+
+    finds = list()
+    pid = -1
+    fds = list()
+    hits = 0
+
+    def fds_open_server_read_write_once(self) -> list[int]:
+
+        finds = self.finds
+        assert finds, (finds,)
+
+        fds = self.fds
+        if fds:
+            return list(fds)  # 'copied better than aliased'
+
+        fd0 = -1  # os.open(finds[0], os.O_RDONLY)
+        fds.append(fd0)
+
+        fd1 = os.open(finds[1], os.O_RDONLY | os.O_NONBLOCK)
+        fds.append(fd1)
+
+        fd2 = os.open(finds[-1], os.O_WRONLY)
+        fds.append(fd2)
+
+        return list(fds)  # 'copied better than aliased'
+
+    def fds_open_client_write_read_once(self) -> list[int]:
+
+        finds = self.finds
+        assert finds, (finds,)
+
+        fds = self.fds
+        if fds:
+            return list(fds)  # 'copied better than aliased'
+
+        fd1 = os.open(finds[0], os.O_WRONLY)
+        fds.append(fd1)
+
+        fd2 = os.open(finds[-1], os.O_RDONLY)
+        fds.append(fd2)
+
+        return list(fds)  # 'copied better than aliased'
+
+    def create_mkfifos_once(self) -> None:
+        """Create a Pair of MkFifo's for to read Requests and write Responses"""
+
+        finds = self.finds
+        if finds:
+            return
+
+        assert self.pid == -1, (self.pid,)
+        pid = os.getpid()
+
+        if not os.path.exists("__pycache__"):
+            os.mkdir("__pycache__")
+        if not os.path.exists("__pycache__/turtling"):
+            os.mkdir("__pycache__/turtling")
+
+        dirfind = f"__pycache__/turtling/pid={pid}"
+        if os.path.exists(dirfind):  # wildly rare
+            eprint(f"shutil.rmtree {dirfind=}", end="\r\n")
+            shutil.rmtree(dirfind)
+
+        os.mkdir(dirfind)
+
+        p1 = f"__pycache__/turtling/pid={pid}/requests.mkfifo"
+        os.mkfifo(p1)
+        finds.append(p1)
+
+        p2 = f"__pycache__/turtling/pid={pid}/responses.mkfifo"
+        os.mkfifo(p2)
+        finds.append(p2)
+
+        self.pid = pid
+
+    def find_mkfifos_once(self) -> None:
+        """Find a Pair of MkFifo's for to write Requests and read Responses"""
+
+        finds = self.finds
+        if finds:
+            return
+
+        assert self.pid == -1, (self.pid,)
+        pid = os.getpid()
+
+        p1 = "__pycache__/turtling/pid=*/requests.mkfifo"
+        p2 = "__pycache__/turtling/pid=*/responses.mkfifo"
+
+        p1_p2_finds = list()
+        for pattern in (p1, p2):
+            glob_finds = sorted(glob.glob(pattern), key=lambda _: pathlib.Path(_).stat().st_mtime)
+            glob_find = glob_finds[-1]
+            p1_p2_finds.append(glob_find)
+
+        str_pid1 = p1_p2_finds[0].partition("/pid=")[-1].split("/")[0]
+        str_pid2 = p1_p2_finds[-1].partition("/pid=")[-1].split("/")[0]
+        assert str_pid1 == str_pid2, (str_pid1, str_pid2)
+        pid = int(str_pid2)
+
+        # t0 = time.time()
+        subprocess.run(shlex.split(f"kill -0 {pid}"), stderr=subprocess.PIPE, check=True)
+        # t1 = time.time()
+        # t1t0 = t1 - t0
+        # eprint(f"{t1t0=}  # kill -0")
+
+        finds.extend(p1_p2_finds)
+
+        self.pid = pid
+
+        # macOS 'kill -0' can spend 6ms
+
+    def fd_write_text(self, fd, text) -> None:
+        """Write Chars out as an indexed Packet that starts with its own Length"""
+
+        hits = self.hits
+
+        self.hits = hits + 1
+        index = hits // 2
+
+        tail = f"index={index}\ntext={text}\n"
+        tail_encode = tail.encode()
+
+        blank_head_encode = f"length=0x{0:019_X}\n".encode()
+        encode_length = len(blank_head_encode) + len(tail_encode)
+
+        head_encode = f"length=0x{encode_length:019_X}\n".encode()
+        encode = head_encode + tail_encode
+
+        os.write(fd, encode)
+
+        # fdopen = os.fdopen(fd)
+        # try:
+        #     fdopen.flush()
+        # finally:
+        #     fdopen.close()
+
+    def fd_read_text_else(self, fd) -> str | None:
+        """Read Chars in as an indexed Request that starts with its own Length"""
+
+        hits = self.hits
+
+        self.hits = hits + 1
+        index = hits // 2
+
+        # Read the Bytes of the Chars
+
+        blank_head_encode = f"length=0x{0:019_X}\n".encode()
+        len_head_bytes = len(blank_head_encode)
+
+        head_bytes = os.read(fd, len_head_bytes)
+        if not head_bytes:
+            return None
+
+        assert len(head_bytes) == len_head_bytes, (len(head_bytes), len_head_bytes)
+        head_text = head_bytes.decode()
+
+        str_encode_length = head_text.partition("length=")[-1]
+        encode_length = int(str_encode_length, 0x10)
+        assert head_text == f"length=0x{encode_length:019_X}\n", (head_text, encode_length)
+
+        tail_bytes_length = encode_length - len(head_bytes)
+        tail_bytes = os.read(fd, tail_bytes_length)
+        assert len(tail_bytes) == tail_bytes_length, (len(tail_bytes), tail_bytes_length)
+
+        tail_text = tail_bytes.decode()
+
+        # Require the present Index
+
+        stop = tail_text.index("\n") + len("\n")
+
+        index_line = tail_text[:stop]
+        assert index_line == f"index={index}\n", (index_line, index)
+
+        # Pick out the Chars
+
+        text_eq = tail_text[stop:]
+        assert text_eq.startswith("text="), (text_eq,)
+        assert text_eq.endswith("\n"), (text_eq,)
+
+        text = text_eq
+        text = text.removeprefix("text=")
+        text = text.removesuffix("\n")
+
+        # Succeed
+
+        return text
+
+        # Named Pipes don't reliably send & receive EOF at close of File
+
+
+#
+# Run as a Server drawing with Logo Turtles
+#
+
+
+def turtling_server_run() -> bool:
+    "Run as a Server drawing with Logo Turtles and return True, else return False"
+
+    with ShadowsTerminal() as st:
+        ts1 = TurtlingServer(st)
+        ts1.server_run_till()
+
+    sys.exit()
+
+
+class TurtlingServer:
+
+    shadows_terminal: ShadowsTerminal
+    turtling_fifos_proxy: TurtlingFifosProxy
+
+    def __init__(self, shadows_terminal) -> None:
+        self.shadows_terminal = shadows_terminal
+        self.turtling_fifos_proxy = TurtlingFifosProxy()
+
+    def server_run_till(self) -> None:
+        """Draw with Logo Turtles"""
+
+        st = self.shadows_terminal
+        tfp = self.turtling_fifos_proxy
+
+        bt = st.bt  # todo: .bytes_terminal
+        bt_fd = bt.fd  # todo: .file_descriptor
+
+        st.__exit__(*sys.exc_info())
+        tfp.create_mkfifos_once()
+        st.__enter__()
+
+        pid = os.getpid()
+        st.bt.str_print(f"At your service as {pid=}")
+
+        while True:
+            fds = tfp.fds_open_server_read_write_once()
+
+            r_fifo_fd = fds[1]  # at the os.O_NONBLOCK
+            r_fifo_fd = fds[0]  # because Client Open Write waits for Server Open Read
+
+            if r_fifo_fd == -1:
+                assert tfp.fds[0] == -1, (tfp.fds,)
+                st.bt.str_print(11.6, tfp.finds[0])
+                fd0 = os.open(tfp.finds[0], os.O_RDONLY)
+                st.bt.str_print(11.7)
+                tfp.fds[0] = fd0
+                fds = list(tfp.fds)
+                r_fifo_fd = fds[0]
+
+            st.bt.str_print(12, fds)
+            timeout_eq_None = None
+            selects = select.select([bt_fd, r_fifo_fd], [], [], timeout_eq_None)
+            assert len(selects) == 3, (selects, r_fifo_fd, bt_fd)
+            r_selects = selects[0]
+            st.bt.str_print(13, selects, r_fifo_fd, bt_fd)
+
+            if bt_fd in r_selects:
+                st.bt.str_print(13.5)
+                break
+
+            assert r_selects == [r_fifo_fd], (r_selects, r_fifo_fd)
+
+            if tfp.fds[0] == -1:
+                print(13.6)
+                fd0 = os.open(tfp.finds[0], os.O_RDONLY)
+                print(13.7)
+                tfp.fds[0] = fd0
+                fds = list(tfp.fds)
+
+            st.bt.str_print(14)
+            st.__exit__(*sys.exc_info())
+            print(14.1)
+            text_else = tfp.fd_read_text_else(fd=fds[0])
+            print(14.2)
+            st.__enter__()
+            st.bt.str_print(15)
+            if text_else is None:
+                st.bt.str_print(f"Server read Empty Request {tfp.hits=}")
+                continue
+            text = text_else  # maybe Empty
+            repr_ = text
+
+            st.bt.str_print("Server got:", len(text), text)
+
+            # py = chars
+            # eval_ = eval(py)
+            # repr_ = repr(eval_)
+
+            st.bt.str_print(16)
+            tfp.fd_write_text(fd=fds[-1], text=repr_)
+            st.bt.str_print(17)
+            st.bt.str_print()
+
+
+#
+# Run as a Client chatting with Logo Turtles
+#
+
+
+def turtling_client_run() -> bool:
+    "Run as a Client chatting with Logo Turtles and return True, else return False"
+
+    try:
+        t1 = turtling.Turtle()
+    except Exception:
+        # traceback.print_exc(file=sys.stderr)
+        return False
+
+    tc1 = TurtleClient(t1)
+    try:
+        tc1.client_run_till()
+    except BrokenPipeError:
+        eprint("BrokenPipeError")
+
+    sys.exit()
+
+
+turtling_fifos_proxies: list[TurtlingFifosProxy]
+turtling_fifos_proxies = list()
+
+
+class Turtle:
+    """Command 1 Sprite of 1 Turtling Server"""
+
+    tfp: TurtlingFifosProxy
+    fds: list[int]
+
+    def __init__(self) -> None:
+
+        if not turtling_fifos_proxies:
+            new_tfp = TurtlingFifosProxy()
+            new_tfp.find_mkfifos_once()
+            turtling_fifos_proxies.append(new_tfp)
+
+        tfp = turtling_fifos_proxies[-1]
+
+        self.tfp = tfp
+        self.fds = list()
+
+    def remote_py_eval_to_repr(self, py) -> str:
+        """Write a Python Expression to the Turtling Server, and read a Python Repr"""
+
+        fds = self.fds
+        tfp = self.tfp
+
+        print(20)
+        if not fds:
+            new_fds = tfp.fds_open_client_write_read_once()
+            assert len(new_fds) == 2, (new_fds,)
+            fds.extend(new_fds)
+
+        # Write Request
+
+        print(21)
+        tfp.fd_write_text(fds[0], text=py)
+        print(22)
+        text_else = tfp.fd_read_text_else(fds[-1])
+        if text_else is None:
+            eprint(f"Client read Empty Response {tfp.hits=}")
+            return ""
+        text = text_else
+        repr_ = text
+        print(23)
+
+        # Succeed
+
+        return repr_
+
+
+class TurtleClient:
+    """Chat with Logo Turtles"""
+
+    def __init__(self, t1: Turtle) -> None:
+        self.t1 = t1
+
+    def client_run_till(self) -> None:
+        """Chat with Logo Turtles"""
+
+        t1 = self.t1
+
+        pid = t1.tfp.pid
+        print(f"Client of {pid=}")
+
+        while True:
+            eprint()
+            eprint(f"{Turtle_} ", end="")
+
+            sys.stdout.flush()
+            sys.stderr.flush()
+
+            readline = sys.stdin.readline()
+            if not readline:
+                break
+
+            rstrip = readline.rstrip()
+
+            py = rstrip
+            repr_ = t1.remote_py_eval_to_repr(py)
+            if not repr_:
+                eprint("Client read Truthy Response Empty Text")
+                continue
+            eval_ = repr_
+            # eval_ = eval(repr_)
+            print("Client got:", len(eval_), eval_)
+
+
+#
 # Paint Turtle Character Graphics onto a Terminal Screen
 #
 
@@ -2333,20 +2747,6 @@ class TurtleClientWas:
         return size
 
 
-w_open_else: typing.TextIO | None
-w_open_else = None
-
-
-def print_if(*args, **kwargs) -> None:
-    """Print, if debugging"""
-
-    if w_open_else:
-        file_ = w_open_else
-
-        print(*args, **kwargs, end="\r\n", file=file_)
-        file_.flush()  # todo: measure when no flush needed by (file_ is sys.stderr)
-
-
 #
 # 🐢 My Guesses of Main Causes of loss in Net Promoter Score (NPS) # todo
 #
@@ -2564,420 +2964,6 @@ def print_if(*args, **kwargs) -> None:
 
 
 #
-# Trade Texts across a pair of Named Pipes at macOS or Linux
-#
-
-
-class TurtlingFifosProxy:  # todo: rename vs TurtlingFifosProxy
-    """Trade Texts between Processes across a pair of Named Pipes at macOS or Linux"""
-
-    finds: list[str]
-    pid: int
-    fds: list[int]
-    hits: int
-
-    finds = list()
-    pid = -1
-    fds = list()
-    hits = 0
-
-    def fds_open_server_read_write_once(self) -> list[int]:
-
-        finds = self.finds
-        assert finds, (finds,)
-
-        fds = self.fds
-        if fds:
-            return list(fds)  # 'copied better than aliased'
-
-        fd0 = -1  # os.open(finds[0], os.O_RDONLY)
-        fds.append(fd0)
-
-        fd1 = os.open(finds[1], os.O_RDONLY | os.O_NONBLOCK)
-        fds.append(fd1)
-
-        fd2 = os.open(finds[-1], os.O_WRONLY)
-        fds.append(fd2)
-
-        return list(fds)  # 'copied better than aliased'
-
-    def fds_open_client_write_read_once(self) -> list[int]:
-
-        finds = self.finds
-        assert finds, (finds,)
-
-        fds = self.fds
-        if fds:
-            return list(fds)  # 'copied better than aliased'
-
-        fd1 = os.open(finds[0], os.O_WRONLY)
-        fds.append(fd1)
-
-        fd2 = os.open(finds[-1], os.O_RDONLY)
-        fds.append(fd2)
-
-        return list(fds)  # 'copied better than aliased'
-
-    def create_mkfifos_once(self) -> None:
-        """Create a Pair of MkFifo's for to read Requests and write Responses"""
-
-        finds = self.finds
-        if finds:
-            return
-
-        assert self.pid == -1, (self.pid,)
-        pid = os.getpid()
-
-        if not os.path.exists("__pycache__"):
-            os.mkdir("__pycache__")
-        if not os.path.exists("__pycache__/turtling"):
-            os.mkdir("__pycache__/turtling")
-
-        dirfind = f"__pycache__/turtling/pid={pid}"
-        if os.path.exists(dirfind):  # wildly rare
-            eprint(f"shutil.rmtree {dirfind=}", end="\r\n")
-            shutil.rmtree(dirfind)
-
-        os.mkdir(dirfind)
-
-        p1 = f"__pycache__/turtling/pid={pid}/requests.mkfifo"
-        os.mkfifo(p1)
-        finds.append(p1)
-
-        p2 = f"__pycache__/turtling/pid={pid}/responses.mkfifo"
-        os.mkfifo(p2)
-        finds.append(p2)
-
-        self.pid = pid
-
-    def find_mkfifos_once(self) -> None:
-        """Find a Pair of MkFifo's for to write Requests and read Responses"""
-
-        finds = self.finds
-        if finds:
-            return
-
-        assert self.pid == -1, (self.pid,)
-        pid = os.getpid()
-
-        p1 = "__pycache__/turtling/pid=*/requests.mkfifo"
-        p2 = "__pycache__/turtling/pid=*/responses.mkfifo"
-
-        p1_p2_finds = list()
-        for pattern in (p1, p2):
-            glob_finds = sorted(glob.glob(pattern), key=lambda _: pathlib.Path(_).stat().st_mtime)
-            glob_find = glob_finds[-1]
-            p1_p2_finds.append(glob_find)
-
-        str_pid1 = p1_p2_finds[0].partition("/pid=")[-1].split("/")[0]
-        str_pid2 = p1_p2_finds[-1].partition("/pid=")[-1].split("/")[0]
-        assert str_pid1 == str_pid2, (str_pid1, str_pid2)
-        pid = int(str_pid2)
-
-        # t0 = time.time()
-        subprocess.run(shlex.split(f"kill -0 {pid}"), stderr=subprocess.PIPE, check=True)
-        # t1 = time.time()
-        # t1t0 = t1 - t0
-        # eprint(f"{t1t0=}  # kill -0")
-
-        finds.extend(p1_p2_finds)
-
-        self.pid = pid
-
-        # macOS 'kill -0' can spend 6ms
-
-    def fd_write_text(self, fd, text) -> None:
-        """Write Chars out as an indexed Packet that starts with its own Length"""
-
-        hits = self.hits
-
-        self.hits = hits + 1
-        index = hits // 2
-
-        tail = f"index={index}\ntext={text}\n"
-        tail_encode = tail.encode()
-
-        blank_head_encode = f"length=0x{0:019_X}\n".encode()
-        encode_length = len(blank_head_encode) + len(tail_encode)
-
-        head_encode = f"length=0x{encode_length:019_X}\n".encode()
-        encode = head_encode + tail_encode
-
-        os.write(fd, encode)
-
-        # fdopen = os.fdopen(fd)
-        # try:
-        #     fdopen.flush()
-        # finally:
-        #     fdopen.close()
-
-    def fd_read_text_else(self, fd) -> str | None:
-        """Read Chars in as an indexed Request that starts with its own Length"""
-
-        hits = self.hits
-
-        self.hits = hits + 1
-        index = hits // 2
-
-        # Read the Bytes of the Chars
-
-        blank_head_encode = f"length=0x{0:019_X}\n".encode()
-        len_head_bytes = len(blank_head_encode)
-
-        head_bytes = os.read(fd, len_head_bytes)
-        if not head_bytes:
-            return None
-
-        assert len(head_bytes) == len_head_bytes, (len(head_bytes), len_head_bytes)
-        head_text = head_bytes.decode()
-
-        str_encode_length = head_text.partition("length=")[-1]
-        encode_length = int(str_encode_length, 0x10)
-        assert head_text == f"length=0x{encode_length:019_X}\n", (head_text, encode_length)
-
-        tail_bytes_length = encode_length - len(head_bytes)
-        tail_bytes = os.read(fd, tail_bytes_length)
-        assert len(tail_bytes) == tail_bytes_length, (len(tail_bytes), tail_bytes_length)
-
-        tail_text = tail_bytes.decode()
-
-        # Require the present Index
-
-        stop = tail_text.index("\n") + len("\n")
-
-        index_line = tail_text[:stop]
-        assert index_line == f"index={index}\n", (index_line, index)
-
-        # Pick out the Chars
-
-        text_eq = tail_text[stop:]
-        assert text_eq.startswith("text="), (text_eq,)
-        assert text_eq.endswith("\n"), (text_eq,)
-
-        text = text_eq
-        text = text.removeprefix("text=")
-        text = text.removesuffix("\n")
-
-        # Succeed
-
-        return text
-
-        # Named Pipes don't reliably send & receive EOF at close of File
-
-
-#
-# Run as a Server drawing with Logo Turtles
-#
-
-
-def turtling_server_run() -> bool:
-    "Run as a Server drawing with Logo Turtles and return True, else return False"
-
-    with ShadowsTerminal() as st:
-        ts1 = TurtlingServer(st)
-        ts1.server_run_till()
-
-    sys.exit()
-
-
-class TurtlingServer:
-
-    shadows_terminal: ShadowsTerminal
-    turtling_fifos_proxy: TurtlingFifosProxy
-
-    def __init__(self, shadows_terminal) -> None:
-        self.shadows_terminal = shadows_terminal
-        self.turtling_fifos_proxy = TurtlingFifosProxy()
-
-    def server_run_till(self) -> None:
-        """Draw with Logo Turtles"""
-
-        st = self.shadows_terminal
-        tfp = self.turtling_fifos_proxy
-
-        bt = st.bt  # todo: .bytes_terminal
-        bt_fd = bt.fd  # todo: .file_descriptor
-
-        st.__exit__(*sys.exc_info())
-        tfp.create_mkfifos_once()
-        st.__enter__()
-
-        pid = os.getpid()
-        st.bt.str_print(f"At your service as {pid=}")
-
-        while True:
-            fds = tfp.fds_open_server_read_write_once()
-
-            r_fifo_fd = fds[1]  # at the os.O_NONBLOCK
-            r_fifo_fd = fds[0]  # because Client Open Write waits for Server Open Read
-
-            if r_fifo_fd == -1:
-                assert tfp.fds[0] == -1, (tfp.fds,)
-                st.bt.str_print(11.6, tfp.finds[0])
-                fd0 = os.open(tfp.finds[0], os.O_RDONLY)
-                st.bt.str_print(11.7)
-                tfp.fds[0] = fd0
-                fds = list(tfp.fds)
-                r_fifo_fd = fds[0]
-
-            st.bt.str_print(12, fds)
-            timeout_eq_None = None
-            selects = select.select([bt_fd, r_fifo_fd], [], [], timeout_eq_None)
-            assert len(selects) == 3, (selects, r_fifo_fd, bt_fd)
-            r_selects = selects[0]
-            st.bt.str_print(13, selects, r_fifo_fd, bt_fd)
-
-            if bt_fd in r_selects:
-                st.bt.str_print(13.5)
-                break
-
-            assert r_selects == [r_fifo_fd], (r_selects, r_fifo_fd)
-
-            if tfp.fds[0] == -1:
-                print(13.6)
-                fd0 = os.open(tfp.finds[0], os.O_RDONLY)
-                print(13.7)
-                tfp.fds[0] = fd0
-                fds = list(tfp.fds)
-
-            st.bt.str_print(14)
-            st.__exit__(*sys.exc_info())
-            print(14.1)
-            text_else = tfp.fd_read_text_else(fd=fds[0])
-            print(14.2)
-            st.__enter__()
-            st.bt.str_print(15)
-            if text_else is None:
-                st.bt.str_print(f"Server read Empty Request {tfp.hits=}")
-                continue
-            text = text_else  # maybe Empty
-            repr_ = text
-
-            st.bt.str_print("Server got:", len(text), text)
-
-            # py = chars
-            # eval_ = eval(py)
-            # repr_ = repr(eval_)
-
-            st.bt.str_print(16)
-            tfp.fd_write_text(fd=fds[-1], text=repr_)
-            st.bt.str_print(17)
-            st.bt.str_print()
-
-
-#
-# Run as a Client chatting with Logo Turtles
-#
-
-
-def turtling_client_run() -> bool:
-    "Run as a Client chatting with Logo Turtles and return True, else return False"
-
-    try:
-        t1 = turtling.Turtle()
-    except Exception:
-        # traceback.print_exc(file=sys.stderr)
-        return False
-
-    tc1 = TurtleClient(t1)
-    try:
-        tc1.client_run_till()
-    except BrokenPipeError:
-        eprint("BrokenPipeError")
-
-    sys.exit()
-
-
-turtling_fifos_proxies: list[TurtlingFifosProxy]
-turtling_fifos_proxies = list()
-
-
-class Turtle:
-    """Command 1 Sprite of 1 Turtling Server"""
-
-    tfp: TurtlingFifosProxy
-    fds: list[int]
-
-    def __init__(self) -> None:
-
-        if not turtling_fifos_proxies:
-            new_tfp = TurtlingFifosProxy()
-            new_tfp.find_mkfifos_once()
-            turtling_fifos_proxies.append(new_tfp)
-
-        tfp = turtling_fifos_proxies[-1]
-
-        self.tfp = tfp
-        self.fds = list()
-
-    def remote_py_eval_to_repr(self, py) -> str:
-        """Write a Python Expression to the Turtling Server, and read a Python Repr"""
-
-        fds = self.fds
-        tfp = self.tfp
-
-        print(20)
-        if not fds:
-            new_fds = tfp.fds_open_client_write_read_once()
-            assert len(new_fds) == 2, (new_fds,)
-            fds.extend(new_fds)
-
-        # Write Request
-
-        print(21)
-        tfp.fd_write_text(fds[0], text=py)
-        print(22)
-        text_else = tfp.fd_read_text_else(fds[-1])
-        if text_else is None:
-            eprint(f"Client read Empty Response {tfp.hits=}")
-            return ""
-        text = text_else
-        repr_ = text
-        print(23)
-
-        # Succeed
-
-        return repr_
-
-
-class TurtleClient:
-    """Chat with Logo Turtles"""
-
-    def __init__(self, t1: Turtle) -> None:
-        self.t1 = t1
-
-    def client_run_till(self) -> None:
-        """Chat with Logo Turtles"""
-
-        t1 = self.t1
-
-        pid = t1.tfp.pid
-        print(f"Client of {pid=}")
-
-        while True:
-            eprint()
-            eprint(f"{Turtle_} ", end="")
-
-            sys.stdout.flush()
-            sys.stderr.flush()
-
-            readline = sys.stdin.readline()
-            if not readline:
-                break
-
-            rstrip = readline.rstrip()
-
-            py = rstrip
-            repr_ = t1.remote_py_eval_to_repr(py)
-            if not repr_:
-                eprint("Client read Truthy Response Empty Text")
-                continue
-            eval_ = repr_
-            # eval_ = eval(repr_)
-            print("Client got:", len(eval_), eval_)
-
-
-#
 # Amp up Import BuiltIns
 #
 
@@ -2986,6 +2972,20 @@ def eprint(*args, **kwargs) -> None:
     """Print to Stderr"""
 
     print(*args, file=sys.stderr, **kwargs)
+
+
+w_open_else: typing.TextIO | None
+w_open_else = None
+
+
+def print_if(*args, **kwargs) -> None:
+    """Print, if debugging"""
+
+    if w_open_else:
+        file_ = w_open_else
+
+        print(*args, **kwargs, end="\r\n", file=file_)
+        file_.flush()  # todo: measure when no flush needed by (file_ is sys.stderr)
 
 
 #
