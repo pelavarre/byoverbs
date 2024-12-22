@@ -50,6 +50,8 @@ import unicodedata
 turtling = sys.modules[__name__]
 
 
+DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
+FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
 Turtle_ = unicodedata.lookup("Turtle")  # 🐢 U+01F422
 
 
@@ -69,7 +71,8 @@ def main() -> None:
         raise
     except Exception as exc:
         (exc_type, exc_value, exc_traceback) = sys.exc_info()
-        assert exc is exc_value
+        assert exc_type is type(exc_value), (exc_type, exc_value)
+        assert exc is exc_value, (exc, exc_value)
 
         if not hasattr(sys, "last_exc"):
             sys.last_exc = exc_value
@@ -237,8 +240,11 @@ ICH_X = "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
 IL_Y = "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
 DL_Y = "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
 DCH_X = "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
+
 DECIC_X = "\x1B" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
 DECDC_X = "\x1B" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
+# both with an Intermediate Byte of 02/07 ' Apostrophe [Tick]
+# despite DECDC_X and DECIC_X absent from macOS Terminal
 
 EL_P = "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
 
@@ -250,16 +256,21 @@ SM_IRM = "\x1B" "[" "4h"  # CSI 06/08 4 Set Mode Insert/ Replace
 
 SGR = "\x1B" "[" "{}m"  # CSI 06/13 Select Graphic Rendition
 
+DSR_5 = "\x1B" "[" "5n"  # CSI 06/14 [Request] Device Status Report  # Ps 5 for DSR_0
+DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 [Request] Device Status Report  # Ps 6 for CPR
+
 DECSCUSR = "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
 DECSCUSR_SKID = "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
 DECSCUSR_BAR = "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
+# all three with an Intermediate Byte of 02/00 ' ' Space
 
-# sort the quoted Str above mostly by the CSI Final Byte:  A, B, C, D, G, Z, m, etc
-
-# the 02/00 ' ' of the CSI ' q' is its only 'Intermediate Byte'
+XTWINOPS_18 = "\x1B" "[" "18t"  # CSI 07/04 [Request]   # Ps 18 for XTWINOPS_8
 
 
-DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 [Request] Device Status Report  # Ps 6 for CPR
+# the quoted Str above sorted mostly by their CSI Final Byte's:  A, B, C, D, G, Z, m, etc
+
+# to test in Sh, run variations of:  printf '\e[18t' && read
+
 
 # CSI 05/02 Active [Cursor] Position Report (CPR)
 CPR_Y_X_REGEX = r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 Active [Cursor] Pos Rep (CPR)
@@ -285,7 +296,7 @@ MACOS_TERMINAL_CSI_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlmnq"
 
 
 #
-# Lots of Docs
+# Terminal Docs
 #
 #   https://unicode.org/charts/PDF/U0000.pdf
 #   https://unicode.org/charts/PDF/U0080.pdf
@@ -319,8 +330,6 @@ class BytesTerminal:
     kbytes_list: list[bytes]  # Bytes of each Keyboard Chord in  # KeyLogger
     sbytes_list: list[bytes]  # Bytes of each Screen Write out  # ScreenLogger
 
-    ifile_else: typing.TextIO | None
-
     #
     # Init, enter, exit, breakpoint, flush, stop, and yolo self-test
     #
@@ -343,25 +352,6 @@ class BytesTerminal:
         self.kbytes_list = list()
         self.sbytes_list = list()
 
-        # Attach a Debug Client if nearby
-        # todo: define a Cli Option to refuse/ demand a nearby Debug Client
-
-        ifile_else = None
-
-        if os.path.exists("stdin.mkfifo") and os.path.exists("stdout.mkfifo"):
-
-            print_if("Server Open Pathname")
-            fd = os.open("stdin.mkfifo", os.O_RDONLY | os.O_NONBLOCK)
-
-            print_if("Server Open File Descriptor Entry")
-            ifile = os.fdopen(fd, "r")
-            print_if("Server Open File Descriptor Exit")
-            assert ifile.fileno() == fd, (ifile.fileno(), fd)
-
-            ifile_else = ifile
-
-        self.ifile_else = ifile_else
-
         # todo: need .after = termios.TCSAFLUSH on large Paste crashing us
 
     def __enter__(self) -> "BytesTerminal":  # -> typing.Self:
@@ -379,7 +369,8 @@ class BytesTerminal:
 
             assert before in (termios.TCSADRAIN, termios.TCSAFLUSH), (before,)
 
-            if False:  # jitter Fri 27/Sep
+            debug = False
+            if debug:
                 tty.setcbreak(fd, when=termios.TCSAFLUSH)  # ⌃C prints Py Traceback
             else:
                 tty.setraw(fd, when=before)  # SetRaw defaults to TcsaFlush
@@ -418,7 +409,7 @@ class BytesTerminal:
         stdio = self.stdio
         stdio.flush()
 
-    def bytes_stop(self) -> None:  # todo: learn how to do .bytes_stop() well
+    def bytes_stop(self) -> None:  # todo: learn to do .bytes_stop() well
         """Suspend and resume this Screen/ Keyboard Terminal Process"""
 
         pid = os.getpid()
@@ -484,11 +475,11 @@ class BytesTerminal:
             # if kbytes_list[:2] == [b"\x1B", b"["]:  # CSI
             # if kbytes_list[-1] in (b"n", b"t"):  # DSR  # Terminal Size Query
 
-            if kbytes_list[-4:] == [b"\x1B", b"[", b"5", b"n"]:  # DSR to FIXME
+            if kbytes_list[-4:] == [b"\x1B", b"[", b"5", b"n"]:  # DSR_5 to DSR_0
                 tmode = "Meta"
-            elif kbytes_list[-4:] == [b"\x1B", b"[", b"6", b"n"]:  # DSR to CPR
+            elif kbytes_list[-4:] == [b"\x1B", b"[", b"6", b"n"]:  # DSR_6 to CPR
                 tmode = "Meta"
-            elif kbytes_list[-5:] == [b"\x1B", b"[", b"1", b"8", b"t"]:  # [Terminal Size Query]
+            elif kbytes_list[-5:] == [b"\x1B", b"[", b"1", b"8", b"t"]:  # XTWINOPS_18 to XTWINOPS_8
                 tmode = "Meta"
 
             # Quit at ⇧Z ⇧Q
@@ -1253,16 +1244,6 @@ class ChordsKeyboard:
 
         # '⌃L'  # '⇧Z'
 
-    def column_x_report(self, column_x) -> None:
-        """Say which Column is the Cursor's Column"""
-
-        self.column_x = column_x
-
-    def row_y_report(self, row_y) -> None:
-        """Say which Row is the Cursor's Row"""
-
-        self.row_y = row_y
-
     def row_y_column_x_report(self, row_y, column_x) -> None:
         """Say which Row & Column is the Cursor's Row & Column"""
 
@@ -1542,6 +1523,38 @@ class TurtlingFifoProxy:
         # Named Pipes don't reliably send & receive EOF at close of File
 
 
+TurtlingWriter = TurtlingFifoProxy("requests")
+
+TurtlingReader = TurtlingFifoProxy("responses")
+
+
+def turtling_server_attach() -> None:
+    """Start trading Texts with a Turtling Server"""
+
+    reader = TurtlingReader
+    writer = TurtlingWriter
+
+    if not reader.find_mkfifo_once_if(pid="*"):
+        raise FileNotFoundError("No Turtling Server Started")
+    assert reader.pid >= 0, (reader.pid,)
+
+    pid = reader.pid
+
+    if not writer.find_mkfifo_once_if(pid):
+        writer.create_mkfifo_once(pid)
+
+    eprint(f"Client first write: {str()!r}")
+    writer.write_text("")
+    read_text_else = reader.read_text_else()
+    eprint(f"Client first read: {read_text_else!r}")
+
+    assert writer.index == 0, (writer.index, reader.index)
+    if reader.index != writer.index:
+        eprint(f"Client catching up Writer with Reader index={reader.index}")
+        assert reader.index > 0, (reader.index,)
+        writer.index = reader.index
+
+
 #
 # Run as a Server drawing with Logo Turtles
 #
@@ -1637,13 +1650,13 @@ def turtling_client_run() -> bool:
     "Run as a Client chatting with Logo Turtles and return True, else return False"
 
     try:
-        t1 = turtling.Turtle()
+        turtling_server_attach()
     except Exception:
-        # eprint("turtling_client_run")
+        # eprint("turtling_client_run turtling_server_attach")
         # traceback.print_exc(file=sys.stderr)
         return False
 
-    tc1 = TurtleClient(t1)
+    tc1 = TurtleClient()
     try:
         tc1.client_run_till()
     except BrokenPipeError:
@@ -1652,37 +1665,8 @@ def turtling_client_run() -> bool:
     return True
 
 
-TurtlingWriter = TurtlingFifoProxy("requests")
-TurtlingReader = TurtlingFifoProxy("responses")
-
-
 class Turtle:
-    """Command 1 Sprite of 1 Turtling Server"""
-
-    def __init__(self) -> None:
-
-        reader = TurtlingReader
-        writer = TurtlingWriter
-
-        if not reader.find_mkfifo_once_if(pid="*"):
-            raise FileNotFoundError("No Turtling Server Started")
-        assert reader.pid >= 0, (reader.pid,)
-
-        pid = reader.pid
-
-        if not writer.find_mkfifo_once_if(pid):
-            writer.create_mkfifo_once(pid)
-
-        eprint(f"Client first write: {str()!r}")
-        writer.write_text("")
-        read_text_else = reader.read_text_else()
-        eprint(f"Client first read: {read_text_else!r}")
-
-        assert writer.index == 0, (writer.index, reader.index)
-        if reader.index != writer.index:
-            eprint(f"Client catching up Writer with Reader index={reader.index}")
-            assert reader.index > 0, (reader.index,)
-            writer.index = reader.index
+    """Chat with 1 Logo Turtle"""
 
     def remote_py_eval_to_repr(self, py) -> str:
         """Write a Python Expression to the Turtling Server, and read a Python Repr"""
@@ -1707,15 +1691,12 @@ class Turtle:
 
 
 class TurtleClient:
-    """Chat with Logo Turtles"""
-
-    def __init__(self, t1: Turtle) -> None:
-        self.t1 = t1
+    """Chat with the Logo Turtles of 1 Turtling Server"""
 
     def client_run_till(self) -> None:
         """Chat with Logo Turtles"""
 
-        t1 = self.t1
+        t1 = Turtle()
 
         reader = TurtlingReader
 
@@ -1731,6 +1712,7 @@ class TurtleClient:
 
             readline = sys.stdin.readline()
             if not readline:
+                eprint("Bye")  # politely closing the line makes ⌘K work
                 break
 
             rstrip = readline.rstrip()
@@ -1749,11 +1731,6 @@ class TurtleClient:
 #
 # Paint Turtle Character Graphics onto a Terminal Screen
 #
-
-
-DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
-FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
-Turtle_ = unicodedata.lookup("Turtle")  # 🐢 U+01F422
 
 
 class TurtleClientWas:
