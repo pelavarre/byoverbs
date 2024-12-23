@@ -319,7 +319,7 @@ class BytesTerminal:
     """Write/ Read Bytes at Screen/ Keyboard of the Terminal"""
 
     stdio: typing.TextIO  # sys.stderr
-    fd: int  # 2
+    fileno: int  # 2
 
     before: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Entry
     tcgetattr_else: list[int | list[bytes | int]] | None  # sampled at Entry
@@ -338,10 +338,10 @@ class BytesTerminal:
         assert after in (termios.TCSADRAIN, termios.TCSAFLUSH), (after,)
 
         stdio = sys.stderr
-        fd = stdio.fileno()
+        fileno = stdio.fileno()
 
         self.stdio = stdio
-        self.fd = fd
+        self.fileno = fileno
 
         self.before = before
         self.tcgetattr_else = None  # is None after Exit and before Entry
@@ -355,12 +355,12 @@ class BytesTerminal:
     def __enter__(self) -> "BytesTerminal":  # -> typing.Self:
         r"""Stop line-buffering Input, stop replacing \n Output with \r\n, etc"""
 
-        fd = self.fd
+        fileno = self.fileno
         before = self.before
         tcgetattr_else = self.tcgetattr_else
 
         if tcgetattr_else is None:
-            tcgetattr = termios.tcgetattr(fd)
+            tcgetattr = termios.tcgetattr(fileno)
             assert tcgetattr is not None
 
             self.tcgetattr_else = tcgetattr
@@ -369,16 +369,16 @@ class BytesTerminal:
 
             debug = False
             if debug:
-                tty.setcbreak(fd, when=termios.TCSAFLUSH)  # ⌃C prints Py Traceback
+                tty.setcbreak(fileno, when=termios.TCSAFLUSH)  # ⌃C prints Py Traceback
             else:
-                tty.setraw(fd, when=before)  # SetRaw defaults to TcsaFlush
+                tty.setraw(fileno, when=before)  # SetRaw defaults to TcsaFlush
 
         return self
 
     def __exit__(self, *exc_info) -> None:
         r"""Start line-buffering Input, start replacing \n Output with \r\n, etc"""
 
-        fd = self.fd
+        fileno = self.fileno
         tcgetattr_else = self.tcgetattr_else
         after = self.after
 
@@ -390,7 +390,7 @@ class BytesTerminal:
 
             assert after in (termios.TCSADRAIN, termios.TCSAFLUSH), (after,)
             when = after
-            termios.tcsetattr(fd, when, tcgetattr)
+            termios.tcsetattr(fileno, when, tcgetattr)
 
         return None
 
@@ -526,11 +526,11 @@ class BytesTerminal:
 
         assert self.tcgetattr_else, (self.tcgetattr_else,)
 
-        fd = self.fd
+        fileno = self.fileno
         sbytes_list = self.sbytes_list
 
         sbytes_list.append(sbytes)
-        os.write(fd, sbytes)
+        os.write(fileno, sbytes)
 
         # doesn't raise UnicodeEncodeError
         # called with end=b"" to write without adding b"\r\n"
@@ -660,11 +660,11 @@ class BytesTerminal:
     def read_kbyte(self) -> bytes:
         """Read 1 Keyboard Byte"""
 
-        fd = self.fd
+        fileno = self.fileno
         assert self.tcgetattr_else, (self.tcgetattr_else,)
 
         self.bytes_flush()  # for 'read_kbyte'
-        kbyte = os.read(fd, 1)  # 1 or more Bytes, begun as 1 Byte
+        kbyte = os.read(fileno, 1)  # 1 or more Bytes, begun as 1 Byte
 
         return kbyte
 
@@ -674,13 +674,13 @@ class BytesTerminal:
     def kbhit(self, timeout) -> bool:  # 'timeout' in seconds - 0 for now, None for forever
         """Block till next Input Byte, else till Timeout, else till forever"""
 
-        fd = self.fd
+        fileno = self.fileno
         assert self.tcgetattr_else, (
             self.tcgetattr_else,
         )  # todo: when kbhit says if readline won't block
 
-        (r, w, x) = select.select([fd], [], [], timeout)
-        hit = fd in r
+        (r, w, x) = select.select([fileno], [], [], timeout)
+        hit = fileno in r
 
         return hit
 
@@ -691,12 +691,12 @@ class BytesTerminal:
     def columns_delete_n(self, n) -> None:  # a la VT420 DECDC ⎋['~
         """Delete N Columns (but snap the Cursor back to where it started)"""
 
-        fd = self.fd
+        fileno = self.fileno
 
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-        (x_columns, y_rows) = os.get_terminal_size(fd)
+        (x_columns, y_rows) = os.get_terminal_size(fileno)
         (y_row, x_column) = self.write_dsr_read_kcpr_y_x()
 
         for y in range(1, y_rows + 1):
@@ -710,12 +710,12 @@ class BytesTerminal:
     def columns_insert_n(self, n) -> None:  # a la VT420 DECIC ⎋['}
         """Insert N Columns (but snap the Cursor back to where it started)"""
 
-        fd = self.fd
+        fileno = self.fileno
 
         assert ICH_X == "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-        (x_columns, y_rows) = os.get_terminal_size(fd)
+        (x_columns, y_rows) = os.get_terminal_size(fileno)
         (y_row, x_column) = self.write_dsr_read_kcpr_y_x()
 
         for y in range(1, y_rows + 1):
@@ -729,19 +729,19 @@ class BytesTerminal:
     def write_dsr_read_kcpr_y_x(self) -> tuple[int, int]:  # todo: mix well with other reader/ writer
         """Write 1 Device-Status-Request (DSR), read 1 Cursor-Position-Report (KCPR)"""
 
-        fd = self.fd
+        fileno = self.fileno
 
         assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
         self.str_write("\x1B" "[" "6n")
 
         assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
 
-        csi_kbytes = os.read(fd, 2)
+        csi_kbytes = os.read(fileno, 2)
         assert csi_kbytes == b"\x1B[", (csi_kbytes,)
 
         y_kbytes = b""
         while True:
-            kbyte = os.read(fd, 1)
+            kbyte = os.read(fileno, 1)
             if kbyte not in b"0123456789":
                 break
             y_kbytes += kbyte
@@ -750,7 +750,7 @@ class BytesTerminal:
 
         x_kbytes = b""
         while True:
-            kbyte = os.read(fd, 1)
+            kbyte = os.read(fileno, 1)
             if kbyte not in b"0123456789":
                 break
             x_kbytes += kbyte
@@ -958,7 +958,7 @@ for _KCHARS, _COUNT in collections.Counter(_KCHARS_LIST).items():
 class ChordsKeyboard:
     """Read Combinations of Key Caps from a BytesTerminal, mixed with Inband Signals"""
 
-    bt: BytesTerminal
+    bytes_terminal: BytesTerminal
 
     y_rows: int  # -1, then Count of Screen Rows
     x_columns: int  # -1, then Count of Screen Columns
@@ -974,7 +974,7 @@ class ChordsKeyboard:
 
     def __init__(self, bt) -> None:
 
-        self.bt = bt
+        self.bytes_terminal = bt
         self.y_rows = -1
         self.x_columns = -1
         self.row_y = -1
@@ -987,7 +987,7 @@ class ChordsKeyboard:
 
     def __exit__(self, *exc_info) -> None:
 
-        bt = self.bt
+        bt = self.bytes_terminal
         kchords = self.kchords
 
         if kchords:
@@ -1018,7 +1018,7 @@ class ChordsKeyboard:
     def read_kchord_or(self, timeout) -> bool:
         """Do read something, and return True if it was a Key Chord"""
 
-        bt = self.bt
+        bt = self.bytes_terminal
         kchords = self.kchords
 
         assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
@@ -1151,7 +1151,7 @@ class ChordsKeyboard:
     def read_row_y_column_x(self, timeout) -> tuple[int, int]:
         """Sample Cursor Row & Column"""
 
-        bt = self.bt
+        bt = self.bytes_terminal
 
         assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
 
@@ -1175,10 +1175,10 @@ class ChordsKeyboard:
     def read_y_rows_x_columns(self, timeout) -> tuple[int, int]:
         """Sample Counts of Screen Rows and Columns"""
 
-        bt = self.bt
+        bt = self.bytes_terminal
 
-        fd = bt.fd
-        (x_columns, y_rows) = os.get_terminal_size(fd)
+        fileno = bt.fileno
+        (x_columns, y_rows) = os.get_terminal_size(fileno)
 
         assert y_rows >= 5, (y_rows,)  # macOS Terminal min 5 Rows
         assert x_columns >= 20, (x_columns,)  # macOS Terminal min 20 Columns
@@ -1192,29 +1192,42 @@ class ChordsKeyboard:
 class ShadowsTerminal:
     """Write/ Read Chars at Screen/ Keyboard of a Monospaced Square'ish Terminal"""
 
-    bt: BytesTerminal
-    ck: ChordsKeyboard
+    bytes_terminal: BytesTerminal
+    chords_keyboard: ChordsKeyboard
 
     #
     # Init, enter, exit
     #
 
     def __init__(self) -> None:
+
         bt = BytesTerminal()
-        self.bt = bt
-        self.ck = ChordsKeyboard(bt)
+        ck = ChordsKeyboard(bt)
+
+        self.bytes_terminal = bt
+        self.chords_keyboard = ck
 
     def __enter__(self) -> "ShadowsTerminal":  # -> typing.Self:
-        self.bt.__enter__()
-        self.ck.__enter__()
+
+        bt = self.bytes_terminal
+        ck = self.chords_keyboard
+
+        bt.__enter__()
+        ck.__enter__()
+
         return self
 
     def __exit__(self, *exc_info) -> None:
-        self.ck.__exit__()
-        self.bt.__exit__()
+
+        bt = self.bytes_terminal
+        ck = self.chords_keyboard
+
+        ck.__exit__()
+        bt.__exit__()
 
     def str_print(self, *args, end="\r\n") -> None:
-        bt = self.bt
+
+        bt = self.bytes_terminal
         bt.str_print(*args, end=end)
 
 
@@ -1230,7 +1243,7 @@ class TurtlingFifoProxy:
 
     find: str  # '__pycache__/turtling/pid=12345/responses.mkfifo'
     pid: int  # 12345
-    fd: int  # 3
+    fileno: int  # 3
     index: int  # -1
 
     def __init__(self, basename) -> None:
@@ -1241,7 +1254,7 @@ class TurtlingFifoProxy:
 
         self.find = ""
         self.pid = -1
-        self.fd = -1
+        self.fileno = -1
         self.index = -1
 
     def pid_create_dir_once(self, pid) -> None:
@@ -1328,30 +1341,30 @@ class TurtlingFifoProxy:
     def write_text(self, text) -> None:
         """Write Chars out as an indexed Packet that starts with its own Length"""
 
-        if self.fd < 0:
+        if self.fileno < 0:
             self.fd_open_write_once()
-            assert self.fd >= 0, (self.fd,)
+            assert self.fileno >= 0, (self.fileno,)
 
-        self.fd_write_text(self.fd, text=text)
+        self.fd_write_text(self.fileno, text=text)
 
     def fd_open_write_once(self) -> int:
         """Open to write, if not open already. Block till a Reader opens the same Pipe"""
 
         find = self.find
-        fd = self.fd
+        fileno = self.fileno
         assert find, (find,)
 
-        if fd >= 0:
-            return fd
+        if fileno >= 0:
+            return fileno
 
-        fd = os.open(find, os.O_WRONLY)
-        assert fd >= 0
+        fileno = os.open(find, os.O_WRONLY)
+        assert fileno >= 0
 
-        self.fd = fd
+        self.fileno = fileno
 
-        return fd
+        return fileno
 
-    def fd_write_text(self, fd, text) -> None:
+    def fd_write_text(self, fileno, text) -> None:
         """Write Chars out as an indexed Packet that starts with its own Length"""
 
         assert text is not None, (text,)
@@ -1368,36 +1381,36 @@ class TurtlingFifoProxy:
         head_encode = f"length=0x{encode_length:019_X}\n".encode()
         encode = head_encode + tail_encode
 
-        os.write(fd, encode)  # todo: no need for .fdopen .flush?
+        os.write(fileno, encode)  # todo: no need for .fdopen .flush?
 
     def read_text_else(self) -> str | None:
         """Read Chars in as an indexed Request that starts with its own Length"""
 
-        if self.fd < 0:
+        if self.fileno < 0:
             self.fd_open_read_once()
-            assert self.fd >= 0, (self.fd,)
+            assert self.fileno >= 0, (self.fileno,)
 
-        rtext_else = self.fd_read_text_else(self.fd)
+        rtext_else = self.fd_read_text_else(self.fileno)
         return rtext_else
 
     def fd_open_read_once(self) -> int:
         """Open to read, if not open already. Block till a Writer opens the same Pipe"""
 
         find = self.find
-        fd = self.fd
+        fileno = self.fileno
         assert find, (find,)
 
-        if fd >= 0:
-            return fd
+        if fileno >= 0:
+            return fileno
 
-        fd = os.open(find, os.O_RDONLY)
-        assert fd >= 0
+        fileno = os.open(find, os.O_RDONLY)
+        assert fileno >= 0
 
-        self.fd = fd
+        self.fileno = fileno
 
-        return fd
+        return fileno
 
-    def fd_read_text_else(self, fd) -> str | None:
+    def fd_read_text_else(self, fileno) -> str | None:
         """Read Chars in as an indexed Request that starts with its own Length"""
 
         index = self.index
@@ -1408,7 +1421,7 @@ class TurtlingFifoProxy:
         blank_head_encode = f"length=0x{0:019_X}\n".encode()
         len_head_bytes = len(blank_head_encode)
 
-        head_bytes = os.read(fd, len_head_bytes)
+        head_bytes = os.read(fileno, len_head_bytes)
         if not head_bytes:
             return None
 
@@ -1420,7 +1433,7 @@ class TurtlingFifoProxy:
         assert head_text == f"length=0x{encode_length:019_X}\n", (head_text, encode_length)
 
         tail_bytes_length = encode_length - len(head_bytes)
-        tail_bytes = os.read(fd, tail_bytes_length)
+        tail_bytes = os.read(fileno, tail_bytes_length)
         assert len(tail_bytes) == tail_bytes_length, (len(tail_bytes), tail_bytes_length)
 
         tail_text = tail_bytes.decode()
@@ -1527,9 +1540,9 @@ class TurtlingServer:
         """Draw with Logo Turtles"""
 
         st = self.shadows_terminal
-        bt = st.bt  # todo: .bytes_terminal
-        bt_fd = bt.fd  # todo: .file_descriptor
-        ck = st.ck
+        bt = st.bytes_terminal
+        bt_fd = bt.fileno  # todo: .file_descriptor
+        ck = st.chords_keyboard
 
         pid = os.getpid()
 
@@ -1551,32 +1564,44 @@ class TurtlingServer:
             fds = list()
             fds.append(bt_fd)
             if reader_fd >= 0:
-                assert reader_fd == reader.fd, (reader_fd, reader.fd)
+                assert reader_fd == reader.fileno, (reader_fd, reader.fileno)
                 fds.append(reader_fd)
 
             timeout = 0.100
             selects = select.select(fds, [], [], timeout)
             select_ = selects[0]
 
+            # Reply to 1 Keyboard Chord
+
             if bt_fd in select_:
-                kchord = ck.read_kchord(timeout=1)
-                st.str_print(kchord)
+                kchord = ck.read_kchord(timeout=1.000)
                 if kchord[-1] == "⌃D":
                     break
+                self.kchord_serve(kchord)
+
+            # Reply to 1 Client Text
 
             if reader_fd in select_:
                 self.reader_writer_serve(reader, writer=writer)
                 continue
 
+            # Reply to 1 Client Arrival
+
             if reader_fd < 0:
                 if reader.find_mkfifo_once_if(pid):  # 0..10 ms
                     reader_fd = reader.fd_open_read_once()
-                    assert reader_fd == reader.fd, (reader_fd, reader.fd)
+                    assert reader_fd == reader.fileno, (reader_fd, reader.fileno)
+
+    def kchord_serve(self, kchord) -> None:
+        """Reply to 1 Keyboard Chord"""
+
+        st = self.shadows_terminal
+        st.str_print(kchord)
 
     def reader_writer_serve(self, reader, writer) -> None:
         """Read a Python Text in, write back out the Repr of its Eval"""
 
-        reader_fd = reader.fd
+        reader_fd = reader.fileno
 
         globals_ = globals()
         locals_ = self.locals_
@@ -1613,11 +1638,11 @@ class TurtlingServer:
 
         # Write back out the Repr of its Eval (except write back "" Empty Str for same)
 
-        if writer.fd < 0:
+        if writer.fileno < 0:
             writer.fd_open_write_once()
-            assert writer.fd >= 0, (writer.fd,)
+            assert writer.fileno >= 0, (writer.fileno,)
 
-        writer.fd_write_text(writer.fd, text=wtext)
+        writer.fd_write_text(writer.fileno, text=wtext)
 
 
 #
@@ -2706,6 +2731,7 @@ class TurtleClientWas:
 #
 # todo: early visual wows of a twitch stream
 # todo: colorful spirography
+# todo: marble games
 # todo: 'batteries included better than homemade'
 #
 # todo: demo bugs fixed lately - Large Headings.logo for '.round()' vs '.trunc()'
