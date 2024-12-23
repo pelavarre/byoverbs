@@ -23,7 +23,6 @@ import argparse
 import ast
 import bdb
 import collections
-import dataclasses
 import decimal
 import glob
 import math
@@ -316,7 +315,6 @@ MACOS_TERMINAL_CSI_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlmnq"
 #
 
 
-@dataclasses.dataclass
 class BytesTerminal:
     """Write/ Read Bytes at Screen/ Keyboard of the Terminal"""
 
@@ -957,22 +955,18 @@ for _KCHARS, _COUNT in collections.Counter(_KCHARS_LIST).items():
     assert _COUNT == 1, (_COUNT, _KCHARS)
 
 
-@dataclasses.dataclass
 class ChordsKeyboard:
     """Read Combinations of Key Caps from a BytesTerminal, mixed with Inband Signals"""
 
     bt: BytesTerminal
 
-    y_rows: int  # count Screen Rows, but initially -1
-    x_columns: int  # count of Screen Columns, but initially -1
+    y_rows: int  # -1, then Count of Screen Rows
+    x_columns: int  # -1, then Count of Screen Columns
 
-    row_y: int  # Row of Cursor, but initially -1
-    column_x: int  # Column of Cursor, but initially -1
+    row_y: int  # -1, then Row of Cursor
+    column_x: int  # -1, then Column of Cursor
 
-    kchords: list[tuple[bytes, str]]  # Key Chords Read Ahead after DSR until CPR
-
-    kcpr_bytes_list: list[bytes]  # Bytes of each CPR in  # KeyLogger
-    kstr_list: list[str]  # Str of each Key Chord in  # ScreenLogger
+    kchords: list[tuple[bytes, str]]  # Key Chords read ahead after DSR until CPR
 
     #
     # Init, Enter, and Exit
@@ -986,8 +980,6 @@ class ChordsKeyboard:
         self.row_y = -1
         self.column_x = -1
         self.kchords = list()
-        self.kcpr_bytes_list = list()
-        self.kstr_list = list()
 
     def __enter__(self) -> "ChordsKeyboard":  # -> typing.Self:
 
@@ -1006,151 +998,63 @@ class ChordsKeyboard:
                 bt.bytes_print(encode)
 
     #
-    # Read from Keyboard or from Screen
+    # Read Key Chords from Keyboard or Screen
     #
 
-    def read_y_rows_x_columns(self, timeout, file=None) -> tuple[int, int]:
-        """Sample Counts of Screen Rows and Columns"""
+    def read_kchord(self, timeout) -> tuple[bytes, str]:
+        """Read 1 Key Chord, but accept Cursor-Position-Report (KCPR's) if they come first"""
+
+        kchords = self.kchords
+
+        while not self.read_kchord_or(timeout=timeout):
+            pass
+
+            # todo: log how rarely CPR's come here
+
+        kchord = kchords.pop(0)
+
+        return kchord
+
+    def read_kchord_or(self, timeout) -> bool:
+        """Do read something, and return True if it was a Key Chord"""
 
         bt = self.bt
+        kchords = self.kchords
 
-        fd = bt.fd
-        (x_columns, y_rows) = os.get_terminal_size(fd)
+        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
 
-        assert y_rows >= 5, (y_rows,)  # macOS Terminal min 5 Rows
-        assert x_columns >= 20, (x_columns,)  # macOS Terminal min 20 Columns
+        # Read something
 
-        self.y_rows = y_rows
-        self.x_columns = x_columns
+        kbytes = bt.pull_kchord_bytes_if(timeout=timeout)  # may contain b' ' near to KCAP_SEP
+        kchars = kbytes.decode()  # may raise UnicodeDecodeError
 
-        if file is not None:
-            file.write(" ⎋[18t" f" ⎋[{y_rows};{x_columns}t")
-            file.flush()
+        # Return True if it was a Key Chord
 
-        return (y_rows, x_columns)
+        m = re.match(r"^\x1B\[([0-9]+);([0-9]+)R$", string=kchars)
+        if not m:
+            kchord = self.kbytes_to_kchord(kbytes)
+            kchords.append(kchord)
+            return True
 
-    def read_row_y_column_x(self, timeout, file=None) -> tuple[int, int]:
-        """Sample Cursor Row & Column"""
+        # Interpret the KCPR
 
-        bt = self.bt
-
-        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
-
-        encode = ("\x1B" "[" "6n").encode()
-        bt.bytes_write(encode)
-
-        self.fetch_kchords_till_kcpr(timeout=timeout)
-
-        row_y = self.row_y
-        column_x = self.column_x
+        row_y = int(m.group(1))
+        column_x = int(m.group(2))
 
         assert row_y >= 1, (row_y,)
         assert column_x >= 1, (column_x,)
 
-        if file is not None:
-            file.write(" ⎋[6n" f" ⎋[{row_y};{column_x}R")
-            file.flush()
+        self.row_y_column_x_report(row_y, column_x=column_x)
 
-        return (row_y, column_x)
+        # Admit it was not a Key Chord
 
-    def read_kchord_despite_kcprs(self, timeout) -> tuple[bytes, str]:
-        """Read 1 Key Chord, but accept Cursor-Position-Report (KCPR's) if they come first"""
+        return False
 
-        kchords = self.kchords
-        kstr_list = self.kstr_list
+    def row_y_column_x_report(self, row_y, column_x) -> None:
+        """Say which Row & Column is the Cursor's Row & Column"""
 
-        if not kchords:
-            self.fetch_kcprs_till_kchord(timeout=timeout)
-            assert kchords, (kchords,)
-
-        kchord = kchords.pop(0)
-        (kbytes, kstr) = kchord
-
-        kstr_list.append(kstr)
-
-        return (kbytes, kstr)
-
-    def fetch_kchords_till_kcpr(self, timeout) -> None:
-        """Read 1 Cursor-Position-Report (KCPR), catching Key Chords as they come"""
-
-        bt = self.bt
-        kchords = self.kchords
-        kcpr_bytes_list = self.kcpr_bytes_list
-
-        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
-
-        # Read the Bytes of 1 Cursor Position Report's (CPR),
-        # except intercept 0 or more Key Chords if they come first
-
-        while True:
-            kbytes = bt.pull_kchord_bytes_if(timeout=timeout)  # may contain b' ' near to KCAP_SEP
-            kchars = kbytes.decode()  # may raise UnicodeDecodeError
-
-            m = re.match(r"^\x1B\[([0-9]+);([0-9]+)R$", string=kchars)
-            if not m:
-                kchord = self.kbytes_to_kchord(kbytes)
-                kchords.append(kchord)
-                continue
-
-            kcpr_bytes_list.append(kbytes)
-
-            # Forward the KCPR
-
-            row_y = int(m.group(1))
-            column_x = int(m.group(2))
-
-            assert row_y >= 1, (row_y,)
-            assert column_x >= 1, (column_x,)
-
-            self.row_y_column_x_report(row_y, column_x=column_x)
-
-            # Succeed
-
-            return
-
-        # FIXME: move half of the 'fetch_k' Code back down into BytesTerminal
-
-        # todo: hangs if CPR doesn't come after DSR
-
-    def fetch_kcprs_till_kchord(self, timeout) -> None:
-        """Read the Bytes of 1 Key Chord, catching Cursor-Position-Report (KCPR's) as they come"""
-
-        bt = self.bt
-        kchords = self.kchords
-        kcpr_bytes_list = self.kcpr_bytes_list
-
-        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
-
-        # Read the Bytes of 1 Key Chord,
-        # except intercept 0 or more Cursor Position Report's (CPR's) if they come first
-
-        while True:
-            kbytes = bt.pull_kchord_bytes_if(timeout=timeout)  # may contain b' ' near to KCAP_SEP
-            kchars = kbytes.decode()  # may raise UnicodeDecodeError
-
-            m = re.match(r"^\x1B\[([0-9]+);([0-9]+)R$", string=kchars)
-            if not m:
-                kchord = self.kbytes_to_kchord(kbytes)
-                kchords.append(kchord)
-                return
-
-            kcpr_bytes_list.append(kbytes)
-
-            # Forward the KCPR
-
-            row_y = int(m.group(1))
-            column_x = int(m.group(2))
-
-            assert row_y >= 1, (row_y,)
-            assert column_x >= 1, (column_x,)
-
-            self.row_y_column_x_report(row_y, column_x=column_x)
-
-            # Loop to try again
-
-            continue
-
-        # FIXME: move half of the 'fetch_k' Code back down into BytesTerminal
+        self.row_y = row_y
+        self.column_x = column_x
 
     def kbytes_to_kchord(self, kbytes) -> tuple[bytes, str]:
         """Choose 1 Key Cap to speak of the Bytes of 1 Key Chord"""
@@ -1244,11 +1148,45 @@ class ChordsKeyboard:
 
         # '⌃L'  # '⇧Z'
 
-    def row_y_column_x_report(self, row_y, column_x) -> None:
-        """Say which Row & Column is the Cursor's Row & Column"""
+    def read_row_y_column_x(self, timeout) -> tuple[int, int]:
+        """Sample Cursor Row & Column"""
 
-        self.row_y = row_y
-        self.column_x = column_x
+        bt = self.bt
+
+        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
+
+        encode = ("\x1B" "[" "6n").encode()
+        bt.bytes_write(encode)
+
+        while self.read_kchord_or(timeout=timeout):
+            pass
+
+            # todo: log how rarely anything but CPR comes after DSR
+            # todo: hangs if CPR never comes, despite DSR
+
+        row_y = self.row_y
+        column_x = self.column_x
+
+        assert row_y >= 1, (row_y,)
+        assert column_x >= 1, (column_x,)
+
+        return (row_y, column_x)
+
+    def read_y_rows_x_columns(self, timeout) -> tuple[int, int]:
+        """Sample Counts of Screen Rows and Columns"""
+
+        bt = self.bt
+
+        fd = bt.fd
+        (x_columns, y_rows) = os.get_terminal_size(fd)
+
+        assert y_rows >= 5, (y_rows,)  # macOS Terminal min 5 Rows
+        assert x_columns >= 20, (x_columns,)  # macOS Terminal min 20 Columns
+
+        self.y_rows = y_rows
+        self.x_columns = x_columns
+
+        return (y_rows, x_columns)
 
 
 class ShadowsTerminal:
@@ -1274,6 +1212,10 @@ class ShadowsTerminal:
     def __exit__(self, *exc_info) -> None:
         self.ck.__exit__()
         self.bt.__exit__()
+
+    def str_print(self, *args, end="\r\n") -> None:
+        bt = self.bt
+        bt.str_print(*args, end=end)
 
 
 #
@@ -1458,8 +1400,6 @@ class TurtlingFifoProxy:
     def fd_read_text_else(self, fd) -> str | None:
         """Read Chars in as an indexed Request that starts with its own Length"""
 
-        basename = self.basename
-
         index = self.index
         self.index = index + 1
 
@@ -1510,11 +1450,9 @@ class TurtlingFifoProxy:
 
             if index != -1:
                 assert alt_index == -1, (alt_index, index)
-                eprint(f"Letting read {basename.title()} run ahead at {index=}\r\n")
             else:
                 assert alt_index != -1, (alt_index, index)
                 self.index = alt_index + 1
-                eprint(f"Catching up read {basename.title()} to index={alt_index}\r\n")
 
         # Succeed
 
@@ -1543,14 +1481,15 @@ def turtling_server_attach() -> None:
     if not writer.find_mkfifo_once_if(pid):
         writer.create_mkfifo_once(pid)
 
-    eprint(f"Client first write: {str()!r}")
     writer.write_text("")
     read_text_else = reader.read_text_else()
-    eprint(f"Client first read: {read_text_else!r}")
+    if read_text_else != "":
+        print(repr(read_text_else))
+        breakpoint()
+        raise FileNotFoundError("Turtling Server Texts-Index-Synch Failed")
 
     assert writer.index == 0, (writer.index, reader.index)
     if reader.index != writer.index:
-        eprint(f"Client catching up Writer with Reader index={reader.index}")
         assert reader.index > 0, (reader.index,)
         writer.index = reader.index
 
@@ -1573,17 +1512,24 @@ def turtling_server_run() -> bool:
 class TurtlingServer:
 
     shadows_terminal: ShadowsTerminal
+    locals_: dict[str, object]
 
     def __init__(self, shadows_terminal) -> None:
+
+        locals_: dict[str, object]
+        locals_ = dict()
+        locals_["self"] = self
+
         self.shadows_terminal = shadows_terminal
+        self.locals_ = locals_
 
     def server_run_till(self) -> None:
         """Draw with Logo Turtles"""
 
         st = self.shadows_terminal
-
         bt = st.bt  # todo: .bytes_terminal
         bt_fd = bt.fd  # todo: .file_descriptor
+        ck = st.ck
 
         pid = os.getpid()
 
@@ -1595,7 +1541,7 @@ class TurtlingServer:
         writer.pid_create_dir_once(pid)
         writer.create_mkfifo_once(pid)
 
-        st.bt.str_print(f"At your service as {pid=}")
+        st.str_print(f"At your service as {pid=} till you press ⌃D")
 
         reader_fd = -1
         while True:
@@ -1605,6 +1551,7 @@ class TurtlingServer:
             fds = list()
             fds.append(bt_fd)
             if reader_fd >= 0:
+                assert reader_fd == reader.fd, (reader_fd, reader.fd)
                 fds.append(reader_fd)
 
             timeout = 0.100
@@ -1612,33 +1559,65 @@ class TurtlingServer:
             select_ = selects[0]
 
             if bt_fd in select_:
-                break
+                kchord = ck.read_kchord(timeout=1)
+                st.str_print(kchord)
+                if kchord[-1] == "⌃D":
+                    break
 
             if reader_fd in select_:
-                st.bt.str_print()
-                i = reader.index
-                text_else = reader.fd_read_text_else(reader_fd)
-                if text_else is None:
-                    st.bt.str_print(f"Server read {i} of Empty Request {reader.index=}")
-                    writer.index += 1  # as if written
-                    continue
-
-                text = text_else
-                st.bt.str_print(f"Server read {i} of Request Text:", len(text), text)
-
-                if writer.fd < 0:
-                    writer.fd_open_write_once()
-                    assert writer.fd >= 0, (writer.fd,)
-
-                j = writer.index
-                st.bt.str_print(f"Server write {j}")
-                writer.fd_write_text(writer.fd, text=text)
+                self.reader_writer_serve(reader, writer=writer)
                 continue
 
             if reader_fd < 0:
-                if reader.find_mkfifo_once_if(pid):  # FIXME: milliseconds?
-                    st.bt.str_print("Server found Client")
+                if reader.find_mkfifo_once_if(pid):  # 0..10 ms
                     reader_fd = reader.fd_open_read_once()
+                    assert reader_fd == reader.fd, (reader_fd, reader.fd)
+
+    def reader_writer_serve(self, reader, writer) -> None:
+        """Read a Python Text in, write back out the Repr of its Eval"""
+
+        reader_fd = reader.fd
+
+        globals_ = globals()
+        locals_ = self.locals_
+        st = self.shadows_terminal
+
+        # Read a Python Text In
+
+        rtext_else = reader.fd_read_text_else(reader_fd)
+        if rtext_else is None:
+            st.str_print("EOFError")
+            writer.index += 1  # as if written
+            return
+
+        rtext = rtext_else
+
+        # Eval the Python Text (except eval "" Empty Str as same)
+
+        wtext = ""
+
+        if rtext:
+            py = rtext
+            try:  # todo: shrug off PyLance pretending eval/exec 'locals=' doesn't work
+                eval_ = eval(py, globals_, locals_)
+            except SyntaxError:
+                eval_ = None
+                try:
+                    exec(py, globals_, locals_)
+                except Exception:
+                    eval_ = traceback.format_exc()
+            except Exception:
+                eval_ = traceback.format_exc()
+
+            wtext = repr(eval_)
+
+        # Write back out the Repr of its Eval (except write back "" Empty Str for same)
+
+        if writer.fd < 0:
+            writer.fd_open_write_once()
+            assert writer.fd >= 0, (writer.fd,)
+
+        writer.fd_write_text(writer.fd, text=wtext)
 
 
 #
@@ -1668,23 +1647,13 @@ def turtling_client_run() -> bool:
 class Turtle:
     """Chat with 1 Logo Turtle"""
 
-    def remote_py_eval_to_repr(self, py) -> str:
-        """Write a Python Expression to the Turtling Server, and read a Python Repr"""
-
-        raise NotImplementedError()
-
     def trade_text_else(self, wtext) -> str | None:
         """Write a Text to the Turtling Server, and read back a Text or None"""
 
         writer = TurtlingWriter
         reader = TurtlingReader
 
-        i = writer.index
-        eprint(f"Client write {i}")
         writer.write_text(wtext)
-
-        j = reader.index
-        eprint(f"Client write {j}")
         rtext_else = reader.read_text_else()
 
         return rtext_else
@@ -1698,13 +1667,7 @@ class TurtleClient:
 
         t1 = Turtle()
 
-        reader = TurtlingReader
-
-        pid = reader.pid
-        print(f"Client of {pid=}")
-
         while True:
-            eprint()
             eprint(f"{Turtle_} ", end="")
 
             sys.stdout.flush()
@@ -1716,16 +1679,31 @@ class TurtleClient:
                 break
 
             rstrip = readline.rstrip()
+            if self.text_is_pylike(rstrip):
+                rtext_else = t1.trade_text_else(wtext=rstrip)
+                if rtext_else is None:
+                    eprint("EOFError")
+                    continue
 
-            i = reader.index
+                rtext = rtext_else
+                if rtext.startswith("'Traceback (most recent call last):"):
+                    format_exc = eval(rtext)
+                    eprint(format_exc.rstrip())
+                    continue
 
-            rtext_else = t1.trade_text_else(wtext=rstrip)
-            if rtext_else is None:
-                eprint(f"Client read {i} of Empty Request {reader.index=}")
-                continue
+                if rtext != "None":
+                    eprint(rtext)
+                    eprint()
 
-            rtext = rtext_else
-            eprint(f"Client read {i} of Response Text:", len(rtext), rtext)
+    def text_is_pylike(self, text) -> bool:
+        """Say forward to Server if more than Blanks and Comments found"""
+
+        for line in text.splitlines():
+            py = line.partition("#")[0].strip()
+            if py:
+                return True
+
+        return False
 
 
 #
@@ -2803,12 +2781,16 @@ class TurtleClientWas:
 #
 # 🐢 Turtle Chat Engine  # todo
 #
+# todo: e Pi Inf -Inf NaN
 #
 # todo: \e escapes in Str
 # todo: kebab-case as a string becomes "kebab case"
 # todo: input Sh lines:  !uname  # !ls  # !cat - >/dev/null  # !zsh
 # todo: input Py lines:  ;sys.version_info[:3]  # ;breakpoint()
 # todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
+#
+# todo: 🐢 Punch ... "\n"   # to print at Server, vs Print at Client
+# todo: 🐢 After ...  # to get past next Float Seconds milestone in Screen .typescript
 #
 # todo: tweak the fd.d to hold diameter constant in 🐢 rep n abbreviation of rep n [fd fd.d rt rt.angle]
 #
@@ -2836,7 +2818,6 @@ class TurtleClientWas:
 # todo: Command Input Word Tab-Completions
 #
 # todo: KwArgs for Funcs
-# todo: or teach 🐢 Label to take a last arg of "" as an ask for no newline?
 # todo: VsCode for .logo, for .lgo, ...
 #
 # todo: reconcile with Python "import turtle" Graphics on TkInter
