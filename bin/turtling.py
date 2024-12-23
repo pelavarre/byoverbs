@@ -30,20 +30,22 @@ import os
 import pathlib
 import pdb
 import platform
-import re
+import re  # 're.fullmatch' since Mar/2014 Python 3.4
 import select  # Windows sad at 'select.select' of Named Pipes
 import shlex
 import shutil
 import signal
 import subprocess
 import sys
-import termios
+import termios  # Windows sad
 import textwrap
 import time
 import traceback
-import tty
+import tty  # Windows sad
 import typing
 import unicodedata
+
+# todo: add 'import mscvrt' at Windows
 
 
 turtling = sys.modules[__name__]
@@ -93,9 +95,10 @@ def main() -> None:
 
 def main_try() -> None:
 
-    if not turtling_client_run():
-        if not turtling_server_run():
-            assert False, "Turtles Server succeeds or quits, never just fails"
+    if turtling_server_attach():
+        turtling_client_run()
+    else:
+        turtling_server_run()
 
 
 def parse_turtling_py_args_else() -> argparse.Namespace:
@@ -255,15 +258,17 @@ SM_IRM = "\x1B" "[" "4h"  # CSI 06/08 4 Set Mode Insert/ Replace
 
 SGR = "\x1B" "[" "{}m"  # CSI 06/13 Select Graphic Rendition
 
-DSR_5 = "\x1B" "[" "5n"  # CSI 06/14 [Request] Device Status Report  # Ps 5 for DSR_0
-DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 [Request] Device Status Report  # Ps 6 for CPR
+DSR_0 = "\x1B" "[" "0n"  # CSI 06/14 [Request] Device Status Report  # Ps 0 because DSR_5
+DSR_5 = "\x1B" "[" "5n"  # CSI 06/14 [Request] Device Status Report  # Ps 5 for DSR_0 In
+DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 [Request] Device Status Report  # Ps 6 for CPR In
 
 DECSCUSR = "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
 DECSCUSR_SKID = "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
 DECSCUSR_BAR = "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
 # all three with an Intermediate Byte of 02/00 ' ' Space
 
-XTWINOPS_18 = "\x1B" "[" "18t"  # CSI 07/04 [Request]   # Ps 18 for XTWINOPS_8
+XTWINOPS_8 = "\x1B" "[" "8t"  # CSI 07/04 [Response]   # Ps 8 In because XTWINOPS_18 Out
+XTWINOPS_18 = "\x1B" "[" "18t"  # CSI 07/04 [Request]   # Ps 18 Out for XTWINOPS_8 In
 
 
 # the quoted Str above sorted mostly by their CSI Final Byte's:  A, B, C, D, G, Z, m, etc
@@ -271,14 +276,19 @@ XTWINOPS_18 = "\x1B" "[" "18t"  # CSI 07/04 [Request]   # Ps 18 for XTWINOPS_8
 # to test in Sh, run variations of:  printf '\e[18t' && read
 
 
-# CSI 05/02 Active [Cursor] Position Report (CPR)
-CPR_Y_X_REGEX = r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 Active [Cursor] Pos Rep (CPR)
+# CSI 05/02 Active [Cursor] Position Report (CPR) In because DSR_6 Out
+CPR_Y_X_REGEX = r"\x1B\[([0-9]+);([0-9]+)R"  # CSI 05/02 Active [Cursor] Pos Rep (CPR)
 
 
 assert CSI_EXTRAS == "".join(chr(_) for _ in range(0x20, 0x40))  # r"[ -?]", no "@"
-CSI_P_F_REGEX = r"^\x1B\[([ -?])*(.)$"  # CSI Intermediate/ Parameter Bytes and Final Byte
+CSI_PIF_REGEX = r"(\x1B\[)" r"([0-?]*)" r"([ -/]*)" r"(.)"  # Parameter/ Intermediate/ Final Bytes
 
-MACOS_TERMINAL_CSI_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlmnq"
+
+MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlm"
+# omits "R" of CPR_Y_X_REGEX In
+# omits "n" of DSR_5 DSR_6 Out, so as to omit "n" of DSR_0 In
+# omits "t" of XTWINOPS_18 Out, so as to omit "t" of XTWINOPS_8 In
+# omits " q", "'}", "'~" of DECIC_X DECSCUSR and DECDC_X Out
 
 
 #
@@ -329,7 +339,7 @@ class BytesTerminal:
     sbytes_list: list[bytes]  # Bytes of each Screen Write out  # ScreenLogger
 
     #
-    # Init, enter, exit, breakpoint, flush, stop, and yolo self-test
+    # Init, enter, exit, flush, and stop
     #
 
     def __init__(self, before=termios.TCSADRAIN, after=termios.TCSADRAIN) -> None:
@@ -383,7 +393,7 @@ class BytesTerminal:
         after = self.after
 
         if tcgetattr_else is not None:
-            self.bytes_flush()  # for '__exit__'
+            self.sbytes_flush()  # for '__exit__' of .ksbytes_stop etc
 
             tcgetattr = tcgetattr_else
             self.tcgetattr_else = None
@@ -394,20 +404,13 @@ class BytesTerminal:
 
         return None
 
-    def bytes_breakpoint(self) -> None:
-        r"""Breakpoint with line-buffered Input and \n Output taken to mean \r\n, etc"""
-
-        self.__exit__()
-        breakpoint()  # to step up the call stack:  u
-        self.__enter__()
-
-    def bytes_flush(self) -> None:
+    def sbytes_flush(self) -> None:
         """Flush Screen Output, like just before blocking to read Keyboard Input"""
 
         stdio = self.stdio
         stdio.flush()
 
-    def bytes_stop(self) -> None:  # todo: learn to do .bytes_stop() well
+    def ksbytes_stop(self) -> None:  # todo: learn to do .ksbytes_stop() well
         """Suspend and resume this Screen/ Keyboard Terminal Process"""
 
         pid = os.getpid()
@@ -426,102 +429,11 @@ class BytesTerminal:
 
         # a la Emacs ⌃Z suspend-frame, Vim ⌃Z
 
-    def bytes_yolo(self) -> None:  # bin/pq.py btyolo
-        """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
-
-        bt = self
-        kbytes_list = self.kbytes_list
-        assert self.tcgetattr_else, (self.tcgetattr_else,)
-
-        # Speak the Rules
-
-        bt.str_print("Let's test Class BytesTerminal")
-        bt.str_print("Press ⎋ Fn ⌃ ⌥ ⇧ ⌘ and Spacebar Tab Return and ← ↑ → ↓ and so on")
-        bt.str_print("Press ⌃C ⇧R to write Bytes, also ⌃C I same, and press ⌃C ⇧Z ⇧Q to quit")
-
-        bt.str_print()
-        bt.str_print()
-
-        bt.sbytes_list.clear()
-
-        # Play till Quit
-
-        tmode = "Write"
-        while True:
-            kbytes = bt.pull_kchord_bytes_if(timeout=0)
-
-            # Loopback the Keyboard Bytes, else describe them
-
-            if tmode == "Write":
-                bt.bytes_write(kbytes)
-            else:
-                assert tmode == "Meta", (tmode,)
-
-                kstr = repr(kbytes)
-                bt.str_write(kstr)
-
-            # Take just I and ⇧R and ⌃C from Vim, for switching between Write and Meta Modes
-
-            if kbytes in (b"i", b"R"):  # I  # ⇧R
-                tmode = "Write"
-            elif kbytes == b"\x03":  # ⌃C
-                tmode = "Meta"
-
-            # Switch back into Meta Mode, secretly magically, after CSI Final Byte b"n" or b"t"
-            # todo: wow ugly
-
-            # if kbytes_list[:2] == [b"\x1B", b"["]:  # CSI
-            # if kbytes_list[-1] in (b"n", b"t"):  # DSR  # Terminal Size Query
-
-            if kbytes_list[-4:] == [b"\x1B", b"[", b"5", b"n"]:  # DSR_5 to DSR_0
-                tmode = "Meta"
-            elif kbytes_list[-4:] == [b"\x1B", b"[", b"6", b"n"]:  # DSR_6 to CPR
-                tmode = "Meta"
-            elif kbytes_list[-5:] == [b"\x1B", b"[", b"1", b"8", b"t"]:  # XTWINOPS_18 to XTWINOPS_8
-                tmode = "Meta"
-
-            # Quit at ⇧Z ⇧Q
-
-            if tmode == "Meta":
-                if kbytes_list[-2:] == [b"Z", b"Q"]:  # ⇧Z ⇧Q
-                    break
-
-        bt.bytes_print()
-
-        # bt.str_print(bt.kbytes_list)
-        # bt.str_print(bt.sbytes_list)
-
     #
     # Write Screen Output Bytes
     #
 
-    def str_print(self, *args, end="\r\n") -> None:
-        """Write Chars to the Screen as one or more Ended Lines"""
-
-        sep = " "
-        join = sep.join(str(_) for _ in args)
-        sbytes = join.encode()
-
-        end_bytes = end.encode()
-
-        self.bytes_print(sbytes, end=end_bytes)
-
-    def str_write(self, schars) -> None:
-        """Write Chars to the Screen, but without implicitly also writing a Line-End afterwards"""
-
-        sbytes = schars.encode()
-        self.bytes_write(sbytes)
-
-    def bytes_print(self, *args, end=b"\r\n") -> None:
-        """Write Bytes to the Screen as one or more Ended Lines"""
-
-        sep = b" "
-        join = sep.join(args)
-        sbytes = join + end
-
-        self.bytes_write(sbytes)
-
-    def bytes_write(self, sbytes) -> None:
+    def sbytes_write(self, sbytes) -> None:
         """Write Bytes to the Screen, but without implicitly also writing a Line-End afterwards"""
 
         assert self.tcgetattr_else, (self.tcgetattr_else,)
@@ -540,17 +452,17 @@ class BytesTerminal:
     # Read Key Chords as 1 or more Keyboard Bytes
     #
 
-    def pull_kchord_bytes_if(self, timeout) -> bytes:
+    def kbytes_pull(self, timeout) -> bytes:
         """Read, and record, the Bytes of 1 Incomplete/ Complete Key Chord"""
 
         kbytes_list = self.kbytes_list
 
-        kbytes = self.read_kchord_bytes_if(timeout=timeout)
+        kbytes = self.kbytes_read(timeout=timeout)
         kbytes_list.append(kbytes)
 
         return kbytes
 
-    def read_kchord_bytes_if(self, timeout) -> bytes:
+    def kbytes_read(self, timeout) -> bytes:
         """Read the Bytes of 1 Incomplete/ Complete Key Chord, without recording them"""
 
         assert ESC == "\x1B"
@@ -559,7 +471,7 @@ class BytesTerminal:
 
         # Block to fetch at least 1 Byte
 
-        kbytes1 = self.read_kchar_bytes_if()  # for .read_kchord_bytes_if
+        kbytes1 = self.kchar_bytes_read_if()  # for .kbytes_read
 
         many_kbytes = kbytes1
         if kbytes1 != b"\x1B":
@@ -574,14 +486,14 @@ class BytesTerminal:
                 # 1st loop:  ⎋ Esc that isn't ⎋⎋ Meta Esc
                 # 2nd loop:  ⎋⎋ Meta Esc that doesn't come with more Bytes
 
-            kbytes2 = self.read_kchar_bytes_if()  # for .read_kchord_bytes_if
+            kbytes2 = self.kchar_bytes_read_if()  # for .kbytes_read
             many_kbytes += kbytes2
             if kbytes2 != b"\x1B":
                 break
 
         if kbytes2 == b"O":  # 01/11 04/15 SS3
-            kbytes3 = self.read_kchar_bytes_if()  # for .read_kchord_bytes_if
-            many_kbytes += kbytes3  # rarely in range(0x20, 0x40) CSI_EXTRAS
+            kbytes3 = self.kchar_bytes_read_if()  # for .kbytes_read
+            many_kbytes += kbytes3  # todo: rarely in range(0x20, 0x40) CSI_EXTRAS
             return many_kbytes
 
         # Accept ⎋[ Meta [ cut short by itself, or longer CSI Escape Sequences
@@ -593,7 +505,7 @@ class BytesTerminal:
 
                 # ⎋[ Meta Esc that doesn't come with more Bytes
 
-            many_kbytes = self.read_csi_kchord_bytes_if(many_kbytes)
+            many_kbytes = self.csi_kchord_bytes_read_if(many_kbytes)
 
         # Succeed
 
@@ -602,20 +514,25 @@ class BytesTerminal:
         # cut short by end-of-input, or by undecodable Bytes
         # doesn't raise UnicodeDecodeError
 
-    def read_csi_kchord_bytes_if(self, kbytes) -> bytes:
+    def csi_kchord_bytes_read_if(self, kbytes) -> bytes:
         """Block to read the rest of 1 CSI Escape Sequence"""
 
         assert CSI_EXTRAS == "".join(chr(_) for _ in range(0x20, 0x40))
 
         many_kchord_bytes = kbytes
         while True:
-            kbytes_ = self.read_kchar_bytes_if()  # for .read_kchord_bytes_if via .read_csi_...
+            kbytes_ = self.kchar_bytes_read_if()  # for .kbytes_read via .read_csi_...
             many_kchord_bytes += kbytes_
 
             if len(kbytes_) == 1:  # as when ord(kbytes_.encode()) < 0x80
                 kord = kbytes_[-1]
-                if 0x20 <= kord < 0x40:  # !"#$%&'()*+,-./0123456789:;<=>?
-                    continue  # Parameter/ Intermediate Bytes in CSI_EXTRAS
+                if 0x20 <= kord < 0x40:
+                    continue
+
+                    # 16 Parameter Bytes in 0123456789:;<=>?
+                    # 16 Intermediate Bytes of Space or in !"#$%&'()*+,-./
+
+                    # FIXME: accept Parameter Bytes only before Intermediate Bytes
 
             break
 
@@ -627,7 +544,7 @@ class BytesTerminal:
 
         # todo: limit the length of the CSI Escape Sequence
 
-    def read_kchar_bytes_if(self) -> bytes:
+    def kchar_bytes_read_if(self) -> bytes:
         """Read the Bytes of 1 Incomplete/ Complete Char from Keyboard"""
 
         def decodable(kbytes: bytes) -> bool:
@@ -639,7 +556,7 @@ class BytesTerminal:
 
         kbytes = b""
         while True:  # till KChar Bytes complete
-            kbyte = self.read_kbyte()  # for .read_kchar_bytes_if  # todo: test end-of-input
+            kbyte = self.kbyte_read()  # for .kchar_bytes_read_if  # todo: test end-of-input
             assert kbyte, (kbyte,)
             kbytes += kbyte
 
@@ -657,13 +574,13 @@ class BytesTerminal:
         # cut short by end-of-input, or by undecodable Bytes
         # doesn't raise UnicodeDecodeError
 
-    def read_kbyte(self) -> bytes:
+    def kbyte_read(self) -> bytes:
         """Read 1 Keyboard Byte"""
 
         fileno = self.fileno
         assert self.tcgetattr_else, (self.tcgetattr_else,)
 
-        self.bytes_flush()  # for 'read_kbyte'
+        self.sbytes_flush()  # for 'kbyte_read'
         kbyte = os.read(fileno, 1)  # 1 or more Bytes, begun as 1 Byte
 
         return kbyte
@@ -675,92 +592,14 @@ class BytesTerminal:
         """Block till next Input Byte, else till Timeout, else till forever"""
 
         fileno = self.fileno
-        assert self.tcgetattr_else, (
-            self.tcgetattr_else,
-        )  # todo: when kbhit says if readline won't block
+        assert self.tcgetattr_else, self.tcgetattr_else  # todo: kbhit can say readline won't block
+
+        self.sbytes_flush()  # for 'kbhit'  # todo: log how often unneeded
 
         (r, w, x) = select.select([fileno], [], [], timeout)
         hit = fileno in r
 
         return hit
-
-    #
-    # Emulate a more functional Terminal
-    #
-
-    def columns_delete_n(self, n) -> None:  # a la VT420 DECDC ⎋['~
-        """Delete N Columns (but snap the Cursor back to where it started)"""
-
-        fileno = self.fileno
-
-        assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
-        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
-
-        (x_columns, y_rows) = os.get_terminal_size(fileno)
-        (y_row, x_column) = self.write_dsr_read_kcpr_y_x()
-
-        for y in range(1, y_rows + 1):
-            ctext = "\x1B" "[" f"{y}d"
-            ctext += "\x1B" "[" f"{n}P"
-            self.str_write(ctext)
-
-        ctext = "\x1B" "[" f"{y_row}d"
-        self.str_write(ctext)
-
-    def columns_insert_n(self, n) -> None:  # a la VT420 DECIC ⎋['}
-        """Insert N Columns (but snap the Cursor back to where it started)"""
-
-        fileno = self.fileno
-
-        assert ICH_X == "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
-        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
-
-        (x_columns, y_rows) = os.get_terminal_size(fileno)
-        (y_row, x_column) = self.write_dsr_read_kcpr_y_x()
-
-        for y in range(1, y_rows + 1):
-            ctext = "\x1B" "[" f"{y}d"
-            ctext += "\x1B" "[" f"{n}@"
-            self.str_write(ctext)
-
-        ctext = "\x1B" "[" f"{y_row}d"
-        self.str_write(ctext)
-
-    def write_dsr_read_kcpr_y_x(self) -> tuple[int, int]:  # todo: mix well with other reader/ writer
-        """Write 1 Device-Status-Request (DSR), read 1 Cursor-Position-Report (KCPR)"""
-
-        fileno = self.fileno
-
-        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
-        self.str_write("\x1B" "[" "6n")
-
-        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
-
-        csi_kbytes = os.read(fileno, 2)
-        assert csi_kbytes == b"\x1B[", (csi_kbytes,)
-
-        y_kbytes = b""
-        while True:
-            kbyte = os.read(fileno, 1)
-            if kbyte not in b"0123456789":
-                break
-            y_kbytes += kbyte
-
-        assert kbyte == b";"
-
-        x_kbytes = b""
-        while True:
-            kbyte = os.read(fileno, 1)
-            if kbyte not in b"0123456789":
-                break
-            x_kbytes += kbyte
-
-        assert kbyte == b"R"
-
-        row_y = int(y_kbytes)
-        column_x = int(x_kbytes)
-
-        return (row_y, column_x)
 
 
 # Name the Shifting Keys
@@ -955,18 +794,17 @@ for _KCHARS, _COUNT in collections.Counter(_KCHARS_LIST).items():
     assert _COUNT == 1, (_COUNT, _KCHARS)
 
 
-class ChordsKeyboard:
-    """Read Combinations of Key Caps from a BytesTerminal, mixed with Inband Signals"""
+class StrTerminal:
+    """Write/ Read Chars at Screen/ Keyboard of the Terminal, mixed with Inband Signals"""
 
     bytes_terminal: BytesTerminal
+    kchords: list[tuple[bytes, str]]  # Key Chords read ahead after DSR until CPR
 
     y_rows: int  # -1, then Count of Screen Rows
     x_columns: int  # -1, then Count of Screen Columns
 
     row_y: int  # -1, then Row of Cursor
     column_x: int  # -1, then Column of Cursor
-
-    kchords: list[tuple[bytes, str]]  # Key Chords read ahead after DSR until CPR
 
     #
     # Init, Enter, and Exit
@@ -975,13 +813,17 @@ class ChordsKeyboard:
     def __init__(self, bt) -> None:
 
         self.bytes_terminal = bt
+        self.kchords = list()
+
         self.y_rows = -1
         self.x_columns = -1
         self.row_y = -1
         self.column_x = -1
-        self.kchords = list()
 
-    def __enter__(self) -> "ChordsKeyboard":  # -> typing.Self:
+    def __enter__(self) -> "StrTerminal":  # -> typing.Self:
+
+        bt = self.bytes_terminal
+        bt.__enter__()
 
         return self
 
@@ -991,52 +833,49 @@ class ChordsKeyboard:
         kchords = self.kchords
 
         if kchords:
-            bt.bytes_print()
+            self.schars_print()
             while kchords:
-                (kbytes, kstr) = kchords.pop(0)
-                encode = kstr.encode()
-                bt.bytes_print(encode)
+                (kbytes, kcaps) = kchords.pop(0)
+                self.schars_print(kcaps)
+
+        bt.__exit__()
 
     #
     # Read Key Chords from Keyboard or Screen
     #
 
-    def read_kchord(self, timeout) -> tuple[bytes, str]:
-        """Read 1 Key Chord, but accept Cursor-Position-Report (KCPR's) if they come first"""
-
-        kchords = self.kchords
-
-        while not self.read_kchord_or(timeout=timeout):
-            pass
-
-            # todo: log how rarely CPR's come here
-
-        kchord = kchords.pop(0)
-
-        return kchord
-
-    def read_kchord_or(self, timeout) -> bool:
-        """Do read something, and return True if it was a Key Chord"""
+    def kchord_pull(self, timeout) -> tuple[bytes, str]:
+        """Read 1 Key Chord, but snoop the Cursor-Position-Report's, if any"""
 
         bt = self.bytes_terminal
         kchords = self.kchords
 
-        assert CPR_Y_X_REGEX == r"^\x1B\[([0-9]+);([0-9]+)R$"  # CSI 05/02 CPR
+        if kchords:
+            kchord = kchords.pop(0)
+            return kchord
 
-        # Read something
+            # todo: log how rarely KChords wait inside a StrTerminal
 
-        kbytes = bt.pull_kchord_bytes_if(timeout=timeout)  # may contain b' ' near to KCAP_SEP
+        kbytes = bt.kbytes_pull(timeout=timeout)  # may contain b' ' near to KCAP_SEP
         kchars = kbytes.decode()  # may raise UnicodeDecodeError
+        kchord = self.kbytes_to_kchord(kbytes)
 
-        # Return True if it was a Key Chord
+        self.kchars_snoop_kcpr_if(kchars)
 
-        m = re.match(r"^\x1B\[([0-9]+);([0-9]+)R$", string=kchars)
+        return kchord
+
+    def kchars_snoop_kcpr_if(self, kchars) -> bool:
+        """Snoop the Cursor-Position-Report (CPR) out of a Key Chord, if present"""
+
+        assert CPR_Y_X_REGEX == r"\x1B\[([0-9]+);([0-9]+)R"  # CSI 05/02 CPR
+
+        # Never mind, if no CPR present
+
+        m = re.fullmatch(r"\x1B\[([0-9]+);([0-9]+)R", string=kchars)
         if not m:
-            kchord = self.kbytes_to_kchord(kbytes)
-            kchords.append(kchord)
-            return True
+            return False
 
-        # Interpret the KCPR
+        # Interpret the CPR
 
         row_y = int(m.group(1))
         column_x = int(m.group(2))
@@ -1044,17 +883,10 @@ class ChordsKeyboard:
         assert row_y >= 1, (row_y,)
         assert column_x >= 1, (column_x,)
 
-        self.row_y_column_x_report(row_y, column_x=column_x)
-
-        # Admit it was not a Key Chord
-
-        return False
-
-    def row_y_column_x_report(self, row_y, column_x) -> None:
-        """Say which Row & Column is the Cursor's Row & Column"""
-
         self.row_y = row_y
         self.column_x = column_x
+
+        return True
 
     def kbytes_to_kchord(self, kbytes) -> tuple[bytes, str]:
         """Choose 1 Key Cap to speak of the Bytes of 1 Key Chord"""
@@ -1064,12 +896,12 @@ class ChordsKeyboard:
         kcap_by_kchars = KCAP_BY_KCHARS  # '\e\e[A' for ⎋↑ etc
 
         if kchars in kcap_by_kchars.keys():
-            kstr = kcap_by_kchars[kchars]
+            kcaps = kcap_by_kchars[kchars]
         else:
-            kstr = ""
+            kcaps = ""
             for kch in kchars:  # often 'len(kchars) == 1'
                 s = self.kch_to_kcap(kch)
-                kstr += s
+                kcaps += s
 
                 # '⎋[25;80R' Cursor-Position-Report (CPR)
                 # '⎋[25;80t' Rows x Column Terminal Size Report
@@ -1080,9 +912,9 @@ class ChordsKeyboard:
         # Succeed
 
         assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
-        assert " " not in kstr, (kstr,)
+        assert " " not in kcaps, (kcaps,)
 
-        return (kbytes, kstr)
+        return (kbytes, kcaps)
 
         # '⌃L'  # '⇧Z'
         # '⎋A' from ⌥A while macOS Keyboard > Option as Meta Key
@@ -1152,23 +984,26 @@ class ChordsKeyboard:
         """Sample Cursor Row & Column"""
 
         bt = self.bytes_terminal
+        kchords = self.kchords
 
         assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
 
-        encode = ("\x1B" "[" "6n").encode()
-        bt.bytes_write(encode)
+        self.schars_write("\x1B" "[" "6n")
 
-        while self.read_kchord_or(timeout=timeout):
-            pass
+        while True:
+            kbytes = bt.kbytes_pull(timeout=timeout)  # may contain b' ' near to KCAP_SEP
+            kchars = kbytes.decode()  # may raise UnicodeDecodeError
+            kchord = self.kbytes_to_kchord(kbytes)
 
-            # todo: log how rarely anything but CPR comes after DSR
-            # todo: hangs if CPR never comes, despite DSR
+            if self.kchars_snoop_kcpr_if(kchars):
+                break
+
+            kchords.append(kchord)
+
+            # todo: log how rarely KChords wait inside a StrTerminal
 
         row_y = self.row_y
         column_x = self.column_x
-
-        assert row_y >= 1, (row_y,)
-        assert column_x >= 1, (column_x,)
 
         return (row_y, column_x)
 
@@ -1188,47 +1023,244 @@ class ChordsKeyboard:
 
         return (y_rows, x_columns)
 
+    #
+    # Say if writing these Screen Chars as Bytes would show their meaning clearly
+    #
 
-class ShadowsTerminal:
-    """Write/ Read Chars at Screen/ Keyboard of a Monospaced Square'ish Terminal"""
+    def schars_to_writable(self, schars) -> bool:
+        """Say if writing these Screen Chars as Bytes would show their meaning clearly"""
 
-    bytes_terminal: BytesTerminal
-    chords_keyboard: ChordsKeyboard
+        assert CSI_PIF_REGEX == r"(\x1B\[)" r"([0-?]*)" r"([ -/]*)" r"(.)"  # 4 Kinds of Bytes
+
+        assert DECIC_X == "\x1B" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
+        assert DECDC_X == "\x1B" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
+
+        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
+        assert DECSCUSR_SKID == "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
+        assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
+
+        assert DSR_5 == "\x1B" "[" "5n"  # CSI 06/14 [Request] Device Status Report  # Ps 5 for DSR_0
+        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 [Request] Device Status Report  # Ps 6 for CPR
+        assert XTWINOPS_18 == "\x1B" "[" "18t"  # CSI 07/04 [Request]   # Ps 18 for XTWINOPS_8
+
+        assert MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES == "@ABCDEGHIJKLMPSTZdhlm"
+
+        # Accept Chars that Repr Accepts
+
+        if schars.isprintable():  # "" is printable, etc
+            return True
+
+        # Accept the most ordinary Screen Control Chars
+
+        if schars in list(" \a\b\n\t\r"):
+            return True
+
+            # definitely True for "\n", else True Enough
+            #
+            #   \a takes time to land, and may be silenced
+            #   \b and \r don't move the Cursor at min Column X
+            #   \t doesn't move the Cursor at max Column X
+            #
+
+        # Accept the CSI Escape Sequences that a macOS Terminal accepts
+
+        (csi, p, i, f) = self.schars_csi_partition(schars)
+        if csi:
+
+            if not i:
+                if f in "@ABCDEGHIJKLMPSTZdhlm":  # no "R"
+                    return True
+
+            if (i + f) in (" q", "'}", "'~"):
+                return True
+
+            if (p + i + f) in ("5n", "6n", "18t"):  # no "0n"  # no "8t"
+                return True
+
+            # many of these have corner cases of no visible effect
+
+        # Reject anything else
+
+        return False
+
+        # todo: Unlock arbitrary SChars for Testing
+
+    def schars_csi_partition(self, schars) -> tuple[str, str, str, str]:
+        """Split a CSI Escape Sequence into its Prefix, Parameter, Intermediate, and Final Bytes"""
+
+        CsiNotFound = ("", "", "", schars)
+
+        assert CSI_PIF_REGEX == r"(\x1B\[)" r"([0-?]*)" r"([ -/]*)" r"(.)"  # 4 Kinds of Bytes
+
+        m = re.match(r"(\x1B\[)" r"([0-?]*)" r"([ -/]*)" r"(.)", string=schars)
+        if not m:
+            return CsiNotFound
+
+        csi = m.group(1)
+        p = m.group(2)  # Parameter Bytes
+        i = m.group(3)
+        f = m.group(4)  # Final Byte
+
+        o = (csi, p, i, f, schars)
+        assert (csi + p + i + f) == schars, o
+
+        return (csi, p, i, f)
+
+        # returns Falsey Csi when not a CSI Escape Sequence
 
     #
-    # Init, enter, exit
+    # Emulate a more functional Terminal
+    #
+
+    def columns_delete_n(self, n) -> None:  # a la VT420 DECDC ⎋['~
+        """Delete N Columns (but snap the Cursor back to where it started)"""
+
+        assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+
+        (y_rows, x_columns) = self.read_y_rows_x_columns(timeout=0)
+        (y_row, x_column) = self.read_row_y_column_x(timeout=0)
+
+        for y in range(1, y_rows + 1):
+            ctext = "\x1B" "[" f"{y}d"
+            ctext += "\x1B" "[" f"{n}P"
+            self.schars_write(ctext)
+
+        ctext = "\x1B" "[" f"{y_row}d"
+        self.schars_write(ctext)
+
+    def columns_insert_n(self, n) -> None:  # a la VT420 DECIC ⎋['}
+        """Insert N Columns (but snap the Cursor back to where it started)"""
+
+        assert ICH_X == "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+
+        (y_rows, x_columns) = self.read_y_rows_x_columns(timeout=0)
+        (y_row, x_column) = self.read_row_y_column_x(timeout=0)
+
+        for y in range(1, y_rows + 1):
+            ctext = "\x1B" "[" f"{y}d"
+            ctext += "\x1B" "[" f"{n}@"
+            self.schars_write(ctext)
+
+        ctext = "\x1B" "[" f"{y_row}d"
+        self.schars_write(ctext)
+
+    #
+    # Print or Write Str's of Chars
+    #
+
+    def schars_print(self, *args, end="\n") -> None:
+        """Write Chars to the Screen as one or more Ended Lines"""
+
+        sep = " "
+        join = sep.join(str(_) for _ in args)
+        ended = join + end
+
+        schars = ended.replace("\n", "\r\n")
+        self.schars_write(schars)
+
+    def schars_write(self, schars) -> None:
+        """Write Chars to the Screen, but without implicitly also writing a Line-End afterwards"""
+
+        bt = self.bytes_terminal
+
+        sbytes = schars.encode()
+        bt.sbytes_write(sbytes)
+
+
+class GlassTeletype:
+    """Write/ Read Chars at Screen/ Keyboard of a Monospaced Rectangular Terminal"""
+
+    bytes_terminal: BytesTerminal
+    str_terminal: StrTerminal
+
+    # FIXME: Snoop a guess of what Chars in which Columns of which Rows
+    # FIXME: Draw the new, undraw the old only where not already replaced
+
+    #
+    # Init, enter, exit, breakpoint
     #
 
     def __init__(self) -> None:
 
         bt = BytesTerminal()
-        ck = ChordsKeyboard(bt)
+        st = StrTerminal(bt)
 
         self.bytes_terminal = bt
-        self.chords_keyboard = ck
+        self.str_terminal = st
 
-    def __enter__(self) -> "ShadowsTerminal":  # -> typing.Self:
-
-        bt = self.bytes_terminal
-        ck = self.chords_keyboard
-
-        bt.__enter__()
-        ck.__enter__()
-
+    def __enter__(self) -> "GlassTeletype":  # -> typing.Self:
+        st = self.str_terminal
+        st.__enter__()
         return self
 
     def __exit__(self, *exc_info) -> None:
+        st = self.str_terminal
+        st.__exit__()
+
+    def breakpoint(self) -> None:
+
+        st = self.str_terminal
+
+        st.__exit__()
+        getsignal = signal.getsignal(signal.SIGINT)
+
+        breakpoint()  # where, up, down, ...
+        pass
+
+        signal.signal(signal.SIGINT, getsignal)
+        st.__enter__()
+
+    #
+    # Loop Keyboard Bytes back onto the Screen
+    #
+
+    def kchord_write_kbytes_else_print_kstr(self, kchord) -> None:
+        """Write 1 Key Chord, else print its Key Caps"""
+
+        (kbytes, kcaps) = kchord
+        sbytes = kbytes
+        schars = kbytes.decode()  # may raise UnicodeDecodeError
 
         bt = self.bytes_terminal
-        ck = self.chords_keyboard
+        st = self.str_terminal
 
-        ck.__exit__()
-        bt.__exit__()
+        assert DECIC_X == "\x1B" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
+        assert DECDC_X == "\x1B" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
 
-    def str_print(self, *args, end="\r\n") -> None:
+        # self.schars_print(kcaps, end="  ")  # jitter Mon 23/Dec
 
-        bt = self.bytes_terminal
-        bt.str_print(*args, end=end)
+        if not st.schars_to_writable(schars):
+            st.schars_print(kcaps)
+        else:
+            (csi, p, i, f) = st.schars_csi_partition(schars)
+            if csi:
+                if not p:
+                    n = 1
+                elif re.fullmatch("[0-9]+", string=p):
+                    n = int(p)
+                else:
+                    n = None
+
+                if n is not None:
+                    if (i + f) == "'}":
+                        st.columns_insert_n(n)
+                        return
+                    elif (i + f) == "'~":
+                        st.columns_delete_n(n)
+                        return
+
+            bt.sbytes_write(sbytes)
+
+
+#
+# Chat with 1 Logo Turtle
+#
+
+
+class Turtle:
+    """Chat with 1 Logo Turtle"""
 
 
 #
@@ -1474,19 +1506,24 @@ class TurtlingFifoProxy:
         # Named Pipes don't reliably send & receive EOF at close of File
 
 
+#
+# Attach to a Turtling Server
+#
+
+
 TurtlingWriter = TurtlingFifoProxy("requests")
 
 TurtlingReader = TurtlingFifoProxy("responses")
 
 
-def turtling_server_attach() -> None:
+def turtling_server_attach() -> bool:
     """Start trading Texts with a Turtling Server"""
 
     reader = TurtlingReader
     writer = TurtlingWriter
 
     if not reader.find_mkfifo_once_if(pid="*"):
-        raise FileNotFoundError("No Turtling Server Started")
+        return False  # Turtling Server not-found
     assert reader.pid >= 0, (reader.pid,)
 
     pid = reader.pid
@@ -1497,14 +1534,14 @@ def turtling_server_attach() -> None:
     writer.write_text("")
     read_text_else = reader.read_text_else()
     if read_text_else != "":
-        print(repr(read_text_else))
-        breakpoint()
-        raise FileNotFoundError("Turtling Server Texts-Index-Synch Failed")
+        assert False, (read_text_else,)  # Turtling Server texts index not synch'ed
 
     assert writer.index == 0, (writer.index, reader.index)
     if reader.index != writer.index:
         assert reader.index > 0, (reader.index,)
         writer.index = reader.index
+
+    return True
 
 
 #
@@ -1512,37 +1549,35 @@ def turtling_server_attach() -> None:
 #
 
 
-def turtling_server_run() -> bool:
+def turtling_server_run() -> None:
     "Run as a Server drawing with Logo Turtles and return True, else return False"
 
-    with ShadowsTerminal() as st:
-        ts1 = TurtlingServer(st)
+    with GlassTeletype() as gt:
+        ts1 = TurtlingServer(gt)
         ts1.server_run_till()
-
-    return True
 
 
 class TurtlingServer:
 
-    shadows_terminal: ShadowsTerminal
+    glass_teletype: GlassTeletype
     locals_: dict[str, object]
 
-    def __init__(self, shadows_terminal) -> None:
+    def __init__(self, glass_teletype) -> None:
 
         locals_: dict[str, object]
         locals_ = dict()
         locals_["self"] = self
 
-        self.shadows_terminal = shadows_terminal
+        self.glass_teletype = glass_teletype
         self.locals_ = locals_
 
     def server_run_till(self) -> None:
         """Draw with Logo Turtles"""
 
-        st = self.shadows_terminal
-        bt = st.bytes_terminal
+        gt = self.glass_teletype
+        st = gt.str_terminal
+        bt = gt.bytes_terminal
         bt_fd = bt.fileno  # todo: .file_descriptor
-        ck = st.chords_keyboard
 
         pid = os.getpid()
 
@@ -1554,10 +1589,11 @@ class TurtlingServer:
         writer.pid_create_dir_once(pid)
         writer.create_mkfifo_once(pid)
 
-        st.str_print(f"At your service as {pid=} till you press ⌃D")
+        st.schars_print(f"At your service as {pid=} till you press ⌃D")
 
         reader_fd = -1
         while True:
+            bt.sbytes_flush()  # todo: skip flush if selects were empty?
 
             # Block till Input or Timeout
 
@@ -1574,10 +1610,9 @@ class TurtlingServer:
             # Reply to 1 Keyboard Chord
 
             if bt_fd in select_:
-                kchord = ck.read_kchord(timeout=1.000)
+                kchord = self.keyboard_serve_one_kchord()
                 if kchord[-1] == "⌃D":
                     break
-                self.kchord_serve(kchord)
 
             # Reply to 1 Client Text
 
@@ -1592,11 +1627,16 @@ class TurtlingServer:
                     reader_fd = reader.fd_open_read_once()
                     assert reader_fd == reader.fileno, (reader_fd, reader.fileno)
 
-    def kchord_serve(self, kchord) -> None:
+    def keyboard_serve_one_kchord(self) -> tuple[bytes, str]:
         """Reply to 1 Keyboard Chord"""
 
-        st = self.shadows_terminal
-        st.str_print(kchord)
+        gt = self.glass_teletype
+        st = gt.str_terminal
+
+        kchord = st.kchord_pull(timeout=1.000)
+        gt.kchord_write_kbytes_else_print_kstr(kchord)
+
+        return kchord
 
     def reader_writer_serve(self, reader, writer) -> None:
         """Read a Python Text in, write back out the Repr of its Eval"""
@@ -1605,13 +1645,15 @@ class TurtlingServer:
 
         globals_ = globals()
         locals_ = self.locals_
-        st = self.shadows_terminal
+
+        gt = self.glass_teletype
+        st = gt.str_terminal
 
         # Read a Python Text In
 
         rtext_else = reader.fd_read_text_else(reader_fd)
         if rtext_else is None:
-            st.str_print("EOFError")
+            st.schars_print("EOFError")
             writer.index += 1  # as if written
             return
 
@@ -1650,15 +1692,8 @@ class TurtlingServer:
 #
 
 
-def turtling_client_run() -> bool:
+def turtling_client_run() -> None:
     "Run as a Client chatting with Logo Turtles and return True, else return False"
-
-    try:
-        turtling_server_attach()
-    except Exception:
-        # eprint("turtling_client_run turtling_server_attach")
-        # traceback.print_exc(file=sys.stderr)
-        return False
 
     tc1 = TurtleClient()
     try:
@@ -1666,31 +1701,22 @@ def turtling_client_run() -> bool:
     except BrokenPipeError:
         eprint("BrokenPipeError")
 
-    return True
-
-
-class Turtle:
-    """Chat with 1 Logo Turtle"""
-
-    def trade_text_else(self, wtext) -> str | None:
-        """Write a Text to the Turtling Server, and read back a Text or None"""
-
-        writer = TurtlingWriter
-        reader = TurtlingReader
-
-        writer.write_text(wtext)
-        rtext_else = reader.read_text_else()
-
-        return rtext_else
-
 
 class TurtleClient:
     """Chat with the Logo Turtles of 1 Turtling Server"""
 
+    def breakpoint(self) -> None:
+        """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
+
+        getsignal = signal.getsignal(signal.SIGINT)
+
+        breakpoint()
+        pass
+
+        signal.signal(signal.SIGINT, getsignal)
+
     def client_run_till(self) -> None:
         """Chat with Logo Turtles"""
-
-        t1 = Turtle()
 
         while True:
             eprint(f"{Turtle_} ", end="")
@@ -1698,14 +1724,20 @@ class TurtleClient:
             sys.stdout.flush()
             sys.stderr.flush()
 
-            readline = sys.stdin.readline()
+            try:
+                readline = sys.stdin.readline()
+            except KeyboardInterrupt:  # mostly shrugs off ⌃C SigInt
+                print(" KeyboardInterrupt")
+                self.breakpoint()
+                continue
+
             if not readline:
                 eprint("Bye")  # politely closing the line makes ⌘K work
                 break
 
             rstrip = readline.rstrip()
             if self.text_is_pylike(rstrip):
-                rtext_else = t1.trade_text_else(wtext=rstrip)
+                rtext_else = self.trade_text_else(wtext=rstrip)
                 if rtext_else is None:
                     eprint("EOFError")
                     continue
@@ -1729,6 +1761,17 @@ class TurtleClient:
                 return True
 
         return False
+
+    def trade_text_else(self, wtext) -> str | None:
+        """Write a Text to the Turtling Server, and read back a Text or None"""
+
+        writer = TurtlingWriter
+        reader = TurtlingReader
+
+        writer.write_text(wtext)
+        rtext_else = reader.read_text_else()
+
+        return rtext_else
 
 
 #
@@ -1795,7 +1838,7 @@ class TurtleClientWas:
             f" sleep={self.sleep}"
         )
 
-        py = 'self.str_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
+        py = 'self.schars_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
         rep = self.py_eval_to_repr(py)
         assert not rep, (rep, py)
 
@@ -1805,7 +1848,7 @@ class TurtleClientWas:
         # Cancel the Vi choice of a Cursor Style
         # Trust Vi to have already chosen ShowTurtle & no SGR
 
-        py = 'self.str_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
+        py = 'self.schars_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
         rep = self.py_eval_to_repr(py)
         assert not rep, (rep, py)
 
@@ -2064,7 +2107,7 @@ class TurtleClientWas:
             "setpencolor setpc": self.do_setpencolor,
             "setpenpunch setpch": self.do_setpenpunch,
             "setxy xy": self.do_setxy,
-            "showturtle st": self.do_showturtle,
+            "showturtle gt": self.do_showturtle,
             "tada t": self.do_tada,
         }
 
@@ -2084,7 +2127,7 @@ class TurtleClientWas:
         """Ring the Terminal Alarm Bell once, remotely inside the Turtle"""
 
         text = "\a"  # Alarm Bell
-        self.str_write(text)
+        self.schars_write(text)
 
         # todo: sleep here, do Not return, until after the Bell is done ringing
 
@@ -2105,7 +2148,7 @@ class TurtleClientWas:
         line += f"\x1B[{y_row};{x_column}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
         line += "\n"  # just Line-Feed \n without Carriage-Return \r
 
-        self.str_write(line)
+        self.schars_write(line)
 
         # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
 
@@ -2119,7 +2162,7 @@ class TurtleClientWas:
         """Write Spaces over every Character of every Screen Row and Column"""
 
         text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
-        self.str_write(text)
+        self.schars_write(text)
 
         # just the Screen, not also its Scrollback
 
@@ -2176,7 +2219,7 @@ class TurtleClientWas:
         hiding = self.hiding
 
         text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
-        self.str_write(text)
+        self.schars_write(text)
 
         self.hiding = True
         if self.hiding != hiding:
@@ -2200,7 +2243,7 @@ class TurtleClientWas:
         if self.pendown != pendown:
             print(f"pendown={self.pendown}  # was {pendown}")
 
-        # todo: calculated boolean args for pd pu ht st
+        # todo: calculated boolean args for pd pu ht gt
 
     def do_penup(self) -> None:  # as if do_pu
         """Plan to Not leave a Trail as the Turtle moves"""
@@ -2280,7 +2323,7 @@ class TurtleClientWas:
         else:
             assert False, (type(color), color)
 
-        py = f"self.str_write({penmode1!r})"
+        py = f"self.schars_write({penmode1!r})"
 
         rep = self.py_eval_to_repr(py)
         assert not rep, (rep, py)
@@ -2374,7 +2417,7 @@ class TurtleClientWas:
         hiding = self.hiding
 
         text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
-        self.str_write(text)
+        self.schars_write(text)
 
         self.hiding = False
         if self.hiding != hiding:
@@ -2396,11 +2439,11 @@ class TurtleClientWas:
         """Hide the Turtle, but only until next Call"""
 
         text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
-        self.str_write(text)
+        self.schars_write(text)
 
         def tada_func() -> None:
             text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
-            self.str_write(text)
+            self.schars_write(text)
 
         self.tada_func_else = tada_func
 
@@ -2550,13 +2593,13 @@ class TurtleClientWas:
             pc_text = penchar + (len(penchar) * "\b")
             text = f"{y_text}{x_text}{pc_text}"
 
-        self.str_write(text)
+        self.schars_write(text)
 
         if not hiding:
             time.sleep(sleep)
 
     #
-    # Layer thinly over 1 ShadowsTerminal, found at the far side of 2 Named Pipes
+    # Layer thinly over 1 GlassTeletype, found at the far side of 2 Named Pipes
     #
 
     def breakpoint(self) -> None:
@@ -2569,10 +2612,10 @@ class TurtleClientWas:
 
         signal.signal(signal.SIGINT, getsignal)
 
-    def str_write(self, text) -> None:
+    def schars_write(self, text) -> None:
         """Write the Text remotely, at the Turtle"""
 
-        py = f"self.str_write({text!r})"
+        py = f"self.schars_write({text!r})"
         rep = self.py_eval_to_repr(py)
         assert not rep, (rep, py)
 
@@ -2690,20 +2733,14 @@ class TurtleClientWas:
 # 🐢 Bug Fixes  # todo
 #
 #
-# todo: tweak up 'make push' to depend on:  ssh-end-work, ssh-start-home
-# but inside call on ssh-end-home, ssh-start-work
-#
-#
 # todo: solve the thin flats left on screen behind:  reset cs pu  sethertz 10 rep 8
 # also differs by Hertz:  reset cs pu  sethertz rep 8
 # also:  sethertz cs pu setxy 250 250  sethertz 100 home
 # also:  sethertz cs pu setxy 0 210  sethertz 100 home
 #
+#
 # todo: solve why ↓ ↑ Keys too small - rounding trouble?:  demos/arrow-keys.logo
 #
-#
-# todo: solve run 'pq.py' easily outside macOS, like disentangle from Pq PbCopy/ PbPaste
-# todo: stop clearing the Os Copy-Paste Buffer as part of quitting normally
 #
 # todo: test bounds collisions
 #   reset cs pd  pu setxy 530 44 pd  lt fd 300
@@ -2730,8 +2767,11 @@ class TurtleClientWas:
 #
 #
 # todo: early visual wows of a twitch stream
+# todo: z-layers to animate a clock of hours/ minutes/ second hands
 # todo: colorful spirography
 # todo: marble games
+# todo: menus w drop shadow & keyboard & mouse - a la Borland Dos Turbo C++
+# todo: vi - emacs - notepad
 # todo: 'batteries included better than homemade'
 #
 # todo: demo bugs fixed lately - Large Headings.logo for '.round()' vs '.trunc()'
@@ -2861,10 +2901,10 @@ class TurtleClientWas:
 # todo: collisions, gravity, friction
 #
 # todo: context of Color Delay etc Space for Forward & Turn, like into irregular dance beat
-# todo: color less arcanely than via self.str_write "\x1B[36m"
-#   as with  ⎋[31m red  ⎋[32m green  ⎋[36m cyan  ⎋[38;5;130m orange
+# todo: more than 8 foreground colors, such as ⎋[38;5;130m orange
+# todo: background colors, such as ⎋[38;5;130m orange
 #
-# todo: scroll and resize and reposition the window
+# todo: scroll and resize and reposition and iconify/ deiconify the window
 #
 
 #
@@ -2872,13 +2912,10 @@ class TurtleClientWas:
 #
 #
 # todo: factor out Class Turtle, think into running more than one
-# todo: factor out 'import uturtle' as a copy of 'pq.py' created when needed
+# todo: factor out 'import turtling'
+#
 # todo: def efprint1(self, form, **kwargs) at uturtle.Turtle for printing its Fields
 # todo: print only first and then changes in the form result
-#
-#
-# todo: have the BytesTerminal say when to yield, but yield in the ShadowsTerminal
-# todo: move the VT420 DECDC ⎋['~ and DECIC ⎋['} emulations up into the ShadowsTerminal
 #
 
 #

@@ -2041,49 +2041,6 @@ def turtle_yolo(itext) -> str:  # turtle
 
 
 r'''
-
-@dataclasses.dataclass
-class ReprLogger:
-    """Log Repr's of Object's arriving over Time"""
-
-    exists: bool  # whether the LogFile already existed
-    lap: dt.datetime  # when 'def rlprint' last ran
-    logger: typing.TextIO  # wrapped here  # '.pqinfo/keylog.py'  # logfmt
-
-    def __init__(self, pathname) -> None:
-
-        dirname = os.path.dirname(pathname)  # '.pqinfo' from '.pqinfo/screenlog.py'
-
-        dirpath = pathlib.Path(dirname)
-        dirpath.mkdir(parents=True, exist_ok=True)  # 'parents=' unneeded at './'
-
-        path = pathlib.Path(pathname)
-        exists = path.exists()
-        logger = path.open("a")  # last wins
-
-        self.exists = exists
-        self.lap = dt.datetime.now()
-        self.logger = logger
-
-    def rlprint(self, *args) -> None:
-        """Print the time since last Print, and the Repr of each Arg, not the Str"""
-
-        logger = self.logger
-        lap = self.lap
-
-        next_now = dt.datetime.now()
-        self.lap = next_now
-
-        between = (next_now - lap).total_seconds()
-
-        sep = " "
-        stamp = f"{between:.6f}"
-        text = stamp + sep + sep.join(repr(_) for _ in args)
-        print(text, file=logger)
-
-'''
-
-r'''
 @dataclasses.dataclass
 class ShadowsTerminal:
     """Write/ Read Chars at Screen/ Keyboard of a Monospaced Square'ish Terminal"""
@@ -2103,20 +2060,6 @@ class ShadowsTerminal:
         self.bt = bt
         self.ck = ChordsKeyboard(bt)
         self.tmode = "Replace"  # technically unknown, often 'Meta'
-
-    def __enter__(self) -> "ShadowsTerminal":  # -> typing.Self:
-
-        self.bt.__enter__()
-        self.ck.__enter__()
-        self.str_tmode_write("Meta")  # not .str_tmode_write_if
-
-        return self
-
-    def __exit__(self, *exc_info) -> None:
-
-        self.str_tmode_write_if("Meta")
-        self.ck.__exit__()
-        self.bt.__exit__()
 
     def shadows_yolo(self, brittle) -> None:  # noqa C901 too complex  # bin/pq.py styolo
         """Read Bytes from Keyboard, Write Bytes or Repr Bytes to Screen"""
@@ -2248,37 +2191,6 @@ class ShadowsTerminal:
 
         return False
 
-    def schars_to_writable(self, schars) -> bool:
-        """Say if writing Screen Bytes signals their meaning well"""
-
-        assert CSI_P_F_REGEX == r"^\x1B\[([ -?])*(.)$"  # r"[ -?]", no "@"
-        assert MACOS_TERMINAL_CSI_FINAL_BYTES == "@ABCDEGHIJKLMPSTZdhlmnq"
-
-        if schars.isprintable():
-            return True
-
-        if schars in list(" \a\b\n\t\r"):
-            return True
-
-            # \b and \r don't move the Cursor when st.column_x == 1
-
-        m = re.match(r"^\x1B\[([ -?]*)(.)$", string=schars)
-        if m:
-            p = m.group(1)
-            f = m.group(2)
-
-            # self.bt.str_print(f"{p=} {f=}")
-
-            if (p + f) in ("5n", "6n", "18t"):  # todo: list these more in common
-                return True
-
-            if f in "@ABCDEGHIJKLMPSTZdhlmnq" + "}~":
-                return True
-
-                # most of these have corner cases of no visible effect
-                # todo: do we write the "...n" and "...t" that aren't ("5n", "6n", "18t")
-
-        return False
 
     #
     # Write Bytes to jump the Cursor
