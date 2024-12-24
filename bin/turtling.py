@@ -20,7 +20,6 @@ examples:
 
 import __main__
 import argparse
-import ast
 import bdb
 import collections
 import decimal
@@ -29,7 +28,6 @@ import math
 import os
 import pathlib
 import pdb
-import platform
 import re  # 're.fullmatch' since Mar/2014 Python 3.4
 import select  # Windows sad at 'select.select' of Named Pipes
 import shlex
@@ -980,7 +978,7 @@ class StrTerminal:
 
         # '⌃L'  # '⇧Z'
 
-    def read_row_y_column_x(self, timeout) -> tuple[int, int]:
+    def row_y_column_x_read(self, timeout) -> tuple[int, int]:
         """Sample Cursor Row & Column"""
 
         bt = self.bytes_terminal
@@ -1007,13 +1005,14 @@ class StrTerminal:
 
         return (row_y, column_x)
 
-    def read_y_rows_x_columns(self, timeout) -> tuple[int, int]:
+    def y_rows_x_columns_read(self, timeout) -> tuple[int, int]:
         """Sample Counts of Screen Rows and Columns"""
 
         bt = self.bytes_terminal
 
         fileno = bt.fileno
-        (x_columns, y_rows) = os.get_terminal_size(fileno)
+        (columns, lines) = os.get_terminal_size(fileno)
+        (x_columns, y_rows) = (columns, lines)
 
         assert y_rows >= 5, (y_rows,)  # macOS Terminal min 5 Rows
         assert x_columns >= 20, (x_columns,)  # macOS Terminal min 20 Columns
@@ -1118,8 +1117,8 @@ class StrTerminal:
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-        (y_rows, x_columns) = self.read_y_rows_x_columns(timeout=0)
-        (y_row, x_column) = self.read_row_y_column_x(timeout=0)
+        (y_rows, x_columns) = self.y_rows_x_columns_read(timeout=0)
+        (y_row, x_column) = self.row_y_column_x_read(timeout=0)
 
         for y in range(1, y_rows + 1):
             ctext = "\x1B" "[" f"{y}d"
@@ -1135,8 +1134,8 @@ class StrTerminal:
         assert ICH_X == "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-        (y_rows, x_columns) = self.read_y_rows_x_columns(timeout=0)
-        (y_row, x_column) = self.read_row_y_column_x(timeout=0)
+        (y_rows, x_columns) = self.y_rows_x_columns_read(timeout=0)
+        (y_row, x_column) = self.row_y_column_x_read(timeout=0)
 
         for y in range(1, y_rows + 1):
             ctext = "\x1B" "[" f"{y}d"
@@ -1213,6 +1212,24 @@ class GlassTeletype:
         st.__enter__()
 
     #
+    # Delegate work to the Str Terminal
+    #
+
+    def schars_write(self, schars) -> None:
+        st = self.str_terminal
+        st.schars_write(schars)
+
+    def os_terminal_y_row_x_column(self) -> tuple[int, int]:
+        st = self.str_terminal
+        (y_row, x_column) = st.row_y_column_x_read(timeout=0)
+        return (y_row, x_column)
+
+    def os_terminal_y_rows_x_columns(self) -> tuple[int, int]:
+        st = self.str_terminal
+        (y_rows, x_columns) = st.y_rows_x_columns_read(timeout=0)
+        return (y_rows, x_columns)
+
+    #
     # Loop Keyboard Bytes back onto the Screen
     #
 
@@ -1261,6 +1278,548 @@ class GlassTeletype:
 
 class Turtle:
     """Chat with 1 Logo Turtle"""
+
+    glass_teletype: GlassTeletype
+
+    ps1 = f"{Turtle_}? \x1B[1m"  # prompt for Turtle Client Shell  # \e1m Bold Sgr
+    after_ps1 = "\x1B[m"  # \em Plain Sgr
+
+    float_x: float  # sub-pixel shadow of horizontal position
+    float_y: float  # sub-pixel shadow of vertical position
+    heading: float  # stride direction
+    stride: float  # stride size
+
+    penmode: str  # last ⎋[m Select Graphic Rendition (SGR) chosen for PenChar
+    penchar: str  # mark to print at each step
+    pendown: bool  # printing marks, or not
+    hiding: bool  # hiding the Turtle, or not
+    sleep: float  # time between marks
+
+    tada_func_else: typing.Callable | None  # runs once before taking next Command
+
+    def __init__(self, gt) -> None:
+
+        self.glass_teletype = gt
+        self.reinit()
+
+    def reinit(self) -> None:
+
+        self.float_x = 0e0
+        self.float_y = 0e0
+        self.heading = 0e0  # 0° of North Up Clockwise
+        self.stride = 100e0
+
+        self.penmode = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
+        self.penchar = FullBlock
+        self.pendown = False
+        self.hiding = False
+
+        hertz = 1000e0
+        self.sleep = 1 / hertz
+
+        self.tada_func_else = None
+
+        # macOS Terminal Sh launch doesn't clear the Graphic Rendition, Cursor Style, etc
+
+    def do_reset(self) -> None:
+        """Warp the Turtle to Home, but do Not clear the Screen"""
+
+        self.reinit()
+        self.do_hideturtle()
+        self.do_setpencolor()
+        self.do_home()
+        self.do_showturtle()
+
+        # print(  # no matter if changed, or not changed
+        #     f"heading={self.heading}"
+        #     f" stride={self.stride}"
+        #     f" penchar={self.penchar}"
+        #     f" pendown={self.pendown}"
+        #     f" sleep={self.sleep}"
+        # )
+
+        # todo: Terminal Cursor Styles
+
+    #
+    # Define what 1 Turtle can do
+    #
+
+    def do_backward(self, stride=None) -> None:  # as if do_bk, do_back
+        """Move the Turtle backwards along its Heading, tracing a Trail if Pen Down"""
+
+        float_stride = self.stride if (stride is None) else float(stride)
+        self.punch_bresenham_stride(-float_stride)
+
+    def do_beep(self) -> None:
+        """Ring the Terminal Alarm Bell once, remotely inside the Turtle"""
+
+        text = "\a"  # Alarm Bell
+        gt = self.glass_teletype
+        gt.schars_write(text)
+
+        # todo: sleep here, do Not return, until after the Bell is done ringing
+
+    def do_label(self, *args) -> None:
+        """Write 0 or more Args"""
+
+        gt = self.glass_teletype
+        heading = self.heading
+
+        if round(heading) != 90:
+            raise NotImplementedError("Printing Labels for Headings other than 90° East")
+
+            # todo: Printing Labels for 180° South Heading
+            # todo: Printing Labels for Headings other than 90° East and 180° South
+
+        (y_row, x_column) = gt.os_terminal_y_row_x_column()
+
+        line = " ".join(str(_) for _ in args)
+        line += f"\x1B[{y_row};{x_column}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
+        line += "\n"  # just Line-Feed \n without Carriage-Return \r
+
+        gt.schars_write(line)
+
+        # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
+
+    def do_clearscreen(self) -> None:  # as if do_cs, do_cls do_clear
+        """Write Spaces over every Character of every Screen Row and Column"""
+
+        text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
+        gt = self.glass_teletype
+        gt.schars_write(text)
+
+        # just the Screen, not also its Scrollback
+
+    def do_forward(self, stride=None) -> None:  # as if do_fd
+        """Move the Turtle forwards along its Heading, tracing a Trail if Pen Down"""
+
+        float_stride = self.stride if (stride is None) else float(stride)
+        self.punch_bresenham_stride(float_stride)
+
+    def do_home(self) -> None:
+        """Move the Turtle to its Home and turn it North, tracing a Trail if Pen Down"""
+
+        self.do_setxy()  # todo: different Homes for different Turtles
+        self.do_setheading()
+
+    def do_hideturtle(self) -> None:  # as if do_ht
+        """Stop showing where the Turtle is"""
+
+        gt = self.glass_teletype
+        # hiding = self.hiding
+
+        text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
+        gt.schars_write(text)
+
+        self.hiding = True
+        # if self.hiding != hiding:
+        #     print(f"hiding={self.hiding}  # was {hiding}")
+
+    def do_left(self, angle=None) -> None:  # as if do_lt
+        """Turn the Turtle anticlockwise, by a 90° Right Angle, or some other Angle"""
+
+        heading = self.heading  # turning anticlockwise
+
+        float_angle = 90e0 if (angle is None) else float(angle)
+        self.heading = (heading - float_angle) % 360  # 360° Circle
+        # if self.heading != heading:
+        #     print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
+
+    def do_pendown(self) -> None:  # as if do_pd
+        """Plan to leave a Trail as the Turtle moves"""
+
+        # pendown = self.pendown
+        self.pendown = True
+        # if self.pendown != pendown:
+        #     print(f"pendown={self.pendown}  # was {pendown}")
+
+        # todo: calculated boolean args for pd pu ht gt
+
+    def do_penup(self) -> None:  # as if do_pu
+        """Plan to Not leave a Trail as the Turtle moves"""
+
+        # pendown = self.pendown
+        self.pendown = False
+        # if self.pendown != pendown:
+        #     print(f"pendown={self.pendown}  # was {pendown}")
+
+    def do_repeat(self, count=None) -> None:  # as if do_rep
+        """Run some instructions a chosen number of times, often less or more than once"""
+
+        count = 1 if (count is None) else int(count)
+        if not count:
+            self.do_forward(0)  # punches the initial pixel without moving on
+            self.do_right(0)  # mostly harmless
+        else:
+            angle = 360 / count
+            for _ in range(count):
+                self.do_forward()  # the traditional [fd rt]
+                self.do_right(angle)  # not the countercultural [rt fd]
+
+    def do_right(self, angle=None) -> None:  # as if do_rt
+        """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
+
+        heading = self.heading  # turning clockwise
+
+        float_angle = 90e0 if (angle is None) else float(angle)
+        self.heading = (heading + float_angle) % 360  # 360° Circle
+        # if self.heading != heading:
+        #     print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
+
+    def do_setheading(self, angle=None) -> None:  # as if do_seth
+        """Turn the Turtle to move 0° North, or to some other Heading"""
+
+        # heading = self.heading  # turning North
+
+        float_angle = 0e0 if (angle is None) else float(angle)  # 0° of North Up Clockwise
+        self.heading = float_angle % 360  # 360° Circle
+        # if self.heading != heading:
+        #     print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
+
+    def do_sethertz(self, hertz=None) -> None:
+
+        # sleep = self.sleep
+
+        sleep1 = 0e0
+        float_hertz = 1000e0 if (hertz is None) else float(hertz)
+        if float_hertz:
+            sleep1 = 1 / float_hertz
+
+        self.sleep = sleep1
+
+        # if sleep1 != sleep:
+        #     print(f"sleep={sleep1}s  # was {sleep}s")
+
+    def do_setpencolor(self, color=None) -> None:  # as if do_setpcv
+        """Choose which Color to draw with"""
+
+        gt = self.glass_teletype
+        # penmode = self.penmode
+
+        floatish = isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
+        if color is None:
+            penmode1 = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
+        elif floatish or isinstance(color, decimal.Decimal):
+            penmode1 = self.rgb_to_penmode(rgb=int(color))
+        elif isinstance(color, str):
+            if color.casefold() == "None".casefold():
+                penmode1 = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
+            else:
+                penmode1 = self.colorname_to_penmode(colorname=color)
+        else:
+            assert False, (type(color), color)
+
+        gt.schars_write(penmode1)
+
+        self.penmode = penmode1
+
+        # if penmode1 != penmode:
+        #     print(f"penmode={penmode1!r} because {color!r}  # was {penmode!r}")
+
+    rgb_by_name = {
+        "white": 0xFFFFFF,
+        "magenta": 0xFF00FF,
+        "blue": 0x0000FF,
+        "cyan": 0x00FFFF,
+        "green": 0x00FF00,
+        "yellow": 0xFFFF00,
+        "red": 0xFF0000,
+        "black": 0x000000,
+    }
+
+    ansi_by_rgb = {  # CSI 06/13 Select Graphic Rendition (SGR)  # 30+ Display Foreground Color
+        0xFFFFFF: "\x1B[37m",
+        0xFF00FF: "\x1B[35m",
+        0x0000FF: "\x1B[34m",
+        0x00FFFF: "\x1B[36m",
+        0x00FF00: "\x1B[32m",
+        0xFFFF00: "\x1B[33m",
+        0xFF0000: "\x1B[31m",
+        0x000000: "\x1B[30m",
+    }
+
+    def colorname_to_penmode(self, colorname) -> str:
+
+        casefold = colorname.casefold()
+        colornames = sorted(_.title() for _ in self.rgb_by_name.keys())
+        if casefold not in self.rgb_by_name.keys():
+            raise KeyError(f"{colorname!r} not in {colornames}")
+
+        rgb = self.rgb_by_name[casefold]
+        penmode = self.ansi_by_rgb[rgb]
+        return penmode
+
+    def rgb_to_penmode(self, rgb) -> str:
+        penmode = self.ansi_by_rgb[rgb]
+        return penmode
+
+    def do_setpenpunch(self, ch=None) -> None:  # as if do_setpch
+        """Choose which Character to draw with, or default to '*'"""
+
+        # penchar = self.penchar
+
+        floatish = isinstance(ch, float) or isinstance(ch, int) or isinstance(ch, bool)
+        if ch is None:
+            penchar1 = FullBlock
+        elif floatish or isinstance(ch, decimal.Decimal):
+            penchar1 = chr(int(ch))  # not much test of '\0' yet
+        elif isinstance(ch, str):
+            # assert len(ch) == 1, (len(ch), ch)  # todo: unlock vs require Len 1 after dropping Sgr's
+            penchar1 = ch
+        else:
+            assert False, (type(ch), ch)
+
+        self.penchar = penchar1
+
+        # if penchar1 != penchar:
+        #     print(f"penchar={penchar1!r}  # was {penchar!r}")
+
+        # todo: With SetPenColor Forward 1:  "!" if (penchar == "~") else chr(ord(penchar) + 1)
+
+    def do_setxy(self, x=None, y=None) -> None:
+        """Move the Turtle to an X Y Point, tracing a Trail if Pen Down"""
+
+        float_x = 0e0 if (x is None) else float(x)
+        float_y = 0e0 if (y is None) else float(y)
+
+        (x1, y1) = self.os_terminal_x_y()
+
+        x2 = round(float_x / 10)  # / 10 to a screen of a few large pixels
+        y2 = round(float_y / 10 / 2)  # / 2 for thin pixels
+
+        self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
+
+        self.float_x = float_x  # not 'float_x_'
+        self.float_y = float_y  # not 'float_y_'
+
+        # todo: setx without setxy, sety without setxy
+
+    def do_showturtle(self) -> None:
+        """Start showing where the Turtle is"""
+
+        gt = self.glass_teletype
+        # hiding = self.hiding
+
+        text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+        gt.schars_write(text)
+
+        self.hiding = False
+        # if self.hiding != hiding:
+        #     print(f"hiding={self.hiding}  # was {hiding}")
+
+        # Forward 0 leaves a Mark to show the Turtle was Here
+        # SetXY leaves a Mark to show the X=0 Y=0 Home
+
+    def do_sleep(self) -> None:
+        """Hold the Turtle still for a moment"""
+
+        sleep = self.sleep
+        # print(f"Sleeping {sleep}s because SetHertz")
+        time.sleep(sleep)
+
+        # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s  st
+
+    def do_tada(self) -> None:
+        """Hide the Turtle, but only until next Call"""
+
+        gt = self.glass_teletype
+        text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
+        gt.schars_write(text)
+
+        def tada_func() -> None:
+            text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+            gt.schars_write(text)
+
+        self.tada_func_else = tada_func
+
+    #
+    # Move the Turtle along the Line of its Heading
+    #
+
+    def punch_bresenham_stride(self, stride) -> None:
+        """Step forwards, or backwards, along the Heading"""
+
+        stride_ = float(stride) / 10  # / 10 to a screen of a few large pixels
+
+        heading = self.heading  # 0° North Up Clockwise
+
+        # Choose the Starting Point
+
+        (x1, y1) = self.os_terminal_x_y()
+        float_x = self.float_x
+        float_y = self.float_y
+        assert (x1 == round(float_x)) and (y1 == round(float_y)), (x1, float_x, y1, float_y)
+
+        # Choose the Ending Point
+
+        angle = (90 - heading) % 360  # converts to 0° East Anticlockwise
+        float_x_ = float_x + (stride_ * math.cos(math.radians(angle)))  # destination
+        float_x__ = round(float_x_, 10)  # todo: how round should our Float Maths be?
+        float_y_ = float_y + (stride_ * math.sin(math.radians(angle)) / 2)  # / 2 for thin pixels
+        float_y__ = round(float_y_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
+
+        x2 = round(float_x__)
+        y2 = round(float_y__)
+
+        # Option to show why Round over Int at X2 Y2
+
+        fuzz1 = True
+        fuzz1 = False
+        if fuzz1:
+            # print(f"FUZZ1 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x_} {float_y_} FUZZ1")
+            x2 = int(float_x_)
+            y2 = int(float_y_)
+
+            # got:  cs  pu home reset pd  rt rt fd  rt fd 400
+            # wanted:  cs  reset pd  setpch '.'  pu setxy ~400 ~100  pd rt fd 400 lt fd
+            # surfaced by:  demos/headings.logo
+
+        # Draw the Line Segment to X2 Y2 from X1 Y1
+
+        self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
+        # print(f"float {float_x} {float_y} {float_x__} {float_y__}")
+
+        # Option to show why keep up Precise X Y Shadows in .float_x .float_y
+
+        fuzz2 = True
+        fuzz2 = False
+        if fuzz2:  # fail test of:  cs  reset pd  fd rt 72  fd rt 72  fd rt 72  fd rt 72  fd rt 72
+            # print(f"FUZZ2 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x__} {float_y__} FUZZ2")
+            float_x__ = float(x2)
+            float_y__ = float(y2)
+
+            # got Pentagon overshot:  cs  reset pd  fd rt 72  fd rt 72  fd rt 72  fd rt 72  fd rt 72
+            # got Octogon overshot:  cs  reset pd  rep 8 [fd rt 45]
+            # wanted close like:  cs  reset pd  fd rt 120  fd rt 120  fd rt 120
+            # wanted close like:  cs  reset pd  rep 4 [fd rt 90]
+            # surfaced by:  walking polygons
+
+        self.float_x = float_x__
+        self.float_y = float_y__
+
+    def punch_bresenham_segment(self, x1: int, y1: int, x2: int, y2: int) -> None:
+        """Step forwards, or backwards, through (Row, Column) choices"""
+
+        assert isinstance(x1, int), (type(x1), x1)
+        assert isinstance(y1, int), (type(y1), y1)
+        assert isinstance(y2, int), (type(y2), y2)
+        assert isinstance(x2, int), (type(x2), x2)
+
+        # print(f"{x1=} {y1=} ({2 * y1}e0)  {x2=} {y2=} ({2 * y2}e0)")
+
+        x2x1 = abs(x2 - x1)  # distance
+        y2y1 = abs(y2 - y1)
+
+        sx = 1 if (x1 < x2) else -1  # steps towards X2 from X1
+        sy = 1 if (y1 < y2) else -1  # steps towards Y2 from y1
+
+        e = x2x1 - y2y1  # Bresenham's Error Measure
+
+        wx = x = x1
+        wy = y = y1
+        while True:
+
+            self.jump_then_punch(wx, wy=-wy, x=x, y=-y)
+            if (x == x2) and (y == y2):
+                break
+
+            wx = x
+            wy = y
+
+            ee = 2 * e
+            dx = ee < x2x1
+            dy = ee > -y2y1
+            assert dx or dy, (dx, dy, x, y, ee, x2x1, y2y1, x1, y1)
+
+            if dy:
+                e -= y2y1
+                x += sx
+            if dx:
+                e += x2x1
+                y += sy
+
+            assert (x, y) != (wx, wy)
+
+        # Wikipedia > https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+
+        # To: Perplexity·Ai
+        #
+        #   When I'm drawing a line across a pixellated display,
+        #   what's the most ordinary way
+        #   to turn my y = a*x + b equation into a list of pixels to turn on?
+        #
+
+    def jump_then_punch(self, wx, wy, x, y) -> None:
+        """Move the Turtle by 1 Column or 1 Row or both, and punch out a Mark if Pen Down"""
+
+        gt = self.glass_teletype
+        hiding = self.hiding
+        pendown = self.pendown
+        penchar = self.penchar
+        sleep = self.sleep
+
+        # # print(f"{x} {y}")
+
+        if wx < x:
+            x_text = f"\x1B[{x - wx}C"  # CSI 04/03 Cursor [Forward] Right
+        elif wx > x:
+            x_text = f"\x1B[{wx - x}D"  # CSI 04/04 Cursor [Backward] Left
+        else:
+            x_text = ""
+
+        if wy < y:
+            y_text = f"\x1B[{y - wy}B"  # CSI 04/02 Cursor [Down] Next
+        elif wy > y:
+            y_text = f"\x1B[{wy - y}A"  # CSI 04/01 Cursor [Up] Previous
+        else:
+            y_text = ""
+
+        text = f"{y_text}{x_text}"
+        if pendown:
+            pc_text = penchar + (len(penchar) * "\b")
+            text = f"{y_text}{x_text}{pc_text}"
+
+        gt.schars_write(text)
+
+        if not hiding:
+            time.sleep(sleep)
+
+    def os_terminal_x_y(self) -> tuple[int, int]:
+        """Sample the X Y Position remotely, inside the Turtle"""
+
+        gt = self.glass_teletype
+
+        float_x = self.float_x
+        float_y = self.float_y
+
+        # Find the Cursor
+
+        (y_row, x_column) = gt.os_terminal_y_row_x_column()
+
+        # Find the Center of Screen
+
+        (y_rows, x_columns) = gt.os_terminal_y_rows_x_columns()
+        cx = 1 + (x_columns // 2)
+        cy = 1 + (y_rows // 2)
+
+        # Say how far away from Center the Cursor is, on a plane of Y is Up and X is Right
+
+        x1 = x_column - cx
+        y1 = -(y_row - cy)
+
+        # Snap the Shadow to the Cursor Row-Column, if the Cursor moved
+
+        if (x1 != round(float_x)) or (y1 != round(float_y)):
+            float_x_ = float(x1)  # 'explicit is better than implicit'
+            float_y_ = float(y1)
+
+            # print(f"snap to {float_x_} {float_y_} from {float_x} {float_y}")
+            self.float_x = float_x_
+            self.float_y = float_y_
+
+        # Succeed
+
+        return (x1, y1)
 
 
 #
@@ -1727,7 +2286,7 @@ class TurtleClient:
             try:
                 readline = sys.stdin.readline()
             except KeyboardInterrupt:  # mostly shrugs off ⌃C SigInt
-                print(" KeyboardInterrupt")
+                eprint(" KeyboardInterrupt")
                 self.breakpoint()
                 continue
 
@@ -1779,117 +2338,11 @@ class TurtleClient:
 #
 
 
+r'''
+
 class TurtleClientWas:
     """Run at Keyboard and Screen as a Shell, to command 1 Turtle via two MkFifo"""
 
-    ps1 = f"{Turtle_}? \x1B[1m"  # prompt for Turtle Client Shell  # \e1m Bold Sgr
-    after_ps1 = "\x1B[m"  # \em Plain Sgr
-
-    float_x: float  # sub-pixel shadow of horizontal position
-    float_y: float  # sub-pixel shadow of vertical position
-    heading: float  # stride direction
-    stride: float  # stride size
-
-    penmode: str  # last ⎋[m Select Graphic Rendition (SGR) chosen for PenChar
-    penchar: str  # mark to print at each step
-    pendown: bool  # printing marks, or not
-    hiding: bool  # hiding the Turtle, or not
-    sleep: float  # time between marks
-
-    tada_func_else: typing.Callable | None  # runs once before taking next Command
-
-    def __init__(self) -> None:
-
-        self.reinit()
-
-    def reinit(self) -> None:
-
-        self.float_x = 0e0
-        self.float_y = 0e0
-        self.heading = 0e0  # 0° of North Up Clockwise
-        self.stride = 100e0
-
-        self.penmode = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
-        self.penchar = FullBlock
-        self.pendown = False
-        self.hiding = False
-
-        hertz = 1000e0
-        self.sleep = 1 / hertz
-
-        self.tada_func_else = None
-
-        # macOS Terminal Sh launch doesn't clear the Graphic Rendition, Cursor Style, etc
-
-    def do_reset(self) -> None:
-        """Warp the Turtle to Home, but do Not clear the Screen"""
-
-        self.reinit()
-        self.do_hideturtle()
-        self.do_setpencolor()
-        self.do_home()
-        self.do_showturtle()
-
-        print(  # no matter if changed, or not changed
-            f"heading={self.heading}"
-            f" stride={self.stride}"
-            f" penchar={self.penchar}"
-            f" pendown={self.pendown}"
-            f" sleep={self.sleep}"
-        )
-
-        py = 'self.schars_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
-        rep = self.py_eval_to_repr(py)
-        assert not rep, (rep, py)
-
-    def turtle_client_yolo(self) -> None:  # noqa # too complex (11  # FIXME
-        """Read 1 Line, Eval it, Print its result, Loop (REPL Chat)"""
-
-        # Cancel the Vi choice of a Cursor Style
-        # Trust Vi to have already chosen ShowTurtle & no SGR
-
-        py = 'self.schars_write("\x1B" "[" " q")'  # CSI 02/00 07/01  # No-Style Cursor
-        rep = self.py_eval_to_repr(py)
-        assert not rep, (rep, py)
-
-        # Prompt & read 1 Line from Keyboard, till ⌃D pressed to quit
-
-        while True:
-            print()
-            print(self.ps1, end="")
-            sys.stdout.flush()
-            try:
-                readline = sys.stdin.readline()
-            except KeyboardInterrupt:  # mostly shrugs off ⌃C SigInt
-                print(" KeyboardInterrupt")
-                self.breakpoint()
-                continue
-
-            print(self.after_ps1, end="")
-
-            print_if(f"{readline=}")
-
-            if not readline:  # accepts ⌃D Tty End
-                self.do_bye()
-                assert False  # unreached
-
-            # Prompt & read 1 Line from Keyboard, till ⌃D Tty End pressed to quit
-
-            py = self.readline_to_py(readline)
-            if py:
-                rep = self.py_eval_to_repr(py)
-                if rep:
-                    if not rep.startswith("'Traceback (most recent call last):"):  # todo: weak
-                        print(rep)
-                    else:
-                        try:
-                            print(eval(rep))
-                        except Exception:
-                            hostname = platform.node()
-                            debug = hostname.startswith("plavarre")
-                            if debug:
-                                traceback.print_exc()  # todo: log the Traceback of Exc
-                            print(rep)
 
     #
     # Eval 1 Line of Input
@@ -2113,64 +2566,11 @@ class TurtleClientWas:
 
         return d
 
-    #
-    # Mess with 1 Turtle
-    #
-
-    def do_backward(self, stride=None) -> None:  # as if do_bk, do_back
-        """Move the Turtle backwards along its Heading, tracing a Trail if Pen Down"""
-
-        float_stride = self.stride if (stride is None) else float(stride)
-        self.punch_bresenham_stride(-float_stride)
-
-    def do_beep(self) -> None:
-        """Ring the Terminal Alarm Bell once, remotely inside the Turtle"""
-
-        text = "\a"  # Alarm Bell
-        self.schars_write(text)
-
-        # todo: sleep here, do Not return, until after the Bell is done ringing
-
-    def do_label(self, *args) -> None:
-        """Write 0 or more Args"""
-
-        heading = self.heading
-        if round(heading) != 90:
-            print("NotImplementedError: Printing Labels for Headings other than 90° East")
-            return
-
-            # todo: Printing Labels for 180° South Heading
-            # todo: Printing Labels for Headings other than 90° East and 180° South
-
-        (y_row, x_column) = self.os_terminal_y_row_x_column()
-
-        line = " ".join(str(_) for _ in args)
-        line += f"\x1B[{y_row};{x_column}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
-        line += "\n"  # just Line-Feed \n without Carriage-Return \r
-
-        self.schars_write(line)
-
-        # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
-
     def do_bye(self) -> None:
         """Quit the Turtle Chat"""
 
         print("bye")  # not from "bye", "end", "exit", "quit", ...
         sys.exit()
-
-    def do_clearscreen(self) -> None:  # as if do_cs, do_cls do_clear
-        """Write Spaces over every Character of every Screen Row and Column"""
-
-        text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
-        self.schars_write(text)
-
-        # just the Screen, not also its Scrollback
-
-    def do_forward(self, stride=None) -> None:  # as if do_fd
-        """Move the Turtle forwards along its Heading, tracing a Trail if Pen Down"""
-
-        float_stride = self.stride if (stride is None) else float(stride)
-        self.punch_bresenham_stride(float_stride)
 
     def do_help(self, pattern=None) -> None:  # as if do_h
         """List the Command Verbs"""
@@ -2207,517 +2607,12 @@ class TurtleClientWas:
 
         return (verbs, grunts)
 
-    def do_home(self) -> None:
-        """Move the Turtle to its Home and turn it North, tracing a Trail if Pen Down"""
-
-        self.do_setxy()  # todo: different Homes for different Turtles
-        self.do_setheading()
-
-    def do_hideturtle(self) -> None:  # as if do_ht
-        """Stop showing where the Turtle is"""
-
-        hiding = self.hiding
-
-        text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
-        self.schars_write(text)
-
-        self.hiding = True
-        if self.hiding != hiding:
-            print(f"hiding={self.hiding}  # was {hiding}")
-
-    def do_left(self, angle=None) -> None:  # as if do_lt
-        """Turn the Turtle anticlockwise, by a 90° Right Angle, or some other Angle"""
-
-        heading = self.heading  # turning anticlockwise
-
-        float_angle = 90e0 if (angle is None) else float(angle)
-        self.heading = (heading - float_angle) % 360  # 360° Circle
-        if self.heading != heading:
-            print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
-
-    def do_pendown(self) -> None:  # as if do_pd
-        """Plan to leave a Trail as the Turtle moves"""
-
-        pendown = self.pendown
-        self.pendown = True
-        if self.pendown != pendown:
-            print(f"pendown={self.pendown}  # was {pendown}")
-
-        # todo: calculated boolean args for pd pu ht gt
-
-    def do_penup(self) -> None:  # as if do_pu
-        """Plan to Not leave a Trail as the Turtle moves"""
-
-        pendown = self.pendown
-        self.pendown = False
-        if self.pendown != pendown:
-            print(f"pendown={self.pendown}  # was {pendown}")
-
     def do_print(self, *args) -> None:  # as if do_p
         """Print the Str of each Arg, separated by Spaces, and then 1 Line_Break"""
 
         print(*args)
 
-    def do_repeat(self, count=None) -> None:  # as if do_rep
-        """Run some instructions a chosen number of times, often less or more than once"""
-
-        count = 1 if (count is None) else int(count)
-        if not count:
-            self.do_forward(0)  # punches the initial pixel without moving on
-            self.do_right(0)  # mostly harmless
-        else:
-            angle = 360 / count
-            for _ in range(count):
-                self.do_forward()  # the traditional [fd rt]
-                self.do_right(angle)  # not the countercultural [rt fd]
-
-    def do_right(self, angle=None) -> None:  # as if do_rt
-        """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
-
-        heading = self.heading  # turning clockwise
-
-        float_angle = 90e0 if (angle is None) else float(angle)
-        self.heading = (heading + float_angle) % 360  # 360° Circle
-        if self.heading != heading:
-            print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
-
-    def do_setheading(self, angle=None) -> None:  # as if do_seth
-        """Turn the Turtle to move 0° North, or to some other Heading"""
-
-        heading = self.heading  # turning North
-
-        float_angle = 0e0 if (angle is None) else float(angle)  # 0° of North Up Clockwise
-        self.heading = float_angle % 360  # 360° Circle
-        if self.heading != heading:
-            print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
-
-    def do_sethertz(self, hertz=None) -> None:
-
-        sleep = self.sleep
-
-        sleep1 = 0e0
-        float_hertz = 1000e0 if (hertz is None) else float(hertz)
-        if float_hertz:
-            sleep1 = 1 / float_hertz
-
-        self.sleep = sleep1
-
-        if sleep1 != sleep:
-            print(f"sleep={sleep1}s  # was {sleep}s")
-
-    def do_setpencolor(self, color=None) -> None:  # as if do_setpcv
-        """Choose which Color to draw with"""
-
-        penmode = self.penmode
-
-        floatish = isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
-        if color is None:
-            penmode1 = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
-        elif floatish or isinstance(color, decimal.Decimal):
-            penmode1 = self.rgb_to_penmode(rgb=int(color))
-        elif isinstance(color, str):
-            if color.casefold() == "None".casefold():
-                penmode1 = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
-            else:
-                penmode1 = self.colorname_to_penmode(colorname=color)
-        else:
-            assert False, (type(color), color)
-
-        py = f"self.schars_write({penmode1!r})"
-
-        rep = self.py_eval_to_repr(py)
-        assert not rep, (rep, py)
-
-        self.penmode = penmode1
-
-        if penmode1 != penmode:
-            print(f"penmode={penmode1!r} because {color!r}  # was {penmode!r}")
-
-    rgb_by_name = {
-        "white": 0xFFFFFF,
-        "magenta": 0xFF00FF,
-        "blue": 0x0000FF,
-        "cyan": 0x00FFFF,
-        "green": 0x00FF00,
-        "yellow": 0xFFFF00,
-        "red": 0xFF0000,
-        "black": 0x000000,
-    }
-
-    ansi_by_rgb = {  # CSI 06/13 Select Graphic Rendition (SGR)  # 30+ Display Foreground Color
-        0xFFFFFF: "\x1B[37m",
-        0xFF00FF: "\x1B[35m",
-        0x0000FF: "\x1B[34m",
-        0x00FFFF: "\x1B[36m",
-        0x00FF00: "\x1B[32m",
-        0xFFFF00: "\x1B[33m",
-        0xFF0000: "\x1B[31m",
-        0x000000: "\x1B[30m",
-    }
-
-    def colorname_to_penmode(self, colorname) -> str:
-
-        casefold = colorname.casefold()
-        colornames = sorted(_.title() for _ in self.rgb_by_name.keys())
-        if casefold not in self.rgb_by_name.keys():
-            raise KeyError(f"{colorname!r} not in {colornames}")
-
-        rgb = self.rgb_by_name[casefold]
-        penmode = self.ansi_by_rgb[rgb]
-        return penmode
-
-    def rgb_to_penmode(self, rgb) -> str:
-        penmode = self.ansi_by_rgb[rgb]
-        return penmode
-
-    def do_setpenpunch(self, ch=None) -> None:  # as if do_setpch
-        """Choose which Character to draw with, or default to '*'"""
-
-        penchar = self.penchar
-
-        floatish = isinstance(ch, float) or isinstance(ch, int) or isinstance(ch, bool)
-        if ch is None:
-            penchar1 = FullBlock
-        elif floatish or isinstance(ch, decimal.Decimal):
-            penchar1 = chr(int(ch))  # not much test of '\0' yet
-        elif isinstance(ch, str):
-            # assert len(ch) == 1, (len(ch), ch)  # todo: unlock vs require Len 1 after dropping Sgr's
-            penchar1 = ch
-        else:
-            assert False, (type(ch), ch)
-
-        self.penchar = penchar1
-
-        if penchar1 != penchar:
-            print(f"penchar={penchar1!r}  # was {penchar!r}")
-
-        # todo: With SetPenColor Forward 1:  "!" if (penchar == "~") else chr(ord(penchar) + 1)
-
-    def do_setxy(self, x=None, y=None) -> None:
-        """Move the Turtle to an X Y Point, tracing a Trail if Pen Down"""
-
-        float_x = 0e0 if (x is None) else float(x)
-        float_y = 0e0 if (y is None) else float(y)
-
-        (x1, y1) = self.os_terminal_x_y()
-
-        x2 = round(float_x / 10)  # / 10 to a screen of a few large pixels
-        y2 = round(float_y / 10 / 2)  # / 2 for thin pixels
-
-        self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
-
-        self.float_x = float_x  # not 'float_x_'
-        self.float_y = float_y  # not 'float_y_'
-
-        # todo: setx without setxy, sety without setxy
-
-    def do_showturtle(self) -> None:
-        """Start showing where the Turtle is"""
-
-        hiding = self.hiding
-
-        text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
-        self.schars_write(text)
-
-        self.hiding = False
-        if self.hiding != hiding:
-            print(f"hiding={self.hiding}  # was {hiding}")
-
-        # Forward 0 leaves a Mark to show the Turtle was Here
-        # SetXY leaves a Mark to show the X=0 Y=0 Home
-
-    def do_sleep(self) -> None:
-        """Hold the Turtle still for a moment"""
-
-        sleep = self.sleep
-        print(f"Sleeping {sleep}s because SetHertz")
-        time.sleep(sleep)
-
-        # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s  st
-
-    def do_tada(self) -> None:
-        """Hide the Turtle, but only until next Call"""
-
-        text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
-        self.schars_write(text)
-
-        def tada_func() -> None:
-            text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
-            self.schars_write(text)
-
-        self.tada_func_else = tada_func
-
-    #
-    # Move the Turtle along the Line of its Heading
-    #
-
-    def punch_bresenham_stride(self, stride) -> None:
-        """Step forwards, or backwards, along the Heading"""
-
-        stride_ = float(stride) / 10  # / 10 to a screen of a few large pixels
-
-        heading = self.heading  # 0° North Up Clockwise
-
-        # Choose the Starting Point
-
-        (x1, y1) = self.os_terminal_x_y()
-        float_x = self.float_x
-        float_y = self.float_y
-        assert (x1 == round(float_x)) and (y1 == round(float_y)), (x1, float_x, y1, float_y)
-
-        # Choose the Ending Point
-
-        angle = (90 - heading) % 360  # converts to 0° East Anticlockwise
-        float_x_ = float_x + (stride_ * math.cos(math.radians(angle)))  # destination
-        float_x__ = round(float_x_, 10)  # todo: how round should our Float Maths be?
-        float_y_ = float_y + (stride_ * math.sin(math.radians(angle)) / 2)  # / 2 for thin pixels
-        float_y__ = round(float_y_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
-
-        x2 = round(float_x__)
-        y2 = round(float_y__)
-
-        # Option to show why Round over Int at X2 Y2
-
-        fuzz1 = True
-        fuzz1 = False
-        if fuzz1:
-            print(f"FUZZ1 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x_} {float_y_} FUZZ1")
-            x2 = int(float_x_)
-            y2 = int(float_y_)
-
-            # got:  cs  pu home reset pd  rt rt fd  rt fd 400
-            # wanted:  cs  reset pd  setpch '.'  pu setxy ~400 ~100  pd rt fd 400 lt fd
-            # surfaced by:  demos/headings.logo
-
-        # Draw the Line Segment to X2 Y2 from X1 Y1
-
-        self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
-        print(f"float {float_x} {float_y} {float_x__} {float_y__}")
-
-        # Option to show why keep up Precise X Y Shadows in .float_x .float_y
-
-        fuzz2 = True
-        fuzz2 = False
-        if fuzz2:  # fail test of:  cs  reset pd  fd rt 72  fd rt 72  fd rt 72  fd rt 72  fd rt 72
-            print(f"FUZZ2 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x__} {float_y__} FUZZ2")
-            float_x__ = float(x2)
-            float_y__ = float(y2)
-
-            # got Pentagon overshot:  cs  reset pd  fd rt 72  fd rt 72  fd rt 72  fd rt 72  fd rt 72
-            # got Octogon overshot:  cs  reset pd  rep 8 [fd rt 45]
-            # wanted close like:  cs  reset pd  fd rt 120  fd rt 120  fd rt 120
-            # wanted close like:  cs  reset pd  rep 4 [fd rt 90]
-            # surfaced by:  walking polygons
-
-        self.float_x = float_x__
-        self.float_y = float_y__
-
-    def punch_bresenham_segment(self, x1: int, y1: int, x2: int, y2: int) -> None:
-        """Step forwards, or backwards, through (Row, Column) choices"""
-
-        assert isinstance(x1, int), (type(x1), x1)
-        assert isinstance(y1, int), (type(y1), y1)
-        assert isinstance(y2, int), (type(y2), y2)
-        assert isinstance(x2, int), (type(x2), x2)
-
-        print(f"{x1=} {y1=} ({2 * y1}e0)  {x2=} {y2=} ({2 * y2}e0)")
-
-        x2x1 = abs(x2 - x1)  # distance
-        y2y1 = abs(y2 - y1)
-
-        sx = 1 if (x1 < x2) else -1  # steps towards X2 from X1
-        sy = 1 if (y1 < y2) else -1  # steps towards Y2 from y1
-
-        e = x2x1 - y2y1  # Bresenham's Error Measure
-
-        wx = x = x1
-        wy = y = y1
-        while True:
-
-            self.jump_then_punch(wx, wy=-wy, x=x, y=-y)
-            if (x == x2) and (y == y2):
-                break
-
-            wx = x
-            wy = y
-
-            ee = 2 * e
-            dx = ee < x2x1
-            dy = ee > -y2y1
-            assert dx or dy, (dx, dy, x, y, ee, x2x1, y2y1, x1, y1)
-
-            if dy:
-                e -= y2y1
-                x += sx
-            if dx:
-                e += x2x1
-                y += sy
-
-            assert (x, y) != (wx, wy)
-
-        # Wikipedia > https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
-
-        # To: Perplexity·Ai
-        #
-        #   When I'm drawing a line across a pixellated display,
-        #   what's the most ordinary way
-        #   to turn my y = a*x + b equation into a list of pixels to turn on?
-        #
-
-    def jump_then_punch(self, wx, wy, x, y) -> None:
-        """Move the Turtle by 1 Column or 1 Row or both, and punch out a Mark if Pen Down"""
-
-        hiding = self.hiding
-        pendown = self.pendown
-        penchar = self.penchar
-        sleep = self.sleep
-
-        # print(f"{x} {y}")
-
-        if wx < x:
-            x_text = f"\x1B[{x - wx}C"  # CSI 04/03 Cursor [Forward] Right
-        elif wx > x:
-            x_text = f"\x1B[{wx - x}D"  # CSI 04/04 Cursor [Backward] Left
-        else:
-            x_text = ""
-
-        if wy < y:
-            y_text = f"\x1B[{y - wy}B"  # CSI 04/02 Cursor [Down] Next
-        elif wy > y:
-            y_text = f"\x1B[{wy - y}A"  # CSI 04/01 Cursor [Up] Previous
-        else:
-            y_text = ""
-
-        text = f"{y_text}{x_text}"
-        if pendown:
-            pc_text = penchar + (len(penchar) * "\b")
-            text = f"{y_text}{x_text}{pc_text}"
-
-        self.schars_write(text)
-
-        if not hiding:
-            time.sleep(sleep)
-
-    #
-    # Layer thinly over 1 GlassTeletype, found at the far side of 2 Named Pipes
-    #
-
-    def breakpoint(self) -> None:
-        """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
-
-        getsignal = signal.getsignal(signal.SIGINT)
-
-        breakpoint()
-        pass
-
-        signal.signal(signal.SIGINT, getsignal)
-
-    def schars_write(self, text) -> None:
-        """Write the Text remotely, at the Turtle"""
-
-        py = f"self.schars_write({text!r})"
-        rep = self.py_eval_to_repr(py)
-        assert not rep, (rep, py)
-
-    def py_eval_to_repr(self, py) -> str:
-        """Eval the Python remotely, inside the Turtle, and return the Repr of the Result"""
-
-        # opener1 = ""  # "<client>"
-        # closer1 = ""  # "<tneilc>"
-
-        print_if(f"Client Write text={py!r}")
-        try:
-            # pathlib.Path("stdin.mkfifo").write_text(opener1 + py + closer1)
-            pathlib.Path("stdin.mkfifo").write_text(py)
-        except BrokenPipeError:
-            print("BrokenPipeError", file=sys.stderr)
-            sys.exit()  # exits zero to shrug off BrokenPipeError
-
-        # opener2 = ""  # "<server>"
-        # closer2 = ""  # "<revres>"
-
-        print_if("Client Read Entry")
-        read_text = pathlib.Path("stdout.mkfifo").read_text()
-        print_if(f"Client Read Exit text={read_text!r}")
-
-        # assert read_text.startswith(opener2), (opener2, read_text)
-        # assert read_text.endswith(closer2), (closer2, read_text)
-        # read_core = read_text[len(opener2) : -len(closer2)]
-
-        read_core = read_text
-
-        if read_core == "None":
-            return ""  # todo: think more about encodings of None
-
-        if read_core.startswith("'Traceback (most recent call last):\\n"):
-            exc_text = ast.literal_eval(read_core)
-            print(exc_text, file=sys.stderr)
-            return ""
-
-        return read_core
-
-    def os_terminal_x_y(self) -> tuple[int, int]:
-        """Sample the X Y Position remotely, inside the Turtle"""
-
-        float_x = self.float_x
-        float_y = self.float_y
-
-        # Find the Cursor
-
-        (y_row, x_column) = self.os_terminal_y_row_x_column()
-
-        # Find the Center of Screen
-
-        x_columns, y_lines = self.os_terminal_size()
-        cx = 1 + (x_columns // 2)
-        cy = 1 + (y_lines // 2)
-
-        # Say how far away from Center the Cursor is, on a plane of Y is Up and X is Right
-
-        x1 = x_column - cx
-        y1 = -(y_row - cy)
-
-        # Snap the Shadow to the Cursor Row-Column, if the Cursor moved
-
-        if (x1 != round(float_x)) or (y1 != round(float_y)):
-            float_x_ = float(x1)  # 'explicit is better than implicit'
-            float_y_ = float(y1)
-
-            print(f"snap to {float_x_} {float_y_} from {float_x} {float_y}")
-            self.float_x = float_x_
-            self.float_y = float_y_
-
-        # Succeed
-
-        return (x1, y1)
-
-    def os_terminal_y_row_x_column(self) -> tuple[int, int]:
-        """Sample the Row-Column Position remotely, inside the Turtle"""
-
-        py = "self.write_dsr_read_kcpr_y_x()"
-        rep = self.py_eval_to_repr(py)
-        kcpr_y_x = ast.literal_eval(rep)
-
-        (y_row, x_column) = kcpr_y_x
-        assert isinstance(y_row, int), (type(y_row), y_row)
-        assert isinstance(x_column, int), (type(x_column), x_column)
-
-        return (y_row, x_column)
-
-    def os_terminal_size(self) -> tuple[int, int]:
-        """Sample the Terminal Width and Height remotely, inside the Turtle"""
-
-        py = "os.get_terminal_size()"
-        rep = self.py_eval_to_repr(py)
-
-        regex = r"os.terminal_size[(]columns=([0-9]+), lines=([0-9]+)[)]"
-        m = re.fullmatch(regex, rep)
-        assert m, (m, py, rep)
-        x_columns, y_lines = m.groups()
-
-        size = os.terminal_size([int(x_columns), int(y_lines)])
-
-        return size
+'''
 
 
 #
@@ -2884,7 +2779,7 @@ class TurtleClientWas:
 # todo: Command Input Word Tab-Completions
 #
 # todo: KwArgs for Funcs
-# todo: VsCode for .logo, for .lgo, ...
+# todo: VsCode for .logo, for .lgo, for .log, ...
 #
 # todo: reconcile with Python "import turtle" Graphics on TkInter
 # todo: .sleep vs Python Turtle screen.delay
