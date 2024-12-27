@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 
 r"""
-usage: turtling.py [-h]
+usage: turtling.py [-h] [--yolo] [-i] [-c COMMAND]
 
 draw inside a Terminal Window with Logo Turtles
 
 options:
   -h, --help  show this message and exit
-  --yolo      do what's popular now (draws, else chats)
+  --yolo      launch the first server in this folder, else launch a chat client
+  -i          launch a chat client
+  -c COMMAND  things to do, before quitting or chatting
 
 examples:
   turtling.py --h  # shows more help and quits
   turtling.py  # shows some help and quits
-  turtling.py --yolo  # does what's popular now (draws, else chats)
+  turtling.py -i  # clears screen, adds one Turtle, and chats
+  turtling.py -i -c ''  # doesn't clear screen, doesn't add Turtle, but does chat
 """
 
 # code reviewed by People, Black, Flake8, MyPy, & PyLance-Standard
@@ -62,10 +65,10 @@ Turtle_ = unicodedata.lookup("Turtle")  # 🐢 U+01F422
 def main() -> None:
     """Run well from the Sh Command Line"""
 
-    parse_turtling_py_args_else()  # often prints help & exits
+    ns = parse_turtling_py_args_else()  # often prints help & exits
 
     try:
-        main_try()
+        main_try(ns)
     except bdb.BdbQuit:
         raise
     except Exception as exc:
@@ -91,12 +94,25 @@ def main() -> None:
         raise
 
 
-def main_try() -> None:
+def main_try(ns) -> None:
 
-    if turtling_server_attach():
-        turtling_client_run()
-    else:
-        turtling_server_run()
+    if ns.yolo:
+        assert (not ns.i) and (not ns.c), (ns.i, ns.c, ns.yolo, ns)
+        if turtling_server_attach():
+            turtling_client_run("showturtle")
+        else:
+            turtling_server_run()
+        return
+
+    turtling_server_attach()
+
+    if ns.c is not None:
+        turtling_client_run(ns.c)
+        return
+
+    assert ns.i, (ns.i, ns)
+    turtling_client_run("reset clearscreen showturtle pendown")
+    print("Bye")
 
 
 def parse_turtling_py_args_else() -> argparse.Namespace:
@@ -107,10 +123,19 @@ def parse_turtling_py_args_else() -> argparse.Namespace:
 
     parser = doc_to_parser(doc, add_help=True, startswith="examples:")
 
-    yolo_help = "do what's popular now (draws, else chats)"
+    yolo_help = "launch the first server in this folder, else launch a chat client"
+    i_help = "launch a chat client"
+    c_help = "things to do, before quitting or chatting"
+
     parser.add_argument("--yolo", action="count", help=yolo_help)
+    parser.add_argument("-i", action="count", help=i_help)
+    parser.add_argument("-c", metavar="COMMAND", help=c_help)
 
     ns = parse_args_else(parser)  # often prints help & exits
+    assert ns.yolo or ns.i or (ns.c is not None), (ns,)
+
+    if ns.yolo and (ns.i or ns.c):
+        sys.exit(2)  # exits 2 for wrong Sh Args
 
     return ns
 
@@ -2251,8 +2276,10 @@ class TurtlingServer:
 #
 
 
-def turtling_client_run() -> None:
+def turtling_client_run(logo) -> None:
     "Run as a Client chatting with Logo Turtles and return True, else return False"
+
+    print(f"{logo=}")
 
     tc1 = TurtleClient()
     try:
@@ -2291,7 +2318,7 @@ class TurtleClient:
                 continue
 
             if not readline:
-                eprint("Bye")  # politely closing the line makes ⌘K work
+                eprint("")  # politely closing the line makes ⌘K work
                 break
 
             rstrip = readline.rstrip()
