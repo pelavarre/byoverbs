@@ -173,7 +173,7 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
     assert epilog, (epilog,)
 
     shargs = sys.argv[1:]
-    if sys.argv[1:] == ["--"]:  # ArgParse chokes if Sep present without Pos Args
+    if sys.argv[1:] == ["--"]:  # ArgParse chokes if Sep present without defining Pos Args
         shargs = list()
 
     testdoc = textwrap.dedent("\n".join(epilog.splitlines()[1:]))
@@ -949,7 +949,6 @@ class StrTerminal:
 
         o = ord(ch)
 
-        option_kchars = OPTION_KCHARS  # '∂' for ⌥D
         option_kchars_spaceless = OPTION_KCHARS_SPACELESS  # '∂' for ⌥D
         option_kstr_by_1_kchar = OPTION_KSTR_BY_1_KCHAR  # 'é' for ⌥EE
         kcap_by_kchars = KCAP_BY_KCHARS  # '\x7F' for 'Delete'
@@ -963,13 +962,7 @@ class StrTerminal:
             s = option_kstr_by_1_kchar[ch]
 
         elif ch in option_kchars_spaceless:  # Mac US Option Key Caps
-            index = option_kchars.index(ch)
-            asc = chr(0x20 + index)
-            if "A" <= asc <= "Z":
-                asc = "⇧" + asc  # '⇧A'
-            if "a" <= asc <= "z":
-                asc = chr(ord(asc) ^ 0x20)  # 'A'
-            s = "⌥" + asc  # '⌥⇧P'
+            s = self.spaceless_ch_to_option_kstr(ch)
 
         # Show the Key Caps of US-Ascii, plus the ⌃ ⇧ Control/ Shift Key Caps
 
@@ -1004,6 +997,21 @@ class StrTerminal:
         return s
 
         # '⌃L'  # '⇧Z'
+
+    def spaceless_ch_to_option_kstr(self, ch) -> str:
+        """Convert to Mac US Option Key Caps from any of OPTION_KCHARS_SPACELESS"""
+
+        option_kchars = OPTION_KCHARS  # '∂' for ⌥D
+
+        index = option_kchars.index(ch)
+        asc = chr(0x20 + index)
+        if "A" <= asc <= "Z":
+            asc = "⇧" + asc  # '⇧A'
+        if "a" <= asc <= "z":
+            asc = chr(ord(asc) ^ 0x20)  # 'A'
+        s = "⌥" + asc  # '⌥⇧P'
+
+        return s
 
     def row_y_column_x_read(self, timeout) -> tuple[int, int]:
         """Sample Cursor Row & Column"""
@@ -1310,16 +1318,16 @@ class Turtle:
     ps1 = f"{Turtle_}? \x1B[1m"  # prompt for Turtle Client Shell  # \e1m Bold Sgr
     after_ps1 = "\x1B[m"  # \em Plain Sgr
 
-    float_x: float  # sub-pixel shadow of horizontal position
-    float_y: float  # sub-pixel shadow of vertical position
+    float_x: float  # sub-pixel shadow of horizontal x-coordinate position
+    float_y: float  # sub-pixel shadow of vertical y-coordinate position
     heading: float  # stride direction
     stride: float  # stride size
 
     penmode: str  # last ⎋[m Select Graphic Rendition (SGR) chosen for PenChar
-    penchar: str  # mark to print at each step
-    pendown: bool  # printing marks, or not
+    penchar: str  # mark to punch at each step
+    punching: bool  # punching marks, or not
     hiding: bool  # hiding the Turtle, or not
-    sleep: float  # time between marks
+    rest: float  # time between marks
 
     tada_func_else: typing.Callable | None  # runs once before taking next Command
 
@@ -1337,31 +1345,31 @@ class Turtle:
 
         self.penmode = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
         self.penchar = FullBlock
-        self.pendown = False
+        self.punching = False
         self.hiding = False
 
         hertz = 1000e0
-        self.sleep = 1 / hertz
+        self.rest = 1 / hertz
 
         self.tada_func_else = None
 
         # macOS Terminal Sh launch doesn't clear the Graphic Rendition, Cursor Style, etc
 
-    def do_reset(self) -> None:
+    def reset(self) -> None:
         """Warp the Turtle to Home, but do Not clear the Screen"""
 
         self.reinit()
-        self.do_hideturtle()
-        self.do_setpencolor()
-        self.do_home()
-        self.do_showturtle()
+        self.hideturtle()
+        self.setpencolor()
+        self.home()
+        self.showturtle()
 
         # print(  # no matter if changed, or not changed
         #     f"heading={self.heading}"
         #     f" stride={self.stride}"
         #     f" penchar={self.penchar}"
-        #     f" pendown={self.pendown}"
-        #     f" sleep={self.sleep}"
+        #     f" punching={self.punching}"
+        #     f" rest={self.rest}"
         # )
 
         # todo: Terminal Cursor Styles
@@ -1370,22 +1378,22 @@ class Turtle:
     # Define what 1 Turtle can do
     #
 
-    def do_backward(self, stride=None) -> None:  # as if do_bk, do_back
+    def backward(self, stride=None) -> None:
         """Move the Turtle backwards along its Heading, tracing a Trail if Pen Down"""
 
         float_stride = self.stride if (stride is None) else float(stride)
         self.punch_bresenham_stride(-float_stride)
 
-    def do_beep(self) -> None:
+    def beep(self) -> None:
         """Ring the Terminal Alarm Bell once, remotely inside the Turtle"""
 
         text = "\a"  # Alarm Bell
         gt = self.glass_teletype
         gt.schars_write(text)
 
-        # todo: sleep here, do Not return, until after the Bell is done ringing
+        time.sleep(4 / 3)  # todo: guess more accurately when the Terminal Bell falls silent
 
-    def do_label(self, *args) -> None:
+    def label(self, *args) -> None:
         """Write 0 or more Args"""
 
         gt = self.glass_teletype
@@ -1407,7 +1415,7 @@ class Turtle:
 
         # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
 
-    def do_clearscreen(self) -> None:  # as if do_cs, do_cls do_clear
+    def clearscreen(self) -> None:
         """Write Spaces over every Character of every Screen Row and Column"""
 
         text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
@@ -1416,19 +1424,19 @@ class Turtle:
 
         # just the Screen, not also its Scrollback
 
-    def do_forward(self, stride=None) -> None:  # as if do_fd
+    def forward(self, stride=None) -> None:
         """Move the Turtle forwards along its Heading, tracing a Trail if Pen Down"""
 
         float_stride = self.stride if (stride is None) else float(stride)
         self.punch_bresenham_stride(float_stride)
 
-    def do_home(self) -> None:
+    def home(self) -> None:
         """Move the Turtle to its Home and turn it North, tracing a Trail if Pen Down"""
 
-        self.do_setxy()  # todo: different Homes for different Turtles
-        self.do_setheading()
+        self.setxy()  # todo: different Homes for different Turtles
+        self.setheading()
 
-    def do_hideturtle(self) -> None:  # as if do_ht
+    def hideturtle(self) -> None:
         """Stop showing where the Turtle is"""
 
         gt = self.glass_teletype
@@ -1441,7 +1449,7 @@ class Turtle:
         # if self.hiding != hiding:
         #     print(f"hiding={self.hiding}  # was {hiding}")
 
-    def do_left(self, angle=None) -> None:  # as if do_lt
+    def left(self, angle=None) -> None:
         """Turn the Turtle anticlockwise, by a 90° Right Angle, or some other Angle"""
 
         heading = self.heading  # turning anticlockwise
@@ -1451,38 +1459,38 @@ class Turtle:
         # if self.heading != heading:
         #     print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
-    def do_pendown(self) -> None:  # as if do_pd
+    def pendown(self) -> None:
         """Plan to leave a Trail as the Turtle moves"""
 
-        # pendown = self.pendown
-        self.pendown = True
-        # if self.pendown != pendown:
-        #     print(f"pendown={self.pendown}  # was {pendown}")
+        # punching = self.punching
+        self.punching = True
+        # if self.punching != punching:
+        #     print(f"punching={self.punching}  # was {punching}")
 
         # todo: calculated boolean args for pd pu ht gt
 
-    def do_penup(self) -> None:  # as if do_pu
+    def penup(self) -> None:
         """Plan to Not leave a Trail as the Turtle moves"""
 
-        # pendown = self.pendown
-        self.pendown = False
-        # if self.pendown != pendown:
-        #     print(f"pendown={self.pendown}  # was {pendown}")
+        # punching = self.punching
+        self.punching = False
+        # if self.punching != punching:
+        #     print(f"punching={self.punching}  # was {punching}")
 
-    def do_repeat(self, count=None) -> None:  # as if do_rep
+    def repeat(self, count=None) -> None:
         """Run some instructions a chosen number of times, often less or more than once"""
 
         count = 1 if (count is None) else int(count)
         if not count:
-            self.do_forward(0)  # punches the initial pixel without moving on
-            self.do_right(0)  # mostly harmless
+            self.forward(0)  # punches the initial pixel without moving on
+            self.right(0)  # mostly harmless
         else:
             angle = 360 / count
             for _ in range(count):
-                self.do_forward()  # the traditional [fd rt]
-                self.do_right(angle)  # not the countercultural [rt fd]
+                self.forward()  # the traditional [fd rt]
+                self.right(angle)  # not the countercultural [rt fd]
 
-    def do_right(self, angle=None) -> None:  # as if do_rt
+    def right(self, angle=None) -> None:
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
 
         heading = self.heading  # turning clockwise
@@ -1492,7 +1500,7 @@ class Turtle:
         # if self.heading != heading:
         #     print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
-    def do_setheading(self, angle=None) -> None:  # as if do_seth
+    def setheading(self, angle=None) -> None:
         """Turn the Turtle to move 0° North, or to some other Heading"""
 
         # heading = self.heading  # turning North
@@ -1502,21 +1510,21 @@ class Turtle:
         # if self.heading != heading:
         #     print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
 
-    def do_sethertz(self, hertz=None) -> None:
+    def sethertz(self, hertz=None) -> None:
 
-        # sleep = self.sleep
+        # rest = self.rest
 
-        sleep1 = 0e0
+        rest1 = 0e0
         float_hertz = 1000e0 if (hertz is None) else float(hertz)
         if float_hertz:
-            sleep1 = 1 / float_hertz
+            rest1 = 1 / float_hertz
 
-        self.sleep = sleep1
+        self.rest = rest1
 
-        # if sleep1 != sleep:
-        #     print(f"sleep={sleep1}s  # was {sleep}s")
+        # if rest1 != rest:
+        #     print(f"rest={rest1}s  # was {rest}s")
 
-    def do_setpencolor(self, color=None) -> None:  # as if do_setpcv
+    def setpencolor(self, color=None) -> None:
         """Choose which Color to draw with"""
 
         gt = self.glass_teletype
@@ -1579,7 +1587,7 @@ class Turtle:
         penmode = self.ansi_by_rgb[rgb]
         return penmode
 
-    def do_setpenpunch(self, ch=None) -> None:  # as if do_setpch
+    def setpenpunch(self, ch=None) -> None:
         """Choose which Character to draw with, or default to '*'"""
 
         # penchar = self.penchar
@@ -1602,7 +1610,7 @@ class Turtle:
 
         # todo: With SetPenColor Forward 1:  "!" if (penchar == "~") else chr(ord(penchar) + 1)
 
-    def do_setxy(self, x=None, y=None) -> None:
+    def setxy(self, x=None, y=None) -> None:
         """Move the Turtle to an X Y Point, tracing a Trail if Pen Down"""
 
         float_x = 0e0 if (x is None) else float(x)
@@ -1620,7 +1628,7 @@ class Turtle:
 
         # todo: setx without setxy, sety without setxy
 
-    def do_showturtle(self) -> None:
+    def showturtle(self) -> None:
         """Start showing where the Turtle is"""
 
         gt = self.glass_teletype
@@ -1636,16 +1644,16 @@ class Turtle:
         # Forward 0 leaves a Mark to show the Turtle was Here
         # SetXY leaves a Mark to show the X=0 Y=0 Home
 
-    def do_sleep(self) -> None:
+    def sleep(self) -> None:
         """Hold the Turtle still for a moment"""
 
-        sleep = self.sleep
-        # print(f"Sleeping {sleep}s because SetHertz")
-        time.sleep(sleep)
+        rest = self.rest
+        # print(f"Sleeping {rest}s because SetHertz")
+        time.sleep(rest)
 
         # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s  st
 
-    def do_tada(self) -> None:
+    def tada(self) -> None:
         """Hide the Turtle, but only until next Call"""
 
         gt = self.glass_teletype
@@ -1780,9 +1788,9 @@ class Turtle:
 
         gt = self.glass_teletype
         hiding = self.hiding
-        pendown = self.pendown
+        punching = self.punching
         penchar = self.penchar
-        sleep = self.sleep
+        rest = self.rest
 
         # # print(f"{x} {y}")
 
@@ -1801,14 +1809,14 @@ class Turtle:
             y_text = ""
 
         text = f"{y_text}{x_text}"
-        if pendown:
+        if punching:
             pc_text = penchar + (len(penchar) * "\b")
             text = f"{y_text}{x_text}{pc_text}"
 
         gt.schars_write(text)
 
         if not hiding:
-            time.sleep(sleep)
+            time.sleep(rest)
 
     def os_terminal_x_y(self) -> tuple[int, int]:
         """Sample the X Y Position remotely, inside the Turtle"""
@@ -2650,7 +2658,7 @@ class TurtleClientWas:
         print("bye")  # not from "bye", "end", "exit", "quit", ...
         sys.exit()
 
-    def do_help(self, pattern=None) -> None:  # as if do_h
+    def do_help(self, pattern=None) -> None:
         """List the Command Verbs"""
 
         (verbs, grunts) = self._sliced_to_verbs_grunts_(pattern)
@@ -2685,7 +2693,7 @@ class TurtleClientWas:
 
         return (verbs, grunts)
 
-    def do_print(self, *args) -> None:  # as if do_p
+    def do_print(self, *args) -> None:
         """Print the Str of each Arg, separated by Spaces, and then 1 Line_Break"""
 
         print(*args)
@@ -2860,9 +2868,9 @@ class TurtleClientWas:
 # todo: VsCode for .logo, for .lgo, for .log, ...
 #
 # todo: reconcile with Python "import turtle" Graphics on TkInter
-# todo: .sleep vs Python Turtle screen.delay
+# todo: .rest vs Python Turtle screen.delay
 # todo: .stride vs Logo SetStepSize
-# todo: .sleep vs Logo SetSpeed, SetVelocity, Wait
+# todo: .rest vs Logo SetSpeed, SetVelocity, Wait
 #
 # todo: random moves, seeded random
 # todo: cyclic moves in Color, in Pen Down, and help catalog more than 8 Colors
