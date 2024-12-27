@@ -833,7 +833,9 @@ class StrTerminal:
     # Init, Enter, and Exit
     #
 
-    def __init__(self, bt) -> None:
+    def __init__(self) -> None:
+
+        bt = BytesTerminal()
 
         self.bytes_terminal = bt
         self.kchords = list()
@@ -1208,10 +1210,9 @@ class GlassTeletype:
 
     def __init__(self) -> None:
 
-        bt = BytesTerminal()
-        st = StrTerminal(bt)
+        st = StrTerminal()
 
-        self.bytes_terminal = bt
+        self.bytes_terminal = st.bytes_terminal
         self.str_terminal = st
 
     def __enter__(self) -> "GlassTeletype":  # -> typing.Self:
@@ -2247,8 +2248,8 @@ class TurtlingServer:
 
         wtext = ""
 
-        if rtext:
-            py = rtext
+        py = rtext
+        if py:
             try:  # todo: shrug off PyLance pretending eval/exec 'locals=' doesn't work
                 eval_ = eval(py, globals_, locals_)
             except SyntaxError:
@@ -2304,25 +2305,38 @@ class TurtleClient:
     def client_run_till(self) -> None:
         """Chat with Logo Turtles"""
 
+        # Till quit
+
+        ps1 = f"{Turtle_} "
         while True:
-            eprint(f"{Turtle_} ", end="")
 
-            sys.stdout.flush()
-            sys.stderr.flush()
+            # Prompt & Echo Lines from the Keyboard
 
-            try:
-                readline = sys.stdin.readline()
-            except KeyboardInterrupt:  # mostly shrugs off ⌃C SigInt
-                eprint(" KeyboardInterrupt")
-                self.breakpoint()
-                continue
-
-            if not readline:
-                eprint("")  # politely closing the line makes ⌘K work
+            ilines = self.read_some_ilines(ps1)
+            if not ilines:
                 break
 
-            rstrip = readline.rstrip()
-            if self.text_is_pylike(rstrip):
+            for iline in ilines:
+
+                # Echo the Line by itself, prefixed by a Prompt
+
+                sys.stdout.flush()
+                eprint(ps1 + iline)
+                sys.stderr.flush()
+
+                # Quit after the Last Line
+
+                if not iline:
+                    break
+
+                # Quickly dismiss a flimsy Line
+
+                rstrip = iline.rstrip()
+                if not self.text_has_pyweight(rstrip):
+                    continue
+
+                # Trade a weighty Line with the Server
+
                 rtext_else = self.trade_text_else(wtext=rstrip)
                 if rtext_else is None:
                     eprint("EOFError")
@@ -2338,7 +2352,44 @@ class TurtleClient:
                     eprint(rtext)
                     eprint()
 
-    def text_is_pylike(self, text) -> bool:
+    def read_some_ilines(self, ps1) -> list[str]:
+        """Prompt & Echo Lines from the Keyboard"""
+
+        sys.stdout.flush()
+        eprint(ps1, end="")
+        sys.stderr.flush()
+
+        ilines = list()
+        while True:
+            itext = ""
+            try:
+                itext += sys.stdin.readline()
+                while select.select([sys.stdin], [], [], 0.000)[0]:
+                    itext += sys.stdin.readline()
+            except KeyboardInterrupt:  # mostly shrugs off ⌃C SigInt
+                eprint(" KeyboardInterrupt")
+                self.breakpoint()
+                continue
+
+            ilines.extend(itext.splitlines())
+
+            if not itext:
+                eprint("")  # duck Incomplete ⌘K Clear of Screen
+                return ilines
+
+            with BytesTerminal() as bt:
+                kbhit = bt.kbhit(timeout=0.000)
+
+            if kbhit:  # when last Line started but not ended
+                eprint("", end="\r")  # duck Doubled Echo of Line
+
+            break
+
+        eprint("\x1B[" f"{len(ilines)}A" "\x1B[" "J", end="")
+
+        return ilines
+
+    def text_has_pyweight(self, text) -> bool:
         """Say forward to Server if more than Blanks and Comments found"""
 
         for line in text.splitlines():
