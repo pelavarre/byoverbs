@@ -99,7 +99,7 @@ def main_try(ns) -> None:
     if ns.yolo:
         assert (not ns.i) and (not ns.c), (ns.i, ns.c, ns.yolo, ns)
         if turtling_server_attach():
-            turtling_client_run("showturtle")
+            turtling_client_run("")
         else:
             turtling_server_run()
         return
@@ -111,7 +111,7 @@ def main_try(ns) -> None:
         return
 
     assert ns.i, (ns.i, ns)
-    turtling_client_run("reset clearscreen showturtle pendown")
+    turtling_client_run("relaunch")
     print("Bye")
 
 
@@ -1315,76 +1315,115 @@ class Turtle:
 
     glass_teletype: GlassTeletype
 
-    ps1 = f"{Turtle_}? \x1B[1m"  # prompt for Turtle Client Shell  # \e1m Bold Sgr
-    after_ps1 = "\x1B[m"  # \em Plain Sgr
-
-    float_x: float  # sub-pixel shadow of horizontal x-coordinate position
-    float_y: float  # sub-pixel shadow of vertical y-coordinate position
+    float_x: float  # sub-pixel horizontal x-coordinate position
+    float_y: float  # sub-pixel vertical y-coordinate position
     heading: float  # stride direction
     stride: float  # stride size
 
-    penmode: str  # last ⎋[m Select Graphic Rendition (SGR) chosen for PenChar
-    penchar: str  # mark to punch at each step
-    punching: bool  # punching marks, or not
+    penscape: str  # setup written before punching a mark  # '\x1B[m'
+    penmark: str  # mark to punch at each step
+    warping: bool  # moving without punching, or not
     hiding: bool  # hiding the Turtle, or not
-    rest: float  # time between marks
 
-    tada_func_else: typing.Callable | None  # runs once before taking next Command
+    rest: float  # min time between marks
+
+    # todo: tada_func_else: typing.Callable | None  # runs once before taking next Command
 
     def __init__(self, gt) -> None:
 
         self.glass_teletype = gt
-        self.reinit()
+        self._reinit_()
 
-    def reinit(self) -> None:
+    def _reinit_(self) -> None:
+        """Clear the Turtle's Settings, but without writing the Screen"""
 
         self.float_x = 0e0
         self.float_y = 0e0
-        self.heading = 0e0  # 0° of North Up Clockwise
+        self.heading = 360e0  # 360° of North Up Clockwise
         self.stride = 100e0
 
-        self.penmode = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
-        self.penchar = FullBlock
-        self.punching = False
+        self.penscape = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
+        self.penmark = FullBlock
+        self.warping = False
         self.hiding = False
 
-        hertz = 1000e0
-        self.rest = 1 / hertz
+        self.rest = 1 / 1000e0
 
-        self.tada_func_else = None
+        # todo: self.tada_func_else = None
 
-        # macOS Terminal Sh launch doesn't clear the Graphic Rendition, Cursor Style, etc
+        # macOS Terminal Sh Launch/ Quit doesn't clear the Graphic Rendition, Cursor Style, etc
 
-    def reset(self) -> None:
-        """Warp the Turtle to Home, but do Not clear the Screen"""
+    def clearscreen(self) -> None:
+        """Write Spaces over every Character of every Screen Row and Column"""
 
-        self.reinit()
+        text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
+        gt = self.glass_teletype
+        gt.schars_write(text)
+
+        # just the Screen, not also its Scrollback
+
+        # todo: keep Turtle Trails separate so as to undo/ clear them
+
+    def relaunch(self) -> dict:
+        """Warp the Turtle to Home, and clear its Settings, and clear the Screen"""
+
+        self.restart()
+        self.clearscreen()
+
+        d = self.asdict()
+        return d
+
+        # FmsLogo Clean deletes 1 Turtle's trail, without clearing its Settings
+        # PyTurtle Clear deletes 1 Turtle's Trail, without clearing its Settings
+
+    def restart(self) -> dict:
+        """Warp the Turtle to Home, and clear its Settings, but do Not clear the Screen"""
+
+        self._reinit_()
+
         self.hideturtle()
-        self.setpencolor()
+        self.penup()
         self.home()
+        self.pendown()
+        self.setpencolor()
         self.showturtle()
 
-        # print(  # no matter if changed, or not changed
-        #     f"heading={self.heading}"
-        #     f" stride={self.stride}"
-        #     f" penchar={self.penchar}"
-        #     f" punching={self.punching}"
-        #     f" rest={self.rest}"
-        # )
+        d = self.asdict()
+        return d
 
         # todo: Terminal Cursor Styles
+
+    def asdict(self) -> dict:
+        """Show the Turtle's Settings as a Dict"""
+
+        d = {
+            "float_x": self.float_x,
+            "float_y": self.float_y,
+            "heading": self.heading,
+            "stride": self.stride,
+            "penscape": self.penscape,
+            "penmark": self.penmark,
+            "warping": self.warping,
+            "hiding": self.hiding,
+            "rest": self.rest,
+        }
+
+        return d
 
     #
     # Define what 1 Turtle can do
     #
 
-    def backward(self, stride=None) -> None:
+    def backward(self, stride=None) -> dict:
         """Move the Turtle backwards along its Heading, tracing a Trail if Pen Down"""
 
         float_stride = self.stride if (stride is None) else float(stride)
-        self.punch_bresenham_stride(-float_stride)
+        self._punch_bresenham_stride_(-float_stride)
 
-    def beep(self) -> None:
+        d = dict(float_x=self.float_x, float_y=self.float_y)
+        return d
+
+    def beep(self) -> dict:
         """Ring the Terminal Alarm Bell once, remotely inside the Turtle"""
 
         text = "\a"  # Alarm Bell
@@ -1393,7 +1432,9 @@ class Turtle:
 
         time.sleep(4 / 3)  # todo: guess more accurately when the Terminal Bell falls silent
 
-    def label(self, *args) -> None:
+        return dict()
+
+    def label(self, *args) -> dict:
         """Write 0 or more Args"""
 
         gt = self.glass_teletype
@@ -1413,71 +1454,86 @@ class Turtle:
 
         gt.schars_write(line)
 
+        d = dict(float_x=self.float_x, float_y=self.float_y)
+        return d
+
         # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
 
-    def clearscreen(self) -> None:
-        """Write Spaces over every Character of every Screen Row and Column"""
-
-        text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
-        gt = self.glass_teletype
-        gt.schars_write(text)
-
-        # just the Screen, not also its Scrollback
-
-    def forward(self, stride=None) -> None:
+    def forward(self, stride=None) -> dict:
         """Move the Turtle forwards along its Heading, tracing a Trail if Pen Down"""
 
         float_stride = self.stride if (stride is None) else float(stride)
-        self.punch_bresenham_stride(float_stride)
+        self._punch_bresenham_stride_(float_stride)
 
-    def home(self) -> None:
-        """Move the Turtle to its Home and turn it North, tracing a Trail if Pen Down"""
+        d = dict(float_x=self.float_x, float_y=self.float_y)
+        return d
 
-        self.setxy()  # todo: different Homes for different Turtles
-        self.setheading()
-
-    def hideturtle(self) -> None:
+    def hideturtle(self) -> dict:
         """Stop showing where the Turtle is"""
 
         gt = self.glass_teletype
-        # hiding = self.hiding
 
         text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
         gt.schars_write(text)
 
         self.hiding = True
-        # if self.hiding != hiding:
-        #     print(f"hiding={self.hiding}  # was {hiding}")
 
-    def left(self, angle=None) -> None:
+        d = dict(hiding=self.hiding)
+        return d
+
+    def isdown(self) -> bool:
+        """Say if the Turtle will leave a Trail as it moves"""
+
+        down = not self.warping
+        return down
+
+        # Lisp'ish Logo's say IsDown as PenDownP and as PenDown?
+
+    def isvisible(self) -> bool:
+        """Say if the Turtle is showing where it is"""
+
+        visible = not self.hiding
+        return visible
+
+        # Lisp'ish Logo's say IsVisible as ShownP and as Shown?
+
+    def home(self) -> dict:
+        """Move the Turtle to its Home and turn it North, tracing a Trail if Pen Down"""
+
+        self.setpos()  # todo: different Homes for different Turtles
+        self.setheading()
+
+        d = dict(float_x=self.float_x, float_y=self.float_y, heading=self.heading)
+        return d
+
+    def left(self, angle=None) -> dict:
         """Turn the Turtle anticlockwise, by a 90° Right Angle, or some other Angle"""
 
-        heading = self.heading  # turning anticlockwise
-
         float_angle = 90e0 if (angle is None) else float(angle)
-        self.heading = (heading - float_angle) % 360  # 360° Circle
-        # if self.heading != heading:
-        #     print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
+        heading = self.heading
 
-    def pendown(self) -> None:
+        d = self.setheading(heading - float_angle)
+        return d
+
+    def pendown(self) -> dict:
         """Plan to leave a Trail as the Turtle moves"""
 
-        # punching = self.punching
-        self.punching = True
-        # if self.punching != punching:
-        #     print(f"punching={self.punching}  # was {punching}")
+        self.warping = False
+
+        d = dict(warping=self.warping)
+        return d
 
         # todo: calculated boolean args for pd pu ht gt
 
-    def penup(self) -> None:
+    def penup(self) -> dict:
         """Plan to Not leave a Trail as the Turtle moves"""
 
-        # punching = self.punching
-        self.punching = False
-        # if self.punching != punching:
-        #     print(f"punching={self.punching}  # was {punching}")
+        self.warping = True
 
-    def repeat(self, count=None) -> None:
+        d = dict(warping=self.warping)
+        return d
+
+    def repeat(self, count=None) -> dict:
         """Run some instructions a chosen number of times, often less or more than once"""
 
         count = 1 if (count is None) else int(count)
@@ -1485,34 +1541,36 @@ class Turtle:
             self.forward(0)  # punches the initial pixel without moving on
             self.right(0)  # mostly harmless
         else:
-            angle = 360 / count
+            angle = 360e0 / count
             for _ in range(count):
                 self.forward()  # the traditional [fd rt]
-                self.right(angle)  # not the countercultural [rt fd]
+                self.right(angle)  # todo: never the countercultural [rt fd]
 
-    def right(self, angle=None) -> None:
+        d = dict(float_x=self.float_x, float_y=self.float_y, heading=self.heading)
+        return d
+
+    def right(self, angle=None) -> dict:
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
 
+        float_angle = 45e0 if (angle is None) else float(angle)
         heading = self.heading  # turning clockwise
 
-        float_angle = 90e0 if (angle is None) else float(angle)
-        self.heading = (heading + float_angle) % 360  # 360° Circle
-        # if self.heading != heading:
-        #     print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
+        d = self.setheading(heading + float_angle)
+        return d
 
-    def setheading(self, angle=None) -> None:
+    def setheading(self, angle=None) -> dict:
         """Turn the Turtle to move 0° North, or to some other Heading"""
 
-        # heading = self.heading  # turning North
-
         float_angle = 0e0 if (angle is None) else float(angle)  # 0° of North Up Clockwise
-        self.heading = float_angle % 360  # 360° Circle
-        # if self.heading != heading:
-        #     print(f"heading={self.heading}{DegreeSign}  # was {heading}{DegreeSign}")
+        heading1 = float_angle % 360e0  # 360° Circle
+        heading2 = 360e0 if not heading1 else heading1
 
-    def sethertz(self, hertz=None) -> None:
+        self.heading = heading2
 
-        # rest = self.rest
+        d = dict(heading=self.heading)
+        return d
+
+    def sethertz(self, hertz=None) -> dict:
 
         rest1 = 0e0
         float_hertz = 1000e0 if (hertz is None) else float(hertz)
@@ -1521,34 +1579,35 @@ class Turtle:
 
         self.rest = rest1
 
-        # if rest1 != rest:
-        #     print(f"rest={rest1}s  # was {rest}s")
+        d = dict(rest=self.rest)
+        return d
 
-    def setpencolor(self, color=None) -> None:
+        # PyTurtle Speed chooses 1..10 for faster animation, reserving 0 for no animation
+
+    def setpencolor(self, color=None) -> dict:
         """Choose which Color to draw with"""
 
         gt = self.glass_teletype
-        # penmode = self.penmode
 
         floatish = isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
         if color is None:
             penmode1 = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
         elif floatish or isinstance(color, decimal.Decimal):
-            penmode1 = self.rgb_to_penmode(rgb=int(color))
+            penmode1 = self._rgb_to_penmode_(rgb=int(color))
         elif isinstance(color, str):
             if color.casefold() == "None".casefold():
                 penmode1 = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
             else:
-                penmode1 = self.colorname_to_penmode(colorname=color)
+                penmode1 = self._colorname_to_penmode_(colorname=color)
         else:
             assert False, (type(color), color)
 
         gt.schars_write(penmode1)
 
-        self.penmode = penmode1
+        self.penscape = penmode1
 
-        # if penmode1 != penmode:
-        #     print(f"penmode={penmode1!r} because {color!r}  # was {penmode!r}")
+        d = dict(penscape=self.penscape)
+        return d
 
     rgb_by_name = {
         "white": 0xFFFFFF,
@@ -1561,7 +1620,7 @@ class Turtle:
         "black": 0x000000,
     }
 
-    ansi_by_rgb = {  # CSI 06/13 Select Graphic Rendition (SGR)  # 30+ Display Foreground Color
+    _ansi_by_rgb_ = {  # CSI 06/13 Select Graphic Rendition (SGR)  # 30+ Display Foreground Color
         0xFFFFFF: "\x1B[37m",
         0xFF00FF: "\x1B[35m",
         0x0000FF: "\x1B[34m",
@@ -1572,7 +1631,7 @@ class Turtle:
         0x000000: "\x1B[30m",
     }
 
-    def colorname_to_penmode(self, colorname) -> str:
+    def _colorname_to_penmode_(self, colorname) -> str:
 
         casefold = colorname.casefold()
         colornames = sorted(_.title() for _ in self.rgb_by_name.keys())
@@ -1580,55 +1639,60 @@ class Turtle:
             raise KeyError(f"{colorname!r} not in {colornames}")
 
         rgb = self.rgb_by_name[casefold]
-        penmode = self.ansi_by_rgb[rgb]
-        return penmode
+        penscape = self._ansi_by_rgb_[rgb]
+        return penscape
 
-    def rgb_to_penmode(self, rgb) -> str:
-        penmode = self.ansi_by_rgb[rgb]
-        return penmode
+    def _rgb_to_penmode_(self, rgb) -> str:
+        penscape = self._ansi_by_rgb_[rgb]
+        return penscape
 
-    def setpenpunch(self, ch=None) -> None:
+    def setpenpunch(self, ch=None) -> dict:
         """Choose which Character to draw with, or default to '*'"""
-
-        # penchar = self.penchar
 
         floatish = isinstance(ch, float) or isinstance(ch, int) or isinstance(ch, bool)
         if ch is None:
-            penchar1 = FullBlock
+            penmark1 = FullBlock
         elif floatish or isinstance(ch, decimal.Decimal):
-            penchar1 = chr(int(ch))  # not much test of '\0' yet
+            penmark1 = chr(int(ch))  # not much test of '\0' yet
         elif isinstance(ch, str):
             # assert len(ch) == 1, (len(ch), ch)  # todo: unlock vs require Len 1 after dropping Sgr's
-            penchar1 = ch
+            penmark1 = ch
         else:
             assert False, (type(ch), ch)
 
-        self.penchar = penchar1
+        self.penmark = penmark1
 
-        # if penchar1 != penchar:
-        #     print(f"penchar={penchar1!r}  # was {penchar!r}")
+        d = dict(penmark=self.penmark)
+        return d
 
-        # todo: With SetPenColor Forward 1:  "!" if (penchar == "~") else chr(ord(penchar) + 1)
+        # todo: With SetPenColor Forward 1:  "!" if (penmark == "~") else chr(ord(penmark) + 1)
 
-    def setxy(self, x=None, y=None) -> None:
+    def setpos(self, x=None, y=None) -> dict:
         """Move the Turtle to an X Y Point, tracing a Trail if Pen Down"""
 
         float_x = 0e0 if (x is None) else float(x)
         float_y = 0e0 if (y is None) else float(y)
 
-        (x1, y1) = self.os_terminal_x_y()
+        (x1, y1) = self.x_y_position()
 
         x2 = round(float_x / 10)  # / 10 to a screen of a few large pixels
         y2 = round(float_y / 10 / 2)  # / 2 for thin pixels
 
-        self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
+        self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2)
 
         self.float_x = float_x  # not 'float_x_'
         self.float_y = float_y  # not 'float_y_'
 
+        d = dict(float_x=self.float_x, float_y=self.float_y)
+        return d
+
+        # FMSLogo SetXY & UBrown SetXY & UCBLogo SetXY alias SetPos
+        # PyTurtle Goto aliases SetPos, PyTurtle Teleport is With PenUp SetPos
+        # UCBLogo Goto is a Control Flow Goto
+
         # todo: setx without setxy, sety without setxy
 
-    def showturtle(self) -> None:
+    def showturtle(self) -> dict:
         """Start showing where the Turtle is"""
 
         gt = self.glass_teletype
@@ -1641,36 +1705,41 @@ class Turtle:
         # if self.hiding != hiding:
         #     print(f"hiding={self.hiding}  # was {hiding}")
 
-        # Forward 0 leaves a Mark to show the Turtle was Here
-        # SetXY leaves a Mark to show the X=0 Y=0 Home
+        # Forward 0 leaves a Mark to show Turtle was Here
+        # SetXY from Home leaves a Mark to show the X=0 Y=0 Home
 
-    def sleep(self) -> None:
+        d = dict(hiding=self.hiding)
+        return d
+
+    def sleep(self) -> dict:
         """Hold the Turtle still for a moment"""
 
         rest = self.rest
-        # print(f"Sleeping {rest}s because SetHertz")
-        time.sleep(rest)
+        time.sleep(rest)  # todo: give credit for delay in work before t.sleep
+
+        d = dict(rest=self.rest)
+        return d
 
         # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s  st
 
-    def tada(self) -> None:
-        """Hide the Turtle, but only until next Call"""
-
-        gt = self.glass_teletype
-        text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
-        gt.schars_write(text)
-
-        def tada_func() -> None:
-            text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
-            gt.schars_write(text)
-
-        self.tada_func_else = tada_func
+    # todo: def tada(self) -> None:
+    #     """Hide the Turtle, but only until next Call"""
+    #
+    #     gt = self.glass_teletype
+    #     text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
+    #     gt.schars_write(text)
+    #
+    #     def tada_func() -> None:
+    #         text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+    #         gt.schars_write(text)
+    #
+    #     self.tada_func_else = tada_func
 
     #
     # Move the Turtle along the Line of its Heading
     #
 
-    def punch_bresenham_stride(self, stride) -> None:
+    def _punch_bresenham_stride_(self, stride) -> None:
         """Step forwards, or backwards, along the Heading"""
 
         stride_ = float(stride) / 10  # / 10 to a screen of a few large pixels
@@ -1679,14 +1748,14 @@ class Turtle:
 
         # Choose the Starting Point
 
-        (x1, y1) = self.os_terminal_x_y()
+        (x1, y1) = self.x_y_position()
         float_x = self.float_x
         float_y = self.float_y
         assert (x1 == round(float_x)) and (y1 == round(float_y)), (x1, float_x, y1, float_y)
 
         # Choose the Ending Point
 
-        angle = (90 - heading) % 360  # converts to 0° East Anticlockwise
+        angle = (90 - heading) % 360e0  # converts to 0° East Anticlockwise
         float_x_ = float_x + (stride_ * math.cos(math.radians(angle)))  # destination
         float_x__ = round(float_x_, 10)  # todo: how round should our Float Maths be?
         float_y_ = float_y + (stride_ * math.sin(math.radians(angle)) / 2)  # / 2 for thin pixels
@@ -1710,7 +1779,7 @@ class Turtle:
 
         # Draw the Line Segment to X2 Y2 from X1 Y1
 
-        self.punch_bresenham_segment(x1, y1=y1, x2=x2, y2=y2)
+        self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2)
         # print(f"float {float_x} {float_y} {float_x__} {float_y__}")
 
         # Option to show why keep up Precise X Y Shadows in .float_x .float_y
@@ -1731,7 +1800,7 @@ class Turtle:
         self.float_x = float_x__
         self.float_y = float_y__
 
-    def punch_bresenham_segment(self, x1: int, y1: int, x2: int, y2: int) -> None:
+    def _punch_bresenham_segment_(self, x1: int, y1: int, x2: int, y2: int) -> None:
         """Step forwards, or backwards, through (Row, Column) choices"""
 
         assert isinstance(x1, int), (type(x1), x1)
@@ -1753,7 +1822,7 @@ class Turtle:
         wy = y = y1
         while True:
 
-            self.jump_then_punch(wx, wy=-wy, x=x, y=-y)
+            self._jump_then_punch_(wx, wy=-wy, x=x, y=-y)
             if (x == x2) and (y == y2):
                 break
 
@@ -1783,13 +1852,13 @@ class Turtle:
         #   to turn my y = a*x + b equation into a list of pixels to turn on?
         #
 
-    def jump_then_punch(self, wx, wy, x, y) -> None:
+    def _jump_then_punch_(self, wx, wy, x, y) -> None:
         """Move the Turtle by 1 Column or 1 Row or both, and punch out a Mark if Pen Down"""
 
         gt = self.glass_teletype
         hiding = self.hiding
-        punching = self.punching
-        penchar = self.penchar
+        warping = self.warping
+        penmark = self.penmark
         rest = self.rest
 
         # # print(f"{x} {y}")
@@ -1809,8 +1878,8 @@ class Turtle:
             y_text = ""
 
         text = f"{y_text}{x_text}"
-        if punching:
-            pc_text = penchar + (len(penchar) * "\b")
+        if not warping:
+            pc_text = penmark + (len(penmark) * "\b")
             text = f"{y_text}{x_text}{pc_text}"
 
         gt.schars_write(text)
@@ -1818,7 +1887,7 @@ class Turtle:
         if not hiding:
             time.sleep(rest)
 
-    def os_terminal_x_y(self) -> tuple[int, int]:
+    def x_y_position(self) -> tuple[int, int]:
         """Sample the X Y Position remotely, inside the Turtle"""
 
         gt = self.glass_teletype
@@ -1854,6 +1923,10 @@ class Turtle:
         # Succeed
 
         return (x1, y1)
+
+        # a la PyTurtle Position
+        # a la FMSLogo Pos
+        # a la UCBLogo X Y Pos, XCor, YCor
 
 
 #
@@ -2313,14 +2386,19 @@ class TurtleClient:
     def client_run_till(self) -> None:
         """Chat with Logo Turtles"""
 
+        Bold = "\x1B[" "1m"  # Sgr Bold  # CSI 06/13 Select Graphic Rendition (SGR)
+        Plain = "\x1B[" "m"  # Sgr Plain
+
+        ps1 = f"{Turtle_}? {Bold}"
+        postedit = Plain
+
         # Till quit
 
-        ps1 = f"{Turtle_} "
         while True:
 
             # Prompt & Echo Lines from the Keyboard
 
-            ilines = self.read_some_ilines(ps1)
+            ilines = self.read_some_ilines(ps1, postedit=postedit)
             if not ilines:
                 break
 
@@ -2329,7 +2407,7 @@ class TurtleClient:
                 # Echo the Line by itself, prefixed by a Prompt
 
                 sys.stdout.flush()
-                eprint(ps1 + iline)
+                eprint(ps1 + iline + postedit)
                 sys.stderr.flush()
 
                 # Quit after the Last Line
@@ -2360,7 +2438,7 @@ class TurtleClient:
                     eprint(rtext)
                     eprint()
 
-    def read_some_ilines(self, ps1) -> list[str]:
+    def read_some_ilines(self, ps1, postedit) -> list[str]:
         """Prompt & Echo Lines from the Keyboard"""
 
         sys.stdout.flush()
@@ -2749,11 +2827,15 @@ class TurtleClientWas:
 #
 # todo: early visual wows of a twitch stream
 # todo: z-layers to animate a clock of hours/ minutes/ second hands
+# todo: let more than 1 Turtle move onto a z-layer to keep only the latest
 # todo: colorful spirography
 # todo: marble games
 # todo: menus w drop shadow & keyboard & mouse - a la Borland Dos Turbo C++
 # todo: vi - emacs - notepad
 # todo: 'batteries included better than homemade'
+#
+# todo: randomly go to corners till all eight connections drawn
+# todo: Serpienski's Gasket, near to Koch Curve at F+F--F+F in Lindenmayer System
 #
 # todo: demo bugs fixed lately - Large Headings.logo for '.round()' vs '.trunc()'
 #
@@ -2794,14 +2876,16 @@ class TurtleClientWas:
 # 🐢 Turtle Graphics Engine  # todo
 #
 #
-# todo: t.penchars should stay as the Chars only, but we always ⎋[Y;XH to where we were
+# todo: t.penmark should stay as the Chars only, but we always ⎋[Y;XH to where we were - vs thin grey
 #
 # todo: thicker X Y Pixels
 #
-# talk up gDoc for export
+# talk up gDoc for export, also Sh Screen TypeScript
+# steganography for delays in TypeScript's
 # work up export to gDoc tech for ending color without spacing to right of screen
 #
 # todo: edge cap cursor position, wrap, bounce, whine, stop
+# todo: 500x500 canvas at U Brown of UCBLogo
 #
 #
 # todo: plot Fonts of Characters
@@ -2828,7 +2912,9 @@ class TurtleClientWas:
 #
 # 🐢 Turtle Chat Engine  # todo
 #
-# todo: e Pi Inf -Inf NaN
+# todo: e Pi Inf -Inf NaN ... sqrt power ... math.tau t.tau ...
+# todo: print (p) repr's, cleartext (ct) mention ⌘K
+# todo: setcursor [x y], cursor
 #
 # todo: \e escapes in Str
 # todo: kebab-case as a string becomes "kebab case"
@@ -2843,6 +2929,8 @@ class TurtleClientWas:
 #
 # todo: prompts placed correctly in the echo of multiple lines of Input
 #
+# todo: 🐢 SetY, 🐢 SetX, for one-dimensional movement
+#
 # todo: 🐢 Pin to drop a pin (in float precision!)
 # todo: 🐢 Go to get back to it
 # todo: 🐢 Pin that has a name, and list them at 🐢 Go, and delete them if pinned twice in same place
@@ -2850,6 +2938,7 @@ class TurtleClientWas:
 # todo: or teach 🐢 Label to take a last arg of "" as an ask for no newline?
 #
 # todo: rep n [fd fd.d rt rt.angle]
+# todo: 'to $name ... end' vs 'def $name [ ... ]'
 # todo: get/set of default args, such as fd.d and rt.angle
 # todo: printing diffs only vs say where we are, such as "rt 0" or "sethertz"
 # todo: 'setpch' to .punch or pen.char or what?
@@ -2872,7 +2961,7 @@ class TurtleClientWas:
 # todo: .stride vs Logo SetStepSize
 # todo: .rest vs Logo SetSpeed, SetVelocity, Wait
 #
-# todo: random moves, seeded random
+# todo: random moves, seeded random, random $n for random.randint(0, n)
 # todo: cyclic moves in Color, in Pen Down, and help catalog more than 8 Colors
 # todo: Pen Colors that mix with the Screen: PenPaint/ PenReverse/ PenErase
 #
@@ -2909,6 +2998,7 @@ class TurtleClientWas:
 #   UCBLogo for Linux/ macOS/ Windows <- USA > U of California Berkeley (UCB)
 #   https://people.eecs.berkeley.edu/~bh/logo.html
 #   https://people.eecs.berkeley.edu/~bh/usermanual [.txt]
+#   https://cs.brown.edu/courses/bridge/1997/Resources/LogoTutorial.html
 #
 #   References listed by https://people.eecs.berkeley.edu/~bh/other-logos.html
 #   References listed by https://fmslogo.sourceforge.io/manual/where-to-start.html
