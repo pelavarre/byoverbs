@@ -4,7 +4,7 @@
 # Draw Lines of 30°, 45°, 60°, and 90° in each Quadrant
 
 
-reset clearscreen pendown
+relaunch
 
 
 pu home pd fd 300
@@ -12,10 +12,10 @@ pu home pd rt 30 fd 300
 pu home pd rt 45 fd 300
 pu home pd rt 60 fd 300
 
-pu home pd rt fd 300
-pu home pd rt rt 30 fd 300
-pu home pd rt rt 45 fd 300
-pu home pd rt rt 60 fd 300
+pu home pd rt 90 fd 300
+pu home pd rt 90 rt 30 fd 300
+pu home pd rt 90 rt 45 fd 300
+pu home pd rt 90 rt 60 fd 300
 
 pu home pd rt 180 fd 300
 pu home pd rt 180 rt 30 fd 300
@@ -30,7 +30,7 @@ pu home pd rt 270 rt 60 fd 300
 pu home pd
 
 
-reset rt label " " tada
+restart rt 90 label " " tada
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/headings.logo

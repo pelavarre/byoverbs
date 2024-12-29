@@ -4,35 +4,35 @@
 # Draw Concentric Arcs of Red Yellow Green Cyan Blue Magenta
 
 
-reset clearscreen pendown
+relaunch
 
 
 setpc red
-pu home bk bk lt fd fd fd fd 40 rt
+pu home bk bk lt 90 fd fd fd fd 40 rt 90
 fd 86 rt 15  pd  fd 86 rt 15  fd 86 rt 15  fd 86 rt 15  fd 86 rt 15  fd 86 rt 15  fd 86 rt 15  fd 86 rt 15  fd 86 rt 15  fd 86 rt 15  fd 86 rt 15  fd 86 rt 15  pu  fd 86 rt 15
 
 setpc yellow
-pu home bk bk lt fd fd fd rt
+pu home bk bk lt 90 fd fd fd rt 90
 fd 75 rt 15  pd  fd 75 rt 15  fd 75 rt 15  fd 75 rt 15  fd 75 rt 15  fd 75 rt 15  fd 75 rt 15  fd 75 rt 15  fd 75 rt 15  fd 75 rt 15  fd 75 rt 15  fd 75 rt 15  pu  fd 75 rt 15
 
 setpc green
-pu home bk bk lt fd fd fd 55 rt
+pu home bk bk lt 90 fd fd fd 55 rt 90
 fd 66 rt 15  pd  fd 66 rt 15  fd 66 rt 15  fd 66 rt 15  fd 66 rt 15  fd 66 rt 15  fd 66 rt 15  fd 66 rt 15  fd 66 rt 15  fd 66 rt 15  fd 66 rt 15  fd 66 rt 15  pu  fd 66 rt 15
 
 setpc cyan
-pu home bk bk lt fd fd fd 25 rt
+pu home bk bk lt 90 fd fd fd 25 rt 90
 fd 57 rt 15  pd  fd 57 rt 15  fd 57 rt 15  fd 57 rt 15  fd 57 rt 15  fd 57 rt 15  fd 57 rt 15  fd 57 rt 15  fd 57 rt 15  fd 57 rt 15  fd 57 rt 15  fd 57 rt 15  pu  fd 57 rt 15
 
 setpc blue
-pu home bk bk lt fd fd rt
+pu home bk bk lt 90 fd fd rt 90
 fd 50 rt 15  pd  fd 50 rt 15  fd 50 rt 15  fd 50 rt 15  fd 50 rt 15  fd 50 rt 15  fd 50 rt 15  fd 50 rt 15  fd 50 rt 15  fd 50 rt 15  fd 50 rt 15  fd 50 rt 15  pu  fd 50 rt 15
 
 setpc magenta
-pu home bk bk lt fd fd 75 rt
+pu home bk bk lt 90 fd fd 75 rt 90
 fd 43 rt 15  pd  fd 43 rt 15  fd 43 rt 15  fd 43 rt 15  fd 43 rt 15  fd 43 rt 15  fd 43 rt 15  fd 43 rt 15  fd 43 rt 15  fd 43 rt 15  fd 43 rt 15  fd 43 rt 15  pu  fd 43 rt 15
 
 
-reset tada
+restart tada
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/like-a-rainbow.logo

@@ -303,7 +303,7 @@ ByoVerbs > Bin > [Python3·Py](bin/python3.py)<br>
 ## Help us please
 
 You know you've got thoughts.
-Please do speak the out loud as words
+Please do speak them out loud as words
 
 + LinkedIn > [pelavarre](https://www.linkedin.com/in/pelavarre)<br>
 + Mastodon > [pelavarre](https://social.vivaldi.net/@pelavarre)<br>

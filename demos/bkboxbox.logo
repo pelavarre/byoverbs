@@ -3,30 +3,30 @@
 # Draw two ← ↑ → ↓ square'ish boxes, concentrically, anticlockwise
 
 
-reset clearscreen pendown
+relaunch
 
 
 st
 pd
 
-setpch '↓' bk lt
-setpch '→' bk lt
-setpch '↑' bk lt
-setpch '←' bk lt
+setpch '↓' bk lt 90
+setpch '→' bk lt 90
+setpch '↑' bk lt 90
+setpch '←' bk lt 90
 
-pu lt fd rt pd
+pu lt 90 fd rt 90 pd
 
-setpch '↓' bk bk lt
-setpch '→' bk bk bk lt
-setpch '↑' bk bk bk lt
-setpch '←' bk bk bk lt
+setpch '↓' bk bk lt 90
+setpch '→' bk bk bk lt 90
+setpch '↑' bk bk bk lt 90
+setpch '←' bk bk bk lt 90
 setpch '↓' bk
 
-pu rt fd lt
+pu rt 90 fd lt 90
 setpch '*'
 
 
-reset tada
+restart tada
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/bkboxbox.logo

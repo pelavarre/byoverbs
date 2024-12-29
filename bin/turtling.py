@@ -14,6 +14,7 @@ options:
 examples:
   turtling.py --h  # shows more help and quits
   turtling.py  # shows some help and quits
+  turtling.py --yolo  # tells the enclosing Terminal to start serving Turtles
   turtling.py -i  # clears screen, adds one Turtle, and chats
   turtling.py -i -c ''  # doesn't clear screen, doesn't add Turtle, but does chat
 """
@@ -23,6 +24,7 @@ examples:
 
 import __main__
 import argparse
+import ast
 import bdb
 import collections
 import decimal
@@ -49,12 +51,16 @@ import unicodedata
 # todo: add 'import mscvrt' at Windows
 
 
-turtling = sys.modules[__name__]
+turtling = __main__
 
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
 Turtle_ = unicodedata.lookup("Turtle")  # 🐢 U+01F422
+
+
+if not __debug__:
+    raise NotImplementedError(str((__debug__,)))  # "'python3' better than 'python3 -O'"
 
 
 #
@@ -1223,6 +1229,8 @@ class GlassTeletype:
         self.bytes_terminal = st.bytes_terminal
         self.str_terminal = st
 
+        glass_teletypes.append(self)
+
     def __enter__(self) -> "GlassTeletype":  # -> typing.Self:
         st = self.str_terminal
         st.__enter__()
@@ -1305,6 +1313,10 @@ class GlassTeletype:
             bt.sbytes_write(sbytes)
 
 
+glass_teletypes: list[GlassTeletype]
+glass_teletypes = list()
+
+
 #
 # Chat with 1 Logo Turtle
 #
@@ -1329,9 +1341,13 @@ class Turtle:
 
     # todo: tada_func_else: typing.Callable | None  # runs once before taking next Command
 
-    def __init__(self, gt) -> None:
+    def __init__(self, glass_teletype=None) -> None:
 
-        self.glass_teletype = gt
+        if glass_teletype is None:
+            self.glass_teletype = glass_teletypes[-1]
+        else:
+            self.glass_teletype = glass_teletype
+
         self._reinit_()
 
     def _reinit_(self) -> None:
@@ -1362,7 +1378,9 @@ class Turtle:
 
         # just the Screen, not also its Scrollback
 
-        # todo: keep Turtle Trails separate so as to undo/ clear them
+        # Scratch: Erase-All
+
+        # todo: undo/ clear Turtle Trails separately
 
     def relaunch(self) -> dict:
         """Warp the Turtle to Home, and clear its Settings, and clear the Screen"""
@@ -1434,6 +1452,15 @@ class Turtle:
 
         return dict()
 
+        # 'def beep' not found in PyTurtle
+
+    # todo: def x +=
+    # Scratch: Change-X-By-10
+
+    # todo: def y +=
+    # Scratch: Change-Y-By-10
+
+    # FIXME: Resort - Label into the L's, and review/ correct the other Def's
     def label(self, *args) -> dict:
         """Write 0 or more Args"""
 
@@ -1457,6 +1484,9 @@ class Turtle:
         d = dict(float_x=self.float_x, float_y=self.float_y)
         return d
 
+        # PyTurtle: (nope)
+        # Scratch: Say
+
         # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
 
     def forward(self, stride=None) -> dict:
@@ -1467,6 +1497,9 @@ class Turtle:
 
         d = dict(float_x=self.float_x, float_y=self.float_y)
         return d
+
+        # Scratch Move-10-Steps (with infinite speed)
+        # Scratch Glide-1-Secs-To-X-0-Y-0 (locks out parallel work)
 
     def hideturtle(self) -> dict:
         """Stop showing where the Turtle is"""
@@ -1500,20 +1533,24 @@ class Turtle:
     def home(self) -> dict:
         """Move the Turtle to its Home and turn it North, tracing a Trail if Pen Down"""
 
-        self.setpos()  # todo: different Homes for different Turtles
+        self.setxy()  # todo: different Homes for different Turtles
         self.setheading()
 
         d = dict(float_x=self.float_x, float_y=self.float_y, heading=self.heading)
         return d
 
     def left(self, angle=None) -> dict:
-        """Turn the Turtle anticlockwise, by a 90° Right Angle, or some other Angle"""
+        """Turn the Turtle anticlockwise, by a 45° Right Angle, or some other Angle"""
 
-        float_angle = 90e0 if (angle is None) else float(angle)
+        float_angle = 45e0 if (angle is None) else float(angle)
         heading = self.heading
 
         d = self.setheading(heading - float_angle)
         return d
+
+        # Assymetric defaults make the Angle Arg more discoverable for 🐢 Left and 🐢 Right
+
+        # Scratch Turn-CCW-15-Degrees
 
     def pendown(self) -> dict:
         """Plan to leave a Trail as the Turtle moves"""
@@ -1522,6 +1559,8 @@ class Turtle:
 
         d = dict(warping=self.warping)
         return d
+
+        # Scratch Pen-Down
 
         # todo: calculated boolean args for pd pu ht gt
 
@@ -1532,6 +1571,8 @@ class Turtle:
 
         d = dict(warping=self.warping)
         return d
+
+        # Scratch Pen-Up
 
     def repeat(self, count=None) -> dict:
         """Run some instructions a chosen number of times, often less or more than once"""
@@ -1552,11 +1593,15 @@ class Turtle:
     def right(self, angle=None) -> dict:
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
 
-        float_angle = 45e0 if (angle is None) else float(angle)
+        float_angle = 90e0 if (angle is None) else float(angle)
         heading = self.heading  # turning clockwise
 
         d = self.setheading(heading + float_angle)
         return d
+
+        # 🐢 Right 90° sets up 🐢 Label to print English from left to right
+
+        # Scratch Turn-CW-15-Degrees
 
     def setheading(self, angle=None) -> dict:
         """Turn the Turtle to move 0° North, or to some other Heading"""
@@ -1609,7 +1654,9 @@ class Turtle:
         d = dict(penscape=self.penscape)
         return d
 
-    rgb_by_name = {
+        # todo: Scratch Change-Pen-Color-By-10
+
+    _rgb_by_name_ = {
         "white": 0xFFFFFF,
         "magenta": 0xFF00FF,
         "blue": 0x0000FF,
@@ -1634,11 +1681,11 @@ class Turtle:
     def _colorname_to_penmode_(self, colorname) -> str:
 
         casefold = colorname.casefold()
-        colornames = sorted(_.title() for _ in self.rgb_by_name.keys())
-        if casefold not in self.rgb_by_name.keys():
+        colornames = sorted(_.title() for _ in self._rgb_by_name_.keys())
+        if casefold not in self._rgb_by_name_.keys():
             raise KeyError(f"{colorname!r} not in {colornames}")
 
-        rgb = self.rgb_by_name[casefold]
+        rgb = self._rgb_by_name_[casefold]
         penscape = self._ansi_by_rgb_[rgb]
         return penscape
 
@@ -1667,7 +1714,14 @@ class Turtle:
 
         # todo: With SetPenColor Forward 1:  "!" if (penmark == "~") else chr(ord(penmark) + 1)
 
-    def setpos(self, x=None, y=None) -> dict:
+    # todo: def setx
+    # Scratch: Set-X-To-0
+
+    # todo: def sety
+    # Scratch: Set-Y-To-0
+
+    # FIXME: Resort after Rename
+    def setxy(self, x=None, y=None) -> dict:
         """Move the Turtle to an X Y Point, tracing a Trail if Pen Down"""
 
         float_x = 0e0 if (x is None) else float(x)
@@ -1688,6 +1742,8 @@ class Turtle:
 
         # FMSLogo SetXY & UBrown SetXY & UCBLogo SetXY alias SetPos
         # PyTurtle Goto aliases SetPos, PyTurtle Teleport is With PenUp SetPos
+        # Scratch Point-In-Direction-90
+        # Scratch Go-To-X-Y
         # UCBLogo Goto is a Control Flow Goto
 
         # todo: setx without setxy, sety without setxy
@@ -1927,6 +1983,227 @@ class Turtle:
         # a la PyTurtle Position
         # a la FMSLogo Pos
         # a la UCBLogo X Y Pos, XCor, YCor
+
+
+#
+# Auto-complete Turtle Logo Sourcelines to run as Python
+#
+
+
+class PythonSpeaker:
+    """Auto-complete Turtle Logo Sourcelines to run as Python"""
+
+    def text_to_python(self, text, cls) -> str:
+        """Auto-complete Turtle Logo Sourcelines to run as Python"""
+
+        funcnames = self.cls_to_funcnames(cls)
+
+        # Forward Python unchanged
+
+        before_strip = text.partition("#")[0].strip()
+        if before_strip not in funcnames:
+            try:
+                ast.parse(text)
+                return text
+            except SyntaxError:  # from Ast Parse
+                pass
+
+        # Split the Text into Python Texts
+
+        assert not self.pysplit_to_pylit_if("", funcnames=funcnames)
+
+        pylines = list()
+
+        line_pysplits: list[str]
+        line_pysplits = list()
+
+        text_pysplits = self.splitpy(text) + [""]
+        for pysplit in text_pysplits:
+            if pysplit.lstrip().startswith("#"):
+                continue
+
+            pylit = self.pysplit_to_pylit_if(pysplit, funcnames=funcnames)
+            if pylit:
+
+                if not line_pysplits:
+                    line_pysplits.append("p")
+                line_pysplits.append(pylit)
+
+            else:
+
+                if line_pysplits:
+                    pyline = self.pysplits_to_pyline(line_pysplits, funcnames=funcnames)
+                    pylines.append(pyline)
+
+                line_pysplits.clear()
+                line_pysplits.append(pysplit)
+
+        assert line_pysplits == [""], (line_pysplits,)
+
+        pytext = "\n".join(pylines)
+
+        return pytext
+
+    def splitpy(self, text) -> list[str]:
+        """Split 1 Text into its widest evallable Py Expressions from the Left"""
+
+        splits = list()
+
+        more = text
+        while more:
+
+            if more.lstrip().startswith("#"):
+                split = more
+                splits.append(split)
+                break
+
+            heads = list()
+            for index in range(0, len(more)):
+                length = index + 1
+                head = more[:length]
+
+                evallable = head
+                evallable = evallable.replace("-", "~")  # refuse '-' as bin op, accept as unary op
+                evallable = evallable.replace("+", "~")  # refuse '+' as bin op, accept as unary op
+
+                try:
+                    ast.literal_eval(evallable)
+                    heads.append(head)
+                except ValueError:
+                    heads.append(head)
+                except SyntaxError:
+                    pass
+
+            if not heads:
+                splits.append(more)
+                break
+
+            head = heads[-1]
+            assert head, (
+                head,
+                more,
+            )
+
+            split = head
+            if "#" in head:
+                if ('"' not in head) and ("'" not in head):
+                    before = split.partition("#")[0]
+                    split = before.rstrip()
+                    assert split, (
+                        split,
+                        head,
+                        more,
+                    )
+
+            splits.append(split)
+
+            more = more[len(split) :]
+
+        assert "".join(splits) == text, (splits, text)
+
+        return splits
+
+    def pysplit_to_pylit_if(self, py, funcnames) -> str:
+        """Say if Py Text is a literal Py Expression"""
+
+        strip = py.strip()
+        try:
+
+            ast.literal_eval(strip)
+
+        except ValueError:
+
+            pylit = repr(strip)
+            if strip in funcnames:
+                return ""
+            return pylit
+
+        except SyntaxError:
+
+            return ""
+
+        return py
+
+    def pysplits_to_pyline(self, pysplits, funcnames) -> str:
+        """Convert some Py Texts into a Py Call with Args"""
+
+        assert pysplits, (pysplits,)
+
+        funcname_by_grunt = self.funcname_by_grunt
+
+        strip_0 = pysplits[0].strip()
+
+        funcname = strip_0
+        if strip_0 in funcnames:
+            if strip_0 in funcname_by_grunt:
+                funcname = "t." + funcname_by_grunt[strip_0]
+            else:
+                funcname = "t." + strip_0
+
+        args = pysplits[1:]
+        join = ", ".join(_.strip() for _ in args)
+
+        pyline = f"{funcname}({join})"
+
+        return pyline
+
+    byo_funcname_by_grunt = {
+        "b": "beep",
+        "clear": "clearscreen",  # Linux Clear  # macOS ⌘K
+        "cls": "clearscreen",  # MsDos Cls
+        "rep": "repeat",
+        "sethz": "sethertz",
+        "setpch": "setpenpunch",
+        "s": "sleep",
+        "t": "tada",
+    }
+
+    py_funcname_by_grunt = {  # for the people of:  import turtle
+        "back": "backward",
+        "bk": "backward",
+        # "down": "pendown",  # nope
+        "fd": "forward",
+        "goto": "setxy",
+        "ht": "hideturtle",
+        "lt": "left",
+        "pd": "pendown",
+        "pu": "penup",
+        "reset": "relaunch",
+        "rt": "right",
+        "seth": "setheading",
+        "setpos": "setxy",
+        "setposition": "setxy",
+        "st": "showturtle",
+        # "up": "penup",  # nope
+    }
+
+    ucb_funcname_by_grunt = {  # for the people of:  UCBLogo
+        "cs": "clearscreen",
+        "setpc": "setpencolor",
+    }
+
+    funcname_by_grunt = byo_funcname_by_grunt | py_funcname_by_grunt | ucb_funcname_by_grunt
+
+    grunts = sorted(
+        list(byo_funcname_by_grunt.keys())
+        + list(py_funcname_by_grunt.keys())
+        + list(ucb_funcname_by_grunt.keys())
+    )
+
+    assert grunts == sorted(set(grunts)), (grunts,)
+
+    def cls_to_funcnames(self, cls) -> list[str]:
+        """Say the Verb Names in a Class"""
+
+        funcname_by_grunt = self.funcname_by_grunt
+
+        names = list(_ for _ in dir(cls) if not _.startswith("_"))
+        keys = list(funcname_by_grunt.keys())
+        values = list(funcname_by_grunt.values())
+
+        funcnames = sorted(set(names + keys + values))
+
+        return funcnames
 
 
 #
@@ -2324,16 +2601,16 @@ class TurtlingServer:
             return
 
         rtext = rtext_else
+        py = rtext
 
         # Eval the Python Text (except eval "" Empty Str as same)
 
         wtext = ""
 
-        py = rtext
         if py:
             try:  # todo: shrug off PyLance pretending eval/exec 'locals=' doesn't work
                 eval_ = eval(py, globals_, locals_)
-            except SyntaxError:
+            except SyntaxError:  # from Py Eval
                 eval_ = None
                 try:
                     exec(py, globals_, locals_)
@@ -2358,14 +2635,12 @@ class TurtlingServer:
 #
 
 
-def turtling_client_run(logo) -> None:
+def turtling_client_run(text) -> None:
     "Run as a Client chatting with Logo Turtles and return True, else return False"
-
-    print(f"{logo=}")
 
     tc1 = TurtleClient()
     try:
-        tc1.client_run_till()
+        tc1.client_run_till(text)
     except BrokenPipeError:
         eprint("BrokenPipeError")
 
@@ -2383,7 +2658,7 @@ class TurtleClient:
 
         signal.signal(signal.SIGINT, getsignal)
 
-    def client_run_till(self) -> None:
+    def client_run_till(self, text) -> None:
         """Chat with Logo Turtles"""
 
         Bold = "\x1B[" "1m"  # Sgr Bold  # CSI 06/13 Select Graphic Rendition (SGR)
@@ -2394,15 +2669,21 @@ class TurtleClient:
 
         # Till quit
 
+        ps = PythonSpeaker()
+
+        started = False
+
+        ilines = text.splitlines()
+        if text == "relaunch":
+            started = True
+
+            eprint("BYO Turtling·Py 2024-12-29")
+            self.py_send_and_eprint_if("t = turtling.Turtle(); t.relaunch()")
+            ilines = list()  # replace
+
         while True:
-
-            # Prompt & Echo Lines from the Keyboard
-
-            ilines = self.read_some_ilines(ps1, postedit=postedit)
-            if not ilines:
-                break
-
-            for iline in ilines:
+            while ilines:
+                iline = ilines.pop(0)
 
                 # Echo the Line by itself, prefixed by a Prompt
 
@@ -2410,33 +2691,46 @@ class TurtleClient:
                 eprint(ps1 + iline + postedit)
                 sys.stderr.flush()
 
-                # Quit after the Last Line
-
-                if not iline:
-                    break
-
                 # Quickly dismiss a flimsy Line
 
                 rstrip = iline.rstrip()
                 if not self.text_has_pyweight(rstrip):
                     continue
 
-                # Trade a weighty Line with the Server
-
-                rtext_else = self.trade_text_else(wtext=rstrip)
-                if rtext_else is None:
-                    eprint("EOFError")
+                if rstrip == "import turtling":
+                    started = True
+                    print(rstrip)
                     continue
 
-                rtext = rtext_else
-                if rtext.startswith("'Traceback (most recent call last):"):
-                    format_exc = eval(rtext)
-                    eprint(format_exc.rstrip())
-                    continue
+                if rstrip.startswith("t =") or rstrip.startswith("t="):
+                    started = True
 
-                if rtext != "None":
-                    eprint(rtext)
-                    eprint()
+                # Auto-correct till it's Python
+
+                py = ps.text_to_python(rstrip, cls=Turtle)
+
+                if py != rstrip:  # if autocompleted
+                    for pyline in py.splitlines():
+                        eprint(">>>", pyline)
+
+                # Send Python to the Server, trace its Reply
+
+                self.py_send_and_eprint_if(py)
+
+            # Prompt & Echo Lines from the Keyboard
+
+            ilines = self.read_some_ilines(ps1, postedit=postedit)  # replace
+            if not ilines:
+                break
+
+            # Insert start-up profile script if not supplied
+
+            itext = "\n".join(ilines)
+            if not started:
+                if "import turtling" not in itext:
+                    started = True
+
+                    ilines[0:0] = ["import turtling", "t = turtling.Turtle()"]
 
     def read_some_ilines(self, ps1, postedit) -> list[str]:
         """Prompt & Echo Lines from the Keyboard"""
@@ -2484,6 +2778,25 @@ class TurtleClient:
                 return True
 
         return False
+
+    def py_send_and_eprint_if(self, py) -> None:
+        """Send Python to the Server, trace its Reply"""
+
+        wtext = py
+        rtext_else = self.trade_text_else(wtext)
+        if rtext_else is None:
+            eprint("EOFError")
+            return
+
+        rtext = rtext_else
+        if rtext.startswith("'Traceback (most recent call last):"):
+            format_exc = eval(rtext)
+            eprint(format_exc.rstrip())
+            return
+
+        if rtext != "None":
+            eprint(rtext)
+            eprint()
 
     def trade_text_else(self, wtext) -> str | None:
         """Write a Text to the Turtling Server, and read back a Text or None"""
@@ -2991,9 +3304,19 @@ class TurtleClientWas:
 #
 # 🐢 Turtle Chat References
 #
+#   https://github.com/pelavarre/byoverbs/tree/main/docs
+#       todo: turtling-in-the-python-terminal.md
+#           output-at-right/left light/dark cap/bounce/wrap
+#
 #   FMSLogo for Linux Wine/ Windows (does the Linux Wine work?)
 #   https://fmslogo.sourceforge.io
 #   https://fmslogo.sourceforge.io/manual/index.html
+#
+#   Scratch
+#   https://scratch.mit.edu
+#   https://en.scratch-wiki.info/wiki
+#   view-source:https://en.scratch-wiki.info/wiki/Scratch_Wiki:Table_of_Contents/Motion_Blocks
+#       ⌘F >move
 #
 #   UCBLogo for Linux/ macOS/ Windows <- USA > U of California Berkeley (UCB)
 #   https://people.eecs.berkeley.edu/~bh/logo.html

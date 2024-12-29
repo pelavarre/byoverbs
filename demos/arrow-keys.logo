@@ -3,7 +3,7 @@
 # Draw the ← ↓ → and ↑ Keys of a MacBook Keyboard
 
 
-reset clearscreen pendown
+relaunch
 
 
 # Draw the → Key to the right of Center
@@ -14,7 +14,7 @@ pu ht home
 
 # Draw the ← Key far away at the Left
 
-lt fd 300
+lt 90 fd 300
 
 st pd seth
 fd lt 120  fd lt 120  fd lt 120
@@ -22,24 +22,24 @@ pu ht home
 
 # Draw the ↓ Key in the Middle, between the ← Key and the the → Key
 
-lt fd 200
+lt 90 fd 200
 # rt fd 80  # not 100 while the ↓ and ↑ drawn small
-rt fd  # aligned top while the ↓ and ↑ drawn small
+rt 90 fd  # aligned top while the ↓ and ↑ drawn small
 
-st pd seth rt
+st pd seth rt 90
 fd rt 120  fd rt 120  fd rt 120
 pu ht home
 
 # Draw the ↑ Key above the rest
 
-lt fd 200
-rt fd fd 80  # not 100 while the ↓ and ↑ drawn small
+lt 90 fd 200
+rt 90 fd fd 80  # not 100 while the ↓ and ↑ drawn small
 
-st pd seth rt
+st pd seth rt 90
 fd lt 120  fd lt 120  fd lt 120
 
 
-reset tada
+restart tada
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/arrow-keys.logo

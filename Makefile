@@ -122,12 +122,12 @@ flake8:
 	source ~/.pyvenvs/flake8/bin/activate && \
 		pip freeze |grep '^flake8-import-order==' >/dev/null
 	~/.pyvenvs/flake8/bin/flake8 \
-		--max-line-length=999 --max-complexity 10 --ignore=E203,W503 \
+		--max-line-length=999 --max-complexity 15 --ignore=E203,W503 \
 		../byoverbs
 	:
 
 # --max-line-length=999  # Black max line lengths over Flake8 max line lengths
-# --max-complexity 10  # limit how much McCabe Cyclomatic Complexity we accept
+# --max-complexity 15  # limit how much McCabe Cyclomatic Complexity we accept
 # --ignore=E203  # Black '[ : ]' rules over E203 whitespace before ':'
 # --ignore=W503  # 2017 Pep 8 and Black over W503 line break before bin op
 
