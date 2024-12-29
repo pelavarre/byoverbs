@@ -9,20 +9,20 @@ relaunch
 st
 pd
 
-setpch '↑' fd rt 90
-setpch '→' fd rt 90
-setpch '↓' fd rt 90
-setpch '←' fd rt 90
+setpch '↑' fd 100 rt
+setpch '→' fd 100 rt
+setpch '↓' fd 100 rt
+setpch '←' fd 100 rt
 
-pu lt 90 fd rt 90 pd
+pu lt 90 fd 100 rt pd
 
-setpch '↑' fd fd rt 90
-setpch '→' fd fd fd rt 90
-setpch '↓' fd fd fd rt 90
-setpch '←' fd fd fd rt 90
-setpch '↑' fd
+setpch '↑' fd 100 fd 100 rt
+setpch '→' fd 100 fd 100 fd 100 rt
+setpch '↓' fd 100 fd 100 fd 100 rt
+setpch '←' fd 100 fd 100 fd 100 rt
+setpch '↑' fd 100
 
-pu rt 90 fd lt 90
+pu rt fd 100 lt 90
 setpch '*'
 
 

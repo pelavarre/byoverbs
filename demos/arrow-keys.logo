@@ -24,18 +24,18 @@ pu ht home
 
 lt 90 fd 200
 # rt fd 80  # not 100 while the ↓ and ↑ drawn small
-rt 90 fd  # aligned top while the ↓ and ↑ drawn small
+rt fd  # aligned top while the ↓ and ↑ drawn small
 
-st pd seth rt 90
+st pd seth rt
 fd rt 120  fd rt 120  fd rt 120
 pu ht home
 
 # Draw the ↑ Key above the rest
 
 lt 90 fd 200
-rt 90 fd fd 80  # not 100 while the ↓ and ↑ drawn small
+rt fd fd 80  # not 100 while the ↓ and ↑ drawn small
 
-st pd seth rt 90
+st pd seth rt
 fd lt 120  fd lt 120  fd lt 120
 
 
