@@ -23,7 +23,7 @@ pu ht home
 # Draw the ↓ Key in the Middle, between the ← Key and the the → Key
 
 lt 90 fd 200
-# rt fd 80  # not 100 while the ↓ and ↑ drawn small
+# rt fd 80  # nope, not fd 200 while the ↓ and ↑ drawn small
 rt fd  # aligned top while the ↓ and ↑ drawn small
 
 st pd seth rt
@@ -33,7 +33,7 @@ pu ht home
 # Draw the ↑ Key above the rest
 
 lt 90 fd 200
-rt fd fd 80  # not 100 while the ↓ and ↑ drawn small
+rt fd fd 80  # nope, not fd 200 while the ↓ and ↑ drawn small
 
 st pd seth rt
 fd lt 120  fd lt 120  fd lt 120

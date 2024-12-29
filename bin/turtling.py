@@ -1447,7 +1447,7 @@ class Turtle:
         gt = self.glass_teletype
         gt.schars_write(text)
 
-        time.sleep(4 / 3)  # todo: guess more accurately when the Terminal Bell falls silent
+        # time.sleep(2 / 3)  # todo: guess more accurately when the Terminal Bell falls silent
 
         return dict()
 
@@ -2170,7 +2170,7 @@ class PythonSpeaker:
         "lt": "left",
         "pd": "pendown",
         "pu": "penup",
-        "reset": "relaunch",
+        "reset": "restart",  # without ClearScreen
         "rt": "right",
         "seth": "setheading",
         "setpos": "setxy",
@@ -2610,18 +2610,35 @@ class TurtlingServer:
         wtext = ""
 
         if py:
+
             try:  # todo: shrug off PyLance pretending eval/exec 'locals=' doesn't work
+
                 eval_ = eval(py, globals_, locals_)
+
+            except NameError:  # from Py Eval
+
+                eval_ = traceback.format_exc()
+                wtext = repr(eval_)
+
+                eline = eval_.splitlines()[-1]
+                m = re.match(r"NameError: name '([^']*)' is not defined\b", string=eline)
+                if m:
+                    ename = m.group(1)
+                    pyname = py.partition("#")[0].strip()
+                    if ename == pyname:
+                        wtext = repr(ename)
+
             except SyntaxError:  # from Py Eval
-                eval_ = None
+
+                wtext = repr(None)
                 try:
                     exec(py, globals_, locals_)
                 except Exception:
-                    eval_ = traceback.format_exc()
-            except Exception:
-                eval_ = traceback.format_exc()
+                    wtext = repr(traceback.format_exc())
 
-            wtext = repr(eval_)
+            except Exception:
+
+                wtext = repr(traceback.format_exc())
 
         # Write back out the Repr of its Eval (except write back "" Empty Str for same)
 
@@ -2793,6 +2810,18 @@ class TurtleClient:
 
     def py_trade_else(self, py) -> str | None:
         """Send Python to the Server, trace its Reply"""
+
+        globals_ = globals()
+
+        def p(*args):
+            text = ", ".join(repr(_) for _ in args)
+            eprint(text)
+
+        locals_ = dict(p=p)
+
+        if py.startswith("p("):
+            exec(py, globals_, locals_)
+            return None
 
         wtext = py
         rtext_else = self.trade_text_else(wtext)

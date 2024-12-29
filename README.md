@@ -17,6 +17,10 @@ Contents
 <!-- I'd fear people need the headings numbered, if it were just me -->
 <!-- VsCode autogenerates this unnumbered Table-of-Contents. Maybe people will cope -->
 
+GitHub posts a rendering of this Md File.
+You might prefer the look of it at VsCode ⇧⌘V Markdown Open Preview
+
+
 ## Welcome
 
 This Repo is my pile of **actions your computer should make easy for you**
