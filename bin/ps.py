@@ -1,6 +1,6 @@
-# ps aux
+# ps a -o pid,ppid,lstart,args
 # ps auwwx
-# ps a -wo pid,lstart,cmd  # suggested by StackOverflow
+# ps aux
 
 # (ps |head -1) && ps |grep 123  # Header should go to Stderr
 
