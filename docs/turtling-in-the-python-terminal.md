@@ -130,9 +130,10 @@ I haven't tested Ghostty and iTerm at macOS.
 Try
 
     relaunch
-    setxy 250 0  setxy 0 250  setxy 0 0
-    setxy 250 250  setxy 0 250  setxy 250 250  setxy 250 0
-    setxy 0 0
+    setxy -250 250  setxy 250 250  setxy 0 0
+    setxy 250 250  setxy 250 -250  setxy 0 0
+    setxy 250 -250  setxy -250 -250  setxy 0 0
+    setxy -250 -250  setxy -250 250  setxy 0 0
 
 Turtle Logo's disagree over how large this Square is.
 UCB Turtle Logo makes this Square as large as the Window

@@ -2004,10 +2004,14 @@ class PythonSpeaker:
 
         # Forward Python unchanged
 
+        parseable = text
+        parseable = parseable.replace("-", "~")  # refuse '-' as bin op, accept as unary op
+        parseable = parseable.replace("+", "~")  # refuse '+' as bin op, accept as unary op
+
         before_strip = text.partition("#")[0].strip()
         if before_strip not in funcnames:
             try:
-                ast.parse(text)
+                ast.parse(parseable)
                 pycalls.append(text)
                 return pycalls
             except SyntaxError:  # from Ast Parse
@@ -2047,7 +2051,7 @@ class PythonSpeaker:
         return pycalls
 
     def splitpy(self, text) -> list[str]:
-        """Split 1 Text into its widest evallable Py Expressions from the Left"""
+        """Split 1 Text into its widest parseable Py Expressions from the Left"""
 
         splits = list()
 
@@ -2064,12 +2068,12 @@ class PythonSpeaker:
                 length = index + 1
                 head = more[:length]
 
-                evallable = head
-                evallable = evallable.replace("-", "~")  # refuse '-' as bin op, accept as unary op
-                evallable = evallable.replace("+", "~")  # refuse '+' as bin op, accept as unary op
+                parseable = head
+                parseable = parseable.replace("-", "~")  # refuse '-' as bin op, accept as unary op
+                parseable = parseable.replace("+", "~")  # refuse '+' as bin op, accept as unary op
 
                 try:
-                    ast.literal_eval(evallable)
+                    ast.literal_eval(parseable)
                     heads.append(head)
                 except ValueError:
                     heads.append(head)
@@ -2618,7 +2622,6 @@ class TurtlingServer:
             except NameError:  # from Py Eval
 
                 eval_ = traceback.format_exc()
-                wtext = repr(eval_)
 
                 eline = eval_.splitlines()[-1]
                 m = re.match(r"NameError: name '([^']*)' is not defined\b", string=eline)
@@ -2626,19 +2629,21 @@ class TurtlingServer:
                     ename = m.group(1)
                     pyname = py.partition("#")[0].strip()
                     if ename == pyname:
-                        wtext = repr(ename)
+                        eval_ = ename
 
             except SyntaxError:  # from Py Eval
 
-                wtext = repr(None)
+                eval_ = None
                 try:
                     exec(py, globals_, locals_)
                 except Exception:
-                    wtext = repr(traceback.format_exc())
+                    eval_ = traceback.format_exc()
 
             except Exception:
 
-                wtext = repr(traceback.format_exc())
+                eval_ = traceback.format_exc()
+
+            wtext = repr(eval_)
 
         # Write back out the Repr of its Eval (except write back "" Empty Str for same)
 
