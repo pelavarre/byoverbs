@@ -3043,15 +3043,16 @@ r'''
 # 🐢 Turtle Chat Engine  # todo
 #
 #
-# todo: Revive 🐢 Repeat to draw polygons off-center to the right
-# todo: Revive 🐢 Bye 🐢 Exit 🐢 Quit - Catch the SystemExit and relay it?
-# todo: Revive 🐢 Help
+# todo: revive 🐢 Repeat to draw polygons off-center to the right
+# todo: revive 🐢 Bye 🐢 Exit 🐢 Quit - Catch the SystemExit and relay it?
+# todo: revive 🐢 Help
 #
 # todo: work with random choices
 #
 # todo: work with blocks, such as:  for _ in range(8): t.forward(100e0); t.right(45e0)
 #
 # todo: work with variables somehow - spirals, Sierpienski, etc
+# todo: mutate Client-Side Defaults somehow
 #
 #
 # todo: e Pi Inf -Inf NaN ... sqrt power ... math.tau t.tau ...
@@ -3113,6 +3114,10 @@ r'''
 
 #
 # 🐢 Python Makeovers  # todo
+#
+#
+# todo: Move all the defaults into the Client
+#
 #
 # todo: def efprint1(self, form, **kwargs) at uturtle.Turtle for printing its Fields
 # todo: print only first and then changes in the form result
