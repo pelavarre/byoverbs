@@ -1430,7 +1430,7 @@ class Turtle:
     #
 
     def backward(self, distance=None) -> dict:
-        """Move the Turtle backwards along its Heading, tracing a Trail if Pen Down"""
+        """Move the Turtle backwards along its Heading, leaving a Trail if Pen Down"""
 
         float_stride = 200e0 if (distance is None) else float(distance)
         self._punch_bresenham_stride_(-float_stride)
@@ -1459,37 +1459,8 @@ class Turtle:
     # todo: def y +=
     # Scratch: Change-Y-By-10
 
-    # FIXME: Resort - Label into the L's, and review/ correct the other Def's
-    def label(self, *args) -> dict:
-        """Write 0 or more Args"""
-
-        gt = self.glass_teletype
-        heading = self.heading
-
-        if round(heading) != 90:
-            raise NotImplementedError("Printing Labels for Headings other than 90° East")
-
-            # todo: Printing Labels for 180° South Heading
-            # todo: Printing Labels for Headings other than 90° East and 180° South
-
-        (y_row, x_column) = gt.os_terminal_y_row_x_column()
-
-        line = " ".join(str(_) for _ in args)
-        line += f"\x1B[{y_row};{x_column}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
-        line += "\n"  # just Line-Feed \n without Carriage-Return \r
-
-        gt.schars_write(line)
-
-        d = dict(float_x=self.float_x, float_y=self.float_y)
-        return d
-
-        # PyTurtle: (nope)
-        # Scratch: Say
-
-        # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
-
     def forward(self, distance=None) -> dict:
-        """Move the Turtle forwards along its Heading, tracing a Trail if Pen Down"""
+        """Move the Turtle forwards along its Heading, leaving a Trail if Pen Down"""
 
         float_stride = 100e0 if (distance is None) else float(distance)
         self._punch_bresenham_stride_(float_stride)
@@ -1515,6 +1486,15 @@ class Turtle:
         d = dict(hiding=self.hiding)
         return d
 
+    def home(self) -> dict:
+        """Move the Turtle to its Home and turn it North, leaving a Trail if Pen Down"""
+
+        self.setxy()  # todo: different Homes for different Turtles
+        self.setheading()
+
+        d = dict(float_x=self.float_x, float_y=self.float_y, heading=self.heading)
+        return d
+
     def isdown(self) -> bool:
         """Say if the Turtle will leave a Trail as it moves"""
 
@@ -1531,14 +1511,33 @@ class Turtle:
 
         # Lisp'ish Logo's say IsVisible as ShownP and as Shown?
 
-    def home(self) -> dict:
-        """Move the Turtle to its Home and turn it North, tracing a Trail if Pen Down"""
+    def label(self, *args) -> dict:
+        """Write the Str's of 0 or more Args, separated by Spaces"""
 
-        self.setxy()  # todo: different Homes for different Turtles
-        self.setheading()
+        gt = self.glass_teletype
+        heading = self.heading
 
-        d = dict(float_x=self.float_x, float_y=self.float_y, heading=self.heading)
+        if round(heading) != 90:
+            raise NotImplementedError("Printing Labels for Headings other than 90° East")
+
+            # todo: Printing Labels for 180° South Heading
+            # todo: Printing Labels for Headings other than 90° East and 180° South
+
+        (y_row, x_column) = gt.os_terminal_y_row_x_column()
+
+        line = " ".join(str(_) for _ in args)
+        line += f"\x1B[{y_row};{x_column}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
+        line += "\n"  # just Line-Feed \n without Carriage-Return \r
+
+        gt.schars_write(line)
+
+        d = dict(float_x=self.float_x, float_y=self.float_y)
         return d
+
+        # PyTurtle: Write
+        # Scratch: Say
+
+        # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
 
     def left(self, angle=None) -> dict:
         """Turn the Turtle anticlockwise, by a 45° Right Angle, or some other Angle"""
@@ -1716,15 +1715,26 @@ class Turtle:
 
         # todo: With SetPenColor Forward 1:  "!" if (penmark == "~") else chr(ord(penmark) + 1)
 
-    # todo: def setx
-    # Scratch: Set-X-To-0
+    def setx(self, x=None) -> dict:
+        """Move the Turtle to a X Point, keeping Y unchanged, leaving a Trail if Pen Down"""
 
-    # todo: def sety
-    # Scratch: Set-Y-To-0
+        float_y = self.float_y
+        self.setxy(x=x, y=float_y)
+        d = dict(float_x=self.float_x)
 
-    # FIXME: Resort after Rename
+        return d
+
+    def sety(self, y=None) -> dict:
+        """Move the Turtle to a Y Point, keeping X unchanged, leaving a Trail if Pen Down"""
+
+        float_x = self.float_x
+        self.setxy(x=float_x, y=y)
+        d = dict(float_x=self.float_y)
+
+        return d
+
     def setxy(self, x=None, y=None) -> dict:
-        """Move the Turtle to an X Y Point, tracing a Trail if Pen Down"""
+        """Move the Turtle to an X Y Point, leaving a Trail if Pen Down"""
 
         float_x = 0e0 if (x is None) else float(x)
         float_y = 0e0 if (y is None) else float(y)
@@ -1780,21 +1790,8 @@ class Turtle:
 
         # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s  st
 
-    # todo: def tada(self) -> None:
-    #     """Hide the Turtle, but only until next Call"""
     #
-    #     gt = self.glass_teletype
-    #     text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
-    #     gt.schars_write(text)
-    #
-    #     def tada_func() -> None:
-    #         text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
-    #         gt.schars_write(text)
-    #
-    #     self.tada_func_else = tada_func
-
-    #
-    # Move the Turtle along the Line of its Heading
+    # Move the Turtle along the Line of its Heading, leaving a Trail if Pen Down
     #
 
     def _punch_bresenham_stride_(self, stride) -> None:
@@ -1945,6 +1942,10 @@ class Turtle:
         if not hiding:
             time.sleep(rest)
 
+    #
+    # Sample the X Y Position remotely, inside the Turtle
+    #
+
     def x_y_position(self) -> tuple[int, int]:
         """Sample the X Y Position remotely, inside the Turtle"""
 
@@ -1982,9 +1983,9 @@ class Turtle:
 
         return (x1, y1)
 
-        # a la PyTurtle Position
+        # a la PyTurtle Position, XCor, YCor
         # a la FMSLogo Pos
-        # a la UCBLogo X Y Pos, XCor, YCor
+        # a la UCBLogo Pos, XCor, YCor
 
 
 #
@@ -1995,12 +1996,18 @@ class Turtle:
 class PythonSpeaker:
     """Auto-complete Turtle Logo Sourcelines to run as Python"""
 
+    held_pycalls: list[str]
+    held_pycalls = list()  # leftover Py Calls from an earlier Text
+
     def text_to_pycalls(self, text, cls) -> list[str]:
         """Auto-complete Turtle Logo Sourcelines to run as Python"""
 
-        funcnames = self.cls_to_funcnames(cls)
+        held_pycalls = self.held_pycalls
+        pycalls = list(held_pycalls)
 
-        pycalls = list()
+        held_pycalls.clear()
+
+        funcnames = self.cls_to_funcnames(cls)
 
         # Forward Python unchanged
 
@@ -2136,6 +2143,7 @@ class PythonSpeaker:
         assert pysplits, (pysplits,)
 
         funcname_by_grunt = self.funcname_by_grunt
+        held_pycalls = self.held_pycalls
 
         strip_0 = pysplits[0].strip()
 
@@ -2145,6 +2153,11 @@ class PythonSpeaker:
                 funcname = "t." + funcname_by_grunt[strip_0]
             else:
                 funcname = "t." + strip_0
+
+        if funcname == "t.tada":
+            funcname = "t.hideturtle"
+
+            held_pycalls.append("t.showturtle()")
 
         args = pysplits[1:]
         join = ", ".join(_.strip() for _ in args)
@@ -2164,7 +2177,7 @@ class PythonSpeaker:
         "t": "tada",
     }
 
-    py_funcname_by_grunt = {  # for the people of:  import turtle
+    py_funcname_by_grunt = {  # for the PyTurtle people of:  import turtle
         "back": "backward",
         "bk": "backward",
         # "down": "pendown",  # nope
@@ -2183,7 +2196,7 @@ class PythonSpeaker:
         # "up": "penup",  # nope
     }
 
-    ucb_funcname_by_grunt = {  # for the people of:  UCBLogo
+    ucb_funcname_by_grunt = {  # for the UCB Logo people
         "cs": "clearscreen",
         "setpc": "setpencolor",
     }
@@ -2653,6 +2666,8 @@ class TurtlingServer:
 
         writer.fd_write_text(writer.fileno, text=wtext)
 
+        # trades with TurtleClient.trade_text_else
+
 
 #
 # Run as a Client chatting with Logo Turtles
@@ -2857,6 +2872,8 @@ class TurtleClient:
 
         return rtext_else
 
+        # trades with TurtlingServer.reader_writer_serve
+
 
 #
 # Paint Turtle Character Graphics onto a Terminal Screen
@@ -2864,232 +2881,6 @@ class TurtleClient:
 
 
 r'''
-
-class TurtleClientWas:
-    """Run at Keyboard and Screen as a Shell, to command 1 Turtle via two MkFifo"""
-
-
-    #
-    # Eval 1 Line of Input
-    #
-
-    def readline_to_py(self, readline) -> str:  # noqa C901 complex  # FIXME
-        """Eval 1 Line of Input"""
-
-        func_by_verb = self.to_func_by_verb()
-        tada_func_else = self.tada_func_else
-
-        # Drop a mostly blank Line
-
-        strip = readline.strip()
-        if not strip:
-            return ""
-
-        part = strip.partition("#")[0].strip()
-        if not part:
-            return ""
-
-        # Split the 1 Line into its widest Py Expressions from the Left
-
-        pys = list()
-        tail = part
-        while tail:
-            prefixes = list()
-            for index in range(0, len(tail)):
-                length = index + 1
-
-                prefix = tail[:length]
-
-                evallable = prefix
-                evallable = evallable.replace("-", "~")  # refuse '-' as bin op, accept as unary op
-                evallable = evallable.replace("+", "~")  # refuse '+' as bin op, accept as unary op
-
-                try:
-                    ast.literal_eval(evallable)
-                    # print(f"{prefix=}  # Literal")
-                    prefixes.append(prefix)
-                except ValueError:
-                    # print(f"{prefix=}  # ValueError")
-                    prefixes.append(prefix)
-                except SyntaxError:
-                    continue
-
-            if not prefixes:
-                # print(f"{tail=} {part=}  # no prefixes")
-                return part
-
-            py = prefixes[-1]
-            pys.append(py)
-
-            tail = tail[len(py) :]
-
-        assert "".join(pys) == part, (pys, part)
-
-        # print(f"{pys=}")
-        # breakpoint()
-
-        # Split the 1 Line into a Series of 1 or more Py Calls
-
-        call: list[object | None]
-        call = list()
-
-        calls: list[list[object | None]]
-        calls = list()
-
-        calculated_call_ids = list()
-
-        for py in pys:
-
-            # Add a Literal Arg,
-            # or guess Printing wanted if no Verb before Literal Args
-
-            try:
-                arg = ast.literal_eval(py)
-                if not call:
-                    call.append("print")  # todo: "printrepr" when Args of no Func?
-                call.append(arg)
-                continue
-
-            # Begin again with each unquoted Verb
-
-            except ValueError:
-
-                word = py.strip()
-                iword = word.casefold()
-                if iword in func_by_verb.keys():
-                    if call:
-                        calls.append(call)
-                        call = list()  # replace
-                    call.append(py.strip())
-                    continue
-
-                # Take an eval'able Expression as its own Literal Value
-
-                try:
-                    evalled = eval(py)
-                    call.append(evalled)
-                    calculated_call_ids.append(id(call))
-                    continue
-                except Exception:
-                    pass
-
-                # Take an undefined Name as if it were a Case-Respecting Quoted String
-
-                call.append(word)
-                continue
-
-            # Demand that no Syntax Error escaped earlier Guards
-
-            except SyntaxError:
-                assert False, (py, pys, strip)
-
-        if call:
-            calls.append(call)
-            call = list()  # unneeded
-
-        if not calls:
-            return ""
-
-        # Exit a Tada Pause between Calls
-
-        if tada_func_else:
-            tada_func = tada_func_else
-
-            self.tada_func_else = None
-
-            tada_func()
-
-        # Make each Call in order
-
-        for call in calls:
-            verb = call[0]
-            args = call[1:]
-
-            if id(call) in calculated_call_ids:
-                print(f"{verb}({", ".join(repr(_) for _ in args)})")
-
-            assert verb, (verb, call, calls, readline)
-            assert isinstance(verb, str), (type(verb), verb, call, calls, readline)
-
-            iverb = verb.casefold()
-            if iverb in func_by_verb:
-                func = func_by_verb[iverb]
-                try:
-                    func(*args)
-
-                except Exception:
-                    hostname = platform.node()
-                    debug = hostname.startswith("plavarre")
-                    if debug:
-                        traceback.print_exc()  # todo: log the Traceback of Exc
-                        return ""
-
-                    format_exc = traceback.format_exc()
-                    line = format_exc.splitlines()[-1]
-                    print(line)
-                    return ""
-            else:
-                py = f"{iverb}({', '.join(repr(_) for _ in args)})"
-                rep = self.py_eval_to_repr(py)
-                if rep:
-                    print(rep)
-
-        # Succeed
-
-        return ""
-
-    def to_func_by_verb(self) -> dict[str, typing.Callable]:
-        """Say how to spell each Command Verb"""
-
-        keys = list()
-
-        d: dict[str, typing.Callable]
-        d = dict()
-
-        func_by_join = self.to_func_by_join()
-        for join, func in func_by_join.items():
-            func_verbs = join.split()
-            keys.extend(func_verbs)
-            for verb in func_verbs:
-                d[verb] = func
-
-        collisions = list(_ for _ in collections.Counter(keys).items() if _[-1] != 1)
-        assert not collisions, (collisions,)
-
-        return d
-
-    def to_func_by_join(self) -> dict[str, typing.Callable]:
-        """Choose 1 or more spellings for each 🐢 Command Verb"""
-
-        d: dict[str, typing.Callable]
-        d = {
-            "backward back bk": self.do_backward,
-            "beep b": self.do_beep,
-            "bye exit quit": self.do_bye,
-            "clearscreen clear cls cs": self.do_clearscreen,
-            "forward fd": self.do_forward,
-            "help h": self.do_help,
-            "home": self.do_home,
-            "hideturtle ht": self.do_hideturtle,
-            "label lb": self.do_label,
-            "left lt": self.do_left,
-            "pendown pd": self.do_pendown,
-            "penup pu": self.do_penup,
-            "print p": self.do_print,
-            "repeat rep": self.do_repeat,
-            "reset": self.do_reset,
-            "right rt": self.do_right,
-            "sleep s": self.do_sleep,
-            "setheading seth": self.do_setheading,
-            "sethertz hz": self.do_sethertz,
-            "setpencolor setpc": self.do_setpencolor,
-            "setpenpunch setpch": self.do_setpenpunch,
-            "setxy xy": self.do_setxy,
-            "showturtle gt": self.do_showturtle,
-            "tada t": self.do_tada,
-        }
-
-        return d
 
     def do_bye(self) -> None:
         """Quit the Turtle Chat"""
@@ -3132,10 +2923,6 @@ class TurtleClientWas:
 
         return (verbs, grunts)
 
-    def do_print(self, *args) -> None:
-        """Print the Str of each Arg, separated by Spaces, and then 1 Line_Break"""
-
-        print(*args)
 
 '''
 
@@ -3143,8 +2930,6 @@ class TurtleClientWas:
 #
 # 🐢 My Guesses of Main Causes of loss in Net Promoter Score (NPS) # todo
 #
-# todo: can't paste the drawing back into the Terminal
-# todo: hangs now and again
 # todo: details still churning for the resulting drawing
 #
 
@@ -3152,15 +2937,12 @@ class TurtleClientWas:
 #
 # 🐢 Bug Fixes  # todo
 #
-#
 # todo: solve the thin flats left on screen behind:  reset cs pu  sethertz 10 rep 8
 # also differs by Hertz:  reset cs pu  sethertz rep 8
 # also:  sethertz cs pu setxy 250 250  sethertz 100 home
 # also:  sethertz cs pu setxy 0 210  sethertz 100 home
 #
-#
 # todo: solve why ↓ ↑ Keys too small - rounding trouble?:  demos/arrow-keys.logo
-#
 #
 # todo: test bounds collisions
 #   reset cs pd  pu setxy 530 44 pd  lt fd 300
@@ -3169,22 +2951,12 @@ class TurtleClientWas:
 # todo: strip out the Sgr and then limit "setpch" to 1 Char
 # todo: unlock Verb for less limited experimentation
 #
-# todo: repro/ fix remaining occasional hangs in the named-pipe mkfifo of Linux & macOS
-# todo: start the 🐢 Chat without waiting to complete the first write to the 🐢 Sketch
-#
-# todo: solve ⌘K vs Turtle Server - record the input, fix the output, especially wide prompts
-#
 
 #
 # 🐢 Turtle Demos  # todo
 #
-#
-# todo: Write a Tutorial
-#
-#
 # todo: 'cs ...' to choose a next demo of a shuffle
 # todo: 'import filename' or 'load filename' to fetch & run a particular file
-#
 #
 # todo: early visual wows of a twitch stream
 # todo: z-layers to animate a clock of hours/ minutes/ second hands
@@ -3193,7 +2965,6 @@ class TurtleClientWas:
 # todo: marble games
 # todo: menus w drop shadow & keyboard & mouse - a la Borland Dos Turbo C++
 # todo: vi - emacs - notepad
-# todo: 'batteries included better than homemade'
 #
 # todo: randomly go to corners till all eight connections drawn
 # todo: Serpienski's Gasket, near to Koch Curve at F+F--F+F in Lindenmayer System
@@ -3208,21 +2979,17 @@ class TurtleClientWas:
 # todo: blink heading:  sethertz 5  pu  st s ht s  bk 10 st s ht s  fd 20 st s ht s  bk 10 st s ht s  st
 # todo: smoke tests of call the Grunts & Verbs as cited by:  help
 #
-# garbled to do was: 🐢 Tada exists
-#
 
 #
 # 🐢 Turtle Shadow Engine  # todo
-#
 #
 # z layer "█@" for a Turtle with 8 Headings
 # todo: z-layers, like one out front with more fun Cursors as Turtle
 # todo: thinner X Y Pixels & Pens, especially the 0.5X 1Y of U+2584 Lower, U+2580 Upper
 #
-#
 # todo: fill and clear to collision, with colors, with patterns
 #
-# todo: do & redo & undo for Turtle work
+# todo: do & redo & undo & clear-all-yours for Turtle work
 #
 # todo: take end-of-Tada in from Vi
 # todo: take Heading in from Vi
@@ -3237,6 +3004,13 @@ class TurtleClientWas:
 # 🐢 Turtle Graphics Engine  # todo
 #
 #
+# todo: try Squarish Pixels of 2 Horizontal Chars each
+#
+#
+# todo: plot Fonts of Characters
+#
+#
+# todo: vs thin grey lines
 # todo: t.penmark should stay as the Chars only, but we always ⎋[Y;XH to where we were - vs thin grey
 #
 # todo: thicker X Y Pixels
@@ -3247,10 +3021,6 @@ class TurtleClientWas:
 #
 # todo: edge cap cursor position, wrap, bounce, whine, stop
 # todo: 500x500 canvas at U Brown of UCBLogo
-#
-#
-# todo: plot Fonts of Characters
-#
 #
 # todo: label "\e[41m" cs - does work, fill screen w background colour, do we like that?
 #
@@ -3266,37 +3036,40 @@ class TurtleClientWas:
 # todo: more bits of Turtle State on Screen somehow
 # todo: more perceptible Screen State, such as the Chars there already
 #
-#
 # todo: 3D Turtle position & trace
 #
 
 #
 # 🐢 Turtle Chat Engine  # todo
 #
-# todo: e Pi Inf -Inf NaN ... sqrt power ... math.tau t.tau ...
-# todo: print (p) repr's, cleartext (ct) mention ⌘K
-# todo: setcursor [x y], cursor
 #
+# todo: Revive 🐢 Repeat to draw polygons off-center to the right
+# todo: Revive 🐢 Bye 🐢 Exit 🐢 Quit - Catch the SystemExit and relay it?
+# todo: Revive 🐢 Help
+#
+# todo: work with random choices
+#
+# todo: work with blocks, such as:  for _ in range(8): t.forward(100e0); t.right(45e0)
+#
+# todo: work with variables somehow - spirals, Sierpienski, etc
+#
+#
+# todo: e Pi Inf -Inf NaN ... sqrt power ... math.tau t.tau ...
 # todo: \e escapes in Str
-# todo: kebab-case as a string becomes "kebab case"
+# todo: kebab-case as a string becomes "kebab case"  # unicodedata.lookup Full-Block
 # todo: input Sh lines:  !uname  # !ls  # !cat - >/dev/null  # !zsh
-# todo: input Py lines:  ;sys.version_info[:3]  # ;breakpoint()
-# todo: stop rejecting ; as Eval Syntax Error, route to Exec instead
+#
+# todo: UCB Logo cleartext (ct) mention ⌘K
+# todo: UCB Logo setcursor [x y], cursor
 #
 # todo: 🐢 Punch ... "\n"   # to print at Server, vs Print at Client
 # todo: 🐢 After ...  # to get past next Float Seconds milestone in Screen .typescript
 #
 # todo: tweak the fd.d to hold diameter constant in 🐢 rep n abbreviation of rep n [fd fd.d rt rt.angle]
 #
-# todo: prompts placed correctly in the echo of multiple lines of Input
-#
-# todo: 🐢 SetY, 🐢 SetX, for one-dimensional movement
-#
 # todo: 🐢 Pin to drop a pin (in float precision!)
 # todo: 🐢 Go to get back to it
 # todo: 🐢 Pin that has a name, and list them at 🐢 Go, and delete them if pinned twice in same place
-#
-# todo: or teach 🐢 Label to take a last arg of "" as an ask for no newline?
 #
 # todo: rep n [fd fd.d rt rt.angle]
 # todo: 'to $name ... end' vs 'def $name [ ... ]'
@@ -3341,12 +3114,14 @@ class TurtleClientWas:
 #
 # 🐢 Python Makeovers  # todo
 #
-#
-# todo: factor out Class Turtle, think into running more than one
-# todo: factor out 'import turtling'
-#
 # todo: def efprint1(self, form, **kwargs) at uturtle.Turtle for printing its Fields
 # todo: print only first and then changes in the form result
+#
+
+#
+# 🐢 Garbled Ideas  # todo
+#
+# todo: Tada exists
 #
 
 #

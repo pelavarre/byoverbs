@@ -10,6 +10,7 @@ Contents
   - [Symmetry](#symmetry)
   - [Shape of Window, Darkmode, Lightmode, and Fonts](#shape-of-window-darkmode-lightmode-and-fonts)
 - [Draw a Large Square](#draw-a-large-square)
+- [What comes next](#what-comes-next)
 - [Choose Your Own Turtle Logo](#choose-your-own-turtle-logo)
   - [Does it work at your desk?](#does-it-work-at-your-desk)
   - [What kind of drawings does it make?](#what-kind-of-drawings-does-it-make)
@@ -137,6 +138,16 @@ Try
 
 Turtle Logo's disagree over how large this Square is.
 UCB Turtle Logo makes this Square as large as the Window
+
+
+## What comes next
+
+You're visiting while we're still rapidly rewriting what's here
+
+Another thing that presently works is
+
+    relaunch
+    for _ in range(8): t.forward(100e0); t.right(45e0)
 
 
 ## Choose Your Own Turtle Logo
