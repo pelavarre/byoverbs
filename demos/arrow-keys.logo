@@ -8,35 +8,34 @@ relaunch
 
 # Draw the → Key to the right of Center
 
-st pd seth
-fd rt 120  fd rt 120  fd rt 120
-pu ht home
+pu home
+rt fd fd rt fd fd seth pd
+
+fd 250 rt 120  fd 250 rt 120  fd 250 rt 120
+
 
 # Draw the ← Key far away at the Left
 
-lt 90 fd 300
+pu home
+lt 90 fd fd lt 90 fd fd seth pd
 
-st pd seth
-fd lt 120  fd lt 120  fd lt 120
-pu ht home
+fd 250 lt 120  fd 250 lt 120  fd 250 lt 120
+
 
 # Draw the ↓ Key in the Middle, between the ← Key and the the → Key
 
-lt 90 fd 200
-# rt fd 80  # nope, not fd 200 while the ↓ and ↑ drawn small
-rt fd  # aligned top while the ↓ and ↑ drawn small
+pu home
+lt 90 fd 125 seth fd 50 rt pd
 
-st pd seth rt
-fd rt 120  fd rt 120  fd rt 120
-pu ht home
+fd 250 rt 120  fd 250 rt 120  fd 250 rt 120
+
 
 # Draw the ↑ Key above the rest
 
-lt 90 fd 200
-rt fd fd 80  # nope, not fd 200 while the ↓ and ↑ drawn small
+pu home
+lt 90 fd 125 seth fd 125 rt pd
 
-st pd seth rt
-fd lt 120  fd lt 120  fd lt 120
+fd 250 lt 120  fd 250 lt 120  fd 250 lt 120
 
 
 restart tada
