@@ -163,7 +163,7 @@ Presently, you can draw an Octagon like this
     rep 8
 
 Traditionally, talk of Turtle Logo
-makes the first lesson in "🐢? repeat" be exactly this:
+makes the first lesson in '🐢? repeat' be exactly this:
 the parts of a polygon
 drawn by repeating a Forward Move and a Right Turn
 
@@ -173,7 +173,7 @@ You can draw an Octagon by more spelling out the steps
     fd rt 45  fd rt 45  fd rt 45  fd rt 45
     fd rt 45  fd rt 45  fd rt 45  fd rt 45
 
-We let you say "fd" in place of "fd 100" or "forward 100"
+We let you say 'fd' in place of 'fd 100' or 'forward 100'
 Most other Turtle Logos hold to the 1960's Lisp convention
 of requiring you to give the same number of arguments every time you try something,
 unless you explicitly enclose them inside '()' parentheses.
@@ -196,9 +196,9 @@ then you can draw N as large as 24 in my Terminal today
 
 For the Notes coming back from the Turtle to make sense,
 you'll want to see them in real-time.
-If you try "sleep 0" after you press Return, before the N = and For,
+If you try 'sleep 0' after you press Return, before the N = and For,
 then you'll see the Note on you having pressed Return pops up then.
-You can try just "s" to clear the Note too.
+You can try just 's' to clear the Note too.
 That works a little less directly,
 by sleeping as long as the last 🐢 SetHertz said to sleep
 
@@ -225,10 +225,10 @@ that being their quick way for you to say Print Repr
 that even works with single-letter variable names
 
 If you shove hard enough,
-then you can test "🐢? breakpoint(); pass"
-which is ">>> breakpoint(); pass"
+then you can test '🐢? breakpoint(); pass'
+which is '>>> breakpoint(); pass'
 which is a less helpful thing,
-because it runs inside "tty.setraw"
+because it runs inside 'tty.setraw'
 which is practically never what you want
 
 

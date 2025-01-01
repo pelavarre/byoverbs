@@ -410,7 +410,7 @@ class BytesTerminal:
             if debug:
                 tty.setcbreak(fileno, when=termios.TCSAFLUSH)  # ⌃C prints Py Traceback
             else:
-                tty.setraw(fileno, when=before)  # SetRaw defaults to TcsaFlush
+                tty.setraw(fileno, when=before)  # Tty SetRaw defaults to TcsaFlush
 
         return self
 
@@ -1533,10 +1533,11 @@ class Turtle:
         gt = self.glass_teletype
         heading = self.heading
 
-        if round(heading) != 90:
+        if round(heading) != 90:  # 90° East
             raise NotImplementedError("Printing Labels for Headings other than 90° East")
 
             # todo: Printing Labels for 180° South Heading
+            # todo: Printing Labels for -90° West and 0° North
             # todo: Printing Labels for Headings other than 90° East and 180° South
 
         (y_row, x_column) = gt.os_terminal_y_row_x_column()
@@ -1546,6 +1547,7 @@ class Turtle:
         line += "\n"  # just Line-Feed \n without Carriage-Return \r
 
         gt.schars_write(line)
+        self.float_y -= 1
 
         d = dict(float_x=self.float_x, float_y=self.float_y)
         return d
@@ -1755,18 +1757,26 @@ class Turtle:
         float_x = 0e0 if (x is None) else float(x)
         float_y = 0e0 if (y is None) else float(y)
 
+        # Choose the Starting Point
+
+        (x1, y1) = self.x_y_position()  # may change .float_x .float_y
+
+        # Choose the Ending Point
+
         float_x_ = float_x / 10  # / 10 to a screen of a few large pixels
         float_y_ = float_y / 10 / 2  # / 2 for thin pixels
 
         float_x__ = round(float_x_, 10)
         float_y__ = round(float_y_, 10)
 
-        (x1, y1) = self.x_y_position()
-
         x2 = round(float_x_)
         y2 = round(float_y_)
 
+        # Draw the Line Segment to X2 Y2 from X1 Y1
+
         self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2)
+
+        # Catch up the Precise X Y Shadows
 
         self.float_x = float_x__
         self.float_y = float_y__
@@ -1774,13 +1784,13 @@ class Turtle:
         d = dict(float_x=self.float_x, float_y=self.float_y)
         return d
 
+        # todo: Share most of .setxy with ._punch_bresenham_stride_ of .forward/ .backward
+
         # FMSLogo SetXY & UBrown SetXY & UCBLogo SetXY alias SetPos
         # PyTurtle Goto aliases SetPos, PyTurtle Teleport is With PenUp SetPos
         # Scratch Point-In-Direction-90
         # Scratch Go-To-X-Y
         # UCBLogo Goto is a Control Flow Goto
-
-        # todo: setx without setxy, sety without setxy
 
     def showturtle(self) -> dict:
         """Start showing where the Turtle is"""
@@ -1813,8 +1823,6 @@ class Turtle:
             d = dict(rest=rest)
             return d
 
-        self.x_y_position()  # here do raise the Note on who moved the Terminal Cursor
-
         time.sleep(seconds)  # may raise ValueError or TypeError
 
         d = dict(seconds=seconds)  # not the sticky .rest
@@ -1837,7 +1845,8 @@ class Turtle:
 
         # Choose the Starting Point
 
-        (x1, y1) = self.x_y_position()
+        (x1, y1) = self.x_y_position()  # may change .float_x .float_y
+
         float_x = self.float_x
         float_y = self.float_y
         assert (x1 == round(float_x)) and (y1 == round(float_y)), (x1, float_x, y1, float_y)
@@ -1887,6 +1896,8 @@ class Turtle:
             # wanted close like:  cs  reset pd  fd rt 120  fd rt 120  fd rt 120
             # wanted close like:  cs  reset pd  rep 4 [fd rt 90]
             # surfaced by:  walking polygons
+
+        # Catch up the Precise X Y Shadows
 
         self.float_x = float_x__
         self.float_y = float_y__
@@ -2011,7 +2022,13 @@ class Turtle:
             float_x_ = float(x1)  # 'explicit is better than implicit'
             float_y_ = float(y1)
 
-            note = f"Snap to X Y {float_x_} {float_y_} from {float_x} {float_y}"
+            floats = (float_x_, float_y_, float_x, float_y)
+            (ix_, iy_, ix, iy) = (int(float_x_), int(float_y_), int(float_x), int(float_y))
+            if floats == (ix_, iy_, ix, iy):
+                note = f"Snap to X Y {ix_} {iy_} from {ix} {iy}"
+            else:
+                note = f"Snap to X Y {float_x_} {float_y_} from {float_x} {float_y}"
+
             gt.notes.append(note)  # todo: should all Glass-Terminal Notes be Exceptions?
 
             self.float_x = float_x_
@@ -2657,6 +2674,12 @@ class TurtlingServer:
         gt = self.glass_teletype
         st = gt.str_terminal
 
+        locals_ = self.locals_
+        default_eq_None = None
+        t = locals_.get("t", default_eq_None)
+
+        assert (t is None) or isinstance(t, Turtle), type(t)
+
         # Read a Python Text In, or an "" Empty Str, or fail to read
 
         rtext_else = reader.fd_read_text_else(reader_fd)
@@ -2672,13 +2695,25 @@ class TurtlingServer:
 
         wtext = ""
         if py:
-            value = self.py_eval(py)
-            if isinstance(value, dict):
-                assert "notes" not in value.keys(), (py, value.keys())
-                if gt.notes:  # todo: count the cost of varying this schema only sometimes
-                    value["notes"] = list(gt.notes)
+
+            wvalue = self.py_eval(py)
+            if t is not None:
+                t.x_y_position()  # raises the Note on who moved the Terminal Cursor
+
+            if gt.notes:
+
+                if wvalue is None:
+                    wvalue = dict(notes=list(gt.notes))  # replaces
                     gt.notes.clear()
-            wtext = repr(value)
+
+                elif isinstance(wvalue, dict):
+                    assert "notes" not in wvalue.keys(), (py, wvalue.keys())
+                    wvalue["notes"] = list(gt.notes)  # mutates
+                    gt.notes.clear()
+
+                    # todo: count the cost of varying the .wvalue schema only sometimes
+
+            wtext = repr(wvalue)
 
         # Write back out the Repr of its Eval (except write back "" Empty Str for same)
 
@@ -2692,6 +2727,11 @@ class TurtlingServer:
 
     def py_eval(self, py) -> object | None:
         """Eval a Python Expression, or exec a Statement, or raise an Exception"""
+
+        gt = self.glass_teletype
+        bt = gt.bytes_terminal
+        fileno = bt.fileno
+        tcgetattr_0 = termios.tcgetattr(fileno)
 
         globals_ = globals()
         locals_ = self.locals_
@@ -2729,6 +2769,20 @@ class TurtlingServer:
         except Exception:
 
             value = traceback.format_exc()
+
+        # If need be, then recover from such stress as:  help();
+
+        tcgetattr_1 = termios.tcgetattr(fileno)
+        if tcgetattr_1 != tcgetattr_0:
+            note = "Snap to Tty SetRaw"  # details at 'difflib.unified_diff' of 'pprint.pformat'
+            gt.notes.append(note)
+
+            when = termios.TCSADRAIN
+            tty.setraw(fileno, when)  # Tty SetRaw defaults to TcsaFlush
+
+            # todo: tty.setraw, or termios.tcsetattr to .tcgetattr_0 or to bt.tcgetattr_else
+
+        # Succeed
 
         return value
 
@@ -2951,6 +3005,9 @@ class TurtleClient:
                 for note in notes:
                     eprint("Note:", note)
 
+                if not clone:  # lets a Dict carry Notes on behalf of None
+                    return None
+
                 ptext = repr(clone)
                 return ptext
 
@@ -3141,7 +3198,9 @@ r'''
 # 🐢 Turtle Chat Engine  # todo
 #
 #
-# todo: revive 🐢 Repeat to draw polygons off-center to the right
+# todo: 🐢 d = 100; bk.d = 200; a = 90; lt.a = 45
+#
+#
 # todo: revive 🐢 Bye 🐢 Exit 🐢 Quit - Catch the SystemExit and relay it?
 # todo: revive 🐢 Help
 #
@@ -3169,6 +3228,8 @@ r'''
 # todo: 🐢 Pin to drop a pin (in float precision!)
 # todo: 🐢 Go to get back to it
 # todo: 🐢 Pin that has a name, and list them at 🐢 Go, and delete them if pinned twice in same place
+#
+# todo: 🐢 turtle.mode("Trig") for default East counting anticlockwise
 #
 # todo: rep n [fd fd.d rt rt.angle]
 # todo: 'to $name ... end' vs 'def $name [ ... ]'
