@@ -1214,6 +1214,7 @@ class GlassTeletype:
 
     bytes_terminal: BytesTerminal
     str_terminal: StrTerminal
+    notes: list[str]
 
     # FIXME: Snoop a guess of what Chars in which Columns of which Rows
     # FIXME: Draw the new, undraw the old only where not already replaced
@@ -1228,6 +1229,7 @@ class GlassTeletype:
 
         self.bytes_terminal = st.bytes_terminal
         self.str_terminal = st
+        self.notes = list()
 
         glass_teletypes.append(self)
 
@@ -1247,7 +1249,7 @@ class GlassTeletype:
         st.__exit__()
         getsignal = signal.getsignal(signal.SIGINT)
 
-        breakpoint()  # where, up, down, ...
+        breakpoint()  # c, where, up, down, p, pp ...
         pass
 
         signal.signal(signal.SIGINT, getsignal)
@@ -1358,7 +1360,7 @@ class Turtle:
 
         self.penscape = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
         self.penmark = FullBlock
-        self.warping = False
+        self.warping = False  # todo: imply .isdown more clearly
         self.hiding = False
 
         self.rest = 1 / 1e3
@@ -1366,6 +1368,13 @@ class Turtle:
         # todo: self.tada_func_else = None
 
         # macOS Terminal Sh Launch/ Quit doesn't clear the Graphic Rendition, Cursor Style, etc
+
+    def breakpoint(self) -> None:
+        """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
+
+        gt = self.glass_teletype
+        gt.schars_write("\r\n")
+        gt.breakpoint()  # todo:  🐢? breakpoint  is not  🐢? breakpoint()
 
     def clearscreen(self) -> None:
         """Write Spaces over every Character of every Screen Row and Column"""
@@ -1386,6 +1395,9 @@ class Turtle:
         self.restart()
         self.clearscreen()
 
+        gt = self.glass_teletype
+        gt.notes.clear()  # todo: Count Exception Notes lost per Relaunch
+
         d = self.asdict()
         return d
 
@@ -1395,17 +1407,21 @@ class Turtle:
     def restart(self) -> dict:
         """Warp the Turtle to Home, and clear its Settings, but do Not clear the Screen"""
 
-        self._reinit_()
-
         self.hideturtle()
         self.penup()
         self.home()
+
         self.pendown()
         self.setpencolor()
+
+        self._reinit_()
+
         self.showturtle()
 
         d = self.asdict()
         return d
+
+        # todo: explain why .home before ._reinit_, why .showturtle after, etc
 
         # todo: Terminal Cursor Styles
 
@@ -1435,7 +1451,7 @@ class Turtle:
         float_stride = 200e0 if (distance is None) else float(distance)
         self._punch_bresenham_stride_(-float_stride)
 
-        d = dict(float_x=self.float_x, float_y=self.float_y)
+        d = dict(float_x=self.float_x, float_y=self.float_y, rest=self.rest)
         return d
 
         # Assymetric defaults for 🐢 Backward and 🐢 Forward make their Distance Arg more discoverable
@@ -1465,7 +1481,7 @@ class Turtle:
         float_stride = 100e0 if (distance is None) else float(distance)
         self._punch_bresenham_stride_(float_stride)
 
-        d = dict(float_x=self.float_x, float_y=self.float_y)
+        d = dict(float_x=self.float_x, float_y=self.float_y, rest=self.rest)
         return d
 
         # Assymetric defaults for 🐢 Forward and 🐢 Backward make their Distance Arg more discoverable
@@ -1578,14 +1594,12 @@ class Turtle:
         """Run some instructions a chosen number of times, often less or more than once"""
 
         count = 1 if (count is None) else int(count)
-        if not count:
-            self.forward(0)  # punches the initial pixel without moving on
-            self.right(0)  # mostly harmless
-        else:
-            angle = 360e0 / count
-            for _ in range(count):
-                self.forward()  # the traditional [fd rt]
-                self.right(angle)  # todo: never the countercultural [rt fd]
+        assert count >= 3, (count,)  # todo: what is a Rep 0, Rep 1, or Rep 2 Polygon?
+
+        angle = 360e0 / count
+        for _ in range(count):
+            self.forward()  # the traditional [fd rt]
+            self.right(angle)  # todo: never the countercultural [rt fd]
 
         d = dict(float_x=self.float_x, float_y=self.float_y, heading=self.heading)
         return d
@@ -1622,6 +1636,8 @@ class Turtle:
         float_hertz = 1000e0 if (hertz is None) else float(hertz)
         if float_hertz:
             rest1 = 1 / float_hertz
+
+            assert rest1 >= 0e0, (rest1, hertz)  # 0e0 at Inf Hertz
 
         self.rest = rest1
 
@@ -1739,15 +1755,21 @@ class Turtle:
         float_x = 0e0 if (x is None) else float(x)
         float_y = 0e0 if (y is None) else float(y)
 
+        float_x_ = float_x / 10  # / 10 to a screen of a few large pixels
+        float_y_ = float_y / 10 / 2  # / 2 for thin pixels
+
+        float_x__ = round(float_x_, 10)
+        float_y__ = round(float_y_, 10)
+
         (x1, y1) = self.x_y_position()
 
-        x2 = round(float_x / 10)  # / 10 to a screen of a few large pixels
-        y2 = round(float_y / 10 / 2)  # / 2 for thin pixels
+        x2 = round(float_x_)
+        y2 = round(float_y_)
 
         self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2)
 
-        self.float_x = float_x  # not 'float_x_'
-        self.float_y = float_y  # not 'float_y_'
+        self.float_x = float_x__
+        self.float_y = float_y__
 
         d = dict(float_x=self.float_x, float_y=self.float_y)
         return d
@@ -1779,14 +1801,26 @@ class Turtle:
         d = dict(hiding=self.hiding)
         return d
 
-    def sleep(self) -> dict:
+    def sleep(self, seconds=None) -> dict:
         """Hold the Turtle still for a moment"""
 
         rest = self.rest
-        time.sleep(rest)  # todo: give credit for delay in work before t.sleep
+        assert rest >= 0e0, (rest,)
 
-        d = dict(rest=self.rest)
+        if seconds is None:
+            time.sleep(rest)
+
+            d = dict(rest=rest)
+            return d
+
+        self.x_y_position()  # here do raise the Note on who moved the Terminal Cursor
+
+        time.sleep(seconds)  # may raise ValueError or TypeError
+
+        d = dict(seconds=seconds)  # not the sticky .rest
         return d
+
+        # todo: give credit for delay in work before t.sleep
 
         # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s  st
 
@@ -1811,9 +1845,11 @@ class Turtle:
         # Choose the Ending Point
 
         angle = (90 - heading) % 360e0  # converts to 0° East Anticlockwise
+
         float_x_ = float_x + (stride_ * math.cos(math.radians(angle)))  # destination
-        float_x__ = round(float_x_, 10)  # todo: how round should our Float Maths be?
         float_y_ = float_y + (stride_ * math.sin(math.radians(angle)) / 2)  # / 2 for thin pixels
+
+        float_x__ = round(float_x_, 10)  # todo: how round should our Float Maths be?
         float_y__ = round(float_y_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
 
         x2 = round(float_x__)
@@ -1975,7 +2011,9 @@ class Turtle:
             float_x_ = float(x1)  # 'explicit is better than implicit'
             float_y_ = float(y1)
 
-            # print(f"snap to {float_x_} {float_y_} from {float_x} {float_y}")
+            note = f"Snap to X Y {float_x_} {float_y_} from {float_x} {float_y}"
+            gt.notes.append(note)  # todo: should all Glass-Terminal Notes be Exceptions?
+
             self.float_x = float_x_
             self.float_y = float_y_
 
@@ -2008,6 +2046,12 @@ class PythonSpeaker:
         held_pycalls.clear()
 
         funcnames = self.cls_to_funcnames(cls)
+
+        # Take 'breakpoint()' as meaning 't.breakpoint()' not 'breakpoint();pass'
+
+        if re.fullmatch(r"breakpoint *[(] *[)] *", string=text):
+            pycalls.append("t.breakpoint()")
+            return pycalls
 
         # Forward Python unchanged
 
@@ -2450,6 +2494,11 @@ class TurtlingFifoProxy:
         # Recover Synch, if lost
 
         if index_line != f"index={index}\n":
+            if text.startswith("'Traceback (most recent call last):"):  # todo: instructions to repro
+                format_exc = ast.literal_eval(text)
+                eprint(format_exc)
+                sys.exit(1)
+
             assert text == "", (text, index_line, index)
 
             alt_index = int(index_line.removeprefix("index="))
@@ -2605,13 +2654,10 @@ class TurtlingServer:
 
         reader_fd = reader.fileno
 
-        globals_ = globals()
-        locals_ = self.locals_
-
         gt = self.glass_teletype
         st = gt.str_terminal
 
-        # Read a Python Text In
+        # Read a Python Text In, or an "" Empty Str, or fail to read
 
         rtext_else = reader.fd_read_text_else(reader_fd)
         if rtext_else is None:
@@ -2622,41 +2668,17 @@ class TurtlingServer:
         rtext = rtext_else
         py = rtext
 
-        # Eval the Python Text (except eval "" Empty Str as same)
+        # Eval the "" Empty Str or the Python Text
 
         wtext = ""
-
         if py:
-
-            try:  # todo: shrug off PyLance pretending eval/exec 'locals=' doesn't work
-
-                eval_ = eval(py, globals_, locals_)
-
-            except NameError:  # from Py Eval
-
-                eval_ = traceback.format_exc()
-
-                eline = eval_.splitlines()[-1]
-                m = re.match(r"NameError: name '([^']*)' is not defined\b", string=eline)
-                if m:
-                    ename = m.group(1)
-                    pyname = py.partition("#")[0].strip()
-                    if ename == pyname:
-                        eval_ = ename
-
-            except SyntaxError:  # from Py Eval
-
-                eval_ = None
-                try:
-                    exec(py, globals_, locals_)
-                except Exception:
-                    eval_ = traceback.format_exc()
-
-            except Exception:
-
-                eval_ = traceback.format_exc()
-
-            wtext = repr(eval_)
+            value = self.py_eval(py)
+            if isinstance(value, dict):
+                assert "notes" not in value.keys(), (py, value.keys())
+                if gt.notes:  # todo: count the cost of varying this schema only sometimes
+                    value["notes"] = list(gt.notes)
+                    gt.notes.clear()
+            wtext = repr(value)
 
         # Write back out the Repr of its Eval (except write back "" Empty Str for same)
 
@@ -2667,6 +2689,48 @@ class TurtlingServer:
         writer.fd_write_text(writer.fileno, text=wtext)
 
         # trades with TurtleClient.trade_text_else
+
+    def py_eval(self, py) -> object | None:
+        """Eval a Python Expression, or exec a Statement, or raise an Exception"""
+
+        globals_ = globals()
+        locals_ = self.locals_
+
+        try:  # todo: shrug off PyLance pretending eval/exec 'locals=' doesn't work
+
+            value = eval(py, globals_, locals_)  # todo:  🐢? breakpoint()  is not  🐢? breakpoint
+
+        except bdb.BdbQuit:  # from Py Eval  # of the Quit of a Pdb Breakpoint
+
+            raise
+
+        except NameError:  # from Py Eval
+
+            value = traceback.format_exc()
+
+            eline = value.splitlines()[-1]
+            m = re.match(r"NameError: name '([^']*)' is not defined\b", string=eline)
+            if m:
+                ename = m.group(1)
+                pyname = py.partition("#")[0].strip()
+                if ename == pyname:
+                    value = ename
+
+        except SyntaxError:  # from Py Eval
+
+            value = None
+            try:
+                exec(py, globals_, locals_)
+            except bdb.BdbQuit:  # from Py Exec  # of the Quit of a Pdb Breakpoint
+                raise
+            except Exception:
+                value = traceback.format_exc()
+
+        except Exception:
+
+            value = traceback.format_exc()
+
+        return value
 
 
 #
@@ -2833,6 +2897,8 @@ class TurtleClient:
 
         globals_ = globals()
 
+        # Run calls of 'p(' at the Client, to Print Repr (same as Pdb does)
+
         def p(*args):
             text = ", ".join(repr(_) for _ in args)
             eprint(text)
@@ -2843,6 +2909,9 @@ class TurtleClient:
             exec(py, globals_, locals_)
             return None
 
+        # Trade with the Server
+        # But say EOFError if the Server Quit our Conversation
+
         wtext = py
         rtext_else = self.trade_text_else(wtext)
         if rtext_else is None:
@@ -2850,13 +2919,42 @@ class TurtleClient:
             return ptext
 
         rtext = rtext_else
+
+        # Try taking the Text as a Python Repr
+
+        try:
+            value = ast.literal_eval(rtext)
+        except Exception:
+            ptext = rtext
+            return rtext
+
+        # Take a None as None, such as from Turtle.breakpoint
+
+        if value is None:
+            return None
+
+        # Take a Python Traceback as Quoted Lines to Print
+
         if rtext.startswith("'Traceback (most recent call last):"):
-            format_exc = eval(rtext)
-            ptext = format_exc.rstrip()
+            ptext = value.rstrip()
             return ptext
 
-        if rtext == "None":
-            return None
+        # Print the Top-Level Notes on a Dict before returning the Dict
+
+        if isinstance(value, dict):
+            if "notes" in value.keys():
+                clone = dict(value)
+
+                notes = clone["notes"]
+                del clone["notes"]
+
+                for note in notes:
+                    eprint("Note:", note)
+
+                ptext = repr(clone)
+                return ptext
+
+        # Else fall back to returning the Text without Eval
 
         ptext = rtext
         return ptext

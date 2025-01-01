@@ -10,8 +10,11 @@ Contents
   - [Symmetry](#symmetry)
   - [Shape of Window, Darkmode, Lightmode, and Fonts](#shape-of-window-darkmode-lightmode-and-fonts)
 - [Draw a Large Square](#draw-a-large-square)
-- [What comes next](#what-comes-next)
-- [Choose Your Own Turtle Logo](#choose-your-own-turtle-logo)
+- [Play around](#play-around)
+- [Breakpoints](#breakpoints)
+  - [Breakpoint the Server](#breakpoint-the-server)
+  - [Breakpoint the Client](#breakpoint-the-client)
+- [Try out some other Turtle Logo](#try-out-some-other-turtle-logo)
   - [Does it work at your desk?](#does-it-work-at-your-desk)
   - [What kind of drawings does it make?](#what-kind-of-drawings-does-it-make)
 - [Help us please](#help-us-please)
@@ -23,10 +26,14 @@ GitHub posts a rendering of this Md File.
 You might prefer the look of it at VsCode ⇧⌘V Markdown Open Preview
 
 
-
 ## Welcome
 
 Welcome to our game
+
+You download the Source Code
+
+    mkdir bin
+    curl -Ss https://github.com/pelavarre/byoverbs/raw/refs/heads/main/bin/turtling.py >bin/turtling.py
 
 You open one Terminal Window at right, and
 you tell it to invite Turtles to move around and draw on it
@@ -68,7 +75,7 @@ Note: We define 'import turtling'. They define 'import turtle'
 Try
 
     relaunch
-    fd rt 120  fd rt 120  fd rt 120
+    fd 100 rt 120  fd 100 rt 120  fd 100 rt 120
 
 You'll see a Triangle. Something like
 
@@ -80,6 +87,7 @@ You'll see a Triangle. Something like
     █ ███
     ██
 
+
 ### Relaunch
 
 Turtle Logo's disagree over how to speak the idea of Relaunch the Game.
@@ -87,6 +95,7 @@ We have you say Relaunch.
 Python Import Turtle would have you say Reset,
 so long as you're working with only 1 Turtle,
 but gets messier when working with more Turtles
+
 
 ### Symmetry
 
@@ -140,17 +149,104 @@ Turtle Logo's disagree over how large this Square is.
 UCB Turtle Logo makes this Square as large as the Window
 
 
-## What comes next
+## Play around
 
-You're visiting while we're still rapidly rewriting what's here
+Plainly, we should tell you more, but what?
 
-Another thing that presently works is
+You're visiting here in our earliest days,
+while we're still rapidly rewriting what's here,
+to make it more friendly
+
+Presently, you can draw an Octagon like this
 
     relaunch
-    for _ in range(8): t.forward(100e0); t.right(45e0)
+    rep 8
+
+Traditionally, talk of Turtle Logo
+makes the first lesson in "🐢? repeat" be exactly this:
+the parts of a polygon
+drawn by repeating a Forward Move and a Right Turn
+
+You can draw an Octagon by more spelling out the steps
+
+    relaunch
+    fd rt 45  fd rt 45  fd rt 45  fd rt 45
+    fd rt 45  fd rt 45  fd rt 45  fd rt 45
+
+We let you say "fd" in place of "fd 100" or "forward 100"
+Most other Turtle Logos hold to the 1960's Lisp convention
+of requiring you to give the same number of arguments every time you try something,
+unless you explicitly enclose them inside '()' parentheses.
+We depart from that convention inetntionally.
+We let you type out more or less arguments as you please
+
+You can also type out the raw Python to draw an Octagon
+
+    relaunch
+    n = 8
+    for _ in range(n): t.forward(100e0); t.right(360e0 / n)
+
+When drawing on the 101x42 Columns and Rows of my Terminal,
+you hit the edges and distort the drawing only when you choose an N of 17 or more.
+Some Turtle Logos will wrap the Cursor at the edges,
+rather than insisting that you always center your drawings yourself.
+Like if you press Return after Relaunch,
+but before the N = and For,
+then you can draw N as large as 24 in my Terminal today
+
+For the Notes coming back from the Turtle to make sense,
+you'll want to see them in real-time.
+If you try "sleep 0" after you press Return, before the N = and For,
+then you'll see the Note on you having pressed Return pops up then.
+You can try just "s" to clear the Note too.
+That works a little less directly,
+by sleeping as long as the last 🐢 SetHertz said to sleep
 
 
-## Choose Your Own Turtle Logo
+## Breakpoints
+
+
+### Breakpoint the Server
+
+To halt the Server and open it up inside the Pdb Python Debugger, try
+
+    🐢? breakpoint
+
+We'll run that as
+
+    >>> t.breakpoint()
+
+And then it works.
+
+To quit a Pdb Debugging Session, you press C and then Return.
+To get help with the Pdb language, you press H and then Return.
+I'd vote you learn the P command early,
+that being their quick way for you to say Print Repr
+that even works with single-letter variable names
+
+If you shove hard enough,
+then you can test "🐢? breakpoint(); pass"
+which is ">>> breakpoint(); pass"
+which is a less helpful thing,
+because it runs inside "tty.setraw"
+which is practically never what you want
+
+
+### Breakpoint the Client
+
+To halt the Client and open it up inside the Pdb Python Debugger, press
+
+    ⌃C
+
+By the default choices of Python itself, that works only once per Process Launch.
+But we've patched it up so it'll work even as you test it again and again
+
+If you have a habit of pressing ⌃C to mean ⌃U Discard Input Line,
+that habit won't work here,
+but ⌃U will work
+
+
+## Try out some other Turtle Logo
 
 You can try these same tests inside other Turtle Logo Apps.
 In particular, adding Python into macOS lets you try
@@ -183,6 +279,7 @@ I can only hope we'll scrub more bugs out of it and make it fast too
 Wiki > [Domain-specific language]([./demos/arrow-keys.logo](https://en.wikipedia.org/wiki/Domain-specific_language))
 Wiki > [Greenspun's tenth rule](https://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)
 
+
 ### Does it work at your desk?
 
 Our Turtle Logo runs inside more Terminals.
@@ -193,6 +290,7 @@ whereas their Turtle Logo tells you things like
     ModuleNotFoundError: No module named 'tkinter'
 
     _tkinter.TclError: no display name and no $DISPLAY environment variable
+
 
 ### What kind of drawings does it make?
 
