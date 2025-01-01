@@ -289,10 +289,10 @@ It reminds me how to spell the more forgettable Python Easter Eggs
 And this Python3·Py reminds me
 which Koans we've left out of the Zen of Python so far
 
-+ 'batteries included better than homemade'
-+ 'copied better than aliased'
-+ 'ordered better than muddled'
-+ 'python3' better than 'python3 -O'
++ 'included is better than homemade'
++ 'copied is better than aliased'
++ 'ordered is better than muddled'
++ 'python3' is better than 'python3 -O'
 
 And this Python3·Py reminds me
 when the different 3.2.1 "Major-Minor-Micro" Version Numbers came out and reached me too.

@@ -22,10 +22,10 @@ examples:
   python -i -c ''  # run without first showing a banner welcome message
 
   python3 -c 'import this' |tail +3 |cat -n |expand
-    # 'batteries included better than homemade'
-    # 'copied better than aliased'
-    # 'ordered better than muddled'
-    # 'python3' better than 'python3 -O'
+    # 'included is better than homemade'
+    # 'copied is better than aliased'
+    # 'ordered is better than muddled'
+    # 'python3' is better than 'python3 -O'
 
   : Dec/2008 Python 3  # major release date
   : Jun/2009 Python 3.1  # minor release date

@@ -29,6 +29,7 @@ import bdb
 import collections
 import decimal
 import glob
+import inspect
 import math
 import os
 import pathlib
@@ -60,7 +61,7 @@ Turtle_ = unicodedata.lookup("Turtle")  # 🐢 U+01F422
 
 
 if not __debug__:
-    raise NotImplementedError(str((__debug__,)))  # "'python3' better than 'python3 -O'"
+    raise NotImplementedError(str((__debug__,)))  # "'python3' is better than 'python3 -O'"
 
 
 #
@@ -561,7 +562,7 @@ class BytesTerminal:
                     # 16 Parameter Bytes in 0123456789:;<=>?
                     # 16 Intermediate Bytes of Space or in !"#$%&'()*+,-./
 
-                    # FIXME: accept Parameter Bytes only before Intermediate Bytes
+                    # todo: accept Parameter Bytes only before Intermediate Bytes
 
             break
 
@@ -1216,8 +1217,8 @@ class GlassTeletype:
     str_terminal: StrTerminal
     notes: list[str]
 
-    # FIXME: Snoop a guess of what Chars in which Columns of which Rows
-    # FIXME: Draw the new, undraw the old only where not already replaced
+    # todo: Snoop a guess of what Chars in which Columns of which Rows
+    # todo: Draw the new, undraw the old only where not already replaced
 
     #
     # Init, enter, exit, breakpoint
@@ -1374,7 +1375,7 @@ class Turtle:
 
         gt = self.glass_teletype
         gt.schars_write("\r\n")
-        gt.breakpoint()  # todo:  🐢? breakpoint  is not  🐢? breakpoint()
+        gt.breakpoint()
 
     def clearscreen(self) -> None:
         """Write Spaces over every Character of every Screen Row and Column"""
@@ -2048,27 +2049,97 @@ class Turtle:
 #
 
 
+class AngleQuotedStr(str):
+    """Work like a Str, but enclose Repr in '<' '>' Angle Marks"""
+
+    def __repr__(self) -> str:
+        s0 = str.__repr__(self)
+        s1 = "<" + s0[1:-1] + ">"
+        return s1
+
+        # <__main__.Turtle object at 0x101486a50>
+
+
 class PythonSpeaker:
     """Auto-complete Turtle Logo Sourcelines to run as Python"""
 
-    held_pycalls: list[str]
-    held_pycalls = list()  # leftover Py Calls from an earlier Text
+    turtling_defaults: dict  # default Values for KwArg Names
+    held_pycodes: list[str]  # leftover Py Codes from an earlier Text
+    server_locals: dict  # weakly shadow remote TurtleServer.exec_eval_locals
 
-    def text_to_pycalls(self, text, cls) -> list[str]:
+    def __init__(self) -> None:
+
+        self.held_pycodes = list()
+        self.turtling_defaults = self._turtling_defaults_choose_()
+        self.server_locals = dict()
+
+    def _turtling_defaults_choose_(self) -> dict:
+        """Choose default Values for KwArg Names"""
+
+        angle = 0e0
+        distance = 100e0
+        x = 0e0
+        y = 0e0
+
+        d = dict(
+            angle=0e0,
+            left_angle=45e0,
+            right_angle=90e0,
+            setheading_angle=angle,
+            #
+            count=1,
+            repeat_count=3,
+            #
+            distance=100e0,
+            backward_distance=200e0,
+            forward_distance=distance,
+            #
+            x=0e0,
+            setx_x=x,
+            setxy_x=x,
+            #
+            y=0e0,
+            sety_y=y,
+            setxy_y=y,
+        )
+
+        return d
+
+        # todo: Choose defaults Values for more Kw Args, no longer just: Angle Distance N X Y
+
+    kw_by_grunt = {  # the well-known Turtle Verb KwArgs Kw Names and their Abbreviations
+        "a": "angle",
+        "d": "distance",
+        "n": "count",
+        "x": "x",
+        "y": "y",
+    }
+
+    kws = sorted(set(kw_by_grunt.values()) | set(kw_by_grunt.values()))
+
+    #
+    # Auto-complete Turtle Logo Sourcelines to run as Python
+    #
+
+    def text_to_pycodes(self, text, cls) -> list[str]:
         """Auto-complete Turtle Logo Sourcelines to run as Python"""
 
-        held_pycalls = self.held_pycalls
-        pycalls = list(held_pycalls)
+        held_pycodes = self.held_pycodes
+        pycodes = list(held_pycodes)
 
-        held_pycalls.clear()
+        held_pycodes.clear()
 
-        funcnames = self.cls_to_funcnames(cls)
+        funcnames = self.cls_to_funcnames(cls)  # todo: cache these to save ~1ms per Input Line
+
+        kws_by_verb = self.cls_to_kws_by_verb(cls)
+        assert "tada" not in kws_by_verb.keys(), (kws_by_verb.keys(), cls)
+        kws_by_verb["tada"] = ["self"]
 
         # Take 'breakpoint()' as meaning 't.breakpoint()' not 'breakpoint();pass'
 
         if re.fullmatch(r"breakpoint *[(] *[)] *", string=text):
-            pycalls.append("t.breakpoint()")
-            return pycalls
+            pycodes.append("t.breakpoint()")
+            return pycodes
 
         # Forward Python unchanged
 
@@ -2080,14 +2151,14 @@ class PythonSpeaker:
         if before_strip not in funcnames:
             try:
                 ast.parse(parseable)
-                pycalls.append(text)
-                return pycalls
+                pycodes.append(text)
+                return pycodes
             except SyntaxError:  # from Ast Parse
                 pass
 
         # Split the Text into Python Texts
 
-        assert not self.pysplit_to_pylit_if("", funcnames=funcnames)
+        assert not self.pysplit_to_pyrepr_if("", funcnames=funcnames)
 
         call_pysplits: list[str]
         call_pysplits = list()
@@ -2097,26 +2168,28 @@ class PythonSpeaker:
             if pysplit.lstrip().startswith("#"):
                 continue
 
-            pylit = self.pysplit_to_pylit_if(pysplit, funcnames=funcnames)
-            if pylit:
+            pyrepr = self.pysplit_to_pyrepr_if(pysplit, funcnames=funcnames)
+            if pyrepr:
 
                 if not call_pysplits:
                     call_pysplits.append("p")
-                call_pysplits.append(pylit)
+                call_pysplits.append(pyrepr)
 
             else:
 
                 if call_pysplits:
-                    pyline = self.pysplits_to_pyline(call_pysplits, funcnames=funcnames)
-                    pycall = pyline
-                    pycalls.append(pycall)
+                    pyline = self.pysplits_to_pycode(
+                        call_pysplits, funcnames=funcnames, kws_by_verb=kws_by_verb
+                    )
+                    pycode = pyline
+                    pycodes.append(pycode)
 
                 call_pysplits.clear()
                 call_pysplits.append(pysplit)
 
         assert call_pysplits == [""], (call_pysplits,)
 
-        return pycalls
+        return pycodes
 
     def splitpy(self, text) -> list[str]:
         """Split 1 Text into its widest parseable Py Expressions from the Left"""
@@ -2177,8 +2250,8 @@ class PythonSpeaker:
 
         return splits
 
-    def pysplit_to_pylit_if(self, py, funcnames) -> str:
-        """Say if Py Text is a literal Py Expression"""
+    def pysplit_to_pyrepr_if(self, py, funcnames) -> str:
+        """Eval the Py as a Py Literal, else return the Empty Str"""
 
         strip = py.strip()
         try:
@@ -2187,10 +2260,11 @@ class PythonSpeaker:
 
         except ValueError:
 
-            pylit = repr(strip)
             if strip in funcnames:
                 return ""
-            return pylit
+
+            pyrepr = self.pyrepr(strip)  # converts to Str Lit from undefined Name
+            return pyrepr
 
         except SyntaxError:
 
@@ -2198,34 +2272,164 @@ class PythonSpeaker:
 
         return py
 
-    def pysplits_to_pyline(self, pysplits, funcnames) -> str:
-        """Convert some Py Texts into a Py Call with Args"""
+    def pysplits_to_pycode(self, pysplits, funcnames, kws_by_verb) -> str:
+        """Stitch together some Py Texts into Py Code for Exec/ Eval"""
 
         assert pysplits, (pysplits,)
+        pystrips = list(_.strip() for _ in pysplits)
+
+        # Guess a 't.' prefix implied by any Verb of the Class
 
         funcname_by_grunt = self.funcname_by_grunt
-        held_pycalls = self.held_pycalls
+        held_pycodes = self.held_pycodes
 
-        strip_0 = pysplits[0].strip()
-
+        strip_0 = pystrips[0]
         funcname = strip_0
+        args = list(pystrips[1:])
+
         if strip_0 in funcnames:
-            if strip_0 in funcname_by_grunt:
-                funcname = "t." + funcname_by_grunt[strip_0]
+            if strip_0 in funcname_by_grunt:  # unabbreviates the Verb, if need be
+                verb = funcname_by_grunt[strip_0]
             else:
-                funcname = "t." + strip_0
+                verb = strip_0
 
-        if funcname == "t.tada":
-            funcname = "t.hideturtle"
+            funcname = "t." + verb
 
-            held_pycalls.append("t.showturtle()")
+            # Fill out the Args for any Verb of the Class, if missing
 
-        args = pysplits[1:]
+            assert verb in kws_by_verb, (verb, kws_by_verb)
+
+            kws = kws_by_verb[verb]
+            assert kws[0] == "self", (kws, verb)
+            args_kws = kws[1:]
+            for i in range(len(args), len(args_kws)):
+                kw = args_kws[i]
+
+                arg_else = self.kw_to_arg_else(kw, verb=verb)
+                if arg_else is None:
+                    break
+
+                arg = arg_else
+                pyrepr = self.pyrepr(arg)
+                args.append(pyrepr)
+
+        # Form the Python Code Line
+
         join = ", ".join(_.strip() for _ in args)
-
         pyline = f"{funcname}({join})"
 
+        # Auto-complete some things also later, not only now
+
+        if pyline == "t.tada()":
+            pyline = "t.hideturtle()  # front half of tada"
+            held_pycodes.append("t.showturtle()  # back half of tada")
+
+        # Succeed
+
         return pyline
+
+    def kw_to_arg_else(self, kw, verb) -> object | None:
+        """Fetch a default Value for the Kw Arg of the Verb, else return None"""
+
+        # Fetch Values suggested for KwArgs
+
+        turtling_defaults = self.turtling_defaults
+        server_locals = self.server_locals
+
+        # Give the Win to the more explicit Server Locals, else to our more implicit Defaults
+        # Give the Win to the more explicit f"{verb}_{kw}", else to the more implicit f"{kw}"
+
+        for space in (server_locals, turtling_defaults):
+            for k in (f"{verb}_{kw}", f"{kw}"):  # ('backward_distance', 'distance')
+                if k in space.keys():
+                    arg = space[k]
+                    return arg
+
+        # Else fail
+
+        return None
+
+    def pyrepr(self, obj) -> str:
+        """Work like Repr, but end Float Ints with an 'e0' mark in place of '.0'"""
+
+        s0 = repr(obj)
+
+        # End Float Int Lits with an 'e0' mark in place of '.0'
+
+        if isinstance(obj, float):
+            f = obj
+            if f == int(f):
+                assert s0.endswith(".0"), (s0,)
+                assert "e" not in s0, (s0,)
+
+                s1 = s0.removesuffix(".0") + "e0"
+
+                return s1
+
+        # Quote Bytes & Str Lits with Double Quotes a la PyPi·Org Black
+
+        if isinstance(obj, bytes):  # todo: not much tested yet
+            if s0.startswith("b'") and s0.endswith("'"):
+                if ('"' not in s0) and ("'" not in s0):
+                    s1 = 'b"' + s0[1:-1] + '"'
+                    assert ast.literal_eval(s1) == ast.literal_eval(s0), (s1, s0)
+                    return s1
+
+        if isinstance(obj, str):
+            if s0.startswith("'") and s0.endswith("'"):
+                if ('"' not in s0) and ("'" not in s0):
+                    s1 = '"' + s0[1:-1] + '"'
+                    assert ast.literal_eval(s1) == ast.literal_eval(s0), (s1, s0)
+                    return s1
+
+        # Succeed
+
+        return s0
+
+        # 'One char " can show you two ticks'
+
+    #
+    # Shadow Changes to Server Locals
+    #
+
+    def note_snoop(self, note) -> bool:
+        """Consume the Note and return True, else return False"""
+
+        globals_ = globals()
+        server_locals = self.server_locals
+
+        # Pick out the Py to exec
+
+        if not note.startswith("locals: "):
+            return False
+
+        py = note.removeprefix("locals: ")
+
+        # Weakly emulate the Remote Server assignment of an Object with a default Repr
+
+        (key, sep, value) = py.partition("=")
+        key = key.strip()
+        value = value.strip()
+
+        if sep == "=":
+            quotable = value[1:-1]
+            if value == ("<" + quotable + ">"):
+                # eprint("exec'ish:", py)
+                server_locals[key] = AngleQuotedStr(quotable)
+                return True
+
+                # <__main__.Turtle object at 0x101486a50>
+
+        # More robustly emulate other the Remote Server add/ mutate/ del at a Key
+
+        # eprint("exec:", py)
+        exec(py, globals_, server_locals)
+
+        return True
+
+    #
+    # Declare the well-known Turtle Verbs and their Abbreviations
+    #
 
     byo_funcname_by_grunt = {
         "b": "beep",
@@ -2264,13 +2468,13 @@ class PythonSpeaker:
 
     funcname_by_grunt = byo_funcname_by_grunt | py_funcname_by_grunt | ucb_funcname_by_grunt
 
-    grunts = sorted(
+    fgrunts = sorted(
         list(byo_funcname_by_grunt.keys())
         + list(py_funcname_by_grunt.keys())
         + list(ucb_funcname_by_grunt.keys())
     )
 
-    assert grunts == sorted(set(grunts)), (grunts,)
+    assert fgrunts == sorted(set(fgrunts)), (fgrunts,)
 
     def cls_to_funcnames(self, cls) -> list[str]:
         """Say the Verb Names in a Class"""
@@ -2284,6 +2488,27 @@ class PythonSpeaker:
         funcnames = sorted(set(names + keys + values))
 
         return funcnames
+
+    def cls_to_kws_by_verb(self, cls) -> dict[str, list[str]]:
+        """List the Verbs defined by a Class and their Args"""
+
+        kws_by_verb = dict()
+
+        verbs = list(_ for _ in dir(cls) if not _.startswith("_"))
+        for verb in verbs:
+            func = getattr(cls, verb)
+
+            kws = list()
+            sig = inspect.signature(func)  # since Dec/2016 Python 3.6
+            for kw, parm in sig.parameters.items():
+                kws.append(kw)
+
+            kws_by_verb[verb] = kws
+
+        return kws_by_verb
+
+        # todo: .cls_to_names imprecisely incorrect outside of
+        #   parm.kind in inspect.Parameter. POSITIONAL_OR_KEYWORD, KEYWORD_ONLY
 
 
 #
@@ -2588,16 +2813,16 @@ def turtling_server_run() -> None:
 class TurtlingServer:
 
     glass_teletype: GlassTeletype
-    locals_: dict[str, object]
+    exec_eval_locals: dict[str, object]  # weakly emulated by PythonSpeaker.server_locals
 
     def __init__(self, glass_teletype) -> None:
 
-        locals_: dict[str, object]
-        locals_ = dict()
-        locals_["self"] = self
+        exec_eval_locals: dict[str, object]
+        exec_eval_locals = dict()
+        exec_eval_locals["self"] = self
 
         self.glass_teletype = glass_teletype
-        self.locals_ = locals_
+        self.exec_eval_locals = exec_eval_locals
 
     def server_run_till(self) -> None:
         """Draw with Logo Turtles"""
@@ -2674,9 +2899,9 @@ class TurtlingServer:
         gt = self.glass_teletype
         st = gt.str_terminal
 
-        locals_ = self.locals_
+        exec_eval_locals = self.exec_eval_locals
         default_eq_None = None
-        t = locals_.get("t", default_eq_None)
+        t = exec_eval_locals.get("t", default_eq_None)
 
         assert (t is None) or isinstance(t, Turtle), type(t)
 
@@ -2696,9 +2921,14 @@ class TurtlingServer:
         wtext = ""
         if py:
 
-            wvalue = self.py_eval(py)
+            before = dict(self.exec_eval_locals)  # sample before
+            wvalue = self.py_exec_eval(py)
+            after = dict(self.exec_eval_locals)  # sample after  # 'copied is better than aliased'
+
             if t is not None:
-                t.x_y_position()  # raises the Note on who moved the Terminal Cursor
+                t.x_y_position()  # raises a Note if Terminal Cursor moved
+
+            self.note_local_changes(before=before, after=after)
 
             if gt.notes:
 
@@ -2725,8 +2955,8 @@ class TurtlingServer:
 
         # trades with TurtleClient.trade_text_else
 
-    def py_eval(self, py) -> object | None:
-        """Eval a Python Expression, or exec a Statement, or raise an Exception"""
+    def py_exec_eval(self, py) -> object | None:
+        """Eval a Python Expression, or exec a Python Statement, or raise an Exception"""
 
         gt = self.glass_teletype
         bt = gt.bytes_terminal
@@ -2734,11 +2964,11 @@ class TurtlingServer:
         tcgetattr_0 = termios.tcgetattr(fileno)
 
         globals_ = globals()
-        locals_ = self.locals_
+        exec_eval_locals = self.exec_eval_locals
 
         try:  # todo: shrug off PyLance pretending eval/exec 'locals=' doesn't work
 
-            value = eval(py, globals_, locals_)  # todo:  🐢? breakpoint()  is not  🐢? breakpoint
+            value = eval(py, globals_, exec_eval_locals)  # breakpoint() here isn't gt.breakpoint()
 
         except bdb.BdbQuit:  # from Py Eval  # of the Quit of a Pdb Breakpoint
 
@@ -2760,7 +2990,7 @@ class TurtlingServer:
 
             value = None
             try:
-                exec(py, globals_, locals_)
+                exec(py, globals_, exec_eval_locals)
             except bdb.BdbQuit:  # from Py Exec  # of the Quit of a Pdb Breakpoint
                 raise
             except Exception:
@@ -2786,6 +3016,35 @@ class TurtlingServer:
 
         return value
 
+    def note_local_changes(self, before, after) -> None:
+        """Note each Change in the Pairs of Key and Repr Value"""
+
+        gt = self.glass_teletype
+        notes = gt.notes
+
+        for ak, av in after.items():
+            rav = repr(av)
+            if ak not in before.keys():
+
+                note = f"locals: {ak} = {rav}"
+                notes.append(note)
+
+        for bk, bv in before.items():
+            rbv = repr(bv)
+            if bk not in after.keys():
+
+                note = f"locals: del {bk}"
+                notes.append(note)
+
+            else:
+                ak = bk
+                av = after[ak]
+                rav = repr(av)
+                if rav != rbv:  # todo: contrast 'if av != bv:'
+
+                    note = f"locals: {ak} = {rav}"
+                    notes.append(note)
+
 
 #
 # Run as a Client chatting with Logo Turtles
@@ -2805,18 +3064,22 @@ def turtling_client_run(text) -> None:
 class TurtleClient:
     """Chat with the Logo Turtles of 1 Turtling Server"""
 
+    ps = PythonSpeaker()
+
     def breakpoint(self) -> None:
         """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
 
         getsignal = signal.getsignal(signal.SIGINT)
 
-        breakpoint()
+        breakpoint()  # breakpoint() here is in Class TurtleClient
         pass
 
         signal.signal(signal.SIGINT, getsignal)
 
     def client_run_till(self, text) -> None:
         """Chat with Logo Turtles"""
+
+        ps = self.ps
 
         Bold = "\x1B[" "1m"  # Sgr Bold  # CSI 06/13 Select Graphic Rendition (SGR)
         Plain = "\x1B[" "m"  # Sgr Plain
@@ -2825,8 +3088,6 @@ class TurtleClient:
         postedit = Plain
 
         # Till quit
-
-        ps = PythonSpeaker()
 
         started = False
 
@@ -2866,13 +3127,13 @@ class TurtleClient:
                 # Auto-correct till it's Python
                 # Send each Python Call to the Server, trace its Reply
 
-                pycalls = ps.text_to_pycalls(rstrip, cls=Turtle)
+                pycodes = ps.text_to_pycodes(rstrip, cls=Turtle)
                 trades = list()
-                for pycall in pycalls:
-                    if pycalls != [rstrip]:  # if autocompleted
-                        eprint(">>>", pycall)
+                for pycode in pycodes:
+                    if pycodes != [rstrip]:  # if autocompleted
+                        eprint(">>>", pycode)
 
-                    trade_else = self.py_trade_else(pycall)
+                    trade_else = self.py_trade_else(pycode)
                     if trade_else is None:
                         continue
 
@@ -2951,9 +3212,9 @@ class TurtleClient:
 
         globals_ = globals()
 
-        # Run calls of 'p(' at the Client, to Print Repr (same as Pdb does)
+        # Run calls of 'p(' at the Client only, to Print Repr (same as Pdb does)
 
-        def p(*args):
+        def p(*args) -> None:
             text = ", ".join(repr(_) for _ in args)
             eprint(text)
 
@@ -3003,7 +3264,7 @@ class TurtleClient:
                 del clone["notes"]
 
                 for note in notes:
-                    eprint("Note:", note)
+                    self.server_note_client_eval(note)
 
                 if not clone:  # lets a Dict carry Notes on behalf of None
                     return None
@@ -3015,6 +3276,13 @@ class TurtleClient:
 
         ptext = rtext
         return ptext
+
+    def server_note_client_eval(self, note) -> None:
+        """Print 1 Server Note, or otherwise consume it"""
+
+        ps = self.ps
+        if not ps.note_snoop(note):
+            eprint("Note:", note)
 
     def trade_text_else(self, wtext) -> str | None:
         """Write a Text to the Turtling Server, and read back a Text or None"""
@@ -3209,7 +3477,6 @@ r'''
 # todo: work with blocks, such as:  for _ in range(8): t.forward(100e0); t.right(45e0)
 #
 # todo: work with variables somehow - spirals, Sierpienski, etc
-# todo: mutate Client-Side Defaults somehow
 #
 #
 # todo: e Pi Inf -Inf NaN ... sqrt power ... math.tau t.tau ...
@@ -3233,7 +3500,6 @@ r'''
 #
 # todo: rep n [fd fd.d rt rt.angle]
 # todo: 'to $name ... end' vs 'def $name [ ... ]'
-# todo: get/set of default args, such as fd.d and rt.angle
 # todo: printing diffs only vs say where we are, such as "rt 0" or "sethertz"
 # todo: 'setpch' to .punch or pen.char or what?
 # todo: nonliteral (getter) arguments  # 'heading', 'position', 'isvisible', etc
@@ -3273,9 +3539,6 @@ r'''
 
 #
 # 🐢 Python Makeovers  # todo
-#
-#
-# todo: Move all the defaults into the Client
 #
 #
 # todo: def efprint1(self, form, **kwargs) at uturtle.Turtle for printing its Fields

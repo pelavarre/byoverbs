@@ -27,10 +27,9 @@ pu home pd rt 270 rt 30 fd 300
 pu home pd rt 270 rt 45 fd 300
 pu home pd rt 270 rt 60 fd 300
 
-pu home pd
+restart rt label " "
 
-
-restart rt label " " tada
+restart tada
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/headings.logo

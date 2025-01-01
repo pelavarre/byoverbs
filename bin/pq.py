@@ -65,6 +65,7 @@ examples:
 
 import __main__
 import argparse
+import ast
 import bdb
 import collections
 import dataclasses
@@ -105,7 +106,7 @@ _ = dict[str, int] | None  # new since Oct/2021 Python 3.10
 _ = json, time  # r'\bjson[.]' found in str of Py  # r'\btime[.]' for debug as yet
 
 if not __debug__:
-    raise NotImplementedError(str((__debug__,)))  # "'python3' better than 'python3 -O'"
+    raise NotImplementedError(str((__debug__,)))  # "'python3' is better than 'python3 -O'"
 
 
 #
@@ -518,7 +519,7 @@ class PyExecQueryResult:
 
         if not py_graf:
             if any((" " in _) for _ in pq_words):
-                py_graf = list(pq_words)  # 'copied better than aliased'
+                py_graf = list(pq_words)  # 'copied is better than aliased'
             elif len(pq_words) == 1:
                 pq_word = pq_words[-1]
 
@@ -1481,15 +1482,29 @@ class ArgumentParser(argparse.ArgumentParser):
 
 
 def black_repr(obj) -> str:
-    """Form a Py Repr of an Object, but as styled by PyPi·Black"""
+    """Form a Py Repr of an Object, but style Str and Bytes a la PyPi·Black"""
 
-    s = repr(obj)
+    s0 = repr(obj)
 
-    if (s.startswith("'") or s.startswith("b'")) and s.endswith("'"):
-        if '"' not in s:
-            s = s.replace("'", '"')
+    if isinstance(obj, bytes):
+        if s0.startswith("b'") and s0.endswith("'"):
+            if ('"' not in s0) and ("'" not in s0):
+                s1 = 'b"' + s0[1:-1] + '"'
+                assert ast.literal_eval(s1) == ast.literal_eval(s0), (s1, s0)
+                return s1
 
-    return s
+    if isinstance(obj, str):
+        if s0.startswith("'") and s0.endswith("'"):
+            if ('"' not in s0) and ("'" not in s0):
+                s1 = '"' + s0[1:-1] + '"'
+                assert ast.literal_eval(s1) == ast.literal_eval(s0), (s1, s0)
+                return s1
+
+    return s0
+
+    # "can't"
+    # 'a "word" spoken'
+    # "a ' single quote"
 
 
 def py_graf_to_pulls_pushes(py_graf) -> tuple[list[str], list[str]]:
