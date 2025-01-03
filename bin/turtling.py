@@ -1399,7 +1399,7 @@ class Turtle:
         gt = self.glass_teletype
         gt.notes.clear()  # todo: Count Exception Notes lost per Relaunch
 
-        d = self.asdict()
+        d = self._asdict_()
         return d
 
         # FmsLogo Clean deletes 1 Turtle's trail, without clearing its Settings
@@ -1419,14 +1419,14 @@ class Turtle:
 
         self.showturtle()
 
-        d = self.asdict()
+        d = self._asdict_()
         return d
 
         # todo: explain why .home before ._reinit_, why .showturtle after, etc
 
         # todo: Terminal Cursor Styles
 
-    def asdict(self) -> dict:
+    def _asdict_(self) -> dict:
         """Show the Turtle's Settings as a Dict"""
 
         d = {
@@ -1743,15 +1743,6 @@ class Turtle:
 
         return d
 
-    def sety(self, y=None) -> dict:
-        """Move the Turtle to a Y Point, keeping X unchanged, leaving a Trail if Pen Down"""
-
-        float_x = self.float_x
-        self.setxy(x=float_x, y=y)
-        d = dict(float_x=self.float_y)
-
-        return d
-
     def setxy(self, x=None, y=None) -> dict:
         """Move the Turtle to an X Y Point, leaving a Trail if Pen Down"""
 
@@ -1760,7 +1751,7 @@ class Turtle:
 
         # Choose the Starting Point
 
-        (x1, y1) = self.x_y_position()  # may change .float_x .float_y
+        (x1, y1) = self._x_y_position_()  # may change .float_x .float_y
 
         # Choose the Ending Point
 
@@ -1792,6 +1783,15 @@ class Turtle:
         # Scratch Point-In-Direction-90
         # Scratch Go-To-X-Y
         # UCBLogo Goto is a Control Flow Goto
+
+    def sety(self, y=None) -> dict:
+        """Move the Turtle to a Y Point, keeping X unchanged, leaving a Trail if Pen Down"""
+
+        float_x = self.float_x
+        self.setxy(x=float_x, y=y)
+        d = dict(float_x=self.float_y)
+
+        return d
 
     def showturtle(self) -> dict:
         """Start showing where the Turtle is"""
@@ -1846,7 +1846,7 @@ class Turtle:
 
         # Choose the Starting Point
 
-        (x1, y1) = self.x_y_position()  # may change .float_x .float_y
+        (x1, y1) = self._x_y_position_()  # may change .float_x .float_y
 
         float_x = self.float_x
         float_y = self.float_y
@@ -1994,7 +1994,7 @@ class Turtle:
     # Sample the X Y Position remotely, inside the Turtle
     #
 
-    def x_y_position(self) -> tuple[int, int]:
+    def _x_y_position_(self) -> tuple[int, int]:
         """Sample the X Y Position remotely, inside the Turtle"""
 
         gt = self.glass_teletype
@@ -2060,62 +2060,68 @@ class AngleQuotedStr(str):
         # <__main__.Turtle object at 0x101486a50>
 
 
+KwByGrunt = {
+    "a": "angle",
+    "d": "distance",
+    "n": "count",
+    "x": "x",
+    "y": "y",
+}
+"""Abbreviations for Turtle Verb Kw Arg Names"""
+
+
+def _turtling_defaults_choose_() -> dict:
+    """Choose default Values for KwArg Names"""
+
+    angle = 0e0
+    count = 1
+    distance = 100e0
+    x = 0e0
+    y = 0e0
+
+    _ = count
+
+    d = dict(
+        angle=0e0,
+        left_angle=45e0,
+        right_angle=90e0,
+        setheading_angle=angle,
+        #
+        count=1,
+        repeat_count=3,
+        #
+        distance=100e0,
+        backward_distance=200e0,
+        forward_distance=distance,
+        #
+        x=0e0,
+        setx_x=x,
+        setxy_x=x,
+        #
+        y=0e0,
+        sety_y=y,
+        setxy_y=y,
+    )
+
+    return d
+
+    # todo: Choose default Values for more Kw Args, no longer just: Angle Count Distance X Y
+
+
+TurtlingDefaults = _turtling_defaults_choose_()
+"""Default Values for Turtle Verb Kw Arg Names"""
+
+
 class PythonSpeaker:
     """Auto-complete Turtle Logo Sourcelines to run as Python"""
 
-    turtling_defaults: dict  # default Values for KwArg Names
     held_pycodes: list[str]  # leftover Py Codes from an earlier Text
     server_locals: dict  # weakly shadow remote TurtleServer.exec_eval_locals
 
     def __init__(self) -> None:
 
         self.held_pycodes = list()
-        self.turtling_defaults = self._turtling_defaults_choose_()
         self.server_locals = dict()
-
-    def _turtling_defaults_choose_(self) -> dict:
-        """Choose default Values for KwArg Names"""
-
-        angle = 0e0
-        distance = 100e0
-        x = 0e0
-        y = 0e0
-
-        d = dict(
-            angle=0e0,
-            left_angle=45e0,
-            right_angle=90e0,
-            setheading_angle=angle,
-            #
-            count=1,
-            repeat_count=3,
-            #
-            distance=100e0,
-            backward_distance=200e0,
-            forward_distance=distance,
-            #
-            x=0e0,
-            setx_x=x,
-            setxy_x=x,
-            #
-            y=0e0,
-            sety_y=y,
-            setxy_y=y,
-        )
-
-        return d
-
-        # todo: Choose defaults Values for more Kw Args, no longer just: Angle Distance N X Y
-
-    kw_by_grunt = {  # the well-known Turtle Verb KwArgs Kw Names and their Abbreviations
-        "a": "angle",
-        "d": "distance",
-        "n": "count",
-        "x": "x",
-        "y": "y",
-    }
-
-    kws = sorted(set(kw_by_grunt.values()) | set(kw_by_grunt.values()))
 
     #
     # Auto-complete Turtle Logo Sourcelines to run as Python
@@ -2129,11 +2135,25 @@ class PythonSpeaker:
 
         held_pycodes.clear()
 
-        funcnames = self.cls_to_funcnames(cls)  # todo: cache these to save ~1ms per Input Line
+        # Fetch the Turtle's Verbs and their Kw Args
+        # todo: cache these to save ~1ms per Input Line
+
+        verbs = self.cls_to_verbs(cls)
 
         kws_by_verb = self.cls_to_kws_by_verb(cls)
         assert "tada" not in kws_by_verb.keys(), (kws_by_verb.keys(), cls)
         kws_by_verb["tada"] = ["self"]
+
+        localname_by_leftside = self.localname_by_leftside()
+
+        # Extend Python to accept 'verb.kw =' or 'v.kw =' as meang 'verb_kw =',
+
+        kw_text_pycodes = self.kw_text_to_pycodes_if(
+            text, localname_by_leftside=localname_by_leftside
+        )
+        if kw_text_pycodes:
+            pycodes.extend(kw_text_pycodes)
+            return pycodes
 
         # Take 'breakpoint()' as meaning 't.breakpoint()' not 'breakpoint();pass'
 
@@ -2144,7 +2164,7 @@ class PythonSpeaker:
         # Forward Python unchanged
 
         before_strip = text.partition("#")[0].strip()
-        if before_strip not in funcnames:
+        if before_strip not in verbs:
 
             title = before_strip.title()
             if title in ("False", "None", "True"):
@@ -2160,7 +2180,7 @@ class PythonSpeaker:
 
         # Split the Text into Python Texts
 
-        assert not self.pysplit_to_pyrepr_if("", funcnames=funcnames)
+        assert not self.pysplit_to_pyrepr_if("", verbs=verbs)
 
         call_pysplits: list[str]
         call_pysplits = list()
@@ -2170,7 +2190,7 @@ class PythonSpeaker:
             if pysplit.lstrip().startswith("#"):
                 continue
 
-            pyrepr = self.pysplit_to_pyrepr_if(pysplit, funcnames=funcnames)
+            pyrepr = self.pysplit_to_pyrepr_if(pysplit, verbs=verbs)
             if pyrepr:
 
                 if not call_pysplits:
@@ -2181,7 +2201,7 @@ class PythonSpeaker:
 
                 if call_pysplits:
                     pyline = self.pysplits_to_pycode(
-                        call_pysplits, funcnames=funcnames, kws_by_verb=kws_by_verb
+                        call_pysplits, verbs=verbs, kws_by_verb=kws_by_verb
                     )
                     pycode = pyline
                     pycodes.append(pycode)
@@ -2192,6 +2212,106 @@ class PythonSpeaker:
         assert call_pysplits == [""], (call_pysplits,)
 
         return pycodes
+
+    def kw_text_to_pycodes_if(self, text, localname_by_leftside) -> list[str]:
+        """Extend Python to accept 'verb.kw =' or 'v.kw =' as meaning 'verb_kw ='"""
+
+        # Drop a trailing Comment, but require something more
+
+        head = text.partition("#")[0].strip()
+        if not head:
+            return list()
+
+        # Split by Semicolon
+
+        pycodes = list()
+        for split in head.split(";"):
+            if split.count("=") != 1:
+                return list()
+
+            (left_, _, right_) = split.partition("=")
+            left = left_.strip()
+            right = right_.strip()
+
+            # Require Kw or Verb.Kw at left, with either or both abbreviated or not
+
+            if left not in localname_by_leftside.keys():
+                return list()
+
+            localname = localname_by_leftside[left]
+
+            # Require a complete Py Literal at right,
+            # justifying our .partition("#") and .split(";") above
+
+            try:
+                ast.literal_eval(right)
+            except Exception:
+                return list()
+
+            # Form an Exec'able Python Statement
+
+            pycode = f"{localname} = {right}"
+            pycodes.append(pycode)
+
+        # Succeed
+
+        return pycodes
+
+    def localname_by_leftside(self) -> dict[str, str]:
+        """List the Kw Arg Names and their abbreviations"""
+
+        verb_by_grunt = self.verb_by_grunt
+
+        kw_by_grunt = KwByGrunt
+        turtling_defaults = TurtlingDefaults
+
+        d: dict[str, str]
+        d = dict()
+
+        for key in turtling_defaults.keys():
+            if "_" not in key:
+                assert key not in d.keys(), (key,)
+                d[key] = key  # d['angle'] = 'angle'
+
+                for kwgrunt, kwkw in kw_by_grunt.items():
+                    if kwgrunt != kwkw:
+                        if kwkw == key:
+                            d[kwgrunt] = key  # d['a'] = 'angle'
+
+            else:
+                assert key not in d.keys(), (key,)
+                d[key] = key  # d['backward_distance'] = 'backward_distance'
+
+                (verb, kw) = key.split("_")  # ('backward', 'distance')
+
+                k = f"{verb}.{kw}"
+                assert k not in d.keys(), (k,)
+                d[k] = key  # d['backward.distance'] = 'backward_distance'
+
+                for kwgrunt, kwkw in kw_by_grunt.items():
+                    if kwgrunt != kwkw:
+                        if kwkw == kw:
+                            k = f"{verb}.{kwgrunt}"
+                            assert k not in d.keys(), (k,)
+                            d[k] = key  # d['backward.d'] = 'backward_distance'
+
+                for vgrunt, vverb in verb_by_grunt.items():
+                    assert vgrunt != vverb, (vgrunt, vverb)
+                    if vverb == verb:
+
+                        k = f"{vgrunt}.{kw}"
+                        assert k not in d.keys(), (k,)
+                        d[k] = key  # d['bk.distance'] = 'backward_distance'
+
+                        for kwgrunt, kwkw in kw_by_grunt.items():
+                            if kwgrunt != kwkw:
+                                if kwkw == kw:
+                                    k = f"{vgrunt}.{kwgrunt}"
+                                    assert k not in d.keys(), (k,)
+                                    d[k] = key  # d['bk.d'] = 'backward_distance'
+
+        by_leftside = d
+        return by_leftside
 
     def splitpy(self, text) -> list[str]:
         """Split 1 Text into its widest parseable Py Expressions from the Left"""
@@ -2252,7 +2372,7 @@ class PythonSpeaker:
 
         return splits
 
-    def pysplit_to_pyrepr_if(self, py, funcnames) -> str:
+    def pysplit_to_pyrepr_if(self, py, verbs) -> str:
         """Eval the Py as a Py Literal, else return the Empty Str"""
 
         strip = py.strip()
@@ -2267,7 +2387,7 @@ class PythonSpeaker:
 
         except ValueError:
 
-            if strip in funcnames:
+            if strip in verbs:
                 return ""
 
             pyrepr = self.pyrepr(strip)  # converts to Str Lit from undefined Name
@@ -2279,7 +2399,7 @@ class PythonSpeaker:
 
         return py
 
-    def pysplits_to_pycode(self, pysplits, funcnames, kws_by_verb) -> str:
+    def pysplits_to_pycode(self, pysplits, verbs, kws_by_verb) -> str:
         """Stitch together some Py Texts into Py Code for Exec/ Eval"""
 
         assert pysplits, (pysplits,)
@@ -2287,16 +2407,16 @@ class PythonSpeaker:
 
         # Guess a 't.' prefix implied by any Verb of the Class
 
-        funcname_by_grunt = self.funcname_by_grunt
+        verb_by_grunt = self.verb_by_grunt
         held_pycodes = self.held_pycodes
 
         strip_0 = pystrips[0]
         funcname = strip_0
         args = list(pystrips[1:])
 
-        if strip_0 in funcnames:
-            if strip_0 in funcname_by_grunt:  # unabbreviates the Verb, if need be
-                verb = funcname_by_grunt[strip_0]
+        if strip_0 in verbs:
+            if strip_0 in verb_by_grunt:  # unabbreviates the Verb, if need be
+                verb = verb_by_grunt[strip_0]
             else:
                 verb = strip_0
 
@@ -2340,7 +2460,7 @@ class PythonSpeaker:
 
         # Fetch Values suggested for KwArgs
 
-        turtling_defaults = self.turtling_defaults
+        turtling_defaults = TurtlingDefaults
         server_locals = self.server_locals
 
         # Give the Win to the more explicit Server Locals, else to our more implicit Defaults
@@ -2438,7 +2558,7 @@ class PythonSpeaker:
     # Declare the well-known Turtle Verbs and their Abbreviations
     #
 
-    byo_funcname_by_grunt = {
+    byo_verb_by_grunt = {
         "b": "beep",
         "clear": "clearscreen",  # Linux Clear  # macOS ⌘K
         "cls": "clearscreen",  # MsDos Cls
@@ -2449,7 +2569,7 @@ class PythonSpeaker:
         "t": "tada",
     }
 
-    py_funcname_by_grunt = {  # for the PyTurtle people of:  import turtle
+    py_verb_by_grunt = {  # for the PyTurtle people of:  import turtle
         "back": "backward",
         "bk": "backward",
         # "down": "pendown",  # nope
@@ -2468,48 +2588,49 @@ class PythonSpeaker:
         # "up": "penup",  # nope
     }
 
-    ucb_funcname_by_grunt = {  # for the UCB Logo people
+    ucb_verb_by_grunt = {  # for the UCB Logo people
         "cs": "clearscreen",
         "setpc": "setpencolor",
     }
 
-    funcname_by_grunt = byo_funcname_by_grunt | py_funcname_by_grunt | ucb_funcname_by_grunt
+    verb_by_grunt = byo_verb_by_grunt | py_verb_by_grunt | ucb_verb_by_grunt
 
     fgrunts = sorted(
-        list(byo_funcname_by_grunt.keys())
-        + list(py_funcname_by_grunt.keys())
-        + list(ucb_funcname_by_grunt.keys())
+        list(byo_verb_by_grunt.keys())
+        + list(py_verb_by_grunt.keys())
+        + list(ucb_verb_by_grunt.keys())
     )
 
     assert fgrunts == sorted(set(fgrunts)), (fgrunts,)
 
-    def cls_to_funcnames(self, cls) -> list[str]:
+    def cls_to_verbs(self, cls) -> list[str]:
         """Say the Verb Names in a Class"""
 
-        funcname_by_grunt = self.funcname_by_grunt
+        verb_by_grunt = self.verb_by_grunt
 
-        names = list(_ for _ in dir(cls) if not _.startswith("_"))
-        keys = list(funcname_by_grunt.keys())
-        values = list(funcname_by_grunt.values())
+        funcnames = list(_ for _ in dir(cls) if not _.startswith("_"))
+        grunts = list(verb_by_grunt.keys())
+        grunt_verbs = list(verb_by_grunt.values())
 
-        funcnames = sorted(set(names + keys + values))
+        verbs = sorted(set(funcnames + grunts + grunt_verbs))
 
-        return funcnames
+        return verbs
 
     def cls_to_kws_by_verb(self, cls) -> dict[str, list[str]]:
         """List the Verbs defined by a Class and their Args"""
 
         kws_by_verb = dict()
 
-        verbs = list(_ for _ in dir(cls) if not _.startswith("_"))
-        for verb in verbs:
-            func = getattr(cls, verb)
+        funcnames = list(_ for _ in dir(cls) if not _.startswith("_"))
+        for funcname in funcnames:
+            func = getattr(cls, funcname)
 
             kws = list()
             sig = inspect.signature(func)  # since Dec/2016 Python 3.6
             for kw, parm in sig.parameters.items():
                 kws.append(kw)
 
+            verb = funcname
             kws_by_verb[verb] = kws
 
         return kws_by_verb
@@ -2933,7 +3054,7 @@ class TurtlingServer:
             after = dict(self.exec_eval_locals)  # sample after  # 'copied is better than aliased'
 
             if t is not None:
-                t.x_y_position()  # raises a Note if Terminal Cursor moved
+                t._x_y_position_()  # raises a Note if Terminal Cursor moved
 
             self.note_local_changes(before=before, after=after)
 
@@ -3459,13 +3580,15 @@ r'''
 # 🐢 Turtle Chat Engine  # todo
 #
 #
-# todo: 🐢 d = 100; bk.d = 200; a = 90; lt.a = 45
-#
-#
 # todo: revive 🐢 Bye 🐢 Exit 🐢 Quit - Catch the SystemExit and relay it?
 # todo: revive 🐢 Help
 #
+#
+# todo: stop over-correcting '  del left_angle' to 'de', 'l', 'left_angle'
+#
+#
 # todo: work with random choices
+#
 #
 # todo: work with blocks, such as:  for _ in range(8): t.forward(100e0); t.right(45e0)
 #
@@ -3489,7 +3612,7 @@ r'''
 # todo: 🐢 Go to get back to it
 # todo: 🐢 Pin that has a name, and list them at 🐢 Go, and delete them if pinned twice in same place
 #
-# todo: 🐢 turtle.mode("Trig") for default East counting anticlockwise
+# todo: 🐢 Turtling turtle.mode("Trig") for default East counting anticlockwise
 #
 # todo: rep n [fd fd.d rt rt.angle]
 # todo: 'to $name ... end' vs 'def $name [ ... ]'

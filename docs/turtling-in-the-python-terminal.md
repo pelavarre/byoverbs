@@ -10,6 +10,8 @@ Contents
   - [Symmetry](#symmetry)
   - [Shape of Window, Darkmode, Lightmode, and Fonts](#shape-of-window-darkmode-lightmode-and-fonts)
 - [Draw a Large Square](#draw-a-large-square)
+- [Choose your own Defaults](#choose-your-own-defaults)
+  - [Read the Help](#read-the-help)
 - [Play around](#play-around)
 - [Breakpoints](#breakpoints)
   - [Breakpoint the Server](#breakpoint-the-server)
@@ -35,12 +37,12 @@ You download the Source Code
     mkdir bin
     curl -Ss https://github.com/pelavarre/byoverbs/raw/refs/heads/main/bin/turtling.py >bin/turtling.py
 
-You open one Terminal Window at right, and
+You open one Server Terminal Window at right, and
 you tell it to invite Turtles to move around and draw on it
 
     python3 bin/turtling.py --yolo
 
-You open another Terminal Window at left, and
+You open a Client Terminal Window at left, and
 you tell it to invite you to type Turtle Logo Instructions into it
 
     python3 bin/turtling.py -i
@@ -52,6 +54,11 @@ to tell the Turtle how to move and what to draw
 
 This Md File walks you through tests of Turtle Logo Instructions
 
+You've joined us in our early days.
+If you quit before we stop talking at you, then it's our fault.
+You've tested our Doc and our Doc failed you.
+We'd love to have you tell us exactly how far you got, please
+
 
 ## Move the Turtle
 
@@ -60,7 +67,10 @@ Try
     fd
 
 We guess you meant 't.forward(100)', so we type that out for you, as you can see.
-You can type 'forward' to mean the same thing.
+You can type 'forward' to mean the same thing
+
+    forward
+
 You can even type out the full Python yourself if you want:
 
     import turtling
@@ -103,7 +113,7 @@ Turtle Logo's disagree over how symmetric a small Triangle should be.
 We're still developing our small Triangles,
 inside our [demos/arrow-keys.logo](./demos/arrow-keys.logo)
 Our smallest Triangles are not yet as symmetric as this.
-and our Triangles pointing up and down don't yet exactly match
+In fact, our Triangles pointing up and down don't even exactly match
 our Triangles pointing left and right
 
 
@@ -124,14 +134,14 @@ even when clashing with the Darkmode's of macOS ior ReplIt·Com.
 You chose your Darkmode or Lightmode Terminal for us,
 no clash required
 
-Font's disagree over what U+2588 Full-Block █ means.
-Lots of Fonts agree it means paint the full horizontal width,
+Turtle Logo Font's disagree over what U+2588 Full-Block █ means.
+Lots of Turtle Logo Fonts agree it means paint the full horizontal width,
 but they still disagree over how much of the vertical height to paint over.
 I've not yet found a Font that says Full-Block should paint the full vertical height.
 Andale Mono 18 is working well enough for me at my macOS Terminal,
 inside Oct/2023 Sonoma macOS 14,
 <!-- Only Oct/2024 Sequoia macOS 15 since Jan/2025 -->
-as you can see in my screenshots online.
+As you can see in my screenshots,
 I haven't tested Ghostty and iTerm at macOS.
 
 
@@ -146,8 +156,89 @@ Try
     setxy -250 -250  setxy -250 250  setxy 0 0
 
 Turtle Logo's disagree over how large this Square is.
-UCB Turtle Logo makes this Square as large as the Window
+UCB Turtle Logo makes this Square as large as their Square Window
 
+
+## Choose your own Defaults
+
+### Read the Help
+
+To see all the Turtle Verbs listed, try
+
+    help(t)
+
+You'll see
+Backward, Beep, Breakpoint, ClearScreen, Forward, HideTurtle, Home, IsDown, IsVisible, Label,
+PenDown, PenUp, Relaunch, Repeat, Restart, Right,
+SetHeading, SetHertz, SetPenColor, SetX, SetXY, SetY, ShowTurtle, and Sleep
+suggested
+
+Try
+
+    help(t.forward)
+
+You'll see Python telling you that our Forward Verb takes a Keyword Argument named:  distance
+
+It then tells you to press Q to quit.
+It means that you press the Q Key once, to start serving drawings again
+
+Try
+
+    relaunch
+    fd rt fd rt
+    bk lt bk lt
+
+Turtle Logo's disagree over what Shape this is.
+After all, who's to say?
+What is the default Forward Distance? Backward Distance? Right Angle? Left Angle?
+And so on and on
+
+You can see our choices, when you try things.
+When you come to feel you prefer other choices, you can tell us to change.
+Try
+
+    relaunch
+    distance = 100
+    left.angle = 90
+    fd rt fd rt
+    bk lt bk lt
+
+There you've told us to make this different Shape
+
+We don't make you type out the Verb and Argument Names in full.
+For the same result, you can type just
+
+    relaunch
+    d = 100
+    lt.a = 90
+    fd rt fd rt
+    bk lt bk lt
+
+Python itself objects if you explicitly try to say 't.left.angle = 90'.
+It will sayAttributeError: 'method' object has no ...
+So we round off what you're saying to become 'left_angle = 90'
+and we tell 't.left' to watch for that
+
+Presently, to see all that we abbreviate for you, you can try
+
+    TurtlingDefaults
+    KwByGrunt
+    PythonSpeaker().verb_by_grunt
+
+That's an act of peeking deep into the guts.
+Odds on, we'll soon dream up some better way to disclose those secrets
+
+To remember what you've said, you can try
+
+    dir()
+
+To undo what you've said, you can try
+
+    del distance
+    del left_angle
+
+These works of Dir and Del are standard Python incantations.
+They work without us helping you out
 
 ## Play around
 
