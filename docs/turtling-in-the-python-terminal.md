@@ -17,7 +17,6 @@ Contents
   - [Play around](#play-around)
   - [Help sort our Wish List](#help-sort-our-wish-list)
 - [Dig in technically, deep into the Python](#dig-in-technically-deep-into-the-python)
-  - [27 Imports](#27-imports)
   - [24 Cross-Platform Python Imports](#24-cross-platform-python-imports)
   - [3 Linux/ macOS Imports](#3-linux-macos-imports)
   - [0 Windows Imports](#0-windows-imports)
@@ -358,10 +357,9 @@ You could review the whole Code? No one has before you
 
 Or you could pick out just one aspect of the Code to drill down into?
 
-### 27 Imports
-
 Our Turtle Logo App here is thousands of lines large.
-It's large enough that it gives a kind of a tour of the Standard Python Library.
+It's large enough that it gives
+its own kind of a tour of the Standard Python Library.
 
 ### 24 Cross-Platform Python Imports
 
