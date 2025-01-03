@@ -343,7 +343,9 @@ Have you found a deal breaker?
 Tell us what it is?
 
 Maybe you need us to try making Square Pixels?
-And we could rewrite our Arrow Keys Demo to have 4 Turtles draw it, not just 1.
+Or we could this work a more game-like feel,
+if we completed a full Python Command every time you pressed a Key at the Server.
+Or we could rewrite our Arrow Keys Demo to have 4 Turtles draw it, not just 1.
 And so on and on and on
 
 You've joined us in our early days.
@@ -459,7 +461,12 @@ In particular, adding Python into macOS lets you try
     t.forward(100)
     t.right(45)
 
-You could go ask them to learn to auto-complete your Input as strongly as we do.
+This Import Turtle demo runs just as well for me in Windows of ReplIt·Com.
+But it runs noticeably slower than macOS out there,
+at least while I'm only logged in and not paying for the ReplIt·Com service
+
+You could go ask Python·Org people
+to learn to auto-complete your Turtle Logo Input as strongly as we do.
 They already run with some understanding of abbreviations.
 For example, they do understand
 
