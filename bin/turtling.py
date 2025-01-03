@@ -1330,6 +1330,7 @@ class Turtle:
     """Chat with 1 Logo Turtle"""
 
     glass_teletype: GlassTeletype
+    restarting: bool  # set once per Turtle.restart, cleared by first listener
 
     float_x: float  # sub-pixel horizontal x-coordinate position
     float_y: float  # sub-pixel vertical y-coordinate position
@@ -1342,8 +1343,6 @@ class Turtle:
 
     rest: float  # min time between marks
 
-    # todo: tada_func_else: typing.Callable | None  # runs once before taking next Command
-
     def __init__(self, glass_teletype=None) -> None:
 
         if glass_teletype is None:
@@ -1352,6 +1351,7 @@ class Turtle:
             self.glass_teletype = glass_teletype
 
         self._reinit_()
+        self.restarting = False
 
     def _reinit_(self) -> None:
         """Clear the Turtle's Settings, but without writing the Screen"""
@@ -1366,8 +1366,6 @@ class Turtle:
         self.hiding = False
 
         self.rest = 1 / 1e3
-
-        # todo: self.tada_func_else = None
 
         # macOS Terminal Sh Launch/ Quit doesn't clear the Graphic Rendition, Cursor Style, etc
 
@@ -1429,6 +1427,8 @@ class Turtle:
 
         self.showturtle()
 
+        self.restarting = True  # todo: multiple Listeners, Callbacks, ...
+
         d = self._asdict_()
         return d
 
@@ -1437,7 +1437,7 @@ class Turtle:
         # todo: Terminal Cursor Styles
 
     def _asdict_(self) -> dict:
-        """Show the Turtle's Settings as a Dict"""
+        """Show most of the Turtle's Settings as a Dict"""
 
         d = {
             "float_x": self.float_x,
@@ -1451,6 +1451,8 @@ class Turtle:
         }
 
         return d
+
+        # omits .glass_teletype, .restarting
 
     #
     # Define what 1 Turtle can do
@@ -2138,7 +2140,7 @@ class PythonSpeaker:
     """Auto-complete Turtle Logo Sourcelines to run as Python"""
 
     held_pycodes: list[str]  # leftover Py Codes from an earlier Text
-    server_locals: dict  # weakly shadow remote TurtleServer.exec_eval_locals
+    server_locals: dict  # weakly shadow remote TurtlingServer.exec_eval_locals
 
     def __init__(self) -> None:
 
@@ -2991,10 +2993,20 @@ class TurtlingServer:
 
         exec_eval_locals: dict[str, object]
         exec_eval_locals = dict()
-        exec_eval_locals["self"] = self
 
         self.glass_teletype = glass_teletype
         self.exec_eval_locals = exec_eval_locals
+
+        self.restart()
+
+    def restart(self) -> None:
+        """Restart this TurtleServer"""
+
+        exec_eval_locals = self.exec_eval_locals
+
+        exec_eval_locals.clear()
+        exec_eval_locals["self"] = self
+        exec_eval_locals["t"] = Turtle()  # todo: multiple Turtles
 
     def server_run_till(self) -> None:
         """Draw with Logo Turtles"""
@@ -3073,7 +3085,7 @@ class TurtlingServer:
 
         exec_eval_locals = self.exec_eval_locals
         default_eq_None = None
-        t = exec_eval_locals.get("t", default_eq_None)
+        t = exec_eval_locals.get("t", default_eq_None)  # todo: multiple Turtles
 
         assert (t is None) or isinstance(t, Turtle), type(t)
 
@@ -3099,6 +3111,10 @@ class TurtlingServer:
 
             if t is not None:
                 t._x_y_position_()  # raises a Note if Terminal Cursor moved
+                if t.restarting:
+                    t.restarting = False
+
+                    self.restart()
 
             self.note_local_changes(before=before, after=after)
 
@@ -3278,7 +3294,8 @@ class TurtleClient:
             started = True
 
             eprint("BYO Turtling·Py 2025.1.2 Thursday")
-            trade_else = self.py_trade_else("t = turtling.Turtle(); t.relaunch()")
+            # trade_else = self.py_trade_else("t = turtling.Turtle(); t.relaunch()")
+            trade_else = self.py_trade_else("t.relaunch(); pass")
             assert trade_else is None, (trade_else,)
             ilines = list()  # replace
 
