@@ -2143,14 +2143,16 @@ class PythonSpeaker:
 
         # Forward Python unchanged
 
-        parseable = text
-        parseable = parseable.replace("-", "~")  # refuse '-' as bin op, accept as unary op
-        parseable = parseable.replace("+", "~")  # refuse '+' as bin op, accept as unary op
-
         before_strip = text.partition("#")[0].strip()
         if before_strip not in funcnames:
+
+            title = before_strip.title()
+            if title in ("False", "None", "True"):
+                pycodes.append(title)
+                return pycodes
+
             try:
-                ast.parse(parseable)
+                ast.parse(text)
                 pycodes.append(text)
                 return pycodes
             except SyntaxError:  # from Ast Parse
@@ -2172,7 +2174,7 @@ class PythonSpeaker:
             if pyrepr:
 
                 if not call_pysplits:
-                    call_pysplits.append("p")
+                    call_pysplits.append("")
                 call_pysplits.append(pyrepr)
 
             else:
@@ -2254,6 +2256,11 @@ class PythonSpeaker:
         """Eval the Py as a Py Literal, else return the Empty Str"""
 
         strip = py.strip()
+
+        title = strip.title()
+        if title in ("False", "None", "True"):
+            return title
+
         try:
 
             ast.literal_eval(strip)
@@ -3209,20 +3216,6 @@ class TurtleClient:
 
     def py_trade_else(self, py) -> str | None:
         """Send Python to the Server, trace its Reply"""
-
-        globals_ = globals()
-
-        # Run calls of 'p(' at the Client only, to Print Repr (same as Pdb does)
-
-        def p(*args) -> None:
-            text = ", ".join(repr(_) for _ in args)
-            eprint(text)
-
-        locals_ = dict(p=p)
-
-        if py.startswith("p("):
-            exec(py, globals_, locals_)
-            return None
 
         # Trade with the Server
         # But say EOFError if the Server Quit our Conversation
