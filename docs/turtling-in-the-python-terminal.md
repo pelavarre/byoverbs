@@ -170,7 +170,7 @@ To see all the Turtle Verbs listed, try
 You'll see
 Backward, Beep, Breakpoint, ClearScreen, Forward, HideTurtle, Home, IsDown, IsVisible, Label,
 PenDown, PenUp, Relaunch, Repeat, Restart, Right,
-SetHeading, SetHertz, SetPenColor, SetX, SetXY, SetY, ShowTurtle, and Sleep
+SetHeading, SetHertz, SetPenColor, SetX, SetXY, SetY, ShowTurtle, Sleep, and Write
 suggested
 
 Try

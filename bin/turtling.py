@@ -48,6 +48,7 @@ import traceback
 import tty  # Windows sad
 import typing
 import unicodedata
+import warnings
 
 # todo: add 'import mscvrt' at Windows
 
@@ -119,7 +120,7 @@ def main_try(ns) -> None:
 
     assert ns.i, (ns.i, ns)
     turtling_client_run("relaunch")
-    print("Bye")
+    eprint("Bye")
 
 
 def parse_turtling_py_args_else() -> argparse.Namespace:
@@ -447,9 +448,9 @@ class BytesTerminal:
 
         self.__exit__()
 
-        print("Pq Terminal Stop: ⌃Z F G Return")
-        print("macOS ⌃C might stop working till you close Window")  # even past:  reset
-        print("Linux might freak lots more than that")
+        eprint("Pq Terminal Stop: ⌃Z F G Return")
+        eprint("macOS ⌃C might stop working till you close Window")  # even past:  reset
+        eprint("Linux might freak lots more than that")
 
         os.kill(pid, signal.SIGTSTP)  # a la 'sh kill $pid -STOP' before 'sh kill $pid -CONT'
 
@@ -1804,7 +1805,7 @@ class Turtle:
 
         self.hiding = False
         # if self.hiding != hiding:
-        #     print(f"hiding={self.hiding}  # was {hiding}")
+        #     eprint(f"hiding={self.hiding}  # was {hiding}")
 
         # Forward 0 leaves a Mark to show Turtle was Here
         # SetXY from Home leaves a Mark to show the X=0 Y=0 Home
@@ -1832,6 +1833,12 @@ class Turtle:
         # todo: give credit for delay in work before t.sleep
 
         # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s  st
+
+    def write(self, s) -> None:
+        """Write the Str to the Screen"""
+
+        gt = self.glass_teletype
+        gt.schars_write(s)
 
     #
     # Move the Turtle along the Line of its Heading, leaving a Trail if Pen Down
@@ -1870,7 +1877,7 @@ class Turtle:
         fuzz1 = True
         fuzz1 = False
         if fuzz1:
-            # print(f"FUZZ1 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x_} {float_y_} FUZZ1")
+            # eprint(f"FUZZ1 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x_} {float_y_} FUZZ1")
             x2 = int(float_x_)
             y2 = int(float_y_)
 
@@ -1881,14 +1888,14 @@ class Turtle:
         # Draw the Line Segment to X2 Y2 from X1 Y1
 
         self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2)
-        # print(f"float {float_x} {float_y} {float_x__} {float_y__}")
+        # eprint(f"float {float_x} {float_y} {float_x__} {float_y__}")
 
         # Option to show why keep up Precise X Y Shadows in .float_x .float_y
 
         fuzz2 = True
         fuzz2 = False
         if fuzz2:  # fail test of:  cs  reset pd  fd rt 72  fd rt 72  fd rt 72  fd rt 72  fd rt 72
-            # print(f"FUZZ2 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x__} {float_y__} FUZZ2")
+            # eprint(f"FUZZ2 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x__} {float_y__} FUZZ2")
             float_x__ = float(x2)
             float_y__ = float(y2)
 
@@ -1911,7 +1918,7 @@ class Turtle:
         assert isinstance(y2, int), (type(y2), y2)
         assert isinstance(x2, int), (type(x2), x2)
 
-        # print(f"{x1=} {y1=} ({2 * y1}e0)  {x2=} {y2=} ({2 * y2}e0)")
+        # eprint(f"{x1=} {y1=} ({2 * y1}e0)  {x2=} {y2=} ({2 * y2}e0)")
 
         x2x1 = abs(x2 - x1)  # distance
         y2y1 = abs(y2 - y1)
@@ -1964,7 +1971,7 @@ class Turtle:
         penmark = self.penmark
         rest = self.rest
 
-        # # print(f"{x} {y}")
+        # # eprint(f"{x} {y}")
 
         if wx < x:
             x_text = f"\x1B[{x - wx}C"  # CSI 04/03 Cursor [Forward] Right
@@ -2151,6 +2158,7 @@ class PythonSpeaker:
         kw_text_pycodes = self.kw_text_to_pycodes_if(
             text, localname_by_leftside=localname_by_leftside
         )
+
         if kw_text_pycodes:
             pycodes.extend(kw_text_pycodes)
             return pycodes
@@ -2172,8 +2180,16 @@ class PythonSpeaker:
                 return pycodes
 
             try:
-                ast.parse(text)
+                ast_parse_strict(text)
                 pycodes.append(text)
+                return pycodes
+            except SyntaxError:  # from Ast Parse
+                pass
+
+            alt_text = text.replace(r"\e", r"\x1B")
+            try:
+                ast_parse_strict(alt_text)
+                pycodes.append(alt_text)
                 return pycodes
             except SyntaxError:  # from Ast Parse
                 pass
@@ -2244,7 +2260,7 @@ class PythonSpeaker:
             # justifying our .partition("#") and .split(";") above
 
             try:
-                ast.literal_eval(right)
+                ast_literal_eval_strict(right)
             except Exception:
                 return list()
 
@@ -2336,12 +2352,19 @@ class PythonSpeaker:
                 parseable = parseable.replace("+", "~")  # refuse '+' as bin op, accept as unary op
 
                 try:
-                    ast.literal_eval(parseable)
+                    ast_literal_eval_strict(parseable)
                     heads.append(head)
                 except ValueError:
                     heads.append(head)
                 except SyntaxError:
-                    pass
+                    alt_head = head.replace(r"\e", r"\x1B")
+                    try:
+                        ast_literal_eval_strict(alt_head)
+                        heads.append(alt_head)
+                    except ValueError:
+                        pass
+                    except SyntaxError:
+                        pass
 
             if not heads:
                 splits.append(more)
@@ -2368,7 +2391,9 @@ class PythonSpeaker:
 
             more = more[len(split) :]
 
-        assert "".join(splits) == text, (splits, text)
+        alt_text = text.replace(r"\e", r"\x1B")
+        if "".join(splits) != alt_text:
+            assert "".join(splits) != text, (splits, text)
 
         return splits
 
@@ -2383,7 +2408,7 @@ class PythonSpeaker:
 
         try:
 
-            ast.literal_eval(strip)
+            ast_literal_eval_strict(strip)
 
         except ValueError:
 
@@ -2499,14 +2524,14 @@ class PythonSpeaker:
             if s0.startswith("b'") and s0.endswith("'"):
                 if ('"' not in s0) and ("'" not in s0):
                     s1 = 'b"' + s0[1:-1] + '"'
-                    assert ast.literal_eval(s1) == ast.literal_eval(s0), (s1, s0)
+                    assert ast_literal_eval_strict(s1) == ast_literal_eval_strict(s0), (s1, s0)
                     return s1
 
         if isinstance(obj, str):
             if s0.startswith("'") and s0.endswith("'"):
                 if ('"' not in s0) and ("'" not in s0):
                     s1 = '"' + s0[1:-1] + '"'
-                    assert ast.literal_eval(s1) == ast.literal_eval(s0), (s1, s0)
+                    assert ast_literal_eval_strict(s1) == ast_literal_eval_strict(s0), (s1, s0)
                     return s1
 
         # Succeed
@@ -2550,7 +2575,7 @@ class PythonSpeaker:
         # More robustly emulate other the Remote Server add/ mutate/ del at a Key
 
         # eprint("exec:", py)
-        exec(py, globals_, server_locals)
+        exec_strict(py, globals_, server_locals)  # in Class PythonSpeaker
 
         return True
 
@@ -2865,7 +2890,7 @@ class TurtlingFifoProxy:
 
         if index_line != f"index={index}\n":
             if text.startswith("'Traceback (most recent call last):"):  # todo: instructions to repro
-                format_exc = ast.literal_eval(text)
+                format_exc = ast_literal_eval_strict(text)
                 eprint(format_exc)
                 sys.exit(1)
 
@@ -3091,12 +3116,16 @@ class TurtlingServer:
         fileno = bt.fileno
         tcgetattr_0 = termios.tcgetattr(fileno)
 
+        # Try Eval first
+
+        try_exec = False
+
         globals_ = globals()
         exec_eval_locals = self.exec_eval_locals
 
         try:  # todo: shrug off PyLance pretending eval/exec 'locals=' doesn't work
 
-            value = eval(py, globals_, exec_eval_locals)  # breakpoint() here isn't gt.breakpoint()
+            value = eval_strict(py, globals_, exec_eval_locals)  # in Class TurtlingServer
 
         except bdb.BdbQuit:  # from Py Eval  # of the Quit of a Pdb Breakpoint
 
@@ -3117,16 +3146,22 @@ class TurtlingServer:
         except SyntaxError:  # from Py Eval
 
             value = None
-            try:
-                exec(py, globals_, exec_eval_locals)
-            except bdb.BdbQuit:  # from Py Exec  # of the Quit of a Pdb Breakpoint
-                raise
-            except Exception:
-                value = traceback.format_exc()
+            try_exec = True
 
         except Exception:
 
             value = traceback.format_exc()
+
+        # Try Exec next, only if Eval raised
+
+        if try_exec:
+            assert value is None, (value,)
+            try:
+                exec_strict(py, globals_, exec_eval_locals)  # in Class TurtlingServer
+            except bdb.BdbQuit:  # from Py Exec  # of the Quit of a Pdb Breakpoint
+                raise
+            except Exception:
+                value = traceback.format_exc()
 
         # If need be, then recover from such stress as:  help();
 
@@ -3199,7 +3234,7 @@ class TurtleClient:
 
         getsignal = signal.getsignal(signal.SIGINT)
 
-        breakpoint()  # breakpoint() here is in Class TurtleClient
+        breakpoint()  # in Class TurtleClient
         pass
 
         signal.signal(signal.SIGINT, getsignal)
@@ -3223,7 +3258,7 @@ class TurtleClient:
         if text == "relaunch":
             started = True
 
-            eprint("BYO Turtling·Py 2024-12-29")
+            eprint("BYO Turtling·Py 2025-01-02")
             trade_else = self.py_trade_else("t = turtling.Turtle(); t.relaunch()")
             assert trade_else is None, (trade_else,)
             ilines = list()  # replace
@@ -3246,7 +3281,7 @@ class TurtleClient:
 
                 if rstrip == "import turtling":
                     started = True
-                    print(rstrip)
+                    eprint(rstrip)
                     continue
 
                 if rstrip.startswith("t =") or rstrip.startswith("t="):
@@ -3268,10 +3303,10 @@ class TurtleClient:
                     trade = trade_else
                     trades.append(trade)
 
-                    print(trade)
+                    eprint(trade)
 
                 if trades:
-                    print()
+                    eprint()
 
             # Prompt & Echo Lines from the Keyboard
 
@@ -3352,7 +3387,7 @@ class TurtleClient:
         # Try taking the Text as a Python Repr
 
         try:
-            value = ast.literal_eval(rtext)
+            value = ast_literal_eval_strict(rtext)
         except Exception:
             ptext = rtext
             return rtext
@@ -3365,6 +3400,7 @@ class TurtleClient:
         # Take a Python Traceback as Quoted Lines to Print
 
         if rtext.startswith("'Traceback (most recent call last):"):
+            assert isinstance(value, str), (value, type(value), rtext)
             ptext = value.rstrip()
             return ptext
 
@@ -3410,58 +3446,6 @@ class TurtleClient:
         return rtext_else
 
         # trades with TurtlingServer.reader_writer_serve
-
-
-#
-# Paint Turtle Character Graphics onto a Terminal Screen
-#
-
-
-r'''
-
-    def do_bye(self) -> None:
-        """Quit the Turtle Chat"""
-
-        print("bye")  # not from "bye", "end", "exit", "quit", ...
-        sys.exit()
-
-    def do_help(self, pattern=None) -> None:
-        """List the Command Verbs"""
-
-        (verbs, grunts) = self._sliced_to_verbs_grunts_(pattern)
-        if not verbs:
-            assert not grunts, (pattern, verbs, grunts)
-            print(f"Chars {pattern!r} not found in Turtle Command Verbs")
-            return
-
-        if not pattern:
-            verbs.remove("bye")  # drops test-ending 'bye' etc from tests of almost-all Verbs
-            grunts.remove("exit")
-            grunts.remove("quit")
-
-        print("Choose from:", ", ".join(sorted(verbs)))
-        print("Or abbreviated as:", ", ".join(sorted(grunts)))
-
-    def _sliced_to_verbs_grunts_(self, pattern) -> tuple[list[str], list[str]]:
-        """List the Abbreviations or Verbs that contain the Arg"""  # pattern=None matches All Verbs
-
-        func_by_join = self.to_func_by_join()
-
-        verbs = list()
-        grunts = list()
-        for join, func in func_by_join.items():
-            func_verbs = join.split()
-            verbs.append(func_verbs[0])
-            grunts.extend(func_verbs[1:])
-
-        if pattern is not None:
-            verbs[::] = list(_ for _ in verbs if pattern in _)
-            grunts[::] = list(_ for _ in grunts if pattern in _)
-
-        return (verbs, grunts)
-
-
-'''
 
 
 #
@@ -3580,30 +3564,27 @@ r'''
 # 🐢 Turtle Chat Engine  # todo
 #
 #
-# todo: revive 🐢 Bye 🐢 Exit 🐢 Quit - Catch the SystemExit and relay it?
-# todo: revive 🐢 Help
+# todo: kebab-case as a string becomes "kebab case"  # unicodedata.lookup Full-Block
 #
+# todo: revive 🐢 Bye 🐢 Exit 🐢 Quit - Catch the SystemExit and relay it?
 #
 # todo: stop over-correcting '  del left_angle' to 'de', 'l', 'left_angle'
 #
-#
 # todo: work with random choices
-#
 #
 # todo: work with blocks, such as:  for _ in range(8): t.forward(100e0); t.right(45e0)
 #
 # todo: work with variables somehow - spirals, Sierpienski, etc
 #
+# todo: e Pi Inf -Inf NaN ... sqrt power ...
+# todo: local tau = for Radians in place of Degrees
+# todo: 🐢 Turtling turtle.mode("Trig") for default East counting anticlockwise
 #
-# todo: e Pi Inf -Inf NaN ... sqrt power ... math.tau t.tau ...
-# todo: \e escapes in Str
-# todo: kebab-case as a string becomes "kebab case"  # unicodedata.lookup Full-Block
 # todo: input Sh lines:  !uname  # !ls  # !cat - >/dev/null  # !zsh
 #
 # todo: UCB Logo cleartext (ct) mention ⌘K
 # todo: UCB Logo setcursor [x y], cursor
 #
-# todo: 🐢 Punch ... "\n"   # to print at Server, vs Print at Client
 # todo: 🐢 After ...  # to get past next Float Seconds milestone in Screen .typescript
 #
 # todo: tweak the fd.d to hold diameter constant in 🐢 rep n abbreviation of rep n [fd fd.d rt rt.angle]
@@ -3611,8 +3592,6 @@ r'''
 # todo: 🐢 Pin to drop a pin (in float precision!)
 # todo: 🐢 Go to get back to it
 # todo: 🐢 Pin that has a name, and list them at 🐢 Go, and delete them if pinned twice in same place
-#
-# todo: 🐢 Turtling turtle.mode("Trig") for default East counting anticlockwise
 #
 # todo: rep n [fd fd.d rt rt.angle]
 # todo: 'to $name ... end' vs 'def $name [ ... ]'
@@ -3695,6 +3674,29 @@ r'''
 
 
 #
+# Amp up Import Ast
+#
+
+
+def ast_literal_eval_strict(text) -> object | None:
+    """Work like 'ast.literal_eval' but raise the SyntaxWarning's, don't print them"""
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SyntaxWarning)
+        value = ast.literal_eval(text)
+        return value
+
+
+def ast_parse_strict(text) -> ast.AST:
+    """Work like 'ast.parse' but raise the SyntaxWarning's, don't print them"""
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SyntaxWarning)
+        node = ast.parse(text)
+        return node
+
+
+#
 # Amp up Import BuiltIns
 #
 
@@ -3705,18 +3707,21 @@ def eprint(*args, **kwargs) -> None:
     print(*args, file=sys.stderr, **kwargs)
 
 
-w_open_else: typing.TextIO | None
-w_open_else = None
+def eval_strict(text, globals_, locals_) -> object | None:
+    """Work like 'eval' but raise the SyntaxWarning's, don't print them"""
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SyntaxWarning)
+        value = eval(text, globals_, locals_)
+        return value
 
 
-def print_if(*args, **kwargs) -> None:
-    """Print, if debugging"""
+def exec_strict(text, globals_, locals_) -> None:
+    """Work like 'exec' but raise the SyntaxWarning's, don't print them"""
 
-    if w_open_else:
-        file_ = w_open_else
-
-        print(*args, **kwargs, end="\r\n", file=file_)
-        file_.flush()  # todo: measure when no flush needed by (file_ is sys.stderr)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SyntaxWarning)
+        exec(text, globals_, locals_)
 
 
 #
