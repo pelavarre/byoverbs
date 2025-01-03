@@ -1376,7 +1376,16 @@ class Turtle:
 
         gt = self.glass_teletype
         gt.schars_write("\r\n")
+
         gt.breakpoint()
+
+    def bye(self) -> None:
+        """Exit Server and Client, but without clearing the Screen"""
+
+        gt = self.glass_teletype
+        gt.schars_write("\r\n")
+
+        sys.exit()
 
     def clearscreen(self) -> None:
         """Write Spaces over every Character of every Screen Row and Column"""
@@ -1414,7 +1423,7 @@ class Turtle:
         self.home()
 
         self.pendown()
-        self.setpencolor()
+        self.setpencolor(color=None)
 
         self._reinit_()
 
@@ -1447,16 +1456,13 @@ class Turtle:
     # Define what 1 Turtle can do
     #
 
-    def backward(self, distance=None) -> dict:
+    def backward(self, distance) -> dict:
         """Move the Turtle backwards along its Heading, leaving a Trail if Pen Down"""
 
-        float_stride = 200e0 if (distance is None) else float(distance)
-        self._punch_bresenham_stride_(-float_stride)
+        self._punch_bresenham_stride_(-float(distance))
 
         d = dict(float_x=self.float_x, float_y=self.float_y, rest=self.rest)
         return d
-
-        # Assymetric defaults for 🐢 Backward and 🐢 Forward make their Distance Arg more discoverable
 
     def beep(self) -> dict:
         """Ring the Terminal Alarm Bell once, remotely inside the Turtle"""
@@ -1477,16 +1483,13 @@ class Turtle:
     # todo: def y +=
     # Scratch: Change-Y-By-10
 
-    def forward(self, distance=None) -> dict:
+    def forward(self, distance) -> dict:
         """Move the Turtle forwards along its Heading, leaving a Trail if Pen Down"""
 
-        float_stride = 100e0 if (distance is None) else float(distance)
-        self._punch_bresenham_stride_(float_stride)
+        self._punch_bresenham_stride_(float(distance))
 
         d = dict(float_x=self.float_x, float_y=self.float_y, rest=self.rest)
         return d
-
-        # Assymetric defaults for 🐢 Forward and 🐢 Backward make their Distance Arg more discoverable
 
         # Scratch Move-10-Steps (with infinite speed)
         # Scratch Glide-1-Secs-To-X-0-Y-0 (locks out parallel work)
@@ -1507,11 +1510,13 @@ class Turtle:
     def home(self) -> dict:
         """Move the Turtle to its Home and turn it North, leaving a Trail if Pen Down"""
 
-        self.setxy()  # todo: different Homes for different Turtles
-        self.setheading()
+        self.setxy(x=0e0, y=0e0)  # todo: different Homes for different Turtles
+        self.setheading(360e0)
 
         d = dict(float_x=self.float_x, float_y=self.float_y, heading=self.heading)
         return d
+
+        # todo: good that .home doesn't follow/ change .setxy and .setheading defaults?
 
     def isdown(self) -> bool:
         """Say if the Turtle will leave a Trail as it moves"""
@@ -1559,16 +1564,12 @@ class Turtle:
 
         # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
 
-    def left(self, angle=None) -> dict:
+    def left(self, angle) -> dict:
         """Turn the Turtle anticlockwise, by a 45° Right Angle, or some other Angle"""
 
-        float_angle = 45e0 if (angle is None) else float(angle)
         heading = self.heading
-
-        d = self.setheading(heading - float_angle)
+        d = self.setheading(heading - float(angle))
         return d
-
-        # Assymetric defaults for 🐢 Left and 🐢 Right make their Angle Arg more discoverable
 
         # Scratch Turn-CCW-15-Degrees
 
@@ -1594,7 +1595,7 @@ class Turtle:
 
         # Scratch Pen-Up
 
-    def repeat(self, count=None) -> dict:
+    def repeat(self, count) -> dict:
         """Run some instructions a chosen number of times, often less or more than once"""
 
         count = 1 if (count is None) else int(count)
@@ -1602,27 +1603,24 @@ class Turtle:
 
         angle = 360e0 / count
         for _ in range(count):
-            self.forward()  # the traditional [fd rt]
+            self.forward(100e0)  # the traditional [fd rt]
             self.right(angle)  # todo: never the countercultural [rt fd]
 
         d = dict(float_x=self.float_x, float_y=self.float_y, heading=self.heading)
         return d
 
-    def right(self, angle=None) -> dict:
+        # todo: good that .repeat doesn't follow/change .forward and .right defaults?
+
+    def right(self, angle) -> dict:
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
 
-        float_angle = 90e0 if (angle is None) else float(angle)
         heading = self.heading  # turning clockwise
-
-        d = self.setheading(heading + float_angle)
+        d = self.setheading(heading + float(angle))
         return d
-
-        # 🐢 Right 90° sets up 🐢 Label to print English from left to right
-        # Assymetric defaults for 🐢 Right and 🐢 Left make their Angle Arg more discoverable
 
         # Scratch Turn-CW-15-Degrees
 
-    def setheading(self, angle=None) -> dict:
+    def setheading(self, angle) -> dict:
         """Turn the Turtle to move 0° North, or to some other Heading"""
 
         float_angle = 0e0 if (angle is None) else float(angle)  # 0° of North Up Clockwise
@@ -1634,7 +1632,7 @@ class Turtle:
         d = dict(heading=self.heading)
         return d
 
-    def sethertz(self, hertz=None) -> dict:
+    def sethertz(self, hertz) -> dict:
 
         rest1 = 0e0
         float_hertz = 1000e0 if (hertz is None) else float(hertz)
@@ -1650,7 +1648,7 @@ class Turtle:
 
         # PyTurtle Speed chooses 1..10 for faster animation, reserving 0 for no animation
 
-    def setpencolor(self, color=None) -> dict:
+    def setpencolor(self, color) -> dict:
         """Choose which Color to draw with"""
 
         gt = self.glass_teletype
@@ -1714,7 +1712,7 @@ class Turtle:
         penscape = self._ansi_by_rgb_[rgb]
         return penscape
 
-    def setpenpunch(self, ch=None) -> dict:
+    def setpenpunch(self, ch) -> dict:
         """Choose which Character to draw with, or default to '*'"""
 
         floatish = isinstance(ch, float) or isinstance(ch, int) or isinstance(ch, bool)
@@ -1735,7 +1733,7 @@ class Turtle:
 
         # todo: With SetPenColor Forward 1:  "!" if (penmark == "~") else chr(ord(penmark) + 1)
 
-    def setx(self, x=None) -> dict:
+    def setx(self, x) -> dict:
         """Move the Turtle to a X Point, keeping Y unchanged, leaving a Trail if Pen Down"""
 
         float_y = self.float_y
@@ -1744,7 +1742,7 @@ class Turtle:
 
         return d
 
-    def setxy(self, x=None, y=None) -> dict:
+    def setxy(self, x, y) -> dict:
         """Move the Turtle to an X Y Point, leaving a Trail if Pen Down"""
 
         float_x = 0e0 if (x is None) else float(x)
@@ -1785,7 +1783,7 @@ class Turtle:
         # Scratch Go-To-X-Y
         # UCBLogo Goto is a Control Flow Goto
 
-    def sety(self, y=None) -> dict:
+    def sety(self, y) -> dict:
         """Move the Turtle to a Y Point, keeping X unchanged, leaving a Trail if Pen Down"""
 
         float_x = self.float_x
@@ -1813,7 +1811,7 @@ class Turtle:
         d = dict(hiding=self.hiding)
         return d
 
-    def sleep(self, seconds=None) -> dict:
+    def sleep(self, seconds) -> dict:
         """Hold the Turtle still for a moment"""
 
         rest = self.rest
@@ -2083,6 +2081,8 @@ def _turtling_defaults_choose_() -> dict:
     angle = 0e0
     count = 1
     distance = 100e0
+    hertz = 1e3
+    seconds = 1e-3
     x = 0e0
     y = 0e0
 
@@ -2101,6 +2101,12 @@ def _turtling_defaults_choose_() -> dict:
         backward_distance=200e0,
         forward_distance=distance,
         #
+        hertz=1e3,
+        sethertz_hertz=hertz,
+        #
+        seconds=1e-3,
+        sleep_seconds=seconds,
+        #
         x=0e0,
         setx_x=x,
         setxy_x=x,
@@ -2111,6 +2117,15 @@ def _turtling_defaults_choose_() -> dict:
     )
 
     return d
+
+    # Assymetric Defaults make editable Defaults more discoverable, because harder to ignore,
+    #
+    #   backward_distance != forward_distance
+    #   count != repeat_count
+    #   left_angle != right_angle
+    #
+
+    # 🐢 Right 90° sets up 🐢 Label to print English from left to right
 
     # todo: Choose default Values for more Kw Args, no longer just: Angle Count Distance X Y
 
@@ -2418,6 +2433,8 @@ class PythonSpeaker:
             pyrepr = self.pyrepr(strip)  # converts to Str Lit from undefined Name
             return pyrepr
 
+            #
+
         except SyntaxError:
 
             return ""
@@ -2587,6 +2604,8 @@ class PythonSpeaker:
         "b": "beep",
         "clear": "clearscreen",  # Linux Clear  # macOS ⌘K
         "cls": "clearscreen",  # MsDos Cls
+        "exit": "bye",
+        "quit": "bye",
         "rep": "repeat",
         "sethz": "sethertz",
         "setpch": "setpenpunch",
@@ -3258,7 +3277,7 @@ class TurtleClient:
         if text == "relaunch":
             started = True
 
-            eprint("BYO Turtling·Py 2025-01-02")
+            eprint("BYO Turtling·Py 2025.1.2 Thursday")
             trade_else = self.py_trade_else("t = turtling.Turtle(); t.relaunch()")
             assert trade_else is None, (trade_else,)
             ilines = list()  # replace
@@ -3379,6 +3398,9 @@ class TurtleClient:
         wtext = py
         rtext_else = self.trade_text_else(wtext)
         if rtext_else is None:
+            if py == "t.bye()":
+                sys.exit()
+
             ptext = "EOFError"
             return ptext
 
@@ -3451,26 +3473,35 @@ class TurtleClient:
 #
 # 🐢 My Guesses of Main Causes of loss in Net Promoter Score (NPS) # todo
 #
-# todo: details still churning for the resulting drawing
+# todo: details still churning for the resulting drawings, such as symmetric small triangles
 #
 
 
 #
 # 🐢 Bug Fixes  # todo
 #
+#
+# todo: solve ↓ ↑ Keys too small - symmetric small triangles:  demos/arrow-keys.logo
+#
+#
+# todo: vs thin grey lines
 # todo: solve the thin flats left on screen behind:  reset cs pu  sethertz 10 rep 8
 # also differs by Hertz:  reset cs pu  sethertz rep 8
 # also:  sethertz cs pu setxy 250 250  sethertz 100 home
 # also:  sethertz cs pu setxy 0 210  sethertz 100 home
+# seemingly unavoidable in the not-alt-screen while printing raw??
 #
-# todo: solve why ↓ ↑ Keys too small - rounding trouble?:  demos/arrow-keys.logo
 #
 # todo: test bounds collisions
 #   reset cs pd  pu setxy 530 44 pd  lt fd 300
 #       skips the column inside the right edge ?!
 #
+#
+# todo: somehow apart from Square Pixels
 # todo: strip out the Sgr and then limit "setpch" to 1 Char
-# todo: unlock Verb for less limited experimentation
+# todo: coin a 🐢 Unlock Verb for less limited experimentation
+# todo: adopt Racket Lang progressive feature flags to offer less choices at first
+#
 #
 
 #
@@ -3479,11 +3510,13 @@ class TurtleClient:
 # todo: 'cs ...' to choose a next demo of a shuffle
 # todo: 'import filename' or 'load filename' to fetch & run a particular file
 #
-# todo: early visual wows of a twitch stream
-# todo: z-layers to animate a clock of hours/ minutes/ second hands
-# todo: let more than 1 Turtle move onto a z-layer to keep only the latest
+# todo: early visual wows of a Twitch video stream
+#
 # todo: colorful spirography
 # todo: marble games
+# todo: send keymaps over the wire: bind keyboard keys to turtle moves, to cycle colors
+# todo: z-layers to animate a clock of hours/ minutes/ second hands
+# todo: let more than 1 Turtle move onto a z-layer to keep only the latest
 # todo: menus w drop shadow & keyboard & mouse - a la Borland Dos Turbo C++
 # todo: vi - emacs - notepad
 #
@@ -3494,11 +3527,12 @@ class TurtleClient:
 #
 # todo: one large single File of many Logo Procs, via:  def <name> [ ... ]
 # todo: multiple Procs per File via TO <name>, then dents, optional END
+# todo: VsCode for .logo, for .lgo, for .log, ...
 #
 # todo: abs square:  reset cs pd  setxy 0 100  setxy 100 100  setxy 100 0  setxy 0 0
 # todo: blink xy:  sethertz 5  st s ht s  st s ht s  st s ht s  st
 # todo: blink heading:  sethertz 5  pu  st s ht s  bk 10 st s ht s  fd 20 st s ht s  bk 10 st s ht s  st
-# todo: smoke tests of call the Grunts & Verbs as cited by:  help
+# todo: a basic smoke test of call the Grunts & Verbs as cited by Hselp
 #
 
 #
@@ -3526,33 +3560,41 @@ class TurtleClient:
 #
 #
 # todo: try Squarish Pixels of 2 Horizontal Chars each
+# todo: thicker X Y Pens, especially the squarish 2X 1Y
+#
+# todo: Colors of Bold Italic Underline etc
 #
 #
 # todo: plot Fonts of Characters
 #
 #
-# todo: vs thin grey lines
-# todo: t.penmark should stay as the Chars only, but we always ⎋[Y;XH to where we were - vs thin grey
-#
-# todo: thicker X Y Pixels
-#
-# talk up gDoc for export, also Sh Screen TypeScript
-# steganography for delays in TypeScript's
-# work up export to gDoc tech for ending color without spacing to right of screen
-#
 # todo: edge cap cursor position, wrap, bounce, whine, stop
 # todo: 500x500 canvas at U Brown of UCBLogo
 #
-# todo: label "\e[41m" cs - does work, fill screen w background colour, do we like that?
+# todo: write "\e[41m\e[2J" does work, fill screen w background colour, do we like that?
+# todo: [  write "\e[41m"  clearscreen  ] also works
+# todo: more than 8 foreground colors, such as ⎋[38;5;130m orange
+# todo: background colors, such as ⎋[38;5;130m orange
 #
-# todo: thicker X Y Pens, especially the squarish 2X 1Y
-#
+# todo: thicker X Y Pixels other than the squarish 2X 1Y
+# todo: t.penmark should stay as the Chars only, but we always ⎋[Y;XH to where we were
 # todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpch "🟢"
 # todo: pasting such as LargeGreenCircle into ⇧R of 'pq turtle', 'pq st yolo', etc
 #
 # todo: Large Window vs SetScrunch, such as a large Headings.logo
 # todo: Ellipse etc via SetScrunch to tweak our fixed '/ 2 for thin pixels'
 # todo: Log Scale SetScrunch in Y or X or both
+#
+# steganography to put delays into Sh Script TypeScript Files after all
+# work up export to gDoc for ending color without spacing to right of screen
+#
+# todo: resolve background foreground color collisions, such as [ write "\e[m\e[40m" ]
+# todo: like [ write "\r\t\e[40m\e[32m\e[2JHello, Green-on-Black Darkmode" ]
+#
+# todo: circles, ellipses
+# todo: arc(angle, radius) with a design for center & end-position
+# todo: arcs with more args at https://fmslogo.sourceforge.io/manual/command-ellipsearc.html
+# todo: collisions, gravity, friction
 #
 # todo: more bits of Turtle State on Screen somehow
 # todo: more perceptible Screen State, such as the Chars there already
@@ -3564,30 +3606,47 @@ class TurtleClient:
 # 🐢 Turtle Chat Engine  # todo
 #
 #
-# todo: kebab-case as a string becomes "kebab case"  # unicodedata.lookup Full-Block
+# todo: rep 3 [fd rt]
+# todo: work with blocks, such as:  for _ in range(8): t.forward(100e0); t.right(45e0)
+# todo: add a rep.d to choose fd.d in 🐢 rep n abbreviation of rep n [fd rep.d rt rep.angle]
 #
-# todo: revive 🐢 Bye 🐢 Exit 🐢 Quit - Catch the SystemExit and relay it?
 #
+# todo: do still catenate successive Str Literals, such as for [ write "\e[m" "\e[2J" ]
 # todo: stop over-correcting '  del left_angle' to 'de', 'l', 'left_angle'
+# todo: kebab-case as an unquoted string becomes "kebab case" rather than (kebab - case)
+# todo: like for unicodedata.lookup Full-Block
+#
 #
 # todo: work with random choices
+# todo: random moves, seeded random, random $n for random.randint(0, n)
+# todo: cyclic moves in Color, in Pen Down, and help catalog more than 8 Colors
+# todo: Pen Colors that mix with the Screen: PenPaint/ PenReverse/ PenErase
 #
-# todo: work with blocks, such as:  for _ in range(8): t.forward(100e0); t.right(45e0)
 #
+# todo: multiple Turtles
+#
+#
+# todo: publish the 'import maths' e Pi Inf -Inf NaN Tau, in with False None True
 # todo: work with variables somehow - spirals, Sierpienski, etc
 #
-# todo: e Pi Inf -Inf NaN ... sqrt power ...
+# todo: ... sqrt pow ... more discoverable from:  import maths
 # todo: local tau = for Radians in place of Degrees
 # todo: 🐢 Turtling turtle.mode("Trig") for default East counting anticlockwise
 #
-# todo: input Sh lines:  !uname  # !ls  # !cat - >/dev/null  # !zsh
-#
-# todo: UCB Logo cleartext (ct) mention ⌘K
-# todo: UCB Logo setcursor [x y], cursor
+# todo: 🐢 With to bounce back after a block, such as:  with d [ d=125 fd fd ]
 #
 # todo: 🐢 After ...  # to get past next Float Seconds milestone in Screen .typescript
 #
-# todo: tweak the fd.d to hold diameter constant in 🐢 rep n abbreviation of rep n [fd fd.d rt rt.angle]
+# todo: input Sh lines:  !uname  # !ls  # !cat - >/dev/null  # !zsh
+#
+# todo: reconcile with Python "import turtle" Graphics on TkInter
+#
+# todo: reconcile with other Logo's
+# todo: UCB Logo cleartext (ct) mention ⌘K
+# todo: UCB Logo setcursor [x y], cursor
+# todo: .rest vs Python Turtle screen.delay
+# todo: .stride vs Logo SetStepSize
+# todo: .rest vs Logo SetSpeed, SetVelocity, Wait
 #
 # todo: 🐢 Pin to drop a pin (in float precision!)
 # todo: 🐢 Go to get back to it
@@ -3603,31 +3662,12 @@ class TurtleClient:
 # todo: pinned sampling, such as list of variables to watch
 # todo: mouse-click (or key chord) to unfold/ fold the values watched
 #
-# todo: escape more robustly into Python Exec & Eval, such as explicit func(arg) calls
-#
 # todo: Command Input Line History
 # todo: Command Input Word Tab-Completions
 #
-# todo: KwArgs for Funcs
-# todo: VsCode for .logo, for .lgo, for .log, ...
-#
-# todo: reconcile with Python "import turtle" Graphics on TkInter
-# todo: .rest vs Python Turtle screen.delay
-# todo: .stride vs Logo SetStepSize
-# todo: .rest vs Logo SetSpeed, SetVelocity, Wait
-#
-# todo: random moves, seeded random, random $n for random.randint(0, n)
-# todo: cyclic moves in Color, in Pen Down, and help catalog more than 8 Colors
-# todo: Pen Colors that mix with the Screen: PenPaint/ PenReverse/ PenErase
-#
-# todo: circles, ellipses
-# todo: arc(angle, radius) with a design for center & end-position
-# todo: arcs with more args at https://fmslogo.sourceforge.io/manual/command-ellipsearc.html
-# todo: collisions, gravity, friction
+# todo: KwArgs for Funcs, no longer just PosArgs:  [  fd d=100  rt a=90  ]
 #
 # todo: context of Color Delay etc Space for Forward & Turn, like into irregular dance beat
-# todo: more than 8 foreground colors, such as ⎋[38;5;130m orange
-# todo: background colors, such as ⎋[38;5;130m orange
 #
 # todo: scroll and resize and reposition and iconify/ deiconify the window
 #
@@ -3635,9 +3675,7 @@ class TurtleClient:
 #
 # 🐢 Python Makeovers  # todo
 #
-#
-# todo: def efprint1(self, form, **kwargs) at uturtle.Turtle for printing its Fields
-# todo: print only first and then changes in the form result
+# todo: subclass Bytes into WholeCSIBytes, CSIBytes, SomeStrBytes, SomeBytes
 #
 
 #

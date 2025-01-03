@@ -168,9 +168,16 @@ To see all the Turtle Verbs listed, try
     help(t)
 
 You'll see
-Backward, Beep, Breakpoint, ClearScreen, Forward, HideTurtle, Home, IsDown, IsVisible, Label,
-PenDown, PenUp, Relaunch, Repeat, Restart, Right,
-SetHeading, SetHertz, SetPenColor, SetX, SetXY, SetY, ShowTurtle, Sleep, and Write
+Backward, Beep, Breakpoint, Bye,
+ClearScreen,
+Forward,
+HideTurtle, Home,
+IsDown, IsVisible,
+Label,
+PenDown, PenUp,
+Relaunch, Repeat, Restart, Right,
+SetHeading, SetHertz, SetPenColor, SetX, SetXY, SetY, ShowTurtle, Sleep, and
+Write
 suggested
 
 Try
@@ -386,8 +393,12 @@ whereas their Turtle Logo tells you things like
 ### What kind of drawings does it make?
 
 Our Turtle Logo draws with Character Graphics inside the Terminal.
-You can copy-paste our drawings into a Google Doc, and
+You can copy-paste our drawings into a Google Doc (gDoc), and
 edit them inside the Google Doc
+
+To save drawings entirely inside the Terminal,
+you can record and replay them (at near infinite speed)
+with the Terminal Sh 'screen' command
 
 Their Turtle Logo draws on a Bitmap Canvas in a separate Window that's not a Terminal Window.
 You can take screenshots of their drawings,
