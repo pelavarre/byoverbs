@@ -12,6 +12,7 @@ Contents
 - [Draw a Large Square](#draw-a-large-square)
 - [Choose your own Defaults](#choose-your-own-defaults)
   - [Read the Help](#read-the-help)
+  - [Some Quick Tests](#some-quick-tests)
 - [Play around](#play-around)
 - [Breakpoints](#breakpoints)
   - [Breakpoint the Server](#breakpoint-the-server)
@@ -250,6 +251,23 @@ To undo what you've said, you can try
 These works of Dir and Del are standard Python incantations.
 They work without us helping you out
 
+
+### Some Quick Tests
+
+You can paste larger Turtle Logo Programs
+in to the '🐢? ' Prompt of the Client Window.
+We've not yet worked up a great way to make them available to you,
+but they are out there
+
+In particular, presently you can paste one or all of
+
+[demos/arrow-keys.logo](../demos/headings.logo)<br>
+[demos/bkboxbox.logo](../demos/headings.logo)<br>
+[demos/fdboxbox.logo](../demos/headings.logo)<br>
+[demos/headings.logo](../demos/headings.logo)<br>
+[demos/like-a-rainbow.logo](../demos/headings.logo)<br>
+
+
 ## Play around
 
 Plainly, we should tell you more, but what?
@@ -377,8 +395,10 @@ I can only hope we'll scrub more bugs out of it and make it fast too
 
 **Links**
 
-Wiki > [Domain-specific language]([./demos/arrow-keys.logo](https://en.wikipedia.org/wiki/Domain-specific_language))
-Wiki > [Greenspun's tenth rule](https://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)
+Docs·Python·Org > Import [turtle — Turtle Graphics](https://docs.python.org/3/library/turtle.html)<br>
+
+Wiki > [Domain-specific language]([./demos/arrow-keys.logo](https://en.wikipedia.org/wiki/Domain-specific_language))<br>
+Wiki > [Greenspun's tenth rule](https://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)<br>
 
 
 ### Does it work at your desk?
