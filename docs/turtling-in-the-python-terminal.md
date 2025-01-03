@@ -4,19 +4,26 @@
 Contents
 
 - [Welcome](#welcome)
-- [Move the Turtle](#move-the-turtle)
-- [Draw a Small Triangle](#draw-a-small-triangle)
-  - [Relaunch](#relaunch)
-  - [Symmetry](#symmetry)
-  - [Shape of Window, Darkmode, Lightmode, and Fonts](#shape-of-window-darkmode-lightmode-and-fonts)
-- [Draw a Large Square](#draw-a-large-square)
-- [Choose your own Defaults](#choose-your-own-defaults)
-  - [Read the Help](#read-the-help)
-  - [Some Quick Tests](#some-quick-tests)
-- [Play around](#play-around)
-- [Breakpoints](#breakpoints)
-  - [Breakpoint the Server](#breakpoint-the-server)
-  - [Breakpoint the Client](#breakpoint-the-client)
+- [You can just try things](#you-can-just-try-things)
+  - [Move the Turtle](#move-the-turtle)
+  - [Draw a Small Triangle](#draw-a-small-triangle)
+    - [Relaunch](#relaunch)
+    - [Symmetry](#symmetry)
+    - [Shape of Window, Darkmode, Lightmode, and Fonts](#shape-of-window-darkmode-lightmode-and-fonts)
+  - [Draw a Large Square](#draw-a-large-square)
+  - [Glance through the Help](#glance-through-the-help)
+  - [Choose your own Defaults, when you dislike ours](#choose-your-own-defaults-when-you-dislike-ours)
+  - [Paste whole Files of Input](#paste-whole-files-of-input)
+  - [Play around](#play-around)
+  - [Help sort our Wish List](#help-sort-our-wish-list)
+- [Dig in technically, deep into the Python](#dig-in-technically-deep-into-the-python)
+  - [27 Imports](#27-imports)
+  - [24 Cross-Platform Python Imports](#24-cross-platform-python-imports)
+  - [3 Linux/ macOS Imports](#3-linux-macos-imports)
+  - [0 Windows Imports](#0-windows-imports)
+  - [Breakpoints](#breakpoints)
+    - [Breakpoint the Server](#breakpoint-the-server)
+    - [Breakpoint the Client](#breakpoint-the-client)
 - [Try out some other Turtle Logo](#try-out-some-other-turtle-logo)
   - [Does it work at your desk?](#does-it-work-at-your-desk)
   - [What kind of drawings does it make?](#what-kind-of-drawings-does-it-make)
@@ -26,7 +33,9 @@ Contents
 <!-- VsCode autogenerates this unnumbered Table-of-Contents. Maybe people will cope -->
 
 GitHub posts a rendering of this Md File.
-You might prefer the look of it at VsCode ⇧⌘V Markdown Open Preview
+You might prefer to read this Md File there.
+Or you might prefer to read this Md File
+at VsCode ⇧⌘V Markdown Open Preview
 
 
 ## Welcome
@@ -64,7 +73,10 @@ You've tested our Doc and our Doc failed you.
 We'd love to have you tell us exactly how far you got, please
 
 
-## Move the Turtle
+## You can just try things
+
+
+### Move the Turtle
 
 Try
 
@@ -84,7 +96,7 @@ You can even type out the full Python yourself if you want:
 Note: We define 'import turtling'. They define 'import turtle'
 
 
-## Draw a Small Triangle
+### Draw a Small Triangle
 
 Try
 
@@ -102,16 +114,18 @@ You'll see a Triangle. Something like
     ██
 
 
-### Relaunch
+#### Relaunch
 
 Turtle Logo's disagree over how to speak the idea of Relaunch the Game.
-We have you say Relaunch.
+We have you say Relaunch,
+or just Restart when you do mostly want to start over,
+but you don't want to clear the Screen.
 Python Import Turtle would have you say Reset,
 so long as you're working with only 1 Turtle,
 but gets messier when working with more Turtles
 
 
-### Symmetry
+#### Symmetry
 
 Turtle Logo's disagree over how symmetric a small Triangle should be.
 We're still developing our small Triangles,
@@ -121,7 +135,7 @@ In fact, our Triangles pointing up and down don't even exactly match
 our Triangles pointing left and right
 
 
-### Shape of Window, Darkmode, Lightmode, and Fonts
+#### Shape of Window, Darkmode, Lightmode, and Fonts
 
 We rely on you to make your own Terminal Windows,
 so you make several choices for us
@@ -149,7 +163,7 @@ As you can see in my screenshots,
 I haven't tested Ghostty and iTerm at macOS.
 
 
-## Draw a Large Square
+### Draw a Large Square
 
 Try
 
@@ -163,9 +177,7 @@ Turtle Logo's disagree over how large this Square is.
 UCB Turtle Logo makes this Square as large as their Square Window
 
 
-## Choose your own Defaults
-
-### Read the Help
+### Glance through the Help
 
 To see all the Turtle Verbs listed, try
 
@@ -180,7 +192,7 @@ IsDown, IsVisible,
 Label,
 PenDown, PenUp,
 Relaunch, Repeat, Restart, Right,
-SetHeading, SetHertz, SetPenColor, SetX, SetXY, SetY, ShowTurtle, Sleep, and
+SetHeading, SetHertz, SetPenColor, SetX, SetXY, SetY, ShowTurtle, Sleep, Tada, and
 Write
 suggested
 
@@ -192,6 +204,9 @@ You'll see Python telling you that our Forward Verb takes a Keyword Argument nam
 
 It then tells you to press Q to quit.
 It means that you press the Q Key once, to start serving drawings again
+
+
+### Choose your own Defaults, when you dislike ours
 
 Try
 
@@ -252,27 +267,27 @@ These works of Dir and Del are standard Python incantations.
 They work without us helping you out
 
 
-### Some Quick Tests
+### Paste whole Files of Input
 
 You can paste larger Turtle Logo Programs
 in to the '🐢? ' Prompt of the Client Window.
-We've not yet worked up a great way to make them available to you,
-but they are out there
+We've not yet worked up a great way to make them more available to you,
+but they are posted out there
 
 In particular, presently you can paste one or all of
 
-[demos/arrow-keys.logo](../demos/headings.logo)<br>
-[demos/bkboxbox.logo](../demos/headings.logo)<br>
-[demos/fdboxbox.logo](../demos/headings.logo)<br>
-[demos/headings.logo](../demos/headings.logo)<br>
-[demos/like-a-rainbow.logo](../demos/headings.logo)<br>
+> [demos/arrow-keys.logo](../demos/headings.logo)<br>
+> [demos/bkboxbox.logo](../demos/bkboxbox.logo)<br>
+> [demos/fdboxbox.logo](../demos/fdboxbox.logo)<br>
+> [demos/headings.logo](../demos/headings.logo)<br>
+> [demos/like-a-rainbow.logo](../demos/like-a-rainbow.logo)<br>
 
 
-## Play around
+### Play around
 
 Plainly, we should tell you more, but what?
 
-You're visiting here in our earliest days,
+You've joined us in our early days,
 while we're still rapidly rewriting what's here,
 to make it more friendly
 
@@ -322,10 +337,76 @@ That works a little less directly,
 by sleeping as long as the last 🐢 SetHertz said to sleep
 
 
-## Breakpoints
+### Help sort our Wish List
+
+Have you found a deal breaker?
+
+Tell us what it is?
+
+Maybe you need us to try making Square Pixels?
+And we could rewrite our Arrow Keys Demo to have 4 Turtles draw it, not just 1.
+And so on and on and on
+
+You've joined us in our early days.
+We don't have more than a few of us gathered here yet.
+Tell us what change you want next, and odds on we'll deliver it sooner
 
 
-### Breakpoint the Server
+## Dig in technically, deep into the Python
+
+You could review the whole Code? No one has before you
+
+Or you could pick out just one aspect of the Code to drill down into?
+
+### 27 Imports
+
+Our Turtle Logo App here is thousands of lines large.
+It's large enough that it gives a kind of a tour of the Standard Python Library.
+
+### 24 Cross-Platform Python Imports
+
+> import \_\_main\_\_<br>
+> import argparse<br>
+> import ast<br>
+> import bdb<br>
+> import collections<br>
+> import decimal<br>
+> import glob<br>
+> import inspect<br>
+> import math<br>
+> import os<br>
+> import pathlib<br>
+> import pdb<br>
+> import re<br>
+> import shlex<br>
+> import shutil<br>
+> import signal<br>
+> import subprocess<br>
+> import sys<br>
+> import textwrap<br>
+> import time<br>
+> import traceback<br>
+> import typing<br>
+> import unicodedata<br>
+> import warnings<br>
+
+### 3 Linux/ macOS Imports
+
+> import select<br>
+> import termios<br>
+> import tty<br>
+
+### 0 Windows Imports
+
+> import mscvrt
+
+We've got nobody testing Microsoft Windows, but you could change that
+
+
+### Breakpoints
+
+
+#### Breakpoint the Server
 
 To halt the Server and open it up inside the Pdb Python Debugger, try
 
@@ -351,7 +432,7 @@ because it runs inside 'tty.setraw'
 which is practically never what you want
 
 
-### Breakpoint the Client
+#### Breakpoint the Client
 
 To halt the Client and open it up inside the Pdb Python Debugger, press
 
@@ -431,7 +512,8 @@ and share and edit the screenshots
 ## Help us please
 
 You know you've got thoughts.
-Please do speak them out loud as words
+Please do speak them out loud as words to someone,
+and to us, if possible
 
 + LinkedIn > [pelavarre](https://www.linkedin.com/in/pelavarre)<br>
 + Mastodon > [pelavarre](https://social.vivaldi.net/@pelavarre)<br>

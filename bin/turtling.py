@@ -3501,7 +3501,7 @@ class TurtleClient:
 # todo: solve ↓ ↑ Keys too small - symmetric small triangles:  demos/arrow-keys.logo
 #
 #
-# todo: vs thin grey lines
+# todo: vs macOS Terminal thin grey lines
 # todo: solve the thin flats left on screen behind:  reset cs pu  sethertz 10 rep 8
 # also differs by Hertz:  reset cs pu  sethertz rep 8
 # also:  sethertz cs pu setxy 250 250  sethertz 100 home
@@ -3579,6 +3579,7 @@ class TurtleClient:
 # todo: try Squarish Pixels of 2 Horizontal Chars each
 # todo: thicker X Y Pens, especially the squarish 2X 1Y
 #
+#
 # todo: Colors of Bold Italic Underline etc
 #
 #
@@ -3642,7 +3643,7 @@ class TurtleClient:
 #
 # todo: multiple Turtles
 #
-#
+# todo: 🐢 SetHertz Inf, in place of 🐢 SetHertz 0
 # todo: publish the 'import maths' e Pi Inf -Inf NaN Tau, in with False None True
 # todo: work with variables somehow - spirals, Sierpienski, etc
 #
