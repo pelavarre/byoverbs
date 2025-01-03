@@ -17,6 +17,10 @@ Contents
 <!-- I'd fear people need the headings numbered, if it were just me -->
 <!-- VsCode autogenerates this unnumbered Table-of-Contents. Maybe people will cope -->
 
+GitHub posts a rendering of this Md File.
+You might prefer the look of it at VsCode ⇧⌘V Markdown Open Preview
+
+
 ## Welcome
 
 This Repo is my pile of **actions your computer should make easy for you**
@@ -285,10 +289,10 @@ It reminds me how to spell the more forgettable Python Easter Eggs
 And this Python3·Py reminds me
 which Koans we've left out of the Zen of Python so far
 
-+ 'batteries included better than homemade'
-+ 'copied better than aliased'
-+ 'ordered better than muddled'
-+ 'python3' better than 'python3 -O'
++ 'included is better than homemade'
++ 'copied is better than aliased'
++ 'ordered is better than muddled'
++ 'python3' is better than 'python3 -O'
 
 And this Python3·Py reminds me
 when the different 3.2.1 "Major-Minor-Micro" Version Numbers came out and reached me too.
@@ -303,7 +307,7 @@ ByoVerbs > Bin > [Python3·Py](bin/python3.py)<br>
 ## Help us please
 
 You know you've got thoughts.
-Please do speak the out loud as words
+Please do speak them out loud as words
 
 + LinkedIn > [pelavarre](https://www.linkedin.com/in/pelavarre)<br>
 + Mastodon > [pelavarre](https://social.vivaldi.net/@pelavarre)<br>

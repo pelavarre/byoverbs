@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 r"""
-bash --noprofile --norc
+env -i bash --noprofile --norc
 
 alias -p
 bind -p

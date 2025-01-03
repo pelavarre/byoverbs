@@ -3,30 +3,30 @@
 # Draw two ← ↑ → ↓ square'ish boxes, concentrically, clockwise
 
 
-reset clearscreen pendown
+relaunch
 
 
 st
 pd
 
-setpch '↑' fd rt
-setpch '→' fd rt
-setpch '↓' fd rt
-setpch '←' fd rt
+setpch '↑' fd 100 rt
+setpch '→' fd 100 rt
+setpch '↓' fd 100 rt
+setpch '←' fd 100 rt
 
-pu lt fd rt pd
+pu lt 90 fd 100 rt pd
 
-setpch '↑' fd fd rt
-setpch '→' fd fd fd rt
-setpch '↓' fd fd fd rt
-setpch '←' fd fd fd rt
-setpch '↑' fd
+setpch '↑' fd 100 fd 100 rt
+setpch '→' fd 100 fd 100 fd 100 rt
+setpch '↓' fd 100 fd 100 fd 100 rt
+setpch '←' fd 100 fd 100 fd 100 rt
+setpch '↑' fd 100
 
-pu rt fd lt
+pu rt fd 100 lt 90
 setpch '*'
 
 
-reset tada
+restart tada
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/fdboxbox.logo

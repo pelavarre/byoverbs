@@ -434,7 +434,7 @@ class PyExecQueryResult:
 
         if not py_graf:
             if any((" " in _) for _ in pq_words):
-                py_graf = list(pq_words)  # 'copied better than aliased'
+                py_graf = list(pq_words)  # 'copied is better than aliased'
             elif len(pq_words) == 1:
                 pq_word = pq_words[-1]
 
