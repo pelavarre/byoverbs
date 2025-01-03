@@ -35,14 +35,17 @@ Welcome to our game
 You download the Source Code
 
     mkdir bin
-    curl -Ss https://github.com/pelavarre/byoverbs/raw/refs/heads/main/bin/turtling.py >bin/turtling.py
 
-You open one Server Terminal Window at right, and
+    curl -Ss https://raw.githubusercontent.com/pelavarre/byoverbs/refs/heads/main/bin/turtling.py >bin/turtling.py
+
+    wc -l bin/turtling.py  # thousands of lines
+
+You open one Terminal Window to run the Server at right, and
 you tell it to invite Turtles to move around and draw on it
 
     python3 bin/turtling.py --yolo
 
-You open a Client Terminal Window at left, and
+You open another Terminal Window to run the Client at left, and
 you tell it to invite you to type Turtle Logo Instructions into it
 
     python3 bin/turtling.py -i
