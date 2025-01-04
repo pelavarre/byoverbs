@@ -1,0 +1,63 @@
+# xyplotter.logo
+
+
+# Plot X = -0.010 * Y * Y as a Contiguous Curve
+
+
+relaunch
+
+pu
+setxy -225 -150
+pd
+setxy -196 -140
+setxy -169 -130
+setxy -144 -120
+setxy -121 -110
+setxy -100 -100
+setxy -81 -90
+setxy -64 -80
+setxy -49 -70
+setxy -36 -60
+setxy -25 -50
+setxy -16 -40
+setxy -9 -30
+setxy -4 -20
+setxy -1 -10
+setxy 0 0
+setxy -1 10
+setxy -4 20
+setxy -9 30
+setxy -16 40
+setxy -25 50
+setxy -36 60
+setxy -49 70
+setxy -64 80
+setxy -81 90
+setxy -100 100
+setxy -121 110
+setxy -144 120
+setxy -169 130
+setxy -196 140
+setxy -225 150
+
+restart  pu  setxy -10 0  pd
+
+tada
+
+
+#
+# print("pu")
+# once = False
+# for y in range(-230, 230 + 1, 10):
+#     x = round(-0.010 * y * y)
+#     if x < -225:
+#         continue
+#     print(f"setxy {x} {y}")
+#     if not once:
+#         once = True
+#         print("pd")
+#
+
+
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/xyplotter.logo
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

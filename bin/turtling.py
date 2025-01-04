@@ -54,7 +54,7 @@ import warnings
 
 
 turtling = __main__
-
+__version__ = "2025.01.04"  # Saturday
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
@@ -1048,6 +1048,9 @@ class StrTerminal:
         row_y = self.row_y
         column_x = self.column_x
 
+        assert row_y >= 1, (row_y,)  # rows counted down from Row 1 at Top
+        assert column_x >= 1, (column_x,)  # columns counted up from Column 1 at Left
+
         return (row_y, column_x)
 
     def y_rows_x_columns_read(self, timeout) -> tuple[int, int]:
@@ -1066,6 +1069,8 @@ class StrTerminal:
         self.x_columns = x_columns
 
         return (y_rows, x_columns)
+
+        # .timeout unneeded when os.get_terminal_size available
 
     #
     # Say if writing these Screen Chars as Bytes would show their meaning clearly
@@ -1362,8 +1367,8 @@ class Turtle:
         self.float_y = 0e0
         self.heading = 360e0  # 360° of North Up Clockwise
 
-        self.penscape = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
-        self.penmark = FullBlock
+        self.penscape = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)  # "" Clear
+        self.penmark = 2 * FullBlock  # ██
         self.warping = False  # todo: imply .isdown more clearly
         self.hiding = False
 
@@ -1383,7 +1388,15 @@ class Turtle:
         """Exit Server and Client, but without clearing the Screen"""
 
         gt = self.glass_teletype
-        gt.schars_write("\r\n")
+
+        assert CUP_Y_X == "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
+
+        (y_rows, x_columns) = gt.os_terminal_y_rows_x_columns()
+        assert y_rows >= 2, (y_rows,)
+
+        y = y_rows - 1
+        x = 1
+        gt.schars_write("\x1B[" f"{y};{x}H")
 
         sys.exit()
 
@@ -1720,12 +1733,9 @@ class Turtle:
         """Choose which Character to draw with, or default to '*'"""
 
         floatish = isinstance(ch, float) or isinstance(ch, int) or isinstance(ch, bool)
-        if ch is None:
-            penmark1 = FullBlock
-        elif floatish or isinstance(ch, decimal.Decimal):
+        if floatish or isinstance(ch, decimal.Decimal):
             penmark1 = chr(int(ch))  # not much test of '\0' yet
         elif isinstance(ch, str):
-            # assert len(ch) == 1, (len(ch), ch)  # todo: unlock vs require Len 1 after dropping Sgr's
             penmark1 = ch
         else:
             assert False, (type(ch), ch)
@@ -1735,15 +1745,18 @@ class Turtle:
         d = dict(penmark=self.penmark)
         return d
 
-        # todo: With SetPenColor Forward 1:  "!" if (penmark == "~") else chr(ord(penmark) + 1)
+        # todo: cyclic US Ascii Penmarks:  "!" if (penmark == "~") else chr(ord(penmark) + 1)
+        # todo: Penmark by Ord for more than 1 Ord
 
     def setx(self, x) -> dict:
         """Move the Turtle to a X Point, keeping Y unchanged, leaving a Trail if Pen Down"""
 
-        float_y = self.float_y
-        self.setxy(x=x, y=float_y)
-        d = dict(float_x=self.float_x)
+        float_y_ = self.float_y
+        float_y = 10 * float_y_
 
+        self.setxy(x=x, y=float_y)
+
+        d = dict(float_x=self.float_x)
         return d
 
     def setxy(self, x, y) -> dict:
@@ -1758,8 +1771,8 @@ class Turtle:
 
         # Choose the Ending Point
 
-        float_x_ = float_x / 10  # / 10 to a screen of a few large pixels
-        float_y_ = float_y / 10 / 2  # / 2 for thin pixels
+        float_x_ = float_x / 10
+        float_y_ = float_y / 10
 
         float_x__ = round(float_x_, 10)
         float_y__ = round(float_y_, 10)
@@ -1790,10 +1803,12 @@ class Turtle:
     def sety(self, y) -> dict:
         """Move the Turtle to a Y Point, keeping X unchanged, leaving a Trail if Pen Down"""
 
-        float_x = self.float_x
-        self.setxy(x=float_x, y=y)
-        d = dict(float_x=self.float_y)
+        float_x_ = self.float_x
+        float_x = 10 * float_x_
 
+        self.setxy(x=float_x, y=y)
+
+        d = dict(float_y=self.float_y)
         return d
 
     def showturtle(self) -> dict:
@@ -1836,6 +1851,11 @@ class Turtle:
 
         # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s  st
 
+    def tada(self) -> None:
+        """Call HideTurtle immediately, and then ShowTurtle before anything else"""
+
+        raise NotImplementedError("Only works when auto-complete'd")
+
     def write(self, s) -> None:
         """Write the Str to the Screen"""
 
@@ -1865,8 +1885,8 @@ class Turtle:
 
         angle = (90 - heading) % 360e0  # converts to 0° East Anticlockwise
 
-        float_x_ = float_x + (stride_ * math.cos(math.radians(angle)))  # destination
-        float_y_ = float_y + (stride_ * math.sin(math.radians(angle)) / 2)  # / 2 for thin pixels
+        float_x_ = float_x + (stride_ * math.cos(math.radians(angle)))
+        float_y_ = float_y + (stride_ * math.sin(math.radians(angle)))
 
         float_x__ = round(float_x_, 10)  # todo: how round should our Float Maths be?
         float_y__ = round(float_y_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
@@ -1974,16 +1994,20 @@ class Turtle:
         rest = self.rest
 
         if wx < x:
-            x_text = f"\x1B[{x - wx}C"  # CSI 04/03 Cursor [Forward] Right
+            pn = 2 * (x - wx)  # doublewide X
+            x_text = f"\x1B[{pn}C"  # CSI 04/03 Cursor [Forward] Right
         elif wx > x:
-            x_text = f"\x1B[{wx - x}D"  # CSI 04/04 Cursor [Backward] Left
+            pn = 2 * (wx - x)  # doublewide X
+            x_text = f"\x1B[{pn}D"  # CSI 04/04 Cursor [Backward] Left
         else:
             x_text = ""
 
         if wy < y:
-            y_text = f"\x1B[{y - wy}B"  # CSI 04/02 Cursor [Down] Next
+            pn = y - wy
+            y_text = f"\x1B[{pn}B"  # CSI 04/02 Cursor [Down] Next
         elif wy > y:
-            y_text = f"\x1B[{wy - y}A"  # CSI 04/01 Cursor [Up] Previous
+            pn = wy - y
+            y_text = f"\x1B[{pn}A"  # CSI 04/01 Cursor [Up] Previous
         else:
             y_text = ""
 
@@ -1996,8 +2020,8 @@ class Turtle:
 
         text = f"{y_text}{x_text}"
         if not warping:
-            pc_text = penmark + (width * "\b")
-            text = f"{y_text}{x_text}{pc_text}"
+            backspaces = width * "\b"
+            text = f"{y_text}{x_text}{penmark}{backspaces}"
 
         gt.schars_write(text)
 
@@ -2019,10 +2043,13 @@ class Turtle:
         # Find the Cursor
 
         (y_row, x_column) = gt.os_terminal_y_row_x_column()
+        x_column = x_column // 2  # doublewide X
 
         # Find the Center of Screen
 
         (y_rows, x_columns) = gt.os_terminal_y_rows_x_columns()
+        x_columns = x_columns // 2  # doublewide X
+
         cx = 1 + (x_columns // 2)
         cy = 1 + (y_rows // 2)
 
@@ -2087,27 +2114,27 @@ KwByGrunt = {
 def _turtling_defaults_choose_() -> dict:
     """Choose default Values for KwArg Names"""
 
-    angle = 0e0
+    angle = 0
     count = 1
-    distance = 100e0
+    distance = 100
     hertz = 1e3
     seconds = 1e-3
-    x = 0e0
-    y = 0e0
+    x = 0
+    y = 0
 
     _ = count
 
     d = dict(
-        angle=0e0,
-        left_angle=45e0,
-        right_angle=90e0,
+        angle=0,
+        left_angle=45,
+        right_angle=90,
         setheading_angle=angle,
         #
         count=1,
         repeat_count=3,
         #
-        distance=100e0,
-        backward_distance=200e0,
+        distance=100,
+        backward_distance=200,
         forward_distance=distance,
         #
         hertz=1e3,
@@ -2116,11 +2143,11 @@ def _turtling_defaults_choose_() -> dict:
         seconds=1e-3,
         sleep_seconds=seconds,
         #
-        x=0e0,
+        x=0,
         setx_x=x,
         setxy_x=x,
         #
-        y=0e0,
+        y=0,
         sety_y=y,
         setxy_y=y,
     )
@@ -2172,8 +2199,6 @@ class PythonSpeaker:
         verbs = self.cls_to_verbs(cls)
 
         kws_by_verb = self.cls_to_kws_by_verb(cls)
-        assert "tada" not in kws_by_verb.keys(), (kws_by_verb.keys(), cls)
-        kws_by_verb["tada"] = ["self"]
 
         localname_by_leftside = self.localname_by_leftside()
 
@@ -2195,7 +2220,9 @@ class PythonSpeaker:
 
         # Forward Python unchanged
 
-        before_strip = text.partition("#")[0].strip()
+        dedent = textwrap.dedent(text)
+
+        before_strip = dedent.partition("#")[0].strip()
         if before_strip not in verbs:
 
             title = before_strip.title()
@@ -2203,17 +2230,23 @@ class PythonSpeaker:
                 pycodes.append(title)
                 return pycodes
 
+            pyish = dedent
+            pyish = pyish.replace("-", "~")  # accepts '-' as unary op, but refuse as binary op
+            pyish = pyish.replace("+", "~")  # accepts '+' as unary op, but refuses as binary op
+
             try:
-                ast_parse_strict(text)
-                pycodes.append(text)
+                ast_parse_strict(pyish)
+                pycodes.append(dedent)
                 return pycodes
             except SyntaxError:  # from Ast Parse
                 pass
 
-            alt_text = text.replace(r"\e", r"\x1B")
+            alt_dedent = text.replace(r"\e", r"\x1B")
+            alt_pyish = pyish.replace(r"\e", r"\x1B")
+
             try:
-                ast_parse_strict(alt_text)
-                pycodes.append(alt_text)
+                ast_parse_strict(alt_pyish)
+                pycodes.append(alt_dedent)
                 return pycodes
             except SyntaxError:  # from Ast Parse
                 pass
@@ -2371,12 +2404,12 @@ class PythonSpeaker:
                 length = index + 1
                 head = more[:length]
 
-                parseable = head
-                parseable = parseable.replace("-", "~")  # refuse '-' as bin op, accept as unary op
-                parseable = parseable.replace("+", "~")  # refuse '+' as bin op, accept as unary op
+                pyish = head
+                pyish = pyish.replace("-", "~")  # accepts '-' as unary op, but refuse as binary op
+                pyish = pyish.replace("+", "~")  # accepts '+' as unary op, but refuses as binary op
 
                 try:
-                    ast_literal_eval_strict(parseable)
+                    ast_literal_eval_strict(pyish)
                     heads.append(head)
                 except ValueError:
                     heads.append(head)
@@ -3056,6 +3089,8 @@ class TurtlingServer:
             if bt_fd in select_:
                 kchord = self.keyboard_serve_one_kchord()
                 if kchord[-1] == "⌃D":
+                    t = Turtle(gt)
+                    t.bye()
                     break
 
             # Reply to 1 Client Text
@@ -3088,7 +3123,7 @@ class TurtlingServer:
         reader_fd = reader.fileno
 
         gt = self.glass_teletype
-        st = gt.str_terminal
+        # st = gt.str_terminal
 
         exec_eval_locals = self.exec_eval_locals
         default_eq_None = None
@@ -3100,7 +3135,7 @@ class TurtlingServer:
 
         rtext_else = reader.fd_read_text_else(reader_fd)
         if rtext_else is None:
-            st.schars_print("EOFError")
+            # st.schars_print("EOFError")
             writer.index += 1  # as if written
             return
 
@@ -3300,7 +3335,7 @@ class TurtleClient:
         if text == "relaunch":
             started = True
 
-            eprint("BYO Turtling·Py 2025.1.2 Thursday")
+            eprint(f"BYO Turtling·Py {__version__}")
             # trade_else = self.py_trade_else("t = turtling.Turtle(); t.relaunch()")
             trade_else = self.py_trade_else("t.relaunch(); pass")
             assert trade_else is None, (trade_else,)
@@ -3318,25 +3353,25 @@ class TurtleClient:
 
                 # Quickly dismiss a flimsy Line
 
-                rstrip = iline.rstrip()
-                if not self.text_has_pyweight(rstrip):
+                dedent = textwrap.dedent(iline)
+                if not self.text_has_pyweight(dedent):
                     continue
 
-                if rstrip == "import turtling":
+                if dedent == "import turtling":
                     started = True
-                    eprint(rstrip)
+                    eprint(dedent)
                     continue
 
-                if rstrip.startswith("t =") or rstrip.startswith("t="):
+                if dedent.startswith("t =") or dedent.startswith("t="):
                     started = True
 
                 # Auto-correct till it's Python
                 # Send each Python Call to the Server, trace its Reply
 
-                pycodes = ps.text_to_pycodes(rstrip, cls=Turtle)
+                pycodes = ps.text_to_pycodes(iline, cls=Turtle)
                 trades = list()
                 for pycode in pycodes:
-                    if pycodes != [rstrip]:  # if autocompleted
+                    if pycodes != [dedent]:  # if autocompleted
                         eprint(">>>", pycode)
 
                     trade_else = self.py_trade_else(pycode)
@@ -3505,7 +3540,7 @@ class TurtleClient:
 # 🐢 Bug Fixes  # todo
 #
 #
-# todo: solve ↓ ↑ Keys too small - symmetric small triangles:  demos/arrow-keys.logo
+# todo: equilateral small triangles of constant Area across ↑ ← ↓ → keys:  demos/arrow-keys.logo
 #
 #
 # todo: vs macOS Terminal thin grey lines
@@ -3521,10 +3556,25 @@ class TurtleClient:
 #       skips the column inside the right edge ?!
 #
 #
-# todo: somehow apart from Square Pixels
-# todo: strip out the Sgr and then limit "setpch" to 1 Char
+# todo: 🐢 SetXY slows to a crawl when given X Y much larger than Screen
+# todo: ⌃C interrupt of first Client, but then still attach another, without crashing the Server
+#
+#
+# todo: more limit "setpch" to what presently works
 # todo: coin a 🐢 Unlock Verb for less limited experimentation
 # todo: adopt Racket Lang progressive feature flags to offer less choices at first
+#
+#
+# todo: default Args in place of Verbose Py Tracebacks, such as:  setpencolor
+# todo: when to default to cyclic choices, such as inc color, or spiral fd
+#
+#
+# todo: let people say 'locals() distance angle' as one line, not three lines
+#
+# todo: let people say 't.tada()', not just 'tada'
+# todo: poll the Server while waiting for next Client Input
+# todo: like quick Client reply to Server Mouse/ Arrow
+# todo: but sum up the Server Arrow, don't only react to each individually
 #
 #
 

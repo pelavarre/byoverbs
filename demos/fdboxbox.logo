@@ -5,9 +5,8 @@
 
 relaunch
 
+pu fd -50 lt 90 fd 50 seth pd
 
-st
-pd
 
 setpch '↑' fd 100 rt
 setpch '→' fd 100 rt

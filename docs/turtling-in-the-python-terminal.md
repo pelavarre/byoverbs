@@ -9,9 +9,9 @@ Contents
   - [Draw a Small Triangle](#draw-a-small-triangle)
     - [Relaunch](#relaunch)
     - [Symmetry](#symmetry)
-    - [Shape of Window, Darkmode, Lightmode, and Fonts](#shape-of-window-darkmode-lightmode-and-fonts)
+    - [Terminal Window Shape, Size, Darkmode, Lightmode, \& Fonts](#terminal-window-shape-size-darkmode-lightmode--fonts)
   - [Draw a Large Square](#draw-a-large-square)
-  - [Glance through the Help](#glance-through-the-help)
+  - [Glance through the Help Texts](#glance-through-the-help-texts)
   - [Choose your own Defaults, when you dislike ours](#choose-your-own-defaults-when-you-dislike-ours)
   - [Paste whole Files of Input](#paste-whole-files-of-input)
   - [Play around](#play-around)
@@ -31,9 +31,8 @@ Contents
 <!-- I'd fear people need the headings numbered, if it were just me -->
 <!-- VsCode autogenerates this unnumbered Table-of-Contents. Maybe people will cope -->
 
-GitHub posts a rendering of this Md File.
-You might prefer to read this Md File there.
-Or you might prefer to read this Md File
+If you're seeing this Md File inside GitHub, it should look ok already.
+But on a MacBook you might prefer to read this Md File
 at VsCode ⇧⌘V Markdown Open Preview
 
 
@@ -50,24 +49,24 @@ You download the Source Code
     wc -l bin/turtling.py  # thousands of lines
 
 You open one Terminal Window to run the Server at right, and
-you tell it to invite Turtles to move around and draw on it
+you tell it to invite Turtles to move around and draw on the Terminal Screen
 
     python3 bin/turtling.py --yolo
 
 You open another Terminal Window to run the Client at left, and
-you tell it to invite you to type Turtle Logo Instructions into it
+you tell it to invite you to type out Turtle Logo Instructions to run through
 
     python3 bin/turtling.py -i
 
-We take the Turtle Logo Instructions you type into the left Window,
-auto-complete them to form Python,
-and run the Python in the right Window,
-to tell the Turtle how to move and what to draw
+We take the Turtle Logo Instructions you type in the left Window,
+auto-complete them to form Python Instruction,
+and run through the Python Instructions in the right Window,
+telling Turtles how to move and what to draw
 
-This Md File walks you through tests of Turtle Logo Instructions
+This Md File walks you through tests of such Turtle Logo Instructions
 
-You've joined us in our early days.
-If you quit before we stop talking at you, then it's our fault.
+You've met with us here in our early days.
+If you quit before we stop talking at you, then we've gone wrong.
 You've tested our Doc and our Doc failed you.
 We'd love to have you tell us exactly how far you got, please
 
@@ -102,64 +101,77 @@ Try
     relaunch
     fd 100 rt 120  fd 100 rt 120  fd 100 rt 120
 
-You'll see a Triangle. Something like
+You'll see a Triangle drawn. Something like
 
     ██
-    █ ███
-    █    ███
-    █      ███
-    █    ███
-    █ ███
+    ██████
+    ██    ████
+    ██        ████
+    ██            ████
+    ██                ██
+    ██            ████
+    ██        ████
+    ██    ████
+    ██████
     ██
 
 
 #### Relaunch
 
 Turtle Logo's disagree over how to speak the idea of Relaunch the Game.
-We have you say Relaunch,
-or just Restart when you do mostly want to start over,
+Above you see we have you say Relaunch.
+We'll also accept you saying just Restart when you do mostly want to start over,
 but you don't want to clear the Screen.
 Python Import Turtle would have you say Reset,
 so long as you're working with only 1 Turtle,
-but gets messier when working with more Turtles
+but Python Import Turtle gets messier when working with more Turtles
 
 
 #### Symmetry
 
 Turtle Logo's disagree over how symmetric a small Triangle should be.
 We're still developing our small Triangles,
-inside our [demos/arrow-keys.logo](./demos/arrow-keys.logo)
-Our smallest Triangles are not yet as symmetric as this.
-In fact, our Triangles pointing up and down don't even exactly match
+inside our [demos/arrow-keys.logo](../demos/arrow-keys.logo)
+Our Triangles pointing up and down don't yet exactly match
 our Triangles pointing left and right
 
 
-#### Shape of Window, Darkmode, Lightmode, and Fonts
+#### Terminal Window Shape, Size, Darkmode, Lightmode, & Fonts
 
 We rely on you to make your own Terminal Windows,
 so you make several choices for us
 
+You chose your Shape of Window for us.
 Turtle Logo's disagree over whether
-to draw in a Landscape, Portrait, or Square Window.
-You chose your Shape of Window for us
+to draw in a Landscape, Portrait, or Square Window
 
+You choose your Size of Window for us.
+Turtle Logo's disagree over how large to make the Window
+
+You choose Lightmode or Darkmode.
 Turtle Logo's disagree over whether
 to draw Dark Pixels on a Lightmode Canvas, or
 to draw Light Pixels on a Darkmode Canvas.
-Like 2024 Python Import Turtle forces Lightmode,
-even when clashing with the Darkmode's of macOS ior ReplIt·Com.
-You chose your Darkmode or Lightmode Terminal for us,
-no clash required
+In particular, the 2024 Python Import Turtle forces Lightmode,
+even when clashing with the Darkmode's of macOS or ReplIt·Com
 
-Turtle Logo Font's disagree over what U+2588 Full-Block █ means.
-Lots of Turtle Logo Fonts agree it means paint the full horizontal width,
-but they still disagree over how much of the vertical height to paint over.
+You choose your default Terminal Font.
+Presently we guess the Pixel you want is a Square pair of U+2588 Full-Block █ █ Characters.
+Lotsa of Terminal Font's disagree over how to draw a U+2588 Full-Block █ Character.
+Many Fonts agree Full-Block means paint the full horizontal width,
+but lots disagree over how much of the vertical height to paint over.
 I've not yet found a Font that says Full-Block should paint the full vertical height.
-Andale Mono 18 is working well enough for me at my macOS Terminal,
-inside Oct/2023 Sonoma macOS 14,
-<!-- Only Oct/2024 Sequoia macOS 15 since Jan/2025 -->
-As you can see in my screenshots,
-I haven't tested Ghostty and iTerm at macOS.
+
+As for me, as you can see in my screenshots,
+lately mostly I test Screens of
+101 Columns and 42 Rows of Andale Mono 18
+in the Lightmode Basic Profile of the macOS Terminal App in Oct/2023 Sonoma macOS 14
+<!-- Oct/2024 Sequoia macOS 15 since Jan/2025 -->
+
+I haven't tested Ghostty, nor iTerm either
+
+I'd love to see screenshots or video of how well the Turtle Logos work for you,
+on the Terminals you choose to test
 
 
 ### Draw a Large Square
@@ -167,33 +179,39 @@ I haven't tested Ghostty and iTerm at macOS.
 Try
 
     relaunch
-    setxy -250 250  setxy 250 250  setxy 0 0
-    setxy 250 250  setxy 250 -250  setxy 0 0
-    setxy 250 -250  setxy -250 -250  setxy 0 0
-    setxy -250 -250  setxy -250 250  setxy 0 0
+    setxy -180 180  setxy 180 180  setxy 0 0
+    setxy 180 180  setxy 180 -180  setxy 0 0
+    setxy 180 -180  setxy -180 -180  setxy 0 0
+    setxy -180 -180  setxy -180 180  setxy 0 0
 
 Turtle Logo's disagree over how large this Square is.
-UCB Turtle Logo makes this Square as large as their Square Window
+UCB Turtle Logo makes a Square from -250 -250 to 250 250 as large as their Square Window
+
+Presently we fit a Square from -180 -180 to 180 180
+into a Terminal Window of 101 Columns x 42 Rows
 
 
-### Glance through the Help
+### Glance through the Help Texts
 
-To see all the Turtle Verbs listed, try
+To see all our Turtle Verbs listed, try
 
     help(t)
 
-You'll see
+You'll see our Help suggests you play around, saying
 Backward, Beep, Breakpoint, Bye,
 ClearScreen,
 Forward,
 HideTurtle, Home,
 IsDown, IsVisible,
-Label,
+Label, Left,
 PenDown, PenUp,
 Relaunch, Repeat, Restart, Right,
-SetHeading, SetHertz, SetPenColor, SetX, SetXY, SetY, ShowTurtle, Sleep, Tada, and
-Write
-suggested
+SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetY, ShowTurtle, Sleep,
+Tada,
+and Write
+
+It then tells you to press Q to quit.
+It means that you press the Q Key once, to start serving drawings again
 
 Try
 
@@ -201,17 +219,14 @@ Try
 
 You'll see Python telling you that our Forward Verb takes a Keyword Argument named:  distance
 
-It then tells you to press Q to quit.
-It means that you press the Q Key once, to start serving drawings again
-
 
 ### Choose your own Defaults, when you dislike ours
 
 Try
 
     relaunch
-    fd rt fd rt
-    bk lt bk lt
+    rt fd rt fd
+    lt bk lt bk
 
 Turtle Logo's disagree over what Shape this is.
 After all, who's to say?
@@ -225,8 +240,8 @@ Try
     relaunch
     distance = 100
     left.angle = 90
-    fd rt fd rt
-    bk lt bk lt
+    rt fd rt fd
+    lt bk lt bk
 
 There you've told us to make this different Shape
 
@@ -236,13 +251,13 @@ For the same result, you can type just
     relaunch
     d = 100
     lt.a = 90
-    fd rt fd rt
-    bk lt bk lt
+    rt fd rt fd
+    lt bk lt bk
 
 Python itself objects if you explicitly try to say 't.left.angle = 90'.
 It will sayAttributeError: 'method' object has no ...
 So we round off what you're saying to become 'left_angle = 90'
-and we tell 't.left' to watch for that
+and we tell our 't.left' to watch for you to say that
 
 Presently, to see all that we abbreviate for you, you can try
 
@@ -250,20 +265,27 @@ Presently, to see all that we abbreviate for you, you can try
     KwByGrunt
     PythonSpeaker().verb_by_grunt
 
-That's an act of peeking deep into the guts.
-Odds on, we'll soon dream up some better way to disclose those secrets
+This is an act of peeking deep into the guts.
+Odds on, we'll soon dream up some better way to disclose these secrets,
+and this exact spelling of a deep peek into the guts will stop working
 
-To remember what you've said, you can try
+To remember what defaults you've chosen, you can look at things like
 
     dir()
+
+    locals()
+
+    distance
+    left_angle
 
 To undo what you've said, you can try
 
     del distance
     del left_angle
+    dir()
 
-These works of Dir and Del are standard Python incantations.
-They work without us helping you out
+These works of Dir and Del and Locals and so on are standard Python ways of speaking.
+They work without us pouring any special effort into making them work
 
 
 ### Paste whole Files of Input
@@ -280,6 +302,17 @@ In particular, presently you can paste one or all of
 > [demos/fdboxbox.logo](../demos/fdboxbox.logo)<br>
 > [demos/headings.logo](../demos/headings.logo)<br>
 > [demos/like-a-rainbow.logo](../demos/like-a-rainbow.logo)<br>
+> [demos/xyplotter.logo](../demos/xyplotter.logo)<br>
+
+If you open up a third Terminal Window, then you can ask to try them one-at-a-time like so =>
+
+    for F in demos/*.logo; do echo; (set -xe; cat $F |pbcopy); read; done
+
+That Sh Script does the ⌘C Copy into your Os-Copy/Paste-Clipboard for you,
+where it calls for '|pbcopy'.
+But you have to do the ⌘V Paste part yourself,
+back into your second Terminal Window,
+where you've left the "🐢?" Turtle Chat going
 
 
 ### Play around
@@ -290,46 +323,52 @@ You've joined us in our early days,
 while we're still rapidly rewriting what's here,
 to make it more friendly
 
-Presently, you can draw an Octagon like this
+Presently, you can draw an Pentagon like this
 
     relaunch
-    rep 8
+    rep 5
 
 Traditionally, talk of Turtle Logo
 makes the first lesson in '🐢? repeat' be exactly this:
 the parts of a polygon
 drawn by repeating a Forward Move and a Right Turn
 
-You can draw an Octagon by more spelling out the steps
+You can redraw this same Pentagon by more spelling out the steps
 
     relaunch
-    fd rt 45  fd rt 45  fd rt 45  fd rt 45
-    fd rt 45  fd rt 45  fd rt 45  fd rt 45
+    fd rt 72  fd rt 72  fd rt 72  fd rt 72  fd rt 72
 
 We let you say 'fd' in place of 'fd 100' or 'forward 100'
 Most other Turtle Logos hold to the 1960's Lisp convention
 of requiring you to give the same number of arguments every time you try something,
 unless you explicitly enclose them inside '()' parentheses.
-We depart from that convention inetntionally.
+We depart from that convention intentionally.
 We let you type out more or less arguments as you please
 
-You can also type out the raw Python to draw an Octagon
+You can also type out the raw Python to draw this same Pentagon
 
     relaunch
-    n = 8
-    for _ in range(n): t.forward(100e0); t.right(360e0 / n)
+    count = 5
+    for _ in range(count): t.forward(100); t.right(360 / count)
 
-When drawing on the 101x42 Columns and Rows of my Terminal,
-you hit the edges and distort the drawing only when you choose an N of 17 or more.
+<!--  pu  setxy -260 -10  pd  -->
+
+You hit the edges and distort the drawing,
+when you choose a Repeat_Count of 8 or more,
+or if you choose a Forward_Distance larger than 100,
+when you're drawing on the 101x42 Columns and Rows of my Terminal,
 Some Turtle Logos will wrap the Cursor at the edges,
 rather than insisting that you always center your drawings yourself.
-Like if you press Return after Relaunch,
-but before the N = and For,
-then you can draw N as large as 24 in my Terminal today
+Like if you click into the Server Window and press Return after Relaunch,
+but before the Count = and For,
+then you can draw Count as large as 10 in my Terminal today.
+If you watch for it, you can see
+our Client prints "Snap" Messages when your drawing grows too large,
+such that we clip and distort it
 
-For the Notes coming back from the Turtle to make sense,
+For such Notes coming back from the Turtle to make the most sense,
 you'll want to see them in real-time.
-If you try 'sleep 0' after you press Return, before the N = and For,
+If you try 'sleep 0' after you press Return, before the Count = and For,
 then you'll see the Note on you having pressed Return pops up then.
 You can try just 's' to clear the Note too.
 That works a little less directly,
@@ -338,30 +377,32 @@ by sleeping as long as the last 🐢 SetHertz said to sleep
 
 ### Help sort our Wish List
 
-Have you found a deal breaker?
+Have you found a deal-breaker that's shutting you out somehow,
+stopping you from playing this game some more?
 
 Tell us what it is?
 
-Maybe you need us to try making Square Pixels?
-Or we could this work a more game-like feel,
+Like we could give this game a more game-like feel,
 if we completed a full Python Command every time you pressed a Key at the Server.
 Or we could rewrite our Arrow Keys Demo to have 4 Turtles draw it, not just 1.
 And so on and on and on
 
 You've joined us in our early days.
-We don't have more than a few of us gathered here yet.
+We don't have more than a few of us gathered here yet, dreaming out what's the most fun.
 Tell us what change you want next, and odds on we'll deliver it sooner
 
 
 ## Dig in technically, deep into the Python
 
-You could review the whole Code? No one has before you
+You could review the whole Code? Read every line of the Python? No one has before you
 
 Or you could pick out just one aspect of the Code to drill down into?
 
 Our Turtle Logo App here is thousands of lines large.
 It's large enough that it gives
 its own kind of a tour of the Standard Python Library.
+
+It mixes together 27 Imports
 
 ### 24 Cross-Platform Python Imports
 
