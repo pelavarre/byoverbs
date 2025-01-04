@@ -28,7 +28,7 @@ quirks:
 examples:
   cal.py  # show these examples and exit
   cal.py --h  # show help lines and exit
-  cal.py --  # show fourteen days before and after now, as one month or two
+  cal.py --  # show the month before, this month, and next month
   cal.py -- |cat -  # same as 'cal.py --', but without highlighting today
   cal.py -h  # same as 'cal.py --', but without highlighting today
   cal.py -H 19990314  # same as 'cal.py --', but centering & highlighting Pi Day 1999
@@ -53,6 +53,14 @@ import byotools as byo
 
 def main() -> None:
     """Run as a Sh Verb"""
+
+    # Guess they meant '--yolo' if they say '--' or more chars of '--yolo' and nothing more
+
+    if sys.argv[1:]:
+        arg = sys.argv[1]
+        if arg.startswith("--") and "--yolo".startswith(arg):
+            yolo()
+        return
 
     # Take in Words from the Sh Command Line
 
@@ -361,6 +369,34 @@ def compile_cal_py_argdoc_else() -> byo.ArgumentParser:
     )
 
     return parser
+
+
+def yolo() -> None:
+    """Guess 3 Months will solve me, unless I say different"""
+
+    sys.stderr.write("\n")
+
+    t = dt.datetime.now()
+    for i in range(-1, 1 + 1):
+
+        m = t.month + i
+        y = t.year
+        if m == 0:
+            m += 12
+            y -= 1
+        elif m == 13:
+            m -= 12
+            y += 1
+
+        if sys.platform == "linux":
+            shline = f"ncal -b -m {m} {y}" if i else "ncal -b"  # -M to start on Monday's
+        else:
+            shline = f"cal -m {m} {y}" if i else "cal"
+
+        sys.stderr.write(f"+ {shline}\n")
+        subprocess.run(shlex.split(shline), check=True)
+
+        sys.stderr.write("\n")
 
 
 if __name__ == "__main__":
