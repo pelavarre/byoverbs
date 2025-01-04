@@ -592,9 +592,11 @@ class BytesTerminal:
             kbytes += kbyte
 
             if not decodable(kbytes):  # todo: invent Unicode Ord > 0x110000
-                suffixes = (b"\x80", b"\x80\x80", b"\x80\x80\x80")
+                suffixes = (b"\xBF", b"\xBF\xBF", b"\xBF\xBF\xBF")
                 if any(decodable(kbytes + _) for _ in suffixes):
                     continue
+
+                # b"\xC2\x80", b"\xE0\xA0\x80", b"\xF0\x90\x80\x80" .. b"\xF4\x8F\xBF\xBF"
 
             break
 
@@ -1971,8 +1973,6 @@ class Turtle:
         penmark = self.penmark
         rest = self.rest
 
-        # # eprint(f"{x} {y}")
-
         if wx < x:
             x_text = f"\x1B[{x - wx}C"  # CSI 04/03 Cursor [Forward] Right
         elif wx > x:
@@ -1987,9 +1987,16 @@ class Turtle:
         else:
             y_text = ""
 
+        width = 0
+        for ch in penmark:
+            eaw = unicodedata.east_asian_width(ch)
+            width += 1
+            if eaw in ("F", "W"):
+                width += 1
+
         text = f"{y_text}{x_text}"
         if not warping:
-            pc_text = penmark + (len(penmark) * "\b")
+            pc_text = penmark + (width * "\b")
             text = f"{y_text}{x_text}{pc_text}"
 
         gt.schars_write(text)
