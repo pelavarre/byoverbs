@@ -1346,8 +1346,8 @@ class Turtle:
     glass_teletype: GlassTeletype
     restarting: bool  # set once per Turtle.restart, cleared by first listener
 
-    float_x: float  # sub-pixel horizontal x-coordinate position
-    float_y: float  # sub-pixel vertical y-coordinate position
+    xfloat: float  # sub-pixel horizontal x-coordinate position
+    yfloat: float  # sub-pixel vertical y-coordinate position
     heading: float  # stride direction
 
     penscape: str  # setup written before punching a mark  # '\x1B[m'
@@ -1370,8 +1370,8 @@ class Turtle:
     def _reinit_(self) -> None:
         """Clear the Turtle's Settings, but without writing the Screen"""
 
-        self.float_x = 0e0
-        self.float_y = 0e0
+        self.xfloat = 0e0
+        self.yfloat = 0e0
         self.heading = 360e0  # 360° of North Up Clockwise
 
         self.penscape = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)  # "" Clear
@@ -1462,8 +1462,8 @@ class Turtle:
         """Show most of the Turtle's Settings as a Dict"""
 
         d = {
-            "float_x": self.float_x,
-            "float_y": self.float_y,
+            "xfloat": self.xfloat,
+            "yfloat": self.yfloat,
             "heading": self.heading,
             "penscape": self.penscape,
             "penmark": self.penmark,
@@ -1485,7 +1485,7 @@ class Turtle:
 
         self._punch_bresenham_stride_(-float(distance))
 
-        d = dict(float_x=self.float_x, float_y=self.float_y, rest=self.rest)
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest)
         return d
 
     def beep(self) -> dict:
@@ -1506,7 +1506,7 @@ class Turtle:
 
         self._punch_bresenham_stride_(float(distance))
 
-        d = dict(float_x=self.float_x, float_y=self.float_y, rest=self.rest)
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest)
         return d
 
         # Scratch Move-10-Steps (with infinite speed)
@@ -1531,7 +1531,7 @@ class Turtle:
         self.setxy(x=0e0, y=0e0)  # todo: different Homes for different Turtles
         self.setheading(360e0)
 
-        d = dict(float_x=self.float_x, float_y=self.float_y, heading=self.heading)
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         return d
 
         # todo: good that .home doesn't follow/ change .setxy and .setheading defaults?
@@ -1539,15 +1539,15 @@ class Turtle:
     def incx(self, distance) -> dict:
         """Move the Turtle along the X Axis, keeping Y unchanged, leaving a Trail if Pen Down"""
 
-        float_x_ = self.float_x
-        float_y_ = self.float_y
-        float_x = 10 * float_x_
-        float_y = 10 * float_y_
+        xfloat_ = self.xfloat
+        yfloat_ = self.yfloat
+        xfloat = 10 * xfloat_
+        yfloat = 10 * yfloat_
 
-        xplus = float_x + distance
-        self.setxy(x=xplus, y=float_y)
+        xplus = xfloat + distance
+        self.setxy(x=xplus, y=yfloat)
 
-        d = dict(float_x=self.float_x)
+        d = dict(xfloat=self.xfloat)
         return d
 
         # Scratch: Change-X-By-10
@@ -1555,15 +1555,15 @@ class Turtle:
     def incy(self, distance) -> dict:
         """Move the Turtle along the Y Axis, keeping X unchanged, leaving a Trail if Pen Down"""
 
-        float_x_ = self.float_x
-        float_y_ = self.float_y
-        float_x = 10 * float_x_
-        float_y = 10 * float_y_
+        xfloat_ = self.xfloat
+        yfloat_ = self.yfloat
+        xfloat = 10 * xfloat_
+        yfloat = 10 * yfloat_
 
-        yplus = float_y + distance
-        self.setxy(x=float_x, y=yplus)
+        yplus = yfloat + distance
+        self.setxy(x=xfloat, y=yplus)
 
-        d = dict(float_y=self.float_y)
+        d = dict(yfloat=self.yfloat)
         return d
 
         # Scratch: Change-Y-By-10
@@ -1604,9 +1604,9 @@ class Turtle:
         line += "\n"  # just Line-Feed \n without Carriage-Return \r
 
         gt.schars_write(line)
-        self.float_y -= 1
+        self.yfloat -= 1
 
-        d = dict(float_x=self.float_x, float_y=self.float_y)
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat)
         return d
 
         # Scratch Say
@@ -1655,7 +1655,7 @@ class Turtle:
             self.forward(100e0)  # the traditional [fd rt]
             self.right(angle)  # todo: never the countercultural [rt fd]
 
-        d = dict(float_x=self.float_x, float_y=self.float_y, heading=self.heading)
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         return d
 
         # todo: good that .repeat doesn't follow/change .forward and .right defaults?
@@ -1783,34 +1783,34 @@ class Turtle:
     def setx(self, x) -> dict:
         """Move the Turtle to a X Point, keeping Y unchanged, leaving a Trail if Pen Down"""
 
-        float_y_ = self.float_y
-        float_y = 10 * float_y_
+        yfloat_ = self.yfloat
+        yfloat = 10 * yfloat_
 
-        self.setxy(x=x, y=float_y)
+        self.setxy(x=x, y=yfloat)
 
-        d = dict(float_x=self.float_x)
+        d = dict(xfloat=self.xfloat)
         return d
 
     def setxy(self, x, y) -> dict:
         """Move the Turtle to an X Y Point, leaving a Trail if Pen Down"""
 
-        float_x = 0e0 if (x is None) else float(x)
-        float_y = 0e0 if (y is None) else float(y)
+        xfloat = 0e0 if (x is None) else float(x)
+        yfloat = 0e0 if (y is None) else float(y)
 
         # Choose the Starting Point
 
-        (x1, y1) = self._x_y_position_()  # may change .float_x .float_y
+        (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
 
         # Choose the Ending Point
 
-        float_x_ = float_x / 10
-        float_y_ = float_y / 10
+        xfloat_ = xfloat / 10
+        yfloat_ = yfloat / 10
 
-        float_x__ = round(float_x_, 10)
-        float_y__ = round(float_y_, 10)
+        xfloat__ = round(xfloat_, 10)
+        yfloat__ = round(yfloat_, 10)
 
-        x2 = round(float_x_)
-        y2 = round(float_y_)
+        x2 = round(xfloat_)
+        y2 = round(yfloat_)
 
         # Draw the Line Segment to X2 Y2 from X1 Y1
 
@@ -1818,10 +1818,10 @@ class Turtle:
 
         # Catch up the Precise X Y Shadows
 
-        self.float_x = float_x__
-        self.float_y = float_y__
+        self.xfloat = xfloat__
+        self.yfloat = yfloat__
 
-        d = dict(float_x=self.float_x, float_y=self.float_y)
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat)
         return d
 
         # todo: Share most of .setxy with ._punch_bresenham_stride_ of .forward/ .backward
@@ -1835,12 +1835,12 @@ class Turtle:
     def sety(self, y) -> dict:
         """Move the Turtle to a Y Point, keeping X unchanged, leaving a Trail if Pen Down"""
 
-        float_x_ = self.float_x
-        float_x = 10 * float_x_
+        xfloat_ = self.xfloat
+        xfloat = 10 * xfloat_
 
-        self.setxy(x=float_x, y=y)
+        self.setxy(x=xfloat, y=y)
 
-        d = dict(float_y=self.float_y)
+        d = dict(yfloat=self.yfloat)
         return d
 
     def showturtle(self) -> dict:
@@ -1909,33 +1909,33 @@ class Turtle:
 
         # Choose the Starting Point
 
-        (x1, y1) = self._x_y_position_()  # may change .float_x .float_y
+        (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
 
-        float_x = self.float_x
-        float_y = self.float_y
-        assert (x1 == round(float_x)) and (y1 == round(float_y)), (x1, float_x, y1, float_y)
+        xfloat = self.xfloat
+        yfloat = self.yfloat
+        assert (x1 == round(xfloat)) and (y1 == round(yfloat)), (x1, xfloat, y1, yfloat)
 
         # Choose the Ending Point
 
         angle = (90 - heading) % 360e0  # converts to 0° East Anticlockwise
 
-        float_x_ = float_x + (stride_ * math.cos(math.radians(angle)))
-        float_y_ = float_y + (stride_ * math.sin(math.radians(angle)))
+        xfloat_ = xfloat + (stride_ * math.cos(math.radians(angle)))
+        yfloat_ = yfloat + (stride_ * math.sin(math.radians(angle)))
 
-        float_x__ = round(float_x_, 10)  # todo: how round should our Float Maths be?
-        float_y__ = round(float_y_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
+        xfloat__ = round(xfloat_, 10)  # todo: how round should our Float Maths be?
+        yfloat__ = round(yfloat_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
 
-        x2 = round(float_x__)
-        y2 = round(float_y__)
+        x2 = round(xfloat__)
+        y2 = round(yfloat__)
 
         # Option to show why Round over Int at X2 Y2
 
         fuzz1 = True
         fuzz1 = False
         if fuzz1:
-            # eprint(f"FUZZ1 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x_} {float_y_} FUZZ1")
-            x2 = int(float_x_)
-            y2 = int(float_y_)
+            # eprint(f"FUZZ1 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {xfloat_} {yfloat_} FUZZ1")
+            x2 = int(xfloat_)
+            y2 = int(yfloat_)
 
             # got:  cs  pu home reset pd  rt rt fd  rt fd 400
             # wanted:  cs  reset pd  setpch '.'  pu setxy ~400 ~100  pd rt fd 400 lt fd
@@ -1944,16 +1944,16 @@ class Turtle:
         # Draw the Line Segment to X2 Y2 from X1 Y1
 
         self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2)
-        # eprint(f"float {float_x} {float_y} {float_x__} {float_y__}")
+        # eprint(f"float {xfloat} {yfloat} {xfloat__} {yfloat__}")
 
-        # Option to show why keep up Precise X Y Shadows in .float_x .float_y
+        # Option to show why keep up Precise X Y Shadows in .xfloat .yfloat
 
         fuzz2 = True
         fuzz2 = False
         if fuzz2:  # fail test of:  cs  reset pd  fd rt 72  fd rt 72  fd rt 72  fd rt 72  fd rt 72
-            # eprint(f"FUZZ2 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {float_x__} {float_y__} FUZZ2")
-            float_x__ = float(x2)
-            float_y__ = float(y2)
+            # eprint(f"FUZZ2 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {xfloat__} {yfloat__} FUZZ2")
+            xfloat__ = float(x2)
+            yfloat__ = float(y2)
 
             # got Pentagon overshot:  cs  reset pd  fd rt 72  fd rt 72  fd rt 72  fd rt 72  fd rt 72
             # got Octogon overshot:  cs  reset pd  rep 8 [fd rt 45]
@@ -1963,8 +1963,8 @@ class Turtle:
 
         # Catch up the Precise X Y Shadows
 
-        self.float_x = float_x__
-        self.float_y = float_y__
+        self.xfloat = xfloat__
+        self.yfloat = yfloat__
 
     def _punch_bresenham_segment_(self, x1: int, y1: int, x2: int, y2: int) -> None:
         """Step forwards, or backwards, through (Row, Column) choices"""
@@ -2071,8 +2071,8 @@ class Turtle:
 
         gt = self.glass_teletype
 
-        float_x = self.float_x
-        float_y = self.float_y
+        xfloat = self.xfloat
+        yfloat = self.yfloat
 
         # Find the Cursor
 
@@ -2094,21 +2094,21 @@ class Turtle:
 
         # Snap the Shadow to the Cursor Row-Column, if the Cursor moved
 
-        if (x1 != round(float_x)) or (y1 != round(float_y)):
-            float_x_ = float(x1)  # 'explicit is better than implicit'
-            float_y_ = float(y1)
+        if (x1 != round(xfloat)) or (y1 != round(yfloat)):
+            xfloat_ = float(x1)  # 'explicit is better than implicit'
+            yfloat_ = float(y1)
 
-            floats = (float_x_, float_y_, float_x, float_y)
-            (ix_, iy_, ix, iy) = (int(float_x_), int(float_y_), int(float_x), int(float_y))
+            floats = (xfloat_, yfloat_, xfloat, yfloat)
+            (ix_, iy_, ix, iy) = (int(xfloat_), int(yfloat_), int(xfloat), int(yfloat))
             if floats == (ix_, iy_, ix, iy):
                 note = f"Snap to X Y {ix_} {iy_} from {ix} {iy}"
             else:
-                note = f"Snap to X Y {float_x_} {float_y_} from {float_x} {float_y}"
+                note = f"Snap to X Y {xfloat_} {yfloat_} from {xfloat} {yfloat}"
 
             gt.notes.append(note)  # todo: should all Glass-Terminal Notes be Exceptions?
 
-            self.float_x = float_x_
-            self.float_y = float_y_
+            self.xfloat = xfloat_
+            self.yfloat = yfloat_
 
         # Succeed
 
