@@ -3641,6 +3641,13 @@ class TurtleClient:
 #
 # 🐢 Turtle Demos  # todo
 #
+#
+# todo: a more real demos/rainbow.logo
+#
+#
+# todo: an accelerating demos/xyplotter.logo, not a fixed hertz
+#
+#
 # todo: 'cs ...' to choose a next demo of a shuffle
 # todo: 'import filename' or 'load filename' to fetch & run a particular file
 #

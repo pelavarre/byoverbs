@@ -5,58 +5,59 @@
 
 
 relaunch
+sethertz 1000
+
 
 pu
-setxy -225 -150
+setxy -192 140
 pd
-setxy -196 -140
-setxy -169 -130
-setxy -144 -120
-setxy -121 -110
-setxy -100 -100
-setxy -81 -90
-setxy -64 -80
-setxy -49 -70
-setxy -36 -60
-setxy -25 -50
-setxy -16 -40
-setxy -9 -30
-setxy -4 -20
-setxy -1 -10
-setxy 0 0
-setxy -1 10
-setxy -4 20
-setxy -9 30
-setxy -16 40
-setxy -25 50
-setxy -36 60
-setxy -49 70
-setxy -64 80
-setxy -81 90
-setxy -100 100
-setxy -121 110
-setxy -144 120
-setxy -169 130
-setxy -196 140
-setxy -225 150
+sethertz 100
+setxy -138 130
+setxy -88 120
+setxy -42 110
+setxy 0 100
+setxy 38 90
+setxy 72 80
+setxy 102 70
+setxy 128 60
+setxy 150 50
+setxy 168 40
+setxy 182 30
+setxy 192 20
+setxy 198 10
+setxy 200 0
+setxy 198 -10
+setxy 192 -20
+setxy 182 -30
+setxy 168 -40
+setxy 150 -50
+setxy 128 -60
+setxy 102 -70
+setxy 72 -80
+setxy 38 -90
+setxy 0 -100
+setxy -42 -110
+setxy -88 -120
+setxy -138 -130
+setxy -192 -140
+
 
 restart  pu  setxy -10 0  pd
 
 tada
 
 
-#
 # print("pu")
 # once = False
-# for y in range(-230, 230 + 1, 10):
-#     x = round(-0.010 * y * y)
+# for y in reversed(range(-230, 230 + 1, 10)):
+#     x = 200 - round(0.020 * y * y)
 #     if x < -225:
 #         continue
 #     print(f"setxy {x} {y}")
 #     if not once:
 #         once = True
 #         print("pd")
-#
+#         print("sethertz 100")
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/xyplotter.logo
