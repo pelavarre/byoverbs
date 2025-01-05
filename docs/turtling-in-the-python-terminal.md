@@ -6,11 +6,11 @@ Contents
 - [Welcome](#welcome)
 - [You can just try things](#you-can-just-try-things)
   - [Move the Turtle](#move-the-turtle)
-  - [Draw a Small Triangle](#draw-a-small-triangle)
+  - [Draw a Triangle](#draw-a-triangle)
     - [Relaunch](#relaunch)
     - [Symmetry](#symmetry)
     - [Terminal Window Shape, Size, Darkmode, Lightmode, \& Fonts](#terminal-window-shape-size-darkmode-lightmode--fonts)
-  - [Draw a Large Square](#draw-a-large-square)
+  - [Draw a Huge Square](#draw-a-huge-square)
   - [Draw Circles and parts of Circles](#draw-circles-and-parts-of-circles)
   - [Glance through the Help Texts](#glance-through-the-help-texts)
   - [Choose your own Defaults, when you dislike ours](#choose-your-own-defaults-when-you-dislike-ours)
@@ -95,7 +95,7 @@ You can even type out the full Python yourself if you want:
 Note: We define 'import turtling'. They define 'import turtle'
 
 
-### Draw a Small Triangle
+### Draw a Triangle
 
 Try
 
@@ -175,7 +175,7 @@ I'd love to see screenshots or video of how well the Turtle Logos work for you,
 on the Terminals you choose to test
 
 
-### Draw a Large Square
+### Draw a Huge Square
 
 Try
 
@@ -194,41 +194,58 @@ into a Terminal Window of 101 Columns x 42 Rows
 
 ### Draw Circles and parts of Circles
 
-To draw one Large Circle, try
+To draw one Circle, try
 
     relaunch
     arc arc arc arc
 
-To draw a couple of Large Overlapping Circles, try
+To draw a couple of Overlapping Circles, try
 
     relaunch
     arc 360
-    penup  lt 90  fd  rt 45  fd 50  rt 45  pendown
+    penup  setxy -50 30  pendown
     arc 360
 
 To draw a Latin Capital Letter P in five colors, try
 
     relaunch
-    setpencolor red  arc 90 50
-    setpencolor green  arc 90 50
-    setpencolor blue  arc 90 50
-    setpencolor yellow  arc 90 50
+    setpencolor red  arc
+    setpencolor green  arc
+    setpencolor blue  arc
+    setpencolor yellow  arc
     setpencolor none
     bk 150
 
-To draw one of the Curves of the Atari ™ Logo, try
+To draw something like the two Curves and a Line of the Atari ™ Logo, try
 
     relaunch
-    left 90  arc
-    right 180  arc
+    left 90  arc  fd 10 bk 10
+    penup  lt 90  fd 20  pendown
+    seth  fd 10 bk 10  bk 50  fd 50
+    penup  lt 90  fd 20  pendown
+    seth  fd 10 bk 10  rt 180  arc
 
-To draw a thin tall Ellipse, try
+To draw a tall thin Ellipse, try
 
     relaunch
     penup setx -100 pendown
     setxyzoom 0.20 1.00
     arc arc arc arc
 
+To draw a Plain Diamond inside a Blue Circle inside a Green Square,
+at the Center of the Screen
+
+    relaunch
+    penup  lt 90  fd 50  rt 90  pendown
+    setpencolor  green  bk 50  rep 4  fd 50
+    setpencolor blue  arc arc arc arc
+    setpencolor  none  rt 45  rep 4 360 70.7  lt 45
+    round(100 * math.sqrt(2) / 2, 1)  # 70.7
+
+To draw a Large Arc as a Repeat of Forward Right
+
+    relaunch
+    repeat 25 90 10
 
 ### Glance through the Help Texts
 

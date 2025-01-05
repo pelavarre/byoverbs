@@ -1388,8 +1388,10 @@ class Turtle:
 
         # macOS Terminal Sh Launch/ Quit doesn't clear the Graphic Rendition, Cursor Style, etc
 
-    def arc(self, angle, radius) -> dict:
+    def arc(self, angle, diameter) -> dict:
         """Draw a Part or All of a Circle, centered at Right Forward"""
+
+        radius = diameter / 2
 
         heading = self.heading
         xscale = self.xscale
@@ -1695,21 +1697,21 @@ class Turtle:
 
         # Scratch Pen-Up
 
-    def repeat(self, count) -> dict:
+    def repeat(self, count, angle, distance) -> dict:
         """Run some instructions a chosen number of times, often less or more than once"""
 
         count = int(count)
         assert count >= 3, (count,)  # todo: what is a Rep 0, Rep 1, or Rep 2 Polygon?
 
-        angle = 360e0 / count
+        a = angle / count
         for _ in range(count):
-            self.forward(100e0)  # the traditional [fd rt]
-            self.right(angle)  # todo: never the countercultural [rt fd]
+            self.forward(distance)
+            self.right(a)
+
+            # the traditional [fd rt], never the countercultural [rt fd]
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         return d
-
-        # todo: good that .repeat doesn't follow/change .forward and .right defaults?
 
     def right(self, angle) -> dict:
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
@@ -2207,6 +2209,7 @@ def _turtling_defaults_choose_() -> dict:
 
     angle = 0
     count = 1
+    diameter = 100
     distance = 100
     hertz = 1e3
     seconds = 1e-3
@@ -2215,12 +2218,13 @@ def _turtling_defaults_choose_() -> dict:
     y = 0
     yscale = 1
 
-    _ = count
+    _ = count, diameter
 
     d = dict(
         angle=0,
         arc_angle=90,
         left_angle=45,
+        repeat_angle=360,
         right_angle=90,
         setheading_angle=angle,
         #
@@ -2232,12 +2236,13 @@ def _turtling_defaults_choose_() -> dict:
         forward_distance=distance,
         incx_distance=10,
         incy_distance=10,
+        repeat_distance=100,
         #
         hertz=1e3,
         sethertz_hertz=hertz,
         #
-        radius=100,
-        arc_radius=100,
+        diameter=100,
+        arc_diameter=100,
         #
         seconds=1e-3,
         sleep_seconds=seconds,
