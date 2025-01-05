@@ -1388,6 +1388,52 @@ class Turtle:
 
         # macOS Terminal Sh Launch/ Quit doesn't clear the Graphic Rendition, Cursor Style, etc
 
+    def arc(self, angle, radius) -> dict:
+        """Draw a Part or All of a Circle, centered at Right Forward"""
+
+        heading = self.heading
+        xscale = self.xscale
+        yscale = self.yscale
+
+        a1 = (90e0 - heading) % 360e0  # converts to 0° East Anticlockwise
+        (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
+
+        a0 = (a1 - 90e0) % 360e0
+        x0 = (x1 / xscale) + (radius * math.cos(math.radians(a0)))
+        y0 = (y1 / yscale) + (radius * math.sin(math.radians(a0)))
+
+        marking_center = False
+        if marking_center:
+            isdown = self.isdown()
+            self.penup()
+            self.setxy(x0, y=y0)
+            self.pendown()
+            self.setxy(x0, y=y0)
+            self.penup()
+            self.setxy(x=x1 / xscale, y=y1 / yscale)
+            if isdown:
+                self.pendown()
+
+        a1_ = round(a1 + 90e0)
+        a2_ = round(a1 + 90e0 - angle)
+        step = round(math.copysign(1, a2_ - a1_))
+
+        for a in range(a1_, a2_ + step, step):
+            x2 = x0 + (radius * math.cos(math.radians(a)))
+            y2 = y0 + (radius * math.sin(math.radians(a)))
+            self.setxy(x2, y=y2)
+
+            # todo: pick the Angle Step less simply
+
+        self.right(angle)
+
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        return d
+
+        # todo: Turn the Turtle Heading WHILE we draw the Arc
+
+        # todo: UCB Logo centers the Circle on the Turtle and keeps the turtle Still
+
     def breakpoint(self) -> None:
         """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
 
@@ -1652,7 +1698,7 @@ class Turtle:
     def repeat(self, count) -> dict:
         """Run some instructions a chosen number of times, often less or more than once"""
 
-        count = 1 if (count is None) else int(count)
+        count = int(count)
         assert count >= 3, (count,)  # todo: what is a Rep 0, Rep 1, or Rep 2 Polygon?
 
         angle = 360e0 / count
@@ -1677,7 +1723,7 @@ class Turtle:
     def setheading(self, angle) -> dict:
         """Turn the Turtle to move 0° North, or to some other Heading"""
 
-        float_angle = 0e0 if (angle is None) else float(angle)  # 0° of North Up Clockwise
+        float_angle = float(angle)  # 0° of North Up Clockwise
         heading1 = float_angle % 360e0  # 360° Circle
         heading2 = 360e0 if not heading1 else heading1
 
@@ -1689,7 +1735,7 @@ class Turtle:
     def sethertz(self, hertz) -> dict:
 
         rest1 = 0e0
-        float_hertz = 1000e0 if (hertz is None) else float(hertz)
+        float_hertz = float(hertz)
         if float_hertz:
             rest1 = 1 / float_hertz
 
@@ -1799,8 +1845,8 @@ class Turtle:
     def setxy(self, x, y) -> dict:
         """Move the Turtle to an X Y Point, leaving a Trail if Pen Down"""
 
-        xfloat = 0e0 if (x is None) else float(x)
-        yfloat = 0e0 if (y is None) else float(y)
+        xfloat = float(x)
+        yfloat = float(y)
 
         # Choose the Starting Point
 
@@ -1884,15 +1930,6 @@ class Turtle:
     def sleep(self, seconds) -> dict:
         """Hold the Turtle still for a moment"""
 
-        rest = self.rest
-        assert rest >= 0e0, (rest,)
-
-        if seconds is None:
-            time.sleep(rest)
-
-            d = dict(rest=rest)
-            return d
-
         time.sleep(seconds)  # may raise ValueError or TypeError
 
         d = dict(seconds=seconds)  # not the sticky .rest
@@ -1937,7 +1974,7 @@ class Turtle:
 
         # Choose the Ending Point
 
-        angle = (90 - heading) % 360e0  # converts to 0° East Anticlockwise
+        angle = (90e0 - heading) % 360e0  # converts to 0° East Anticlockwise
 
         xfloat_ = xfloat + (xstride_ * math.cos(math.radians(angle)))
         yfloat_ = yfloat + (ystride_ * math.sin(math.radians(angle)))
@@ -2174,14 +2211,15 @@ def _turtling_defaults_choose_() -> dict:
     hertz = 1e3
     seconds = 1e-3
     x = 0
-    xscale = 100e-3
+    xscale = 1
     y = 0
-    yscale = 100e-3
+    yscale = 1
 
     _ = count
 
     d = dict(
         angle=0,
+        arc_angle=90,
         left_angle=45,
         right_angle=90,
         setheading_angle=angle,
@@ -2198,17 +2236,20 @@ def _turtling_defaults_choose_() -> dict:
         hertz=1e3,
         sethertz_hertz=hertz,
         #
+        radius=100,
+        arc_radius=100,
+        #
         seconds=1e-3,
         sleep_seconds=seconds,
         #
         x=0,
-        xscale=100e-3,
+        xscale=1,
         setx_x=x,
         setxy_x=x,
         setxyzoom_xscale=xscale,
         #
         y=0,
-        yscale=100e-3,
+        yscale=1,
         sety_y=y,
         setxy_y=y,
         setxyzoom_yscale=yscale,
@@ -2583,8 +2624,11 @@ class PythonSpeaker:
                     break
 
                 arg = arg_else
+
                 pyrepr = self.pyrepr(arg)
-                args.append(pyrepr)
+                argpy = f"{kw}={pyrepr}" if i else pyrepr
+
+                args.append(argpy)
 
         # Form the Python Code Line
 
@@ -3642,9 +3686,6 @@ class TurtleClient:
 # 🐢 Turtle Demos  # todo
 #
 #
-# todo: a more real demos/rainbow.logo
-#
-#
 # todo: an accelerating demos/xyplotter.logo, not a fixed hertz
 #
 #
@@ -3736,11 +3777,6 @@ class TurtleClient:
 
 #
 # 🐢 Turtle Chat Engine  # todo
-#
-#
-# todo: 🐢 Arc(radius, angle) from a center to the right
-# todo: Ellipse etc via SetXYZoom
-# todo: a more real demos/rainbow.logo
 #
 #
 # todo: 🐢 Poly(*coefficients) to plot it

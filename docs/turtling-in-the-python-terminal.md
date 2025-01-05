@@ -11,6 +11,7 @@ Contents
     - [Symmetry](#symmetry)
     - [Terminal Window Shape, Size, Darkmode, Lightmode, \& Fonts](#terminal-window-shape-size-darkmode-lightmode--fonts)
   - [Draw a Large Square](#draw-a-large-square)
+  - [Draw Circles and parts of Circles](#draw-circles-and-parts-of-circles)
   - [Glance through the Help Texts](#glance-through-the-help-texts)
   - [Choose your own Defaults, when you dislike ours](#choose-your-own-defaults-when-you-dislike-ours)
   - [Paste whole Files of Input](#paste-whole-files-of-input)
@@ -191,6 +192,44 @@ Presently we fit a Square from -180 -180 to 180 180
 into a Terminal Window of 101 Columns x 42 Rows
 
 
+### Draw Circles and parts of Circles
+
+To draw one Large Circle, try
+
+    relaunch
+    arc arc arc arc
+
+To draw a couple of Large Overlapping Circles, try
+
+    relaunch
+    arc 360
+    penup  lt 90  fd  rt 45  fd 50  rt 45  pendown
+    arc 360
+
+To draw a Latin Capital Letter P in five colors, try
+
+    relaunch
+    setpencolor red  arc 90 50
+    setpencolor green  arc 90 50
+    setpencolor blue  arc 90 50
+    setpencolor yellow  arc 90 50
+    setpencolor none
+    bk 150
+
+To draw one of the Curves of the Atari ™ Logo, try
+
+    relaunch
+    left 90  arc
+    right 180  arc
+
+To draw a thin tall Ellipse, try
+
+    relaunch
+    penup setx -100 pendown
+    setxyzoom 0.20 1.00
+    arc arc arc arc
+
+
 ### Glance through the Help Texts
 
 To see all our Turtle Verbs listed, try
@@ -198,7 +237,7 @@ To see all our Turtle Verbs listed, try
     help(t)
 
 You'll see our Help suggests you play around, saying
-Backward, Beep, Breakpoint, Bye,
+Arc, Backward, Beep, Breakpoint, Bye,
 ClearScreen,
 Forward,
 HideTurtle, Home,
@@ -305,11 +344,18 @@ In particular, presently you can paste one or all of
 > [demos/fdboxbox.logo](../demos/fdboxbox.logo)<br>
 > [demos/headings.logo](../demos/headings.logo)<br>
 > [demos/like-a-rainbow.logo](../demos/like-a-rainbow.logo)<br>
+> [demos/rainbow.logo](../demos/rainbow.logo)<br>
 > [demos/xyplotter.logo](../demos/xyplotter.logo)<br>
 
 If you open up a third Terminal Window, then you can ask to try them one-at-a-time like so =>
 
     for F in demos/*.logo; do echo; (set -xe; cat $F |pbcopy); read; done
+
+The "rainbow.logo"
+draws concentric circles, calculated by machine.
+The "like-a-rainbow.logo"
+draws something a lot like concentric circles,
+somewhat miscalculated by hand
 
 That Sh Script does the ⌘C Copy into your Os-Copy/Paste-Clipboard for you,
 where it calls for '|pbcopy'.

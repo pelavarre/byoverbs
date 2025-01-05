@@ -1,0 +1,45 @@
+# like-a-rainbow.logo
+
+
+# Draw Concentric Arcs of Red Yellow Green Cyan Blue Magenta
+
+
+relaunch
+
+
+setpc red
+pu  setxy -200 -50  pd
+arc 180 200
+restart
+
+setpc yellow
+pu  setxy -170 -50  pd
+arc 180 170
+restart
+
+setpc green
+pu  setxy -140 -50  pd
+arc 180 140
+restart
+
+setpc cyan
+pu  setxy -110 -50  pd
+arc 180 110
+restart
+
+setpc blue
+pu  setxy -80 -50  pd
+arc 180 80
+restart
+
+setpc magenta
+pu  setxy -50 -50  pd
+arc 180 50
+restart
+
+
+tada
+
+
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/like-a-rainbow.logo
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git
