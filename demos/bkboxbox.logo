@@ -5,6 +5,8 @@
 
 relaunch
 
+sethertz 100
+
 pu fd 50 lt 90 fd 50 seth pd
 
 
