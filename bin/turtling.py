@@ -1344,7 +1344,7 @@ class Turtle:
     """Chat with 1 Logo Turtle"""
 
     glass_teletype: GlassTeletype
-    restarting: bool  # set once per Turtle.restart, cleared by first listener
+    exec_locals: dict  #
 
     xfloat: float  # sub-pixel horizontal x-coordinate position
     yfloat: float  # sub-pixel vertical y-coordinate position
@@ -1360,23 +1360,30 @@ class Turtle:
 
     rest: float  # min time between marks
 
-    def __init__(self, glass_teletype=None) -> None:
+    def __init__(self) -> None:
 
-        if glass_teletype is None:
-            self.glass_teletype = glass_teletypes[-1]
-        else:
-            self.glass_teletype = glass_teletype
+        gt = glass_teletypes[-1]
+
+        exec_locals = dict()
+        if turtling_servers:
+            turtling_server = turtling_servers[-1]
+            exec_locals = turtling_server.exec_locals
+
+        self.glass_teletype = gt
+        self.exec_locals = exec_locals
 
         self._reinit_()
-        self.restarting = False
 
     def _reinit_(self) -> None:
         """Clear the Turtle's Settings, but without writing the Screen"""
+
+        self.exec_locals.clear()
 
         self.xfloat = 0e0
         self.yfloat = 0e0
         self.xscale = 100e-3
         self.yscale = 100e-3
+
         self.heading = 360e0  # 360° of North Up Clockwise
 
         self.penscape = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)  # "" Clear
@@ -1432,9 +1439,9 @@ class Turtle:
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         return d
 
-        # todo: Turn the Turtle Heading WHILE we draw the Arc
+        # todo: Turn the Turtle Heading WHILE we draw the Arc - Unneeded till we have Sprites
 
-        # todo: UCB Logo centers the Circle on the Turtle and keeps the turtle Still
+        # ugh: UCB Logo centers the Circle on the Turtle and keeps the turtle Still
 
     def breakpoint(self) -> None:
         """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
@@ -2177,6 +2184,54 @@ class Turtle:
         # a la FMSLogo Pos
         # a la UCBLogo Pos, XCor, YCor
 
+    #
+    # Exec a Turtle Logo Text, by first transpiling it to Python
+    #
+
+    def exec(self, text) -> None:
+        """Exec a Logo Turtle Text"""
+
+        globals_ = globals()
+        exec_locals = self.exec_locals
+
+        ps = PythonSpeaker()
+        pycodes = ps.text_to_pycodes(text, cls=Turtle)
+        for pycode in pycodes:
+            exec(pycode, globals_, exec_locals)
+
+    #
+    # Draw some famous Figures
+    #
+
+    def sierpiński(self, distance, divisor) -> None:
+        """Draw Triangles inside Triangles, in the way of Sierpiński"""
+
+        assert distance >= 0, (distance,)
+        assert divisor > 0, (divisor,)
+
+        t = self
+
+        if distance <= 50:
+            # todo: t.exec(f"repeat 3 [fd {distance}  rt 120]")
+            t.exec(f"repeat 3 360 {distance}")
+        else:
+            for _ in range(3):
+
+                fewer = distance / divisor
+                t.sierpiński(fewer, divisor=divisor)
+
+                t.forward(distance)
+                t.right(120)
+
+        # todo: cyclic colors for Sierpiński's Triangle/ Sieve/ Gasket
+
+        #
+        # tested with
+        #
+        #   relaunch
+        #   pu  setxy 170 -170  lt 90  pd
+        #   sierpinski 400
+        #
 
 #
 # Auto-complete Turtle Logo Sourcelines to run as Python
@@ -2211,6 +2266,7 @@ def _turtling_defaults_choose_() -> dict:
     count = 1
     diameter = 100
     distance = 100
+    divisor = 2
     hertz = 1e3
     seconds = 1e-3
     x = 0
@@ -2231,18 +2287,22 @@ def _turtling_defaults_choose_() -> dict:
         count=1,
         repeat_count=3,
         #
+        diameter=100,
+        arc_diameter=100,
+        #
         distance=100,
         backward_distance=200,
         forward_distance=distance,
         incx_distance=10,
         incy_distance=10,
         repeat_distance=100,
+        sierpiński_distance=200,
+        #
+        divisor=2,
+        sierpiński_divisor=divisor,
         #
         hertz=1e3,
         sethertz_hertz=hertz,
-        #
-        diameter=100,
-        arc_diameter=100,
         #
         seconds=1e-3,
         sleep_seconds=seconds,
@@ -2282,12 +2342,12 @@ class PythonSpeaker:
     """Auto-complete Turtle Logo Sourcelines to run as Python"""
 
     held_pycodes: list[str]  # leftover Py Codes from an earlier Text
-    server_locals: dict  # weakly shadow remote TurtlingServer.exec_eval_locals
+    exec_locals: dict  # cloned from remote TurtlingServer  # with local TurtlingServer
 
     def __init__(self) -> None:
 
         self.held_pycodes = list()
-        self.server_locals = dict()
+        self.exec_locals = dict()
 
     #
     # Auto-complete Turtle Logo Sourcelines to run as Python
@@ -2656,12 +2716,12 @@ class PythonSpeaker:
         # Fetch Values suggested for KwArgs
 
         turtling_defaults = TurtlingDefaults
-        server_locals = self.server_locals
+        exec_locals = self.exec_locals
 
         # Give the Win to the more explicit Server Locals, else to our more implicit Defaults
         # Give the Win to the more explicit f"{verb}_{kw}", else to the more implicit f"{kw}"
 
-        for space in (server_locals, turtling_defaults):
+        for space in (exec_locals, turtling_defaults):
             for k in (f"{verb}_{kw}", f"{kw}"):  # ('backward_distance', 'distance')
                 if k in space.keys():
                     arg = space[k]
@@ -2718,7 +2778,7 @@ class PythonSpeaker:
         """Consume the Note and return True, else return False"""
 
         globals_ = globals()
-        server_locals = self.server_locals
+        exec_locals = self.exec_locals
 
         # Pick out the Py to exec
 
@@ -2736,16 +2796,16 @@ class PythonSpeaker:
         if sep == "=":
             quotable = value[1:-1]
             if value == ("<" + quotable + ">"):
-                # eprint("exec'ish:", py)
-                server_locals[key] = AngleQuotedStr(quotable)
+                # eprint("weakly emulate local exec of remote py:", py)
+                exec_locals[key] = AngleQuotedStr(quotable)
                 return True
 
                 # <__main__.Turtle object at 0x101486a50>
 
         # More robustly emulate other the Remote Server add/ mutate/ del at a Key
 
-        # eprint("exec:", py)
-        exec_strict(py, globals_, server_locals)  # in Class PythonSpeaker
+        # eprint("local exec of remote py:", py)
+        exec_strict(py, globals_, exec_locals)  # in Class PythonSpeaker
 
         return True
 
@@ -2769,7 +2829,7 @@ class PythonSpeaker:
     py_verb_by_grunt = {  # for the PyTurtle people of:  import turtle
         "back": "backward",
         "bk": "backward",
-        # "down": "pendown",  # nope
+        # "down": "pendown",  # ugh: PyTurtle land-grab's Down to mean Pen Down
         "fd": "forward",
         "goto": "setxy",
         "ht": "hideturtle",
@@ -2781,8 +2841,9 @@ class PythonSpeaker:
         "seth": "setheading",
         "setpos": "setxy",
         "setposition": "setxy",
+        "sierpinski": "sierpiński",
         "st": "showturtle",
-        # "up": "penup",  # nope
+        # "up": "penup",  # ugh: PyTurtle land-grab's Up to mean Pen Up
     }
 
     ucb_verb_by_grunt = {  # for the UCB Logo people
@@ -3138,26 +3199,17 @@ def turtling_server_run() -> None:
 class TurtlingServer:
 
     glass_teletype: GlassTeletype
-    exec_eval_locals: dict[str, object]  # weakly emulated by PythonSpeaker.server_locals
+    exec_locals: dict[str, object]  # with local Turtle's  # cloned by remote PythonSpeaker
 
-    def __init__(self, glass_teletype) -> None:
+    def __init__(self, gt) -> None:
 
-        exec_eval_locals: dict[str, object]
-        exec_eval_locals = dict()
+        exec_locals: dict[str, object]
+        exec_locals = dict()
 
-        self.glass_teletype = glass_teletype
-        self.exec_eval_locals = exec_eval_locals
+        self.glass_teletype = gt
+        self.exec_locals = exec_locals
 
-        self.restart()
-
-    def restart(self) -> None:
-        """Restart this TurtleServer"""
-
-        exec_eval_locals = self.exec_eval_locals
-
-        exec_eval_locals.clear()
-        exec_eval_locals["self"] = self
-        exec_eval_locals["t"] = Turtle()  # todo: multiple Turtles
+        turtling_servers.append(self)
 
     def server_run_till(self) -> None:
         """Draw with Logo Turtles"""
@@ -3200,7 +3252,7 @@ class TurtlingServer:
             if bt_fd in select_:
                 kchord = self.keyboard_serve_one_kchord()
                 if kchord[-1] in ("⌃C", "⌃D"):
-                    t = Turtle(gt)
+                    t = Turtle()
                     t.bye()
                     break
 
@@ -3233,41 +3285,45 @@ class TurtlingServer:
 
         reader_fd = reader.fileno
 
+        exec_locals = self.exec_locals
         gt = self.glass_teletype
-        # st = gt.str_terminal
-
-        exec_eval_locals = self.exec_eval_locals
-        default_eq_None = None
-        t = exec_eval_locals.get("t", default_eq_None)  # todo: multiple Turtles
-
-        assert (t is None) or isinstance(t, Turtle), type(t)
 
         # Read a Python Text In, or an "" Empty Str, or fail to read
 
         rtext_else = reader.fd_read_text_else(reader_fd)
         if rtext_else is None:
-            # st.schars_print("EOFError")
             writer.index += 1  # as if written
             return
 
         rtext = rtext_else
         py = rtext
 
-        # Eval the "" Empty Str or the Python Text
+        # Eval the "" Empty Str or the Python Text,
+        # but do insist on keeping >= 1 Turtles in Service
 
         wtext = ""
         if py:
 
-            before = dict(self.exec_eval_locals)  # sample before
+            if "t" not in exec_locals.keys():
+                t0 = Turtle()
+                exec_locals["t"] = t0
+
+            before = dict(self.exec_locals)  # sample before
+
             wvalue = self.py_exec_eval(py)
-            after = dict(self.exec_eval_locals)  # sample after  # 'copied is better than aliased'
 
-            if t is not None:
-                t._x_y_position_()  # raises a Note if Terminal Cursor moved
-                if t.restarting:
-                    t.restarting = False
+            if "t" not in exec_locals.keys():
+                t1 = Turtle()
+                exec_locals["t"] = t1
 
-                    self.restart()
+            t = exec_locals["t"]
+            assert isinstance(t, Turtle), (type(t), t)
+
+            after = dict(self.exec_locals)  # sample after  # 'copied is better than aliased'
+
+            # Watch for Changes in the Terminal Cursor Position or Repr's of Locals
+
+            t._x_y_position_()  # raises a Note if Terminal Cursor moved
 
             self.note_local_changes(before=before, after=after)
 
@@ -3309,11 +3365,11 @@ class TurtlingServer:
         try_exec = False
 
         globals_ = globals()
-        exec_eval_locals = self.exec_eval_locals
+        exec_locals = self.exec_locals
 
         try:  # todo: shrug off PyLance pretending eval/exec 'locals=' doesn't work
 
-            value = eval_strict(py, globals_, exec_eval_locals)  # in Class TurtlingServer
+            value = eval_strict(py, globals_, exec_locals)  # in Class TurtlingServer
 
         except bdb.BdbQuit:  # from Py Eval  # of the Quit of a Pdb Breakpoint
 
@@ -3345,7 +3401,7 @@ class TurtlingServer:
         if try_exec:
             assert value is None, (value,)
             try:
-                exec_strict(py, globals_, exec_eval_locals)  # in Class TurtlingServer
+                exec_strict(py, globals_, exec_locals)  # in Class TurtlingServer
             except bdb.BdbQuit:  # from Py Exec  # of the Quit of a Pdb Breakpoint
                 raise
             except Exception:
@@ -3397,6 +3453,10 @@ class TurtlingServer:
                     notes.append(note)
 
 
+turtling_servers: list[TurtlingServer]
+turtling_servers = list()
+
+
 #
 # Run as a Client chatting with Logo Turtles
 #
@@ -3445,11 +3505,13 @@ class TurtleClient:
         ilines = text.splitlines()
         if text == "relaunch":
             started = True
-
             eprint(f"BYO Turtling·Py {__version__}")
-            # trade_else = self.py_trade_else("t = turtling.Turtle(); t.relaunch()")
+
             trade_else = self.py_trade_else("t.relaunch(); pass")
-            assert trade_else is None, (trade_else,)
+            if trade_else is not None:
+                eprint(trade_else)
+                assert False
+
             ilines = list()  # replace
 
         while True:
@@ -3705,7 +3767,7 @@ class TurtleClient:
 # todo: vi - emacs - notepad
 #
 # todo: randomly go to corners till all eight connections drawn
-# todo: Serpienski's Gasket, near to Koch Curve at F+F--F+F in Lindenmayer System
+# todo: Koch Curve at F+F--F+F in Lindenmayer System near to Serpienski Triangles
 #
 # todo: demo bugs fixed lately - Large Headings.logo for '.round()' vs '.trunc()'
 #
@@ -3797,6 +3859,12 @@ class TurtleClient:
 # todo: work with blocks, such as:  for _ in range(8): t.forward(100e0); t.right(45e0)
 # todo: add a rep.d to choose fd.d in 🐢 rep n abbreviation of rep n [fd rep.d rt rep.angle]
 #
+# todo: Parentheses to eval now, Square brackets to eval later
+# todo: rep 5 360 (round  100 * math.sqrt(2) / 2  1)
+# todo: rep 5 [fd (round  100 * math.sqrt(2) / 2  1)  rt (360 / 5)]
+# todo: rep 5 [fd (_ * 10)  rt 45]
+# todo: seth (t.heading + 90)
+#
 # todo: 🐢 With to bounce back after a block, such as:  with d [ d=125 fd fd ]
 #
 #
@@ -3815,7 +3883,7 @@ class TurtleClient:
 # todo: multiple Turtles
 #
 #
-# todo: work with variables somehow - spirals, Sierpienski, etc
+# todo: work with variables somehow - spirals, Sierpiński, etc
 # todo: nonliteral (getter) arguments  # 'heading', 'position', 'isvisible', etc
 # todo: reconcile more with Lisp Legacy of 'func nary' vs '(func nary and more and more)'
 # todo: KwArgs for Funcs, no longer just PosArgs:  [  fd d=100  rt a=90  ]

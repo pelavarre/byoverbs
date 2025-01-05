@@ -13,6 +13,7 @@ Contents
   - [Draw a Huge Square](#draw-a-huge-square)
   - [Draw Circles and parts of Circles](#draw-circles-and-parts-of-circles)
   - [Glance through the Help Texts](#glance-through-the-help-texts)
+  - [Draw famous Figures](#draw-famous-figures)
   - [Choose your own Defaults, when you dislike ours](#choose-your-own-defaults-when-you-dislike-ours)
   - [Paste whole Files of Input](#paste-whole-files-of-input)
   - [Play around](#play-around)
@@ -194,10 +195,10 @@ into a Terminal Window of 101 Columns x 42 Rows
 
 ### Draw Circles and parts of Circles
 
-To draw one Circle, try
+To draw three-quarters of a Circle, try
 
     relaunch
-    arc arc arc arc
+    arc arc arc
 
 To draw a couple of Overlapping Circles, try
 
@@ -262,7 +263,8 @@ IncX, IncY, IsDown, IsVisible,
 Label, Left,
 PenDown, PenUp,
 Relaunch, Repeat, Restart, Right,
-SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetY, ShowTurtle, Sleep,
+SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetY,
+ShowTurtle, Sierpinski, Sleep,
 Tada,
 and Write.
 Help is not in this list,
@@ -277,6 +279,39 @@ Try
     help(t.forward)
 
 You'll see Python telling you that our Forward Verb takes a Keyword Argument named:  distance
+
+
+### Draw famous Figures
+
+A popular way to draw Triangles inside Triangles
+is the way of the Sierpinski Triangles, also know as Sierpinski's Sieve or Gasket
+
+    relaunch
+    pu  setxy 170 -170  lt 90  pd
+    sierpinski 400
+
+To pack more Pixels into the same macOS Terminal Window, you can press
+
+    ⌘- View > Smaller
+
+You can press that again and again to make the Pixels smaller.
+And you can drag the lower-right Corner of the Window to make the Window larger again.
+
+To undo what you've done, you can press ⇧⌘+ View > Bigger again and again,
+or even choose to press ⌘0 Default Font Size
+
+While you've got lots more Pixels to draw with,
+such as 387 X 133 Y,
+you can draw more Triangles inside Triangles,
+such as
+
+    relaunch
+    pu  setxy 510 -510  lt 90  pd
+    sierpinski 1200
+
+**Links**
+
+Wiki > [Sierpiński triangle](https://en.wikipedia.org/wiki/Sierpi%C5%84ski_triangle)<br>
 
 
 ### Choose your own Defaults, when you dislike ours
