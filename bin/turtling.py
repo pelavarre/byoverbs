@@ -3686,10 +3686,7 @@ class TurtleClient:
 # 🐢 Turtle Demos  # todo
 #
 #
-# todo: an accelerating demos/xyplotter.logo, not a fixed hertz
-#
-#
-# todo: 'cs ...' to choose a next demo of a shuffle
+# todo: 'cs ...' to shuffle the demos and pick the next
 # todo: 'import filename' or 'load filename' to fetch & run a particular file
 #
 # todo: early visual wows of a Twitch video stream

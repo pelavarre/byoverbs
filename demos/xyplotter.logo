@@ -5,41 +5,39 @@
 
 
 relaunch
-sethertz 1000
 
 
 pu
-setxy -192 140
+sethertz 1000  setxy -192 140
 pd
-sethertz 100
-setxy -138 130
-setxy -88 120
-setxy -42 110
-setxy 0 100
-setxy 38 90
-setxy 72 80
-setxy 102 70
-setxy 128 60
-setxy 150 50
-setxy 168 40
-setxy 182 30
-setxy 192 20
-setxy 198 10
-setxy 200 0
-setxy 198 -10
-setxy 192 -20
-setxy 182 -30
-setxy 168 -40
-setxy 150 -50
-setxy 128 -60
-setxy 102 -70
-setxy 72 -80
-setxy 38 -90
-setxy 0 -100
-setxy -42 -110
-setxy -88 -120
-setxy -138 -130
-setxy -192 -140
+sethertz 44  setxy -138 130
+sethertz 64  setxy -88 120
+sethertz 83  setxy -42 110
+sethertz 100  setxy 0 100
+sethertz 116  setxy 38 90
+sethertz 130  setxy 72 80
+sethertz 142  setxy 102 70
+sethertz 153  setxy 128 60
+sethertz 162  setxy 150 50
+sethertz 169  setxy 168 40
+sethertz 175  setxy 182 30
+sethertz 179  setxy 192 20
+sethertz 181  setxy 198 10
+sethertz 182  setxy 200 0
+sethertz 181  setxy 198 -10
+sethertz 179  setxy 192 -20
+sethertz 175  setxy 182 -30
+sethertz 169  setxy 168 -40
+sethertz 162  setxy 150 -50
+sethertz 153  setxy 128 -60
+sethertz 142  setxy 102 -70
+sethertz 130  setxy 72 -80
+sethertz 116  setxy 38 -90
+sethertz 100  setxy 0 -100
+sethertz 83  setxy -42 -110
+sethertz 64  setxy -88 -120
+sethertz 44  setxy -138 -130
+sethertz 22  setxy -192 -140
 
 
 restart  pu  setxy -10 0  pd
