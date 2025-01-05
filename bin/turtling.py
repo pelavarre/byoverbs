@@ -1348,6 +1348,9 @@ class Turtle:
 
     xfloat: float  # sub-pixel horizontal x-coordinate position
     yfloat: float  # sub-pixel vertical y-coordinate position
+    xscale: float  # multiply Literal X Int/ Float by Scale
+    yscale: float  # multiply Literal Y Int/ Float by Scale
+
     heading: float  # stride direction
 
     penscape: str  # setup written before punching a mark  # '\x1B[m'
@@ -1372,6 +1375,8 @@ class Turtle:
 
         self.xfloat = 0e0
         self.yfloat = 0e0
+        self.xscale = 100e-3
+        self.yscale = 100e-3
         self.heading = 360e0  # 360° of North Up Clockwise
 
         self.penscape = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)  # "" Clear
@@ -1541,8 +1546,8 @@ class Turtle:
 
         xfloat_ = self.xfloat
         yfloat_ = self.yfloat
-        xfloat = 10 * xfloat_
-        yfloat = 10 * yfloat_
+        xfloat = xfloat_ / self.xscale
+        yfloat = yfloat_ / self.yscale
 
         xplus = xfloat + distance
         self.setxy(x=xplus, y=yfloat)
@@ -1557,8 +1562,8 @@ class Turtle:
 
         xfloat_ = self.xfloat
         yfloat_ = self.yfloat
-        xfloat = 10 * xfloat_
-        yfloat = 10 * yfloat_
+        xfloat = xfloat_ / self.xscale
+        yfloat = yfloat_ / self.yscale
 
         yplus = yfloat + distance
         self.setxy(x=xfloat, y=yplus)
@@ -1784,7 +1789,7 @@ class Turtle:
         """Move the Turtle to a X Point, keeping Y unchanged, leaving a Trail if Pen Down"""
 
         yfloat_ = self.yfloat
-        yfloat = 10 * yfloat_
+        yfloat = yfloat_ / self.yscale
 
         self.setxy(x=x, y=yfloat)
 
@@ -1803,8 +1808,8 @@ class Turtle:
 
         # Choose the Ending Point
 
-        xfloat_ = xfloat / 10
-        yfloat_ = yfloat / 10
+        xfloat_ = xfloat * self.xscale
+        yfloat_ = yfloat * self.yscale
 
         xfloat__ = round(xfloat_, 10)
         yfloat__ = round(yfloat_, 10)
@@ -1832,11 +1837,25 @@ class Turtle:
         # Scratch Go-To-X-Y
         # UCBLogo Goto is a Control Flow Goto
 
+    def setxyzoom(self, xscale, yscale) -> dict:
+        """Choose an X:Y Ratio of Zoom"""
+
+        assert xscale, (xscale,)
+        assert yscale, (yscale,)
+
+        self.xscale = round(xscale * 100e-3, 10)
+        self.yscale = round(yscale * 100e-3, 10)
+
+        d = dict(xscale=self.xscale, yscale=self.yscale)
+        return d
+
+        # UCBLogo SetScrunch
+
     def sety(self, y) -> dict:
         """Move the Turtle to a Y Point, keeping X unchanged, leaving a Trail if Pen Down"""
 
         xfloat_ = self.xfloat
-        xfloat = 10 * xfloat_
+        xfloat = xfloat_ / self.xscale
 
         self.setxy(x=xfloat, y=y)
 
@@ -1903,7 +1922,8 @@ class Turtle:
     def _punch_bresenham_stride_(self, stride) -> None:
         """Step forwards, or backwards, along the Heading"""
 
-        stride_ = float(stride) / 10  # / 10 to a screen of a few large pixels
+        xstride_ = float(stride) * self.xscale
+        ystride_ = float(stride) * self.yscale
 
         heading = self.heading  # 0° North Up Clockwise
 
@@ -1919,8 +1939,8 @@ class Turtle:
 
         angle = (90 - heading) % 360e0  # converts to 0° East Anticlockwise
 
-        xfloat_ = xfloat + (stride_ * math.cos(math.radians(angle)))
-        yfloat_ = yfloat + (stride_ * math.sin(math.radians(angle)))
+        xfloat_ = xfloat + (xstride_ * math.cos(math.radians(angle)))
+        yfloat_ = yfloat + (ystride_ * math.sin(math.radians(angle)))
 
         xfloat__ = round(xfloat_, 10)  # todo: how round should our Float Maths be?
         yfloat__ = round(yfloat_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
@@ -2154,7 +2174,9 @@ def _turtling_defaults_choose_() -> dict:
     hertz = 1e3
     seconds = 1e-3
     x = 0
+    xscale = 100e-3
     y = 0
+    yscale = 100e-3
 
     _ = count
 
@@ -2180,12 +2202,16 @@ def _turtling_defaults_choose_() -> dict:
         sleep_seconds=seconds,
         #
         x=0,
+        xscale=100e-3,
         setx_x=x,
         setxy_x=x,
+        setxyzoom_xscale=xscale,
         #
         y=0,
+        yscale=100e-3,
         sety_y=y,
         setxy_y=y,
+        setxyzoom_yscale=yscale,
     )
 
     return d
@@ -3124,7 +3150,7 @@ class TurtlingServer:
 
             if bt_fd in select_:
                 kchord = self.keyboard_serve_one_kchord()
-                if kchord[-1] == "⌃D":
+                if kchord[-1] in ("⌃C", "⌃D"):
                     t = Turtle(gt)
                     t.bye()
                     break
@@ -3605,8 +3631,6 @@ class TurtleClient:
 # todo: when to default to cyclic choices, such as inc color, or spiral fd
 #
 #
-# todo: let people say 'locals() distance angle' as one line, not three lines
-#
 # todo: let people say 't.tada()', not just 'tada'
 # todo: poll the Server while waiting for next Client Input
 # todo: like quick Client reply to Server Mouse/ Arrow
@@ -3648,17 +3672,18 @@ class TurtleClient:
 #
 # 🐢 Turtle Shadow Engine  # todo
 #
-# z layer "█@" for a Turtle with 8 Headings
-# todo: z-layers, like one out front with more fun Cursors as Turtle
-# todo: thinner X Y Pixels & Pens, especially the 0.5X 1Y of U+2584 Lower, U+2580 Upper
-#
 # todo: fill and clear to collision, with colors, with patterns
-#
-# todo: do & redo & undo & clear-all-yours for Turtle work
+# todo: resize what's on Screen, and undo resize without loss
 #
 # todo: take end-of-Tada in from Vi
 # todo: take Heading in from Vi
 # todo: compose the Logo Command that sums up the Vi choices
+#
+# todo: do & redo & undo & clear-all-yours for Turtle work
+#
+# z layer "█@" for a Turtle with 8 Headings
+# todo: z-layers, like one out front with more fun Cursors as Turtle
+# todo: thinner X Y Pixels & Pens, especially the 0.5X 1Y of U+2584 Lower, U+2580 Upper
 #
 # todo: draw on a Canvas larger than the screen
 # todo: checkpoint/ commit/ restore the Canvas
@@ -3667,10 +3692,6 @@ class TurtleClient:
 
 #
 # 🐢 Turtle Graphics Engine  # todo
-#
-#
-# todo: try Squarish Pixels of 2 Horizontal Chars each
-# todo: thicker X Y Pens, especially the squarish 2X 1Y
 #
 #
 # todo: Colors of Bold Italic Underline etc
@@ -3682,29 +3703,22 @@ class TurtleClient:
 # todo: edge cap cursor position, wrap, bounce, whine, stop
 # todo: 500x500 canvas at U Brown of UCBLogo
 #
+# todo: thicker X Y Pens, beyond the squarish 2X 1Y
+#
 # todo: write "\e[41m\e[2J" does work, fill screen w background colour, do we like that?
 # todo: [  write "\e[41m"  clearscreen  ] also works
 # todo: more than 8 foreground colors, such as ⎋[38;5;130m orange
 # todo: background colors, such as ⎋[38;5;130m orange
 #
 # todo: thicker X Y Pixels other than the squarish 2X 1Y
-# todo: t.penmark should stay as the Chars only, but we always ⎋[Y;XH to where we were
-# todo: double-wide Chars for the Turtle, such as LargeGreenCircle  # setpch "🟢"
-# todo: pasting such as LargeGreenCircle into ⇧R of 'pq turtle', 'pq st yolo', etc
-#
-# todo: Large Window vs SetScrunch, such as a large Headings.logo
-# todo: Ellipse etc via SetScrunch to tweak our fixed '/ 2 for thin pixels'
-# todo: Log Scale SetScrunch in Y or X or both
 #
 # steganography to put delays into Sh Script TypeScript Files after all
+# todo: 🐢 After ...  # to get past next Float Seconds milestone in Screen .typescript
 # work up export to gDoc for ending color without spacing to right of screen
 #
 # todo: resolve background foreground color collisions, such as [ write "\e[m\e[40m" ]
 # todo: like [ write "\r\t\e[40m\e[32m\e[2JHello, Green-on-Black Darkmode" ]
 #
-# todo: circles, ellipses
-# todo: arc(angle, radius) with a design for center & end-position
-# todo: arcs with more args at https://fmslogo.sourceforge.io/manual/command-ellipsearc.html
 # todo: collisions, gravity, friction
 #
 # todo: more bits of Turtle State on Screen somehow
@@ -3717,9 +3731,28 @@ class TurtleClient:
 # 🐢 Turtle Chat Engine  # todo
 #
 #
+# todo: 🐢 Arc(radius, angle) from a center to the right
+# todo: Ellipse etc via SetXYZoom
+# todo: a more real demos/rainbow.logo
+#
+#
+# todo: 🐢 Poly(*coefficients) to plot it
+#
+#
+# todo: accept multiple Lines of Python with dented Continuation Lines
+#
+#
+# todo: let people say 'locals() distance angle' as one line, not three lines
+#
+# todo: 🐢 SetHertz Inf, in place of 🐢 SetHertz 0
+# todo: publish the 'import maths' e Pi Inf -Inf NaN Tau, in with False None True
+#
+#
 # todo: rep 3 [fd rt]
 # todo: work with blocks, such as:  for _ in range(8): t.forward(100e0); t.right(45e0)
 # todo: add a rep.d to choose fd.d in 🐢 rep n abbreviation of rep n [fd rep.d rt rep.angle]
+#
+# todo: 🐢 With to bounce back after a block, such as:  with d [ d=125 fd fd ]
 #
 #
 # todo: do still catenate successive Str Literals, such as for [ write "\e[m" "\e[2J" ]
@@ -3736,28 +3769,28 @@ class TurtleClient:
 #
 # todo: multiple Turtles
 #
-# todo: 🐢 SetHertz Inf, in place of 🐢 SetHertz 0
-# todo: publish the 'import maths' e Pi Inf -Inf NaN Tau, in with False None True
-# todo: work with variables somehow - spirals, Sierpienski, etc
 #
-# todo: ... sqrt pow ... more discoverable from:  import maths
+# todo: work with variables somehow - spirals, Sierpienski, etc
+# todo: nonliteral (getter) arguments  # 'heading', 'position', 'isvisible', etc
+# todo: reconcile more with Lisp Legacy of 'func nary' vs '(func nary and more and more)'
+# todo: KwArgs for Funcs, no longer just PosArgs:  [  fd d=100  rt a=90  ]
+# todo: context of Color Delay etc Space for Forward & Turn, like into irregular dance beat
+#
+#
 # todo: local tau = for Radians in place of Degrees
 # todo: 🐢 Turtling turtle.mode("Trig") for default East counting anticlockwise
+# todo: ... sqrt pow ... more discoverable from:  import maths
 #
-# todo: 🐢 With to bounce back after a block, such as:  with d [ d=125 fd fd ]
 #
-# todo: 🐢 After ...  # to get past next Float Seconds milestone in Screen .typescript
-#
-# todo: input Sh lines:  !uname  # !ls  # !cat - >/dev/null  # !zsh
-#
-# todo: reconcile with Python "import turtle" Graphics on TkInter
-#
+# todo: reconcile more with Python "import turtle" Graphics on TkInter
 # todo: reconcile with other Logo's
+# todo: FMS Logo Arcs with more args at https://fmslogo.sourceforge.io/manual/command-ellipsearc.html
 # todo: UCB Logo cleartext (ct) mention ⌘K
 # todo: UCB Logo setcursor [x y], cursor
 # todo: .rest vs Python Turtle screen.delay
 # todo: .stride vs Logo SetStepSize
 # todo: .rest vs Logo SetSpeed, SetVelocity, Wait
+# todo: scroll and resize and reposition and iconify/ deiconify the window
 #
 # todo: 🐢 Pin to drop a pin (in float precision!)
 # todo: 🐢 Go to get back to it
@@ -3765,10 +3798,6 @@ class TurtleClient:
 #
 # todo: rep n [fd fd.d rt rt.angle]
 # todo: 'to $name ... end' vs 'def $name [ ... ]'
-# todo: printing diffs only vs say where we are, such as "rt 0" or "sethertz"
-# todo: 'setpch' to .punch or pen.char or what?
-# todo: nonliteral (getter) arguments  # 'heading', 'position', 'isvisible', etc
-# todo: deal with Logo Legacy of 'func nary' vs '(func nary and more and more)'
 #
 # todo: pinned sampling, such as list of variables to watch
 # todo: mouse-click (or key chord) to unfold/ fold the values watched
@@ -3776,11 +3805,7 @@ class TurtleClient:
 # todo: Command Input Line History
 # todo: Command Input Word Tab-Completions
 #
-# todo: KwArgs for Funcs, no longer just PosArgs:  [  fd d=100  rt a=90  ]
-#
-# todo: context of Color Delay etc Space for Forward & Turn, like into irregular dance beat
-#
-# todo: scroll and resize and reposition and iconify/ deiconify the window
+# todo: input Sh lines:  !uname  # !ls  # !cat - >/dev/null  # !zsh
 #
 
 #
