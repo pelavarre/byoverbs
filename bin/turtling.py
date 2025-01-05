@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 r"""
-usage: turtling.py [-h] [--yolo] [-i] [-c COMMAND]
+usage: turtling.py [-h] [--version] [--yolo] [-i] [-c COMMAND]
 
 draw inside a Terminal Window with Logo Turtles
 
 options:
   -h, --help  show this message and exit
+  --version   show version and exit
   --yolo      launch the first server in this folder, else launch a chat client
   -i          launch a chat client
   -c COMMAND  things to do, before quitting or chatting
@@ -131,19 +132,25 @@ def parse_turtling_py_args_else() -> argparse.Namespace:
 
     parser = doc_to_parser(doc, add_help=True, startswith="examples:")
 
+    version_help = "show version and exit"
     yolo_help = "launch the first server in this folder, else launch a chat client"
     i_help = "launch a chat client"
     c_help = "things to do, before quitting or chatting"
 
+    parser.add_argument("--version", action="count", help=version_help)
     parser.add_argument("--yolo", action="count", help=yolo_help)
     parser.add_argument("-i", action="count", help=i_help)
     parser.add_argument("-c", metavar="COMMAND", help=c_help)
 
     ns = parse_args_else(parser)  # often prints help & exits
-    assert ns.yolo or ns.i or (ns.c is not None), (ns,)
+    assert ns.version or ns.yolo or ns.i or (ns.c is not None), (ns,)
 
     if ns.yolo and (ns.i or ns.c):
         sys.exit(2)  # exits 2 for wrong Sh Args
+
+    if ns.version:
+        print(f"BYO Turtling·Py {__version__}")
+        sys.exit(0)
 
     return ns
 
@@ -1494,12 +1501,6 @@ class Turtle:
 
         # 'def beep' not found in PyTurtle
 
-    # todo: def x +=
-    # Scratch: Change-X-By-10
-
-    # todo: def y +=
-    # Scratch: Change-Y-By-10
-
     def forward(self, distance) -> dict:
         """Move the Turtle forwards along its Heading, leaving a Trail if Pen Down"""
 
@@ -1534,6 +1535,38 @@ class Turtle:
         return d
 
         # todo: good that .home doesn't follow/ change .setxy and .setheading defaults?
+
+    def incx(self, distance) -> dict:
+        """Move the Turtle along the X Axis, keeping Y unchanged, leaving a Trail if Pen Down"""
+
+        float_x_ = self.float_x
+        float_y_ = self.float_y
+        float_x = 10 * float_x_
+        float_y = 10 * float_y_
+
+        xplus = float_x + distance
+        self.setxy(x=xplus, y=float_y)
+
+        d = dict(float_x=self.float_x)
+        return d
+
+        # Scratch: Change-X-By-10
+
+    def incy(self, distance) -> dict:
+        """Move the Turtle along the Y Axis, keeping X unchanged, leaving a Trail if Pen Down"""
+
+        float_x_ = self.float_x
+        float_y_ = self.float_y
+        float_x = 10 * float_x_
+        float_y = 10 * float_y_
+
+        yplus = float_y + distance
+        self.setxy(x=float_x, y=yplus)
+
+        d = dict(float_y=self.float_y)
+        return d
+
+        # Scratch: Change-Y-By-10
 
     def isdown(self) -> bool:
         """Say if the Turtle will leave a Trail as it moves"""
@@ -1576,8 +1609,7 @@ class Turtle:
         d = dict(float_x=self.float_x, float_y=self.float_y)
         return d
 
-        # PyTurtle: Write
-        # Scratch: Say
+        # Scratch Say
 
         # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
 
@@ -1862,6 +1894,8 @@ class Turtle:
         gt = self.glass_teletype
         gt.schars_write(s)
 
+        # PyTurtle Write
+
     #
     # Move the Turtle along the Line of its Heading, leaving a Trail if Pen Down
     #
@@ -2136,6 +2170,8 @@ def _turtling_defaults_choose_() -> dict:
         distance=100,
         backward_distance=200,
         forward_distance=distance,
+        incx_distance=10,
+        incy_distance=10,
         #
         hertz=1e3,
         sethertz_hertz=hertz,
@@ -3769,6 +3805,10 @@ class TurtleClient:
 #   FMSLogo for Linux Wine/ Windows (does the Linux Wine work?)
 #   https://fmslogo.sourceforge.io
 #   https://fmslogo.sourceforge.io/manual/index.html
+#
+#   Python Import Turtle (PyTurtle)
+#   https://docs.python.org/3/library/turtle.html
+#   (distinct from Pip Install PyTurtle)
 #
 #   Scratch
 #   https://scratch.mit.edu

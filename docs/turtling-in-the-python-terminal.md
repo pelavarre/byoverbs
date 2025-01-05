@@ -202,13 +202,16 @@ Backward, Beep, Breakpoint, Bye,
 ClearScreen,
 Forward,
 HideTurtle, Home,
-IsDown, IsVisible,
+IncX, IncY, IsDown, IsVisible,
 Label, Left,
 PenDown, PenUp,
 Relaunch, Repeat, Restart, Right,
 SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetY, ShowTurtle, Sleep,
 Tada,
-and Write
+and Write.
+Help is not in this list,
+because Help is a thing of Python itself,
+not just a thing of our kind of Logo Turtle
 
 It then tells you to press Q to quit.
 It means that you press the Q Key once, to start serving drawings again
@@ -523,6 +526,8 @@ I can only hope we'll scrub more bugs out of it and make it fast too
 **Links**
 
 Docs·Python·Org > Import [turtle — Turtle Graphics](https://docs.python.org/3/library/turtle.html)<br>
+
+Mit·Edu [Scratch](https://scratch.mit.edu) Programming Language - Draw Logo-Like Programs that draw Logo-Like Turtle Graphics
 
 Wiki > [Domain-specific language]([./demos/arrow-keys.logo](https://en.wikipedia.org/wiki/Domain-specific_language))<br>
 Wiki > [Greenspun's tenth rule](https://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)<br>
