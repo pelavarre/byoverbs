@@ -9,32 +9,32 @@ relaunch
 
 setpc red
 pu  setxy -200 -50  pd
-arc 180 200
+arc 180 400
 restart
 
 setpc yellow
 pu  setxy -170 -50  pd
-arc 180 170
+arc 180 340
 restart
 
 setpc green
 pu  setxy -140 -50  pd
-arc 180 140
+arc 180 280
 restart
 
 setpc cyan
 pu  setxy -110 -50  pd
-arc 180 110
+arc 180 220
 restart
 
 setpc blue
 pu  setxy -80 -50  pd
-arc 180 80
+arc 180 160
 restart
 
 setpc magenta
 pu  setxy -50 -50  pd
-arc 180 50
+arc arc
 restart
 
 
