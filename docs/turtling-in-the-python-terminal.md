@@ -264,7 +264,7 @@ Label, Left,
 PenDown, PenUp,
 Relaunch, Repeat, Restart, Right,
 SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetY,
-ShowTurtle, Sierpinski, Sleep,
+ShowTurtle, Sierpiński, Sleep,
 Tada,
 and Write.
 Help is not in this list,
@@ -284,11 +284,11 @@ You'll see Python telling you that our Forward Verb takes a Keyword Argument nam
 ### Draw famous Figures
 
 A popular way to draw Triangles inside Triangles
-is the way of the Sierpinski Triangles, also know as Sierpinski's Sieve or Gasket
+is the way of the Sierpiński Triangles, also know as Sierpiński's Sieve or Gasket
 
     relaunch
     pu  setxy 170 -170  lt 90  pd
-    sierpinski 400
+    sierpiński 400
 
 To pack more Pixels into the same macOS Terminal Window, you can press
 
@@ -307,7 +307,7 @@ such as
 
     relaunch
     pu  setxy 510 -510  lt 90  pd
-    sierpinski 1200
+    sierpiński 1200
 
 **Links**
 

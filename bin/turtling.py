@@ -2212,8 +2212,7 @@ class Turtle:
         t = self
 
         if distance <= 50:
-            # todo: t.exec(f"repeat 3 [fd {distance}  rt 120]")
-            t.exec(f"repeat 3 360 {distance}")
+            t.repeat(3, angle=360, distance=distance)
         else:
             for _ in range(3):
 
@@ -3760,6 +3759,7 @@ class TurtleClient:
 #
 # todo: colorful spirography
 # todo: marble games
+# todo: tic-tac-toe, checkers, chess, & other counters-on-flat-board games
 # todo: send keymaps over the wire: bind keyboard keys to turtle moves, to cycle colors
 # todo: z-layers to animate a clock of hours/ minutes/ second hands
 # todo: let more than 1 Turtle move onto a z-layer to keep only the latest
@@ -3924,6 +3924,7 @@ class TurtleClient:
 #
 # 🐢 Python Makeovers  # todo
 #
+# todo: declare datatypes of class Turtle args
 # todo: subclass Bytes into WholeCSIBytes, CSIBytes, SomeStrBytes, SomeBytes
 #
 
