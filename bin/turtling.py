@@ -55,7 +55,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.01.04"  # Saturday
+__version__ = "2025.01.07"  # Tuesday
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
@@ -113,7 +113,8 @@ def main_try(ns) -> None:
             turtling_server_run()
         return
 
-    turtling_server_attach()
+    if not turtling_server_attach():
+        print("not turtling_server_attach")
 
     if ns.c is not None:
         turtling_client_run(ns.c)
@@ -1362,6 +1363,9 @@ class Turtle:
 
     def __init__(self) -> None:
 
+        if not glass_teletypes:
+            gt = GlassTeletype()
+            gt.__enter__()
         gt = glass_teletypes[-1]
 
         exec_locals = dict()
@@ -1373,6 +1377,8 @@ class Turtle:
         self.exec_locals = exec_locals
 
         self._reinit_()
+
+        turtles.append(self)
 
     def _reinit_(self) -> None:
         """Clear the Turtle's Settings, but without writing the Screen"""
@@ -1561,6 +1567,17 @@ class Turtle:
 
         # 'def beep' not found in PyTurtle
 
+    def exec(self, text) -> None:
+        """Exec a Logo Turtle Text"""
+
+        globals_ = globals()
+        exec_locals = self.exec_locals
+
+        ps = PythonSpeaker()
+        pycodes = ps.text_to_pycodes(text, cls=Turtle)
+        for pycode in pycodes:
+            exec_strict(pycode, globals_, exec_locals)
+
     def forward(self, distance) -> dict:
         """Move the Turtle forwards along its Heading, leaving a Trail if Pen Down"""
 
@@ -1681,6 +1698,31 @@ class Turtle:
         return d
 
         # Scratch Turn-CCW-15-Degrees
+
+    def mode(self, hints) -> dict:
+        """Choose a dialect of the Logo Turtle Language"""
+
+        Logo = "Logo".casefold()
+        Trig = "Trig".casefold()
+        Trigonometry = "Trigonometry".casefold()
+
+        for hint in hints.split():
+            cfold = hint.casefold()
+
+            if cfold.startswith(Logo):
+                pass  # emulating full Python installs of:  import turtle; turtle.mode("Logo")
+
+            elif cfold.startswith(Trig) and Trigonometry.startswith(cfold):
+                raise NotImplementedError("🐢 Mode Trigonometry")
+
+            else:
+                raise ValueError(f"Choose Mode from ['Logo', 'Trigonometry'], not {hint!r}")
+
+        return dict()
+
+        # todo: Trigonometry Angles start at 90° North and rise to turn Left
+        # todo: Logo Angles starts at 0° North and rise to turn Right
+        # todo: Locals Tau can be 360° or 2π Radians
 
     def pendown(self) -> dict:
         """Plan to leave a Trail as the Turtle moves"""
@@ -2185,21 +2227,6 @@ class Turtle:
         # a la UCBLogo Pos, XCor, YCor
 
     #
-    # Exec a Turtle Logo Text, by first transpiling it to Python
-    #
-
-    def exec(self, text) -> None:
-        """Exec a Logo Turtle Text"""
-
-        globals_ = globals()
-        exec_locals = self.exec_locals
-
-        ps = PythonSpeaker()
-        pycodes = ps.text_to_pycodes(text, cls=Turtle)
-        for pycode in pycodes:
-            exec(pycode, globals_, exec_locals)
-
-    #
     # Draw some famous Figures
     #
 
@@ -2231,6 +2258,170 @@ class Turtle:
         #   pu  setxy 170 -170  lt 90  pd
         #   sierpinski 400
         #
+
+
+turtles: list[Turtle]
+turtles = list()
+
+
+#
+# Define a similar 'turtling.alef(bet, gimel)' for most Methods of Class Turtle
+#
+#   todo: solve 'turtling.breakpoint()' and 'turtling.exec'
+#
+
+
+def turtle_demand() -> Turtle:
+    """Find or form a Turtle to work with"""
+
+    if not glass_teletypes:
+        if not turtling_server_attach():
+            turtling_server_run()
+            sys.exit()
+
+    if not turtles:
+        Turtle()
+
+    turtle = turtles[-1]
+
+    return turtle
+
+
+def arc(angle, diameter) -> dict:
+    return turtle_demand().arc(angle, diameter=diameter)
+
+
+def bye() -> None:
+    return turtle_demand().bye()
+
+
+def clearscreen() -> None:
+    return turtle_demand().clearscreen()
+
+
+def relaunch() -> dict:
+    return turtle_demand().relaunch()
+
+
+def restart() -> dict:
+    return turtle_demand().restart()
+
+
+def backward(distance) -> dict:
+    return turtle_demand().backward(distance)
+
+
+def beep() -> dict:
+    return turtle_demand().beep()
+
+
+def forward(distance) -> dict:
+    return turtle_demand().forward(distance)
+
+
+def hideturtle() -> dict:
+    return turtle_demand().hideturtle()
+
+
+def home() -> dict:
+    return turtle_demand().home()
+
+
+def incx(distance) -> dict:
+    return turtle_demand().incx(distance)
+
+
+def incy(distance) -> dict:
+    return turtle_demand().incy(distance)
+
+
+def isdown() -> bool:
+    return turtle_demand().isdown()
+
+
+def isvisible() -> bool:
+    return turtle_demand().isvisible()
+
+
+def label(*args) -> dict:
+    return turtle_demand().label(*args)
+
+
+def left(angle) -> dict:
+    return turtle_demand().left(angle)
+
+
+def mode(hints) -> dict:
+    return turtle_demand().mode(hints)
+
+
+def pendown() -> dict:
+    return turtle_demand().pendown()
+
+
+def penup() -> dict:
+    return turtle_demand().penup()
+
+
+def repeat(count, angle, distance) -> dict:
+    return turtle_demand().repeat(count, angle=angle, distance=distance)
+
+
+def right(angle) -> dict:
+    return turtle_demand().right(angle)
+
+
+def setheading(angle) -> dict:
+    return turtle_demand().setheading(angle)
+
+
+def sethertz(hertz) -> dict:
+    return turtle_demand().sethertz(hertz)
+
+
+def setpencolor(color) -> dict:
+    return turtle_demand().setpencolor(color)
+
+
+def setpenpunch(ch) -> dict:
+    return turtle_demand().setpenpunch(ch)
+
+
+def setx(x) -> dict:
+    return turtle_demand().setx(x)
+
+
+def setxy(x, y) -> dict:
+    return turtle_demand().setxy(x, y=y)
+
+
+def setxyzoom(xscale, yscale) -> dict:
+    return turtle_demand().setxyzoom(xscale, yscale=yscale)
+
+
+def sety(y) -> dict:
+    return turtle_demand().sety(y)
+
+
+def showturtle() -> dict:
+    return turtle_demand().showturtle()
+
+
+def sleep(seconds) -> dict:
+    return turtle_demand().sleep(seconds)
+
+
+def tada() -> None:
+    turtle_demand().tada()
+
+
+def write(s) -> None:
+    return turtle_demand().write(s)
+
+
+def sierpiński(distance, divisor) -> None:
+    return turtle_demand().sierpiński(distance, divisor=divisor)
+
 
 #
 # Auto-complete Turtle Logo Sourcelines to run as Python
@@ -3924,6 +4115,12 @@ class TurtleClient:
 #
 # 🐢 Python Makeovers  # todo
 #
+#
+# todo: more solve TurtleClient at:  python3 -i -c ''
+#   import turtling; turtling.mode("Logo"); t = turtling.Turtle(); t.forward(100)
+#
+# todo: Alt Screen for Server t.breakpoint()
+#
 # todo: declare datatypes of class Turtle args
 # todo: subclass Bytes into WholeCSIBytes, CSIBytes, SomeStrBytes, SomeBytes
 #
@@ -4008,7 +4205,7 @@ def eval_strict(text, globals_, locals_) -> object | None:
         return value
 
 
-def exec_strict(text, globals_, locals_) -> None:
+def exec_strict(text, globals_: dict, locals_: dict) -> None:
     """Work like 'exec' but raise the SyntaxWarning's, don't print them"""
 
     with warnings.catch_warnings():

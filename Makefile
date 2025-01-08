@@ -24,7 +24,7 @@ default:
 	@echo
 	@echo 'make pips  # rewrites ~/.pyvenvs/pips/'
 	@echo 'make push  # restyles & tests the source, then tells you to push it'
-	@echo "make smokle  # restyles & tests the source, but doesn't say push it"
+	@echo "make smoke  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo 'make bin  # puts bin dir files under test at home bin dir'
 	@echo 'make dotfiles  # updates local dotfiles dir from home dot files'
