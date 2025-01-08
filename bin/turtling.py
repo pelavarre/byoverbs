@@ -3903,6 +3903,16 @@ class TurtleClient:
 # 🐢 Bug Fixes  # todo
 #
 #
+# todo: Stop getting the angle wrong when drawing with the 💙 Blue-Heart in place of █
+#
+#
+# todo: Stronger discovery of Colors (and more than 8 Colors) at help(t.setpencolor)
+# todo: Stronger discovery of FD at help(t.forward)
+# todo: Stronger discovery in Doc of  \t \r  ⎋[H row-column-go  ⎋[M rows-delete  ⎋['~ col-delete
+# todo: Stronger discovery in help(t) of FD RT BK etc Abbreviations & discover of Doc
+# todo: Stronger discovery of "Drawing Window" and "Chat Window" (too easy to swap Client/ Server)
+#
+#
 # todo: equilateral small triangles of constant Area across ↑ ← ↓ → keys:  demos/arrow-keys.logo
 #
 #
@@ -3941,6 +3951,9 @@ class TurtleClient:
 
 #
 # 🐢 Turtle Demos  # todo
+#
+#
+# todo: draw a larger Character with the smaller Character, such as the 💙 Blue-Heart
 #
 #
 # todo: 'cs ...' to shuffle the demos and pick the next
@@ -4034,6 +4047,14 @@ class TurtleClient:
 # 🐢 Turtle Chat Engine  # todo
 #
 #
+# todo: autocomplete 'help' and 'dir' - stop mentioning Instance Fields like '.glass_terminal'
+#
+#
+# todo: Put the Client Breakpoint somewhere away from ⌃C
+# todo: Take ⌃D at either side to quit the Client and Server
+# todo: Take ⌃C at the Server to quit the Client and Server
+#
+#
 # todo: 🐢 Poly(*coefficients) to plot it
 #
 #
@@ -4106,7 +4127,7 @@ class TurtleClient:
 # todo: pinned sampling, such as list of variables to watch
 # todo: mouse-click (or key chord) to unfold/ fold the values watched
 #
-# todo: Command Input Line History
+# todo: Command Input Line History  # duped 8/Jan/2024
 # todo: Command Input Word Tab-Completions
 #
 # todo: input Sh lines:  !uname  # !ls  # !cat - >/dev/null  # !zsh
@@ -4114,6 +4135,12 @@ class TurtleClient:
 
 #
 # 🐢 Python Makeovers  # todo
+#
+#
+# todo: correct the self-mentions in .Logo Files too, not just in .Py Files
+#
+#
+# todo: stronger detection of old Server/ Client need 'pkill' or 'kill -9'
 #
 #
 # todo: more solve TurtleClient at:  python3 -i -c ''
