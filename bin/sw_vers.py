@@ -40,6 +40,7 @@ examples:
   : Oct/2021 Monterey macOS 12  # major release date
   : Oct/2022 Ventura macOS 13  # major release date
   : Oct/2023 Sonoma macOS 14  # major release date
+  : Oct/2024 Sequoia macOS 15  # major release date
   :
 """
 
