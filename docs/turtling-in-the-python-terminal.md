@@ -4,6 +4,9 @@
 Contents
 
 - [Welcome](#welcome)
+  - [Working separately or not](#working-separately-or-not)
+  - [Starting over expertly](#starting-over-expertly)
+  - [Please expect we've gone wrong](#please-expect-weve-gone-wrong)
 - [You can just try things](#you-can-just-try-things)
   - [Move the Turtle](#move-the-turtle)
   - [Draw a Triangle](#draw-a-triangle)
@@ -11,7 +14,13 @@ Contents
     - [Symmetry](#symmetry)
     - [Terminal Window Shape, Size, Darkmode, Lightmode, \& Fonts](#terminal-window-shape-size-darkmode-lightmode--fonts)
   - [Draw a Huge Square](#draw-a-huge-square)
+  - [Draw Animals](#draw-animals)
+    - [Natalia's Snake](#natalias-snake)
+    - [Tina's Giraffe](#tinas-giraffe)
   - [Draw Circles and parts of Circles](#draw-circles-and-parts-of-circles)
+  - [Explore More Colors](#explore-more-colors)
+    - [Explore 24-Bit Color in the Cloud](#explore-24-bit-color-in-the-cloud)
+    - [Explore 8-Bit Color at macOS](#explore-8-bit-color-at-macos)
   - [Glance through the Help Texts](#glance-through-the-help-texts)
   - [Draw famous Figures](#draw-famous-figures)
   - [Choose your own Defaults, when you dislike ours](#choose-your-own-defaults-when-you-dislike-ours)
@@ -42,34 +51,80 @@ at VsCode ⇧⌘V Markdown Open Preview
 
 Welcome to our game
 
-You download the Source Code
+Four Steps =>
 
-    mkdir bin
+1
 
-    curl -Ss https://raw.githubusercontent.com/pelavarre/byoverbs/refs/heads/main/bin/turtling.py >bin/turtling.py
+**You start inside a macOS or Linux**
 
-    wc -l bin/turtling.py  # thousands of lines
+If you don't already have a Linux,
+you can go run the 4+ GB Linux that your gMail gives you free at
 
-You open one Terminal Window to run the Server at right, and
-you tell it to invite Turtles to move around and draw on the Terminal Screen
+> https://shell.cloud.google.com/?show=terminal
 
-    python3 bin/turtling.py --yolo
+I wish we could recommend the replIt Startup service over the gShell Corporate service,
+but your free gMail gCloud gShell runs much faster than the free tier of replIt.
+And of course getting a hold of a macOS Terminal like mine
+would cost you hundreds or thousands of US Dollars
 
-You open another Terminal Window to run the Client at left, and
-you tell it to invite you to type out Turtle Logo Instructions to run through
+2
 
-    python3 bin/turtling.py -i
+**You download the Source Code**
 
-We take the Turtle Logo Instructions you type in the left Window,
-auto-complete them to form Python Instruction,
-and run through the Python Instructions in the right Window,
-telling Turtles how to move and what to draw
+    curl -Ss https://raw.githubusercontent.com/pelavarre/byoverbs/refs/heads/main/bin/turtling.py >turtling.py
+
+    wc -l turtling.py  # thousands of lines
+
+You can just run the Code.
+I wish we could find someone to judge for you how much trust you should give to this Code.
+This Code is published, formatted for review, at
+GitHub > [Turtling·Py](https://github.com/pelavarre/byoverbs/blob/main/bin/turtling.py)
+
+3
+
+**You open one Terminal Window or Tab**, and
+you tell it to move Turtles around to draw things on the Terminal Screen
+
+    python3 turtling.py --yolo
+
+4
+
+**You open another Terminal Window or Tab**, and
+you tell it to chat with you,
+giving you your chance to type out Logo Instructions for your Turtles
+
+    python3 turtling.py -i
+
+Our Code takes the brief Logo Instructions you type,
+fills them out to form Python Instructions carefully spelled and punctuated,
+and then forwards the Python into the Turtles in the other Windows or Tabs,
+so that those Turtles then run the Python to move around and draw things for you
 
 This Md File walks you through tests of such Turtle Logo Instructions
 
-You've met with us here in our early days.
-If you quit before we stop talking at you, then we've gone wrong.
-You've tested our Doc and our Doc failed you.
+### Working separately or not
+
+I really like running my Turtles and my Chat in separate Windows, not just separate Tabs.
+You can run separate Windows at replIt·Com, and at macOS,
+but not at gMail gCloud gShell.
+That gShell will let you split a single Terminal Tab,
+which can be as good.
+But if you want the Font for your Turtles to be lots smaller
+than the Font for your Chat,
+then you have to run macOS or replIt·Com or something other than gShell
+
+### Starting over expertly
+
+Next time you start over,
+if you want just one thing to remember,
+it turns out you can start both Terminal Windows or Tabs in the same way.
+They both work if you always start each Tab or Window with:&nbsp; python3 turtling.py --yolo
+
+### Please expect we've gone wrong
+
+You're meeting with us here in our early days.
+If you quit reading before we stop talking at you, then we've gone wrong.
+That's when you know you've tested our Doc and our Doc failed you.
 We'd love to have you tell us exactly how far you got, please
 
 
@@ -87,13 +142,21 @@ You can type 'forward' to mean the same thing
 
     forward
 
-You can even type out the full Python yourself if you want:
+Over inside your Turtle's Tab or Window,
+you can see it drew a Line of 11 Squares for you.
+
+Why 11 and not 10?
+Well, I'm not sure about that.
+You're meeting with us here in our early days.
+We're still figuring out what Turtling Well means
+
+You can type out the full Python yourself if you want:
 
     import turtling
     t = turtling.Turtle()
     t.forward(100)
 
-Note: We define 'import turtling'. They define 'import turtle'
+Note: We define 'import turtling'. The people at Python·Org define only 'import turtle'
 
 
 ### Draw a Triangle
@@ -103,7 +166,7 @@ Try
     relaunch
     fd 100 rt 120  fd 100 rt 120  fd 100 rt 120
 
-You'll see a Triangle drawn. Something like
+You'll see your Turtle drew a Triangle. Something like
 
     ██
     ██████
@@ -132,8 +195,8 @@ but Python Import Turtle gets messier when working with more Turtles
 #### Symmetry
 
 Turtle Logo's disagree over how symmetric a small Triangle should be.
-We're still developing our small Triangles,
-inside our [demos/arrow-keys.logo](../demos/arrow-keys.logo)
+We're still figuring out our small Triangles,
+inside our [arrow-keys.logo](../demos/arrow-keys.logo) Demo.
 Our Triangles pointing up and down don't yet exactly match
 our Triangles pointing left and right
 
@@ -155,25 +218,30 @@ Turtle Logo's disagree over whether
 to draw Dark Pixels on a Lightmode Canvas, or
 to draw Light Pixels on a Darkmode Canvas.
 In particular, the 2024 Python Import Turtle forces Lightmode,
-even when clashing with the Darkmode's of macOS or ReplIt·Com
+even when clashing with the Darkmode's of replIt or macOS.
+(And it often declines to run altogether at gShell.)
 
 You choose your default Terminal Font.
 Presently we guess the Pixel you want is a Square pair of U+2588 Full-Block █ █ Characters.
-Lotsa of Terminal Font's disagree over how to draw a U+2588 Full-Block █ Character.
+Lotsa of Terminal Fonts disagree over how to draw a U+2588 Full-Block █ Character.
 Many Fonts agree Full-Block means paint the full horizontal width,
-but lots disagree over how much of the vertical height to paint over.
-I've not yet found a Font that says Full-Block should paint the full vertical height.
+but lots of Terminal Fonts disagree over how much of the vertical height to paint over.
+I've not yet found a Font that says Full-Block should paint the full vertical height,
+but that works that way by default at replIt·Com
 
 As for me, as you can see in my screenshots,
 lately mostly I test Screens of
 101 Columns and 42 Rows of Andale Mono 18
-in the Lightmode Basic Profile of the macOS Terminal App in Oct/2023 Sonoma macOS 14
-<!-- Oct/2024 Sequoia macOS 15 since Jan/2025 -->
+in the Lightmode Basic Profile of the macOS Terminal App in Oct/2024 Sequoia macOS 15
 
-I haven't tested Ghostty, nor iTerm either
+I think most of you are working inside your gMail gCloud gShell.
+I've also seen the free tier of replIt work.
+I haven't tested macOS Ghostty, nor macOS iTerm2 either
 
 I'd love to see screenshots or video of how well the Turtle Logos work for you,
-on the Terminals you choose to test
+on the Terminals you choose to test.
+I've posted mine into LinkedIn, Mastodon, and Twitter.
+I can send you copies. We can trade
 
 
 ### Draw a Huge Square
@@ -186,12 +254,58 @@ Try
     setxy 180 -180  setxy -180 -180  setxy 0 0
     setxy -180 -180  setxy -180 180  setxy 0 0
 
+Don't forget to press Return after the end of the last Line of your Input here
+
 Turtle Logo's disagree over how large this Square is.
 UCB Turtle Logo makes a Square from -250 -250 to 250 250 as large as their Square Window
 
 Presently we fit a Square from -180 -180 to 180 180
 into a Terminal Window of 101 Columns x 42 Rows
 
+
+### Draw Animals
+
+#### Natalia's Snake
+
+Draw Natalia's Snake, first drawn by Natalia of Bucharest
+
+    relaunch
+    rt 180  fd 30
+    lt 90  fd 10  rt 90  fd 10  bk 10
+    lt 90  fd 10  lt 90  fd 30  bk 30
+    write '█'  fd 30
+    rt 90  fd 10  lt 90  fd 10  bk 10
+    rt 90  fd 10  lt 90  bk 30  fd 30
+    rt 90  fd 10  lt 90  fd
+    rt 90  bk 10  write ' '  fd 20  write '  █'
+    tada
+
+<!--
+
+clear; pbpaste
+printf '\e[H''\e[13L''\e[39H'  # 39 of 42
+bin/turtling.py --yolo
+⎋[28'⇧}
+
+-->
+
+#### Tina's Giraffe
+
+Draw Tina's Giraffe, first drawn by Tina of Monterey
+
+    relaunch
+    penup home pendown
+    rt 270  fd  lt 90  fd
+    penup home pendown  write '█'
+    bk 100
+    penup home pendown  write '█'
+    rt 45  fd 100
+    seth  rt 90  fd 30
+    penup home
+    fd 10  write '   █'
+    tada
+
+<!-- FIXME: Fully Relaunch after Write '   █' without '█' -->
 
 ### Draw Circles and parts of Circles
 
@@ -248,14 +362,138 @@ To draw a Large Arc as a Repeat of Forward Right
     relaunch
     repeat 25 90 10
 
+
+### Explore More Colors
+
+The most classic most basic 8 Colors of a Sh Terminal are
+
+    setpc white
+    setpc magenta
+    setpc blue
+    setpc cyan
+    setpc green
+    setpc yellow
+    setpc red
+    setpc black
+
+You can call for these Colors like that, or
+you can cast more arcane, fiddly, intricate Terminal Spells such as
+
+    write '\e[37m'  # White
+    write '\e[35m'  # Magenta
+    write '\e[34m'  # Blue
+    write '\e[36m'  # Cyan
+    write '\e[32m'  # Green
+    write '\e[33m'  # Yellow
+    write '\e[31m'  # Red
+    write '\e[30m'  # Black
+
+If you dig down into the deep magic like that,
+then you can swap in deeper magic.
+For example
+
+    write '\e[38;5;130m'  # Orange
+
+#### Explore 24-Bit Color in the Cloud
+
+There's a world of Colors out there, and I don't yet know it well.
+One of the websites talking of Sh Terminal Colors is
+
+Wikipedia > [ANSI escape code](https://en.wikipedia.org/wiki/ANSI_escape_code)
+
+Searching with ⌘F 31 will show you
+Wikipedia People talking of ESC[31m, as we did above
+
+Searching instead with ⌘F 38; will show you
+Wikipedia People talking of "Select RGB foreground color"
+from a choice of more than 16 million "24-bit" Colors
+
+For example, inside of a gMail gCloud gShell, try
+
+    write '\x1B[38;2;255;0;0m Red'
+    write '\x1B[38;2;0;255;0m Green'
+    write '\x1B[38;2;0;0;255m Blue'
+
+<!-- FIXME: Work when given \e at replIt·Com, not only when given \x1B -->
+
+This works inside a replIt·Com Terminal Sh likewise
+
+This does Not work inside a macOS Terminal Sh.
+Perplexity·Ai tells me that limitation is famous.
+That limitation drives people to swap in other Terminals for macOS.
+Such as macOS Ghostty or macOS iTerm2
+
+
+
+#### Explore 8-Bit Color at macOS
+
+There's a world of Colors out there, and I don't yet know it well.
+One of the websites talking of Sh Terminal Colors is
+
+Wikipedia > [ANSI escape code](https://en.wikipedia.org/wiki/ANSI_escape_code)
+
+Searching with ⌘F 31 will show you Wikipedia People talking of ESC[31m, as we did above
+
+My experiments tell me that macOS Terminals only do the "8-bit" Color of "256-color lookup tables". For example, this experiment works
+
+    relaunch
+    write '\e[38;5;4m'
+    fd 50  bk 50  rt 30  # Darker Purple
+    write '\e[38;5;5m'
+    fd 50  bk 50  rt 30  # Darker Pink
+    write '\e[38;5;12m'
+    fd 50  bk 50  rt 30  # Purple
+    write '\e[38;5;13m'
+    fd 50  bk 50  rt 30  # Lighter Pink
+    write '\e[38;5;40m'
+    fd 50  bk 50  rt 30  # Darker Green
+    write '\e[38;5;80m'
+    fd 50  bk 50  rt 30  # Lighter Blue Green
+    write '\e[38;5;120m'
+    fd 50  bk 50  rt 30  # Lighter Green
+    write '\e[38;5;160m'
+    fd 50  bk 50  rt 30  # Red
+    write '\e[38;5;200m'
+    fd 50  bk 50  rt 30  # Much the Same Pink
+    write '\e[38;5;241m'
+    fd 50  bk 50  rt 30  # Darker Gray
+    write '\e[38;5;249m'
+    fd 50  bk 50  rt 30  # Lighter Gray
+    setpc none  penup  home
+    tada
+
+Wikipedia People tell us these '38;5' Color Numbers carry a meaning like so
+
+    0-  7:  standard colors (as in ESC [ 30–37 m)
+    8- 15:  high intensity colors (as in ESC [ 90–97 m)
+    16-231:  6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
+    232-255:  grayscale from dark to light in 24 steps
+
+Some tests of replIt·Com choked unless we type our \e notation,
+extended from merely standard Python,
+as \x1B instead. I dunno why yet
+
+    write '\x1B[m'
+    # Plain Text, Uncolored
+
+<!-- FIXME: work despite trailing # commentary -->
+<!-- FIXME: w for write -->
+<!-- FIXME: no quotes needed for \e without Spaces -->
+
+
 ### Glance through the Help Texts
 
 To see all our Turtle Verbs listed, try
 
     help(t)
 
-You'll see our Help suggests you play around, saying
-Arc, Backward, Beep, Breakpoint, Bye,
+The Help appears in the Tab or Window of the Turtles,
+not the Tab or Window where you typed out 'help(t)' to ask for it.
+When you're done reading the Help, press Q to see your Drawings again.
+Press Spacebar before Q if you want to see more Screenfuls of the Help
+
+You'll see our Help suggests you play around, saying please try
+Arc, Backward, Beep, Bye,
 ClearScreen,
 Forward,
 HideTurtle, Home,
@@ -263,13 +501,18 @@ IncX, IncY, IsDown, IsVisible,
 Label, Left,
 PenDown, PenUp,
 Relaunch, Repeat, Restart, Right,
-SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetY,
+SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetXYZoom, SetY,
 ShowTurtle, Sierpiński, Sleep,
 Tada,
 and Write.
 Help is not in this list,
 because Help is a thing of Python itself,
-not just a thing of our kind of Logo Turtle
+not just a thing of our kind of Logo Turtle.
+When you try this yourself,
+you'll also see talk of Breakpoint and Exec,
+but those take more knowledge to speak well
+
+<!-- FIXME: Can we hide t.breakpoint, t.exec, t.mode? -->
 
 It then tells you to press Q to quit.
 It means that you press the Q Key once, to start serving drawings again
@@ -280,11 +523,15 @@ Try
 
 You'll see Python telling you that our Forward Verb takes a Keyword Argument named:  distance
 
+A quicker way to see all our Turtle Verbs mentioned even more briefly is
+
+    dir(t)
+
 
 ### Draw famous Figures
 
-A popular way to draw Triangles inside Triangles
-is the way of the Sierpiński Triangles, also know as Sierpiński's Sieve or Gasket
+Draw Sierpiński's Triangles inside Triangles,
+first well explained by Sierpiński in Warsaw, also known as Sierpiński's Sieve or Gasket
 
     relaunch
     pu  setxy 170 -170  lt 90  pd
@@ -350,8 +597,8 @@ For the same result, you can type just
 
 Python itself objects if you explicitly try to say 't.left.angle = 90'.
 It will sayAttributeError: 'method' object has no ...
-So we round off what you're saying to become 'left_angle = 90'
-and we tell our 't.left' to watch for you to say that
+So we round off the 'lt.a = 90' that you say to become 'left_angle = 90'
+and we tell our 't.left' to watch for you having said that
 
 Presently, to see all that we abbreviate for you, you can try
 
@@ -378,7 +625,8 @@ To undo what you've said, you can try
     del left_angle
     dir()
 
-These works of Dir and Del and Locals and so on are standard Python ways of speaking.
+These works of Dir and Del and Locals and so on
+are standard, arcane, intricate Python ways of speaking.
 They work without us pouring any special effort into making them work
 
 
@@ -399,21 +647,38 @@ In particular, presently you can paste one or all of
 > [demos/rainbow.logo](../demos/rainbow.logo)<br>
 > [demos/xyplotter.logo](../demos/xyplotter.logo)<br>
 
-If you open up a third Terminal Window, then you can ask to try them one-at-a-time like so =>
+Our "arrow-keys" draws the four Arrow keys of a macBook Keyboard.
+Our "bkboxbox" and "fdboxbox" draw two boxes, one inside the other,
+one clockwise, the other anticlockwise.
+Our "headings" draws Lines of 30°, 45°, 60°, and 90° in each of the four Quadrants.
+draws something a lot like concentric circles,
+somewhat miscalculated by hand, with charm.
+Our "rainbow.logo"
+draws concentric circles, calculated by machine.
+Our "xyplotter.logo" draws a Parabola, twice,
+accelerating as it goes right, decelerating as it goes left
+
+To try each of these in turn,
+you can open them up, one at a time, and paste them into your chat with the Turtles
+
+At macOS, we know how to work with the Os-Copy/Paste-Clipboard.
+At macOS, you can open up a third Terminal Window to work with the Sh,
+and push them into the Clipboard together, one at a time
 
     for F in demos/*.logo; do echo; (set -xe; cat $F |pbcopy); read; done
 
-The "rainbow.logo"
-draws concentric circles, calculated by machine.
-The "like-a-rainbow.logo"
-draws something a lot like concentric circles,
-somewhat miscalculated by hand
-
-That Sh Script does the ⌘C Copy into your Os-Copy/Paste-Clipboard for you,
-where it calls for '|pbcopy'.
+That macOS Sh Script does the ⌘C Copy into your Os-Copy/Paste-Clipboard for you,
+over and over again, when it calls '|pbcopy'.
 But you have to do the ⌘V Paste part yourself,
 back into your second Terminal Window,
-where you've left the "🐢?" Turtle Chat going
+where you've left the "🐢?" Turtle Chat going.
+And then you have to come back to your Sh Window
+and press Return to get the next one going
+
+Your macOS Sh Window can also try them all together, one after another
+
+    cat demos/*.logo |sed 's,tada,ht sleep 1 st,' |pq
+
 
 
 ### Play around
@@ -454,20 +719,22 @@ You can also type out the raw Python to draw this same Pentagon
 
 <!--  pu  setxy -260 -10  pd  -->
 
-You hit the edges and distort the drawing,
-when you choose a Repeat_Count of 8 or more,
-or if you choose a Forward_Distance larger than 100,
-when you're drawing on the 101x42 Columns and Rows of my Terminal,
+You hit the edges of the Screen and distort the drawing, when you make it too large.
+Like when you're drawing on the 101x42 Columns and Rows of my Terminal,
+it'll be too large if you choose a Repeat_Count of 8 or more,
+or if you choose a Forward_Distance larger than 100
+
 Some Turtle Logos will wrap the Cursor at the edges,
 rather than insisting that you always center your drawings yourself.
-Like if you click into the Server Window and press Return after Relaunch,
+As an example of more centering a drawing yourself,
+you can click into the Server Window and press Return after Relaunch,
 but before the Count = and For,
 then you can draw Count as large as 10 in my Terminal today.
 If you watch for it, you can see
 our Client prints "Snap" Messages when your drawing grows too large,
 such that we clip and distort it
 
-For such Notes coming back from the Turtle to make the most sense,
+For such Messages coming back from the Turtle to make the most sense,
 you'll want to see them in real-time.
 If you try 'sleep 0' after you press Return, before the Count = and For,
 then you'll see the Note on you having pressed Return pops up then.
@@ -486,7 +753,18 @@ Tell us what it is?
 Like we could give this game a more game-like feel,
 if we completed a full Python Command every time you pressed a Key at the Server.
 Or we could rewrite our Arrow Keys Demo to have 4 Turtles draw it, not just 1.
-And so on and on and on
+Or we could figure out how to show the Turtle
+even after you split a gMail gCloud gShell Tab
+with ⌃B ⇧" and then moved the Turtle between Splits with ⌃B ↑ and  ⌃B ↓.
+replIt·Com has this same disappear-the-Turtle bug
+if you run the Turtle and the Chat in separate Browser Windows.
+gMail gCloud gShell can't do separate Browser Windows.
+
+And so on and on and on.
+Choices and choices and choices, each with intricate and unpredictable consequences.
+We stop calling it Technology after it works, just plain works.
+This world is still new enough that lots of bits of it don't quite work.
+You have to pay enough attention to figure out how to cope, all the same.
 
 You've joined us in our early days.
 We don't have more than a few of us gathered here yet, dreaming out what's the most fun.
@@ -495,15 +773,14 @@ Tell us what change you want next, and odds on we'll deliver it sooner
 
 ## Dig in technically, deep into the Python
 
-You could review the whole Code? Read every line of the Python? No one has before you
-
+You could review the whole Code? Read every line of the Python? No one has before you.
 Or you could pick out just one aspect of the Code to drill down into?
 
 Our Turtle Logo App here is thousands of lines large.
 It's large enough that it gives
 its own kind of a tour of the Standard Python Library.
 
-It mixes together 27 Imports
+It mixes together 27 Python Imports
 
 ### 24 Cross-Platform Python Imports
 
@@ -660,13 +937,26 @@ and share and edit the screenshots
 
 ## Help us please
 
-You know you've got thoughts.
-Please do speak them out loud as words to someone,
-and to us, if possible
+Please speak your thoughts out loud as words to someone.
+To us, if possible
 
 + LinkedIn > [pelavarre](https://www.linkedin.com/in/pelavarre)<br>
 + Mastodon > [pelavarre](https://social.vivaldi.net/@pelavarre)<br>
 + Twitter > [pelavarre](https://twitter.com/intent/tweet?text=/@PELaVarre)<br>
+
+Please also thank our people for their efforts, if you catch the chance
+
+**January, 2025**
+
+Georgiana of Bucharest!
+She put the Terminal Tabs of the gMail gCloud gShell
+forward as the most available Linux Hosts
+
+Natalia of Bucharest!
+She drew our first Animal, her Snake
+
+Tina of Monterey!
+She drew our first Giraffe
 
 
 <!-- omit in toc -->

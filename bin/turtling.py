@@ -55,7 +55,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.01.07"  # Tuesday
+__version__ = "2025.01.11"  # Saturday
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
@@ -212,30 +212,58 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 
 
 #
-#   ⌃G ⌃H ⌃I ⌃J ⌃M ⌃[   \a \b \t \n \r \e
+#   ⌃G ⌃H ⌃I ⌃J ⌃M mean \a \b \t \n \r, and ⌃[ means \e, also known as ⎋
 #
-#   and then the @ABCDEGHIJKLMPSTZdhlmnq forms of ⎋[ Csi, without R t } ~, are
+#   macOS Terminals also understand a LIFO Stack of 1 Copy of the Y X Terminal Cursor
 #
-#   ⎋[A ↑  ⎋[B ↓  ⎋[C →  ⎋[D ←
-#   ⎋[I Tab  ⎋[Z ⇧Tab
-#   ⎋[d row-go  ⎋[G column-go  ⎋[H row-column-go
+#       FIXME:  ⎋7 cursor-checkpoint  ⎋8 cursor-revert  reverting to Y 1 X 1
 #
-#   ⎋[M rows-delete  ⎋[L rows-insert  ⎋[P chars-delete  ⎋[@ chars-insert
-#   ⎋[J after-erase  ⎋[1J before-erase  ⎋[2J screen-erase  ⎋[3J scrollback-erase
-#   ⎋[K tail-erase  ⎋[1K head-erase  ⎋[2K row-erase
-#   ⎋[T scrolls-down  ⎋[S scrolls-up
+#   The ⇧ @ABCDEGHIJKLMPSTZ & dhlm forms of ⎋[ Csi, without ⇧R n q t ⇧} ⇧~, are
 #
-#   ⎋[4h insert  ⎋[4l replace  ⎋[6 q bar  ⎋[4 q skid  ⎋[ q unstyled
+#       ⎋[⇧A ↑  ⎋[⇧B ↓  ⎋[⇧C →  ⎋[⇧D ←
+#       ⎋[I Tab  ⎋[⇧Z ⇧Tab
+#       ⎋[d row-go  ⎋[⇧G column-go  ⎋[⇧H row-column-go
 #
-#   ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[7m reverse/inverse
-#   ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange
-#   ⎋[m plain
+#       ⎋[⇧M rows-delete  ⎋[⇧L rows-insert  ⎋[⇧P chars-delete  ⎋[⇧@ chars-insert
+#       ⎋[⇧J after-erase  ⎋[1⇧J before-erase  ⎋[2⇧J screen-erase  ⎋[3⇧J scrollback-erase
+#       ⎋[⇧K row-tail-erase  ⎋[1⇧K row-head-erase  ⎋[2⇧K row-erase
+#       ⎋[⇧T scrolls-down  ⎋[S scrolls-up
 #
-#   ⎋[6n call for ⎋[{y};{x}R  ⎋[18t call for ⎋[{rows};{columns}t
+#       ⎋[4h insert  ⎋[4l replace  ⎋[6 q bar  ⎋[4 q skid  ⎋[ q unstyled
 #
-#   ⎋[E repeat \r\n
+#       ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[7m reverse/inverse
+#       ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange
+#       ⎋[m plain
 #
-#   and also VT420 had DECIC ⎋['} col-insert, DECDC ⎋['~ col-delete
+#       ⎋[6n call for reply ⎋[{y};{x}R  ⎋[18t call for reply⎋[{rows};{columns}t
+#
+#       ⎋[⇧E \r\n
+#
+#   Our VT420 Terminal Emulation includes
+
+#       ⎋['⇧} col-insert  ⎋['⇧~ col-delete
+#
+#   FIXME:  Our macOS App Emulation includes
+#
+#       ⌃A column-go-leftmost
+#       ⌃B column-go-left
+#       ⌃D char-delete-right
+#       ⌃F column-go-right
+#       ⌃G alarm-ring
+#       ⌃H char-delete-left
+#       ⌃K row-tail-erase
+#       ⌃N ↓
+#       ⌃O row-insert  # works only in leftmost column
+#       ⌃P ↑
+#       Delete char-delete-left
+#
+#   For Terminals who don't understand that a macOS ⌘K means erase the Screen without backup
+#
+#       FIXME:  ⌃L scrollback-and-screen-erase
+#
+#   For Terminals who end each Line of Os-Copy/Paste-Clipboard only with ⌃J and not also ⌃M
+#
+#       FIXME: ⌃J without ⌃M  ⏎ including its ↓
 #
 
 
@@ -1165,6 +1193,8 @@ class StrTerminal:
 
         # returns Falsey Csi when not a CSI Escape Sequence
 
+        # FIXME: chokes at ⎋['28}  # because Pn after first Intermediate
+
     #
     # Emulate a more functional Terminal
     #
@@ -1465,9 +1495,9 @@ class Turtle:
         assert CUP_Y_X == "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
 
         (y_rows, x_columns) = gt.os_terminal_y_rows_x_columns()
-        assert y_rows >= 2, (y_rows,)
+        assert y_rows >= 4, (y_rows,)
 
-        y = y_rows - 1
+        y = y_rows - 3
         x = 1
         gt.schars_write("\x1B[" f"{y};{x}H")
 
@@ -1827,7 +1857,7 @@ class Turtle:
         # todo: Scratch Change-Pen-Color-By-10
 
     _rgb_by_name_ = {
-        "white": 0xFFFFFF,
+        "white": 0xFFFFFF,  # FIXME: _rgb_by_title_
         "magenta": 0xFF00FF,
         "blue": 0x0000FF,
         "cyan": 0x00FFFF,
@@ -1838,14 +1868,14 @@ class Turtle:
     }
 
     _ansi_by_rgb_ = {  # CSI 06/13 Select Graphic Rendition (SGR)  # 30+ Display Foreground Color
-        0xFFFFFF: "\x1B[37m",
-        0xFF00FF: "\x1B[35m",
-        0x0000FF: "\x1B[34m",
-        0x00FFFF: "\x1B[36m",
-        0x00FF00: "\x1B[32m",
-        0xFFFF00: "\x1B[33m",
-        0xFF0000: "\x1B[31m",
-        0x000000: "\x1B[30m",
+        0xFFFFFF: "\x1B[37m",  # White
+        0xFF00FF: "\x1B[35m",  # Magenta
+        0x0000FF: "\x1B[34m",  # Blue
+        0x00FFFF: "\x1B[36m",  # Cyan
+        0x00FF00: "\x1B[32m",  # Green
+        0xFFFF00: "\x1B[33m",  # Yellow
+        0xFF0000: "\x1B[31m",  # Red
+        0x000000: "\x1B[30m",  # Black
     }
 
     def _colorname_to_penmode_(self, colorname) -> str:
@@ -1996,7 +2026,7 @@ class Turtle:
         raise NotImplementedError("Only works when auto-complete'd")
 
     def write(self, s) -> None:
-        """Write the Str to the Screen"""
+        """Write one Str to the Screen"""
 
         gt = self.glass_teletype
         gt.schars_write(s)
@@ -2175,7 +2205,7 @@ class Turtle:
     #
 
     def _x_y_position_(self) -> tuple[int, int]:
-        """Sample the X Y Position remotely, inside the Turtle"""
+        """Sample the Turtle's X Y Position"""
 
         gt = self.glass_teletype
 
@@ -2231,7 +2261,7 @@ class Turtle:
     #
 
     def sierpiński(self, distance, divisor) -> None:
-        """Draw Triangles inside Triangles, in the way of Sierpiński"""
+        """Draw Triangles inside Triangles, in the way of Sierpiński 1882..1969"""
 
         assert distance >= 0, (distance,)
         assert divisor > 0, (divisor,)
@@ -2809,6 +2839,8 @@ class PythonSpeaker:
         alt_text = text.replace(r"\e", r"\x1B")
         if "".join(splits) != alt_text:
             assert "".join(splits) != text, (splits, text)
+
+            # FIXME: fails at input of:  w \e[37m
 
         return splits
 
@@ -4021,7 +4053,7 @@ class TurtleClient:
 #
 # todo: thicker X Y Pens, beyond the squarish 2X 1Y
 #
-# todo: write "\e[41m\e[2J" does work, fill screen w background colour, do we like that?
+# todo: write "\e[41m\e[2J" does work, fill screen w background color, do we like that?
 # todo: [  write "\e[41m"  clearscreen  ] also works
 # todo: more than 8 foreground colors, such as ⎋[38;5;130m orange
 # todo: background colors, such as ⎋[38;5;130m orange
