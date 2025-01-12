@@ -55,7 +55,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.01.11"  # Saturday
+__version__ = "2025.01.12"  # Sunday
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
@@ -3547,9 +3547,80 @@ class TurtlingServer:
         st = gt.str_terminal
 
         kchord = st.kchord_pull(timeout=1.000)
+
+        if self.kchord_edit_like_macos(kchord):
+            return kchord
+
         gt.kchord_write_kbytes_else_print_kstr(kchord)
 
         return kchord
+
+    def kchord_edit_like_macos(self, kchord) -> bool:
+        """Reply to 1 Keyboard Chord that edits the Terminal"""
+        """Return True if served, else return False"""
+
+        (kbytes, kstr) = kchord
+
+        func_by_kstr = {
+            "⌃A": self.do_column_go_leftmost,
+            "⌃F": self.do_column_go_right,
+            "⌃G": self.do_alarm_ring,
+            "⌃H": self.do_char_delete_left,
+            "⌃K": self.do_row_tail_erase,
+            "⌃N": self.do_row_go_down,
+            "⌃P": self.do_row_go_up,
+            "Delete": self.do_char_delete_left,
+        }
+
+        if kstr not in func_by_kstr.keys():
+            return False
+
+        func = func_by_kstr[kstr]
+        func(kchord)
+
+        return True
+
+    def do_alarm_ring(self, kchord) -> None:  # ⌃G
+        """Ring the Terminal Bell"""
+
+        gt = self.glass_teletype
+        gt.schars_write("\a")  # Alarm Bell
+
+    def do_char_delete_left(self, kchord) -> None:  # ⌃H  # Delete
+        """Delete 1 Character at the Left of the Turtle"""
+
+        gt = self.glass_teletype
+        gt.schars_write("\b\x1B[P")  # CSI Ps P  # Delete Characters (DCH)
+
+    def do_column_go_leftmost(self, kchord) -> None:  # ⌃A
+        """Go to first Character of Row"""
+
+        gt = self.glass_teletype
+        gt.schars_write("\r")
+
+    def do_column_go_right(self, kchord) -> None:  # ⌃F
+        """Go to the next Character of Row"""
+
+        gt = self.glass_teletype
+        gt.schars_write("\x1B[C")  # CSI Ps C  # Cursor Forward (CUF)
+
+    def do_row_go_down(self, kchord) -> None:  # ⌃N
+        """Move as if you pressed the ↓ Down Arrow"""
+
+        gt = self.glass_teletype
+        gt.schars_write("\x1B[B")  # CSI Ps B  # Cursor Down (CUD)  # could be "\n"
+
+    def do_row_go_up(self, kchord) -> None:  # ⌃P
+        """Move as if you pressed the ↑ Up Arrow"""
+
+        gt = self.glass_teletype
+        gt.schars_write("\x1B[A")  # CSI Ps A  # Cursor Up (CUU)
+
+    def do_row_tail_erase(self, kchord) -> None:  # ⌃K
+        """Delete all the Characters at or to the Right of the Turtle"""
+
+        gt = self.glass_teletype
+        gt.schars_write("\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
 
     def reader_writer_serve(self, reader, writer) -> None:
         """Read a Python Text in, write back out the Repr of its Eval"""

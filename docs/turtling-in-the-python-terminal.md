@@ -22,8 +22,11 @@ Contents
   - [Explore More Colors](#explore-more-colors)
     - [Explore 24-Bit Color in the Cloud](#explore-24-bit-color-in-the-cloud)
     - [Explore 8-Bit Color at macOS](#explore-8-bit-color-at-macos)
-  - [Glance through the Help Texts](#glance-through-the-help-texts)
   - [Draw famous Figures](#draw-famous-figures)
+  - [Edit your Drawings](#edit-your-drawings)
+- [We can just try things](#we-can-just-try-things)
+  - [Glance through the Help Texts](#glance-through-the-help-texts)
+  - [Blame me, not you, when this English is difficult to read](#blame-me-not-you-when-this-english-is-difficult-to-read)
   - [Choose your own Defaults, when you dislike ours](#choose-your-own-defaults-when-you-dislike-ours)
   - [Paste whole Files of Input](#paste-whole-files-of-input)
   - [Play around](#play-around)
@@ -524,6 +527,77 @@ I dunno why yet
 <!-- FIXME: no quotes needed for \e without Spaces -->
 
 
+### Draw famous Figures
+
+Draw Sierpiński's Triangles inside Triangles,
+first well explained by Sierpiński in Warsaw, also known as Sierpiński's Sieve or Gasket
+
+    relaunch
+    pu  setxy 170 -170  lt 90  pd
+    sierpiński 400
+
+To pack more Pixels into the same macOS Terminal Window, you can press
+
+    ⌘- View > Smaller
+
+You can press that again and again to make the Pixels smaller.
+And you can drag the lower-right Corner of the Window to make the Window larger again.
+
+To undo what you've done, you can press ⇧⌘+ View > Bigger again and again,
+or even choose to press ⌘0 Default Font Size
+
+While you've got lots more Pixels to draw with,
+such as 387 X 133 Y,
+you can draw more Triangles inside Triangles,
+such as
+
+    relaunch
+    pu  setxy 510 -510  lt 90  pd
+    sierpiński 1200
+
+**Links**
+
+Wiki > [Sierpiński triangle](https://en.wikipedia.org/wiki/Sierpi%C5%84ski_triangle)<br>
+
+
+### Edit your Drawings
+
+You can edit your Drawings
+with some of the same Keyboard Shortcuts
+that a macOS Note or Terminal Emacs understands
+
+| Key Chord | Short Name | Explanation |
+|-----------|------------|-------------|
+| ⌃A | column-go-leftmost | Go to first Character of Row |
+| ⌃F | column-go-right | Go to the next Character of Row |
+| ⌃G | alarm-ring | Ring the Terminal Bell |
+| ⌃H | char-delete-left | Delete 1 Character at Left (same as if pressing Delete) |
+| ⌃K | row-tail-erase | Delete all the Characters at or to the Right of the Turtle |
+| ⌃N | row-tail-erase | Move as if you pressed the ↓ Down Arrow |
+| ⌃P | row-tail-erase | Delete all the Characters at or to the Right of the Turtle |
+
+Also the ordinary editing Keys of the Keyboard work to edit your Drawing
+
+| Key Chord | Short Name | Explanation |
+|-----------|------------|-------------|
+| ← | column-go-left | Move Left by one Column |
+| → | column-go-right | Move Right by one Column |
+| ⇧Tab | tab-go-left | Move far Left, to next Tab Stop |
+| Tab | tab-go-right | Move far Right, to next Tab Stop |
+| ↑ | row-go-up | Move Up by 1 Row |
+| ↓ | row-go-down | Move Down by 1 Row |
+| Delete | char-delete-left | Delete 1 Character at the Left of the Turtle |
+
+<!-- ⌃C ⌃D ⌃O ⌃Y -->
+
+Presently, editing your Drawings like this
+doesn't write the Logo Code that would make the same edits.
+We could come fix that. Just ask us
+
+
+## We can just try things
+
+
 ### Glance through the Help Texts
 
 To see all our Turtle Verbs listed, try
@@ -571,37 +645,40 @@ A quicker way to see all our Turtle Verbs mentioned even more briefly is
     dir(t)
 
 
-### Draw famous Figures
+### Blame me, not you, when this English is difficult to read
 
-Draw Sierpiński's Triangles inside Triangles,
-first well explained by Sierpiński in Warsaw, also known as Sierpiński's Sieve or Gasket
+You may believe this Md File is written in the English of Computer Engineers
 
-    relaunch
-    pu  setxy 170 -170  lt 90  pd
-    sierpiński 400
+You're not completely wrong.
+But people often struggle to get my meaning from my first writing.
+Tell me some piece of this English doesn't just make sense, and then
+Claude·Ai & I will go work on rewriting it to make its meaning come across
+more clearly and accurately, while still brief
 
-To pack more Pixels into the same macOS Terminal Window, you can press
+Myself, I delight in my failures to understand your English, first try.
+Like so =>
 
-    ⌘- View > Smaller
+> Part of the value of being oblique, done properly, is that you
+> challenge the reader to piece together the meaning themselves.
+> This is vastly superior to them taking an answer at face-value, with no depth or nuance,
+> in a way that can be worse than having no answer at all
+>
+> ~ Twitter > Visakan Veerasamy (@visakanv),
 
-You can press that again and again to make the Pixels smaller.
-And you can drag the lower-right Corner of the Window to make the Window larger again.
+And before him
 
-To undo what you've done, you can press ⇧⌘+ View > Bigger again and again,
-or even choose to press ⌘0 Default Font Size
+> Tell all the truth but tell it slant —<br>
+> Success in Circuit lies<br>
+> Too bright for our infirm Delight<br>
+> The Truth's superb surprise<br>
+> As Lightning to the Children eased<br>
+> With explanation kind<br>
+> The Truth must dazzle gradually<br>
+> Or every man be blind —<br>
+>
+> Emily Dickinson 1830..1886
 
-While you've got lots more Pixels to draw with,
-such as 387 X 133 Y,
-you can draw more Triangles inside Triangles,
-such as
-
-    relaunch
-    pu  setxy 510 -510  lt 90  pd
-    sierpiński 1200
-
-**Links**
-
-Wiki > [Sierpiński triangle](https://en.wikipedia.org/wiki/Sierpi%C5%84ski_triangle)<br>
+<!-- todo: Code those two — more plainly as U+2014 Em-Dash-->
 
 
 ### Choose your own Defaults, when you dislike ours
