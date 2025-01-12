@@ -17,6 +17,7 @@ Contents
   - [Draw Animals](#draw-animals)
     - [Natalia's Snake](#natalias-snake)
     - [Tina's Giraffe](#tinas-giraffe)
+    - [Light up the Turtle](#light-up-the-turtle)
   - [Draw Circles and parts of Circles](#draw-circles-and-parts-of-circles)
   - [Explore More Colors](#explore-more-colors)
     - [Explore 24-Bit Color in the Cloud](#explore-24-bit-color-in-the-cloud)
@@ -62,10 +63,11 @@ you can go run the 4+ GB Linux that your gMail gives you free at
 
 > https://shell.cloud.google.com/?show=terminal
 
-I wish we could recommend the replIt Startup service over the gShell Corporate service,
-but your free gMail gCloud gShell runs much faster than the free tier of replIt.
+That's the gShell inside gCloud inside gMail.
+I wish we could recommend the replIt·Com Startup service over the gShell Corporate service,
+but often your free gShell runs much faster than the free tier of replIt.
 And of course getting a hold of a macOS Terminal like mine
-would cost you hundreds or thousands of US Dollars
+will cost you hundreds or thousands of US Dollars
 
 2
 
@@ -105,13 +107,20 @@ This Md File walks you through tests of such Turtle Logo Instructions
 ### Working separately or not
 
 I really like running my Turtles and my Chat in separate Windows, not just separate Tabs.
-You can run separate Windows at replIt·Com, and at macOS,
-but not at gMail gCloud gShell.
-That gShell will let you split a single Terminal Tab,
+That way I can watch my Drawing appear, even while I'm still typing out my Chat
+
+You can run separate Windows at replIt, and at macOS,
+but not with gShell.
+Your gShell will let you split a single Terminal Tab,
 which can be as good.
 But if you want the Font for your Turtles to be lots smaller
 than the Font for your Chat,
-then you have to run macOS or replIt·Com or something other than gShell
+then you have to run macOS or replIt or something other than gShell.
+When you open a 2nd Window with the same gShell Login,
+then gShell shuts off the 1st Window.
+At least, they go wrong like that when both Windows are inside 1 Browser.
+Maybe they don't go so wrong if you test 2 Browsers at once with the same gShell Login.
+I've not yet tried that
 
 ### Starting over expertly
 
@@ -227,16 +236,17 @@ Lotsa of Terminal Fonts disagree over how to draw a U+2588 Full-Block █ Charac
 Many Fonts agree Full-Block means paint the full horizontal width,
 but lots of Terminal Fonts disagree over how much of the vertical height to paint over.
 I've not yet found a Font that says Full-Block should paint the full vertical height,
-but that works that way by default at replIt·Com
+except the default Font at replIt does paint the full vertical height
 
 As for me, as you can see in my screenshots,
 lately mostly I test Screens of
 101 Columns and 42 Rows of Andale Mono 18
 in the Lightmode Basic Profile of the macOS Terminal App in Oct/2024 Sequoia macOS 15
 
-I think most of you are working inside your gMail gCloud gShell.
-I've also seen the free tier of replIt work.
-I haven't tested macOS Ghostty, nor macOS iTerm2 either
+I'd guess most of you are working inside a free gShell.
+I've also seen free replIt Shells work.
+I haven't tested macOS Ghostty, nor macOS iTerm2 either,
+nor any of the Terminal Apps of Linux and Windows
 
 I'd love to see screenshots or video of how well the Turtle Logos work for you,
 on the Terminals you choose to test.
@@ -253,6 +263,7 @@ Try
     setxy 180 180  setxy 180 -180  setxy 0 0
     setxy 180 -180  setxy -180 -180  setxy 0 0
     setxy -180 -180  setxy -180 180  setxy 0 0
+    restart tada
 
 Don't forget to press Return after the end of the last Line of your Input here
 
@@ -278,7 +289,7 @@ Draw Natalia's Snake, first drawn by Natalia of Bucharest
     rt 90  fd 10  lt 90  bk 30  fd 30
     rt 90  fd 10  lt 90  fd
     rt 90  bk 10  write ' '  fd 20  write '  █'
-    tada
+    restart tada
 
 <!--
 
@@ -300,12 +311,42 @@ Draw Tina's Giraffe, first drawn by Tina of Monterey
     bk 100
     penup home pendown  write '█'
     rt 45  fd 100
-    seth  rt 90  fd 30
+    seth 0  rt 90  fd 30
     penup home
     fd 10  write '   █'
-    tada
+    restart tada
 
 <!-- FIXME: Fully Relaunch after Write '   █' without '█' -->
+
+#### Light up the Turtle
+
+Our Turtle is too easy to lose
+
+Sometimes it's the same Color as the Background of the Screen,
+or the same Color as your Drawing in the Foreground,
+or you turned it off with HideTurtle or Tada,
+or you didn't turn it back on with ShowTurtle
+
+To get the Turtle to blink on and off,
+you can tell the Turtle to draw just 1 Square Pixel underneath it without moving away,
+in different Colors
+
+Try each of these, but one at a time
+
+    pendown  setpencolor Red  forward 0  tada
+
+    pendown  setpencolor None  forward 0  tada
+
+    pendown  setpencolor None  write '  '  tada
+
+<!-- FIXME: 'PenDown  SetPenColor Red  Forward 0  Tada' should work and doesn't -->
+
+If you try one at a time, then you can see the changes
+
+Like I'll often draft a Drawing in PenColor None,
+and end by drawing just 1 Pixel in Red,
+just so I can see where I left the Cursor standing
+
 
 ### Draw Circles and parts of Circles
 
@@ -408,17 +449,17 @@ Searching instead with ⌘F 38; will show you
 Wikipedia People talking of "Select RGB foreground color"
 from a choice of more than 16 million "24-bit" Colors
 
-For example, inside of a gMail gCloud gShell, try
+For example, inside of a gShell, try
 
     write '\x1B[38;2;255;0;0m Red'
     write '\x1B[38;2;0;255;0m Green'
     write '\x1B[38;2;0;0;255m Blue'
 
-<!-- FIXME: Work when given \e at replIt·Com, not only when given \x1B -->
+<!-- FIXME: Work when given \e at replIt, not only when given \x1B -->
 
-This works inside a replIt·Com Terminal Sh likewise
+This also works inside a replIt Shell
 
-This does Not work inside a macOS Terminal Sh.
+This does Not work inside a macOS Shell.
 Perplexity·Ai tells me that limitation is famous.
 That limitation drives people to swap in other Terminals for macOS.
 Such as macOS Ghostty or macOS iTerm2
@@ -469,9 +510,11 @@ Wikipedia People tell us these '38;5' Color Numbers carry a meaning like so
     16-231:  6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
     232-255:  grayscale from dark to light in 24 steps
 
-Some tests of replIt·Com choked unless we type our \e notation,
+Some tests at replIt choked unless we type our \e notation,
 extended from merely standard Python,
-as \x1B instead. I dunno why yet
+as \x1B instead.
+I'd've guess that's impossible, but it fails there when I test it.
+I dunno why yet
 
     write '\x1B[m'
     # Plain Text, Uncolored
@@ -608,7 +651,9 @@ Presently, to see all that we abbreviate for you, you can try
 
 This is an act of peeking deep into the guts.
 Odds on, we'll soon dream up some better way to disclose these secrets,
-and this exact spelling of a deep peek into the guts will stop working
+and this exact spelling of a deep peek into the guts will stop working.
+I'd guess I'll go make typing H and pressing Return inside the 🐢 Chat
+tell you what our Abbreviations are
 
 To remember what defaults you've chosen, you can look at things like
 
@@ -628,6 +673,11 @@ To undo what you've said, you can try
 These works of Dir and Del and Locals and so on
 are standard, arcane, intricate Python ways of speaking.
 They work without us pouring any special effort into making them work
+
+I'd guess I'll make lots of the defaults cyclic.
+Like when you ask for SetPenColor None then give you back how we started,
+but every time you ask for SetPenColor without picking a Color,
+then we give you the next Color of the Rainbow
 
 
 ### Paste whole Files of Input
@@ -754,11 +804,11 @@ Like we could give this game a more game-like feel,
 if we completed a full Python Command every time you pressed a Key at the Server.
 Or we could rewrite our Arrow Keys Demo to have 4 Turtles draw it, not just 1.
 Or we could figure out how to show the Turtle
-even after you split a gMail gCloud gShell Tab
+even after you split a gShell Tab
 with ⌃B ⇧" and then moved the Turtle between Splits with ⌃B ↑ and  ⌃B ↓.
-replIt·Com has this same disappear-the-Turtle bug
-if you run the Turtle and the Chat in separate Browser Windows.
-gMail gCloud gShell can't do separate Browser Windows.
+The replIt Shell has much the same disappear-the-Turtle bug,
+if you do run the replIt Turtle and the Chat in separate Browser Windows.
+gShell can't do separate Windows inside the same Browser
 
 And so on and on and on.
 Choices and choices and choices, each with intricate and unpredictable consequences.
@@ -880,9 +930,8 @@ In particular, adding Python into macOS lets you try
     t.forward(100)
     t.right(45)
 
-This Import Turtle demo runs just as well for me in Windows of ReplIt·Com.
-But it runs noticeably slower than macOS out there,
-at least while I'm only logged in and not paying for the ReplIt·Com service
+This Import Turtle demo runs just as well for me in Windows of ReplIt.
+But the free replIt Python runs tremendously slower than macOS Python
 
 You could go ask Python·Org people
 to learn to auto-complete your Turtle Logo Input as strongly as we do.
@@ -896,7 +945,7 @@ Technically, the Turtle Logo language we auto-complete correctly here
 is a "Domain-Specific Language (DSL)".
 Our DSL here is "ad hoc, informally-specified, bug-ridden, and slow".
 I feel it works well, so I like it, I like it lots.
-I can only hope we'll scrub more bugs out of it and make it fast too
+I can only hope we'll scrub more bugs out of it and make it as fast as Python
 
 **Links**
 
@@ -911,8 +960,8 @@ Wiki > [Greenspun's tenth rule](https://en.wikipedia.org/wiki/Greenspun%27s_tent
 ### Does it work at your desk?
 
 Our Turtle Logo runs inside more Terminals.
-Their Turtle Logo runs inside a macOS Terminal, and inside ReplIt·Com.
-In other places, our Turtle Logo still works,
+Their Turtle Logo runs inside a macOS Terminal, and inside ReplIt.
+In other places, such as gShell, our Turtle Logo still works,
 whereas their Turtle Logo tells you things like
 
     ModuleNotFoundError: No module named 'tkinter'
@@ -928,7 +977,7 @@ edit them inside the Google Doc
 
 To save drawings entirely inside the Terminal,
 you can record and replay them (at near infinite speed)
-with the Terminal Sh 'screen' command
+with the Shell 'screen' command
 
 Their Turtle Logo draws on a Bitmap Canvas in a separate Window that's not a Terminal Window.
 You can take screenshots of their drawings,
@@ -949,7 +998,7 @@ Please also thank our people for their efforts, if you catch the chance
 **January, 2025**
 
 Georgiana of Bucharest!
-She put the Terminal Tabs of the gMail gCloud gShell
+She put Terminal Tabs of gShell
 forward as the most available Linux Hosts
 
 Natalia of Bucharest!
