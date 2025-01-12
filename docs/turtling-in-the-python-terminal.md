@@ -192,6 +192,17 @@ You'll see your Turtle drew a Triangle. Something like
     ██████
     ██
 
+You might want to prepare your Instructions in some other Window and paste them in,
+because our Input Line Editing doesn't work very well yet.
+For now, as you type instructions, to edit what you've typed, you can try
+
+| Key Chord | Short Name | Meaning |
+|-----------|------------|---------|
+| ⌃C | row-delete | Delete the Input Line |
+| ⌃W | word-delete | Delete 1 Word at the Left of the Turtle |
+| ⌃U | row-delete | Delete the Input Line |
+| Delete | char-delete-left | Delete 1 Character at the Left of the Turtle |
+
 
 #### Relaunch
 
@@ -566,33 +577,61 @@ You can edit your Drawings
 with some of the same Keyboard Shortcuts
 that a macOS Note or Terminal Emacs understands
 
-| Key Chord | Short Name | Explanation |
-|-----------|------------|-------------|
-| ⌃A | column-go-leftmost | Go to first Character of Row |
-| ⌃F | column-go-right | Go to the next Character of Row |
-| ⌃G | alarm-ring | Ring the Terminal Bell |
-| ⌃H | char-delete-left | Delete 1 Character at Left (same as if pressing Delete) |
-| ⌃K | row-tail-erase | Delete all the Characters at or to the Right of the Turtle |
-| ⌃N | row-tail-erase | Move as if you pressed the ↓ Down Arrow |
-| ⌃P | row-tail-erase | Delete all the Characters at or to the Right of the Turtle |
-
-Also the ordinary editing Keys of the Keyboard work to edit your Drawing
-
-| Key Chord | Short Name | Explanation |
-|-----------|------------|-------------|
-| ← | column-go-left | Move Left by one Column |
-| → | column-go-right | Move Right by one Column |
-| ⇧Tab | tab-go-left | Move far Left, to next Tab Stop |
-| Tab | tab-go-right | Move far Right, to next Tab Stop |
-| ↑ | row-go-up | Move Up by 1 Row |
-| ↓ | row-go-down | Move Down by 1 Row |
-| Delete | char-delete-left | Delete 1 Character at the Left of the Turtle |
-
-<!-- ⌃C ⌃D ⌃O ⌃Y -->
-
-Presently, editing your Drawings like this
+Editing your Drawings like this today
 doesn't write the Logo Code that would make the same edits.
 We could come fix that. Just ask us
+
+The ordinary editing Keys of the Keyboard will mostly work as you expect
+
+| Key Chord | Short Name | Meaning |
+|-----------|------------|---------|
+| Delete | char-delete-left | Delete 1 Character at the Left of the Turtle |
+| Tab | tab-go-right | Move far Right, to next Tab Stop |
+| ⇧Tab | tab-go-left | Move far Left, to next Tab Stop |
+| Return | row-insert-go-below | Insert a Row below this Row and move into it |
+| ← | column-go-left | Move Left by one Column |
+| ↑ | row-go-up | Move Up by 1 Row |
+| ↓ | row-go-down | Move Down by 1 Row |
+| → | column-go-right | Move Right by one Column |
+
+The most ordinary editing macOS/ Emacs Key Chords will mostly work too
+
+| Key Chord | Short Name | Meaning |
+|-----------|------------|---------|
+| ⌃A | column-go-leftmost | Go to the leftmost Character of Row |
+| ⌃D | char-delete-right | Delete 1 Character at Right (like a Windows Delete) |
+| ⌃B | column-go-left | Go to the Character at Left of the Turtle |
+| ⌃F | column-go-right | Go to the Character at Right of the Turtle |
+| ⌃G | alarm-ring | Ring the Terminal Bell |
+| ⌃H | char-delete-left | Delete 1 Character at Left (same as if pressing Delete) |
+| ⌃K | row-tail-delete | Delete all the Characters at or to the Right of the Turtle |
+| ⌃N | row-go-down | Move as if you pressed the ↓ Down Arrow |
+| ⌃P | row-go-up | Move as if you pressed the ↑ Up Arrow |
+| ⌃O | row-insert-below | Insert a Row below this Row |
+| ⌃Y | chars-undelete | Paste back in the chars you deleted with ⌃K |
+
+Presently, a few of these Key Chords don't work as well as you might expect
+
+Mainly, because our Turtles don't know what's on Screen.
+The Security Design of the Terminal blocks the Turtles
+from knowing what came on Screen before they were born.
+And the Turtles we have today forget even the Characters they drew themselves,
+and then they don't know anything
+
+So our ⌃K today only erases the Characters at and to the Right.
+It only deletes the Row when you press it twice in the leftmost Column,
+because only then can it know that there are no more Characters to the Right.
+And ⌃Y can't give you back what ⌃K erased, because it doesn't know what it erased
+
+Similarly, ⌃O moves you to the leftmost Column when you hit it somewhere else.
+Only when you try ⌃O in the leftmost Column do you see it insert a new Row.
+And same deal with Return as with ⌃O.
+
+I also fear we can't make the ⌃B work reliably.
+gShell grabs that Key Chord to operate a TMux Split of the Tab
+for ⌃B ⇧", ⌃B ↓, ⌃B ↑, ⌃B X. etc.
+We could grab that Key Chord to operate a TMux Split of the Tab someday too,
+just to make our Turtle Logo look & feel alike in more places
 
 
 ## We can just try things

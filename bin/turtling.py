@@ -3471,6 +3471,7 @@ class TurtlingServer:
 
     glass_teletype: GlassTeletype
     exec_locals: dict[str, object]  # with local Turtle's  # cloned by remote PythonSpeaker
+    kchords: list[tuple[bytes, str]]  # Key Chords served  # KeyLogger
 
     def __init__(self, gt) -> None:
 
@@ -3479,6 +3480,7 @@ class TurtlingServer:
 
         self.glass_teletype = gt
         self.exec_locals = exec_locals
+        self.kchords = list()
 
         turtling_servers.append(self)
 
@@ -3500,7 +3502,7 @@ class TurtlingServer:
         writer.pid_create_dir_once(pid)
         writer.create_mkfifo_once(pid)
 
-        st.schars_print(f"At your service as {pid=} till you press ⌃D")
+        st.schars_print(f"Drawing with Pixels as Process {pid} till you press ⌃W")
 
         reader_fd = -1
         while True:
@@ -3522,7 +3524,7 @@ class TurtlingServer:
 
             if bt_fd in select_:
                 kchord = self.keyboard_serve_one_kchord()
-                if kchord[-1] in ("⌃C", "⌃D"):
+                if kchord[-1] in ("⌃W",):
                     t = Turtle()
                     t.bye()
                     break
@@ -3545,11 +3547,21 @@ class TurtlingServer:
 
         gt = self.glass_teletype
         st = gt.str_terminal
+        kchords = self.kchords
 
         kchord = st.kchord_pull(timeout=1.000)
+        kchords.append(kchord)
 
         if self.kchord_edit_like_macos(kchord):
             return kchord
+
+        # (kbytes, kstr) = kchord  # FIXME: paste Drawings back into place
+        # if kstr == "⌃J":
+        #     if len(kchords) > 1:
+        #         (kbytes, kstr) = kchord[-2]
+        #         if kstr != "Return":
+        #             gt.schars_write("\r\n")
+        #             return kchord
 
         gt.kchord_write_kbytes_else_print_kstr(kchord)
 
@@ -3563,11 +3575,15 @@ class TurtlingServer:
 
         func_by_kstr = {
             "⌃A": self.do_column_go_leftmost,
+            "⌃B": self.do_column_go_left,
+            "⌃D": self.do_char_delete_right,
             "⌃F": self.do_column_go_right,
             "⌃G": self.do_alarm_ring,
             "⌃H": self.do_char_delete_left,
-            "⌃K": self.do_row_tail_erase,
+            "⌃K": self.do_row_tail_delete,
+            "Return": self.do_row_insert_go_below,
             "⌃N": self.do_row_go_down,
+            "⌃O": self.do_row_insert_below,
             "⌃P": self.do_row_go_up,
             "Delete": self.do_char_delete_left,
         }
@@ -3590,37 +3606,83 @@ class TurtlingServer:
         """Delete 1 Character at the Left of the Turtle"""
 
         gt = self.glass_teletype
-        gt.schars_write("\b\x1B[P")  # CSI Ps P  # Delete Characters (DCH)
+        gt.schars_write("\b\x1B[P")  # CSI 05/00 Delete Character
+
+    def do_char_delete_right(self, kchord) -> None:  # ⌃D
+        """Delete 1 Character at Right (like a Windows Delete)"""
+
+        gt = self.glass_teletype
+        gt.schars_write("\x1B[P")  # CSI 05/00 Delete Character
+
+    def do_column_go_left(self, kchord) -> None:  # ⌃B
+        """Go to the Character at Left of the Turtle"""
+
+        gt = self.glass_teletype
+        gt.schars_write("\x1B[D")  # CSI 04/04 Cursor [Backward] Left  # could be "\b"
 
     def do_column_go_leftmost(self, kchord) -> None:  # ⌃A
         """Go to first Character of Row"""
 
         gt = self.glass_teletype
-        gt.schars_write("\r")
+        gt.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
 
     def do_column_go_right(self, kchord) -> None:  # ⌃F
         """Go to the next Character of Row"""
 
         gt = self.glass_teletype
-        gt.schars_write("\x1B[C")  # CSI Ps C  # Cursor Forward (CUF)
+        gt.schars_write("\x1B[C")  # CSI 04/03 Cursor [Forward] Right
 
     def do_row_go_down(self, kchord) -> None:  # ⌃N
         """Move as if you pressed the ↓ Down Arrow"""
 
         gt = self.glass_teletype
-        gt.schars_write("\x1B[B")  # CSI Ps B  # Cursor Down (CUD)  # could be "\n"
+        gt.schars_write("\x1B[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
 
     def do_row_go_up(self, kchord) -> None:  # ⌃P
         """Move as if you pressed the ↑ Up Arrow"""
 
         gt = self.glass_teletype
-        gt.schars_write("\x1B[A")  # CSI Ps A  # Cursor Up (CUU)
+        gt.schars_write("\x1B[A")  # CSI 04/01 Cursor [Up] Previous
 
-    def do_row_tail_erase(self, kchord) -> None:  # ⌃K
+    def do_row_insert_below(self, kchord) -> None:  # ⌃O
+        """Insert a Row below this Row"""
+
+        gt = self.glass_teletype
+
+        (y_row, x_column) = gt.os_terminal_y_row_x_column()
+        if x_column != 1:
+            gt.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
+        else:
+            gt.schars_write("\x1B[L")  # CSI 04/12 Insert Line
+
+    def do_row_insert_go_below(self, kchord) -> None:  # Return
+        """Insert a Row below this Row and move into it"""
+
+        gt = self.glass_teletype
+
+        (y_row, x_column) = gt.os_terminal_y_row_x_column()
+        if x_column != 1:
+            gt.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
+        else:
+            gt.schars_write("\x1B[L")  # CSI 04/12 Insert Line
+            gt.schars_write("\x1B[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
+
+    def do_row_tail_delete(self, kchord) -> None:  # ⌃K
         """Delete all the Characters at or to the Right of the Turtle"""
 
         gt = self.glass_teletype
-        gt.schars_write("\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+        kchords = self.kchords
+
+        gt.schars_write("\x1B[K")  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
+
+        (y_row, x_column) = gt.os_terminal_y_row_x_column()
+        if x_column == 1:
+            kstrs = list(_[-1] for _ in kchords[-2:])
+            if kstrs == ["⌃K", "⌃K"]:
+                gt.schars_write("\x1B[M")  # CSI 04/13 Delete Line
+
+                kchord = (b"", "")  # takes ⌃K ⌃K ⌃K as ⌃K ⌃K and ⌃K
+                kchords.append(kchord)
 
     def reader_writer_serve(self, reader, writer) -> None:
         """Read a Python Text in, write back out the Repr of its Eval"""
@@ -3847,7 +3909,7 @@ class TurtleClient:
         ilines = text.splitlines()
         if text == "relaunch":
             started = True
-            eprint(f"BYO Turtling·Py {__version__}")
+            eprint(f"Chatting with BYO Turtling·Py {__version__} till you say:  bye")
 
             trade_else = self.py_trade_else("t.relaunch(); pass")
             if trade_else is not None:
@@ -3923,16 +3985,27 @@ class TurtleClient:
         eprint(ps1, end="")
         sys.stderr.flush()
 
+        ilines: list[str]
         ilines = list()
+
         while True:
             itext = ""
             try:
+
                 itext += sys.stdin.readline()
                 while select.select([sys.stdin], [], [], 0.000)[0]:
                     itext += sys.stdin.readline()
-            except KeyboardInterrupt:  # mostly shrugs off ⌃C SigInt
-                eprint(" KeyboardInterrupt")
-                self.breakpoint()
+
+            except KeyboardInterrupt:  # ⌃C SigInt
+                if ilines:
+                    eprint("\x1B[" f"{len(ilines)}A")
+                eprint("\r" "\x1B[" "J", end="")
+                eprint(ps1, end="\r\n")
+                eprint("KeyboardInterrupt")
+                eprint(ps1, end="")
+                sys.stderr.flush()
+                ilines.clear()
+
                 continue
 
             ilines.extend(itext.splitlines())
