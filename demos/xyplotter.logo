@@ -40,9 +40,7 @@ sethertz 44  setxy -138 -130
 sethertz 22  setxy -192 -140
 
 
-restart  pu  setxy -10 0  pd
-
-tada
+restart tada
 
 
 # print("pu")

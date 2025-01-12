@@ -4,10 +4,8 @@
 
 
 relaunch
-
 sethertz 100
-
-pu fd 50 lt 90 fd 50 seth pd
+pu fd 50 lt 90 fd 50 seth 0 pd
 
 
 setpch '↓' bk 100 lt 90
@@ -23,8 +21,7 @@ setpch '↑' bk 100 bk 100 bk 100 lt 90
 setpch '←' bk 100 bk 100 bk 100 lt 90
 setpch '↓' bk 100
 
-pu rt fd 100 lt 90
-setpch '*'
+pu rt 90 fd 100 lt 90
 
 
 restart tada

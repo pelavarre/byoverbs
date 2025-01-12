@@ -1386,8 +1386,8 @@ class Turtle:
 
     penscape: str  # setup written before punching a mark  # '\x1B[m'
     penmark: str  # mark to punch at each step
-    warping: bool  # moving without punching, or not
-    hiding: bool  # hiding the Turtle, or not
+    warping: bool  # moving without punching pen up, else punching while moving pen down
+    hiding: bool  # hiding the Turtle, else showing the Turtle
 
     rest: float  # min time between marks
 
@@ -1430,54 +1430,6 @@ class Turtle:
         self.rest = 1 / 1e3
 
         # macOS Terminal Sh Launch/ Quit doesn't clear the Graphic Rendition, Cursor Style, etc
-
-    def arc(self, angle, diameter) -> dict:
-        """Draw a Part or All of a Circle, centered at Right Forward"""
-
-        radius = diameter / 2
-
-        heading = self.heading
-        xscale = self.xscale
-        yscale = self.yscale
-
-        a1 = (90e0 - heading) % 360e0  # converts to 0° East Anticlockwise
-        (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
-
-        a0 = (a1 - 90e0) % 360e0
-        x0 = (x1 / xscale) + (radius * math.cos(math.radians(a0)))
-        y0 = (y1 / yscale) + (radius * math.sin(math.radians(a0)))
-
-        marking_center = False
-        if marking_center:
-            isdown = self.isdown()
-            self.penup()
-            self.setxy(x0, y=y0)
-            self.pendown()
-            self.setxy(x0, y=y0)
-            self.penup()
-            self.setxy(x=x1 / xscale, y=y1 / yscale)
-            if isdown:
-                self.pendown()
-
-        a1_ = round(a1 + 90e0)
-        a2_ = round(a1 + 90e0 - angle)
-        step = round(math.copysign(1, a2_ - a1_))
-
-        for a in range(a1_, a2_ + step, step):
-            x2 = x0 + (radius * math.cos(math.radians(a)))
-            y2 = y0 + (radius * math.sin(math.radians(a)))
-            self.setxy(x2, y=y2)
-
-            # todo: pick the Angle Step less simply
-
-        self.right(angle)
-
-        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
-        return d
-
-        # todo: Turn the Turtle Heading WHILE we draw the Arc - Unneeded till we have Sprites
-
-        # ugh: UCB Logo centers the Circle on the Turtle and keeps the turtle Still
 
     def breakpoint(self) -> None:
         """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
@@ -1576,10 +1528,66 @@ class Turtle:
     # Define what 1 Turtle can do
     #
 
+    def arc(self, angle, diameter) -> dict:
+        """Draw a Part or All of a Circle, centered at Right Forward"""
+
+        assert TurtlingDefaults["arc_angle"] == 90, (TurtlingDefaults,)
+        assert TurtlingDefaults["arc_diameter"] == 100, (TurtlingDefaults,)
+        angle_float = float(90 if (angle is None) else angle)
+        diameter_float = float(100 if (diameter is None) else diameter)
+
+        radius = diameter_float / 2
+
+        heading = self.heading
+        xscale = self.xscale
+        yscale = self.yscale
+
+        a1 = (90e0 - heading) % 360e0  # converts to 0° East Anticlockwise
+        (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
+
+        a0 = (a1 - 90e0) % 360e0
+        x0 = (x1 / xscale) + (radius * math.cos(math.radians(a0)))
+        y0 = (y1 / yscale) + (radius * math.sin(math.radians(a0)))
+
+        marking_center = False
+        if marking_center:
+            isdown = self.isdown()
+            self.penup()
+            self.setxy(x0, y=y0)
+            self.pendown()
+            self.setxy(x0, y=y0)
+            self.penup()
+            self.setxy(x=x1 / xscale, y=y1 / yscale)
+            if isdown:
+                self.pendown()
+
+        a1_ = round(a1 + 90e0)
+        a2_ = round(a1 + 90e0 - angle_float)
+        step = round(math.copysign(1, a2_ - a1_))
+
+        for a in range(a1_, a2_ + step, step):
+            x2 = x0 + (radius * math.cos(math.radians(a)))
+            y2 = y0 + (radius * math.sin(math.radians(a)))
+            self.setxy(x2, y=y2)
+
+            # todo: pick the Angle Step less simply, not always abs(step) == 1
+
+        self.right(angle_float)
+
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        return d
+
+        # todo: Turn the Turtle Heading WHILE we draw the Arc - Unneeded till we have Sprites
+
+        # ugh: UCB Logo centers the Circle on the Turtle and keeps the turtle Still
+
     def backward(self, distance) -> dict:
         """Move the Turtle backwards along its Heading, leaving a Trail if Pen Down"""
 
-        self._punch_bresenham_stride_(-float(distance))
+        assert TurtlingDefaults["backward_distance"] == 200, (TurtlingDefaults,)
+        distance_float = float(200 if (distance is None) else distance)
+
+        self._punch_bresenham_stride_(-distance_float)
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest)
         return d
@@ -1611,7 +1619,10 @@ class Turtle:
     def forward(self, distance) -> dict:
         """Move the Turtle forwards along its Heading, leaving a Trail if Pen Down"""
 
-        self._punch_bresenham_stride_(float(distance))
+        assert TurtlingDefaults["forward_distance"] == 100, (TurtlingDefaults,)
+        distance_float = float(100 if (distance is None) else distance)
+
+        self._punch_bresenham_stride_(distance_float)
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest)
         return d
@@ -1646,12 +1657,15 @@ class Turtle:
     def incx(self, distance) -> dict:
         """Move the Turtle along the X Axis, keeping Y unchanged, leaving a Trail if Pen Down"""
 
+        assert TurtlingDefaults["incx_distance"] == 10, (TurtlingDefaults,)
+        distance_float = float(10 if (distance is None) else distance)
+
         xfloat_ = self.xfloat
         yfloat_ = self.yfloat
         xfloat = xfloat_ / self.xscale
         yfloat = yfloat_ / self.yscale
 
-        xplus = xfloat + distance
+        xplus = xfloat + distance_float
         self.setxy(x=xplus, y=yfloat)
 
         d = dict(xfloat=self.xfloat)
@@ -1662,12 +1676,15 @@ class Turtle:
     def incy(self, distance) -> dict:
         """Move the Turtle along the Y Axis, keeping X unchanged, leaving a Trail if Pen Down"""
 
+        assert TurtlingDefaults["incy_distance"] == 10, (TurtlingDefaults,)
+        distance_float = float(10 if (distance is None) else distance)
+
         xfloat_ = self.xfloat
         yfloat_ = self.yfloat
         xfloat = xfloat_ / self.xscale
         yfloat = yfloat_ / self.yscale
 
-        yplus = yfloat + distance
+        yplus = yfloat + distance_float
         self.setxy(x=xfloat, y=yplus)
 
         d = dict(yfloat=self.yfloat)
@@ -1723,14 +1740,20 @@ class Turtle:
     def left(self, angle) -> dict:
         """Turn the Turtle anticlockwise, by a 45° Right Angle, or some other Angle"""
 
+        assert TurtlingDefaults["left_angle"] == 45, (TurtlingDefaults,)
+        angle_float = float(45 if (angle is None) else angle)
+
         heading = self.heading
-        d = self.setheading(heading - float(angle))
+        d = self.setheading(heading - angle_float)
         return d
 
         # Scratch Turn-CCW-15-Degrees
 
     def mode(self, hints) -> dict:
         """Choose a dialect of the Logo Turtle Language"""
+
+        if hints is None:
+            return dict()
 
         Logo = "Logo".casefold()
         Trig = "Trig".casefold()
@@ -1779,12 +1802,18 @@ class Turtle:
     def repeat(self, count, angle, distance) -> dict:
         """Run some instructions a chosen number of times, often less or more than once"""
 
-        count = int(count)
-        assert count >= 3, (count,)  # todo: what is a Rep 0, Rep 1, or Rep 2 Polygon?
+        assert TurtlingDefaults["repeat_count"] == 3, (TurtlingDefaults,)
+        assert TurtlingDefaults["repeat_angle"] == 360, (TurtlingDefaults,)
+        assert TurtlingDefaults["repeat_diameter"] == 100, (TurtlingDefaults,)
+        int_count = int(90 if (count is None) else count)
+        angle_float = float(90 if (angle is None) else angle)
+        distance_float = float(100 if (distance is None) else distance)
 
-        a = angle / count
-        for _ in range(count):
-            self.forward(distance)
+        assert int_count >= 3, (int_count,)  # todo: what is a Rep 0, Rep 1, or Rep 2 Polygon?
+
+        a = angle_float / int_count
+        for _ in range(int_count):
+            self.forward(distance_float)
             self.right(a)
 
             # the traditional [fd rt], never the countercultural [rt fd]
@@ -1795,8 +1824,11 @@ class Turtle:
     def right(self, angle) -> dict:
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
 
+        assert TurtlingDefaults["right_angle"] == 90, (TurtlingDefaults,)
+        angle_float = float(90 if (angle is None) else angle)
+
         heading = self.heading  # turning clockwise
-        d = self.setheading(heading + float(angle))
+        d = self.setheading(heading + angle_float)
         return d
 
         # Scratch Turn-CW-15-Degrees
@@ -1804,8 +1836,10 @@ class Turtle:
     def setheading(self, angle) -> dict:
         """Turn the Turtle to move 0° North, or to some other Heading"""
 
-        float_angle = float(angle)  # 0° of North Up Clockwise
-        heading1 = float_angle % 360e0  # 360° Circle
+        assert TurtlingDefaults["setheading_angle"] == 0, (TurtlingDefaults,)
+        angle_float = float(0 if (angle is None) else angle)
+
+        heading1 = angle_float % 360e0  # 360° Circle
         heading2 = 360e0 if not heading1 else heading1
 
         self.heading = heading2
@@ -1815,12 +1849,14 @@ class Turtle:
 
     def sethertz(self, hertz) -> dict:
 
-        rest1 = 0e0
-        float_hertz = float(hertz)
-        if float_hertz:
-            rest1 = 1 / float_hertz
+        assert TurtlingDefaults["sethertz_hertz"] == 1e3, (TurtlingDefaults,)
+        hertz_float = float(1e3 if (hertz is None) else hertz)
 
-            assert rest1 >= 0e0, (rest1, hertz)  # 0e0 at Inf Hertz
+        rest1 = 0e0
+        if hertz_float:
+            rest1 = 1 / hertz_float
+
+            assert rest1 >= 0e0, (rest1, hertz_float, hertz)  # 0e0 at Inf Hertz
 
         self.rest = rest1
 
@@ -1856,15 +1892,15 @@ class Turtle:
 
         # todo: Scratch Change-Pen-Color-By-10
 
-    _rgb_by_name_ = {
-        "white": 0xFFFFFF,  # FIXME: _rgb_by_title_
-        "magenta": 0xFF00FF,
-        "blue": 0x0000FF,
-        "cyan": 0x00FFFF,
-        "green": 0x00FF00,
-        "yellow": 0xFFFF00,
-        "red": 0xFF0000,
-        "black": 0x000000,
+    _rgb_by_title_ = {
+        "White": 0xFFFFFF,
+        "Magenta": 0xFF00FF,  # todo: Terminals disagree over how pure these are
+        "Blue": 0x0000FF,
+        "Cyan": 0x00FFFF,
+        "Green": 0x00FF00,
+        "Yellow": 0xFFFF00,
+        "Red": 0xFF0000,
+        "Black": 0x000000,
     }
 
     _ansi_by_rgb_ = {  # CSI 06/13 Select Graphic Rendition (SGR)  # 30+ Display Foreground Color
@@ -1880,12 +1916,12 @@ class Turtle:
 
     def _colorname_to_penmode_(self, colorname) -> str:
 
-        casefold = colorname.casefold()
-        colornames = sorted(_.title() for _ in self._rgb_by_name_.keys())
-        if casefold not in self._rgb_by_name_.keys():
+        title = colorname.title()
+        colornames = sorted(_.title() for _ in self._rgb_by_title_.keys())
+        if title not in self._rgb_by_title_.keys():
             raise KeyError(f"{colorname!r} not in {colornames}")
 
-        rgb = self._rgb_by_name_[casefold]
+        rgb = self._rgb_by_title_[title]
         penscape = self._ansi_by_rgb_[rgb]
         return penscape
 
@@ -1893,16 +1929,20 @@ class Turtle:
         penscape = self._ansi_by_rgb_[rgb]
         return penscape
 
-    def setpenpunch(self, ch) -> dict:
+    def setpenpunch(self, mark) -> dict:
         """Choose which Character to draw with, or default to '*'"""
 
-        floatish = isinstance(ch, float) or isinstance(ch, int) or isinstance(ch, bool)
-        if floatish or isinstance(ch, decimal.Decimal):
-            penmark1 = chr(int(ch))  # not much test of '\0' yet
-        elif isinstance(ch, str):
-            penmark1 = ch
+        assert TurtlingDefaults["setpenpunch_mark"] == "██", (TurtlingDefaults,)
+
+        floatish = isinstance(mark, float) or isinstance(mark, int) or isinstance(mark, bool)
+        if mark is None:
+            penmark1 = 2 * FullBlock  # '██'
+        elif floatish or isinstance(mark, decimal.Decimal):
+            penmark1 = chr(int(mark))  # not much test of '\0' yet
+        elif isinstance(mark, str):
+            penmark1 = mark
         else:
-            assert False, (type(ch), ch)
+            assert False, (type(mark), mark)
 
         self.penmark = penmark1
 
@@ -1918,7 +1958,7 @@ class Turtle:
         yfloat_ = self.yfloat
         yfloat = yfloat_ / self.yscale
 
-        self.setxy(x=x, y=yfloat)
+        self.setxy(x=x, y=yfloat)  # X may be None
 
         d = dict(xfloat=self.xfloat)
         return d
@@ -1926,8 +1966,10 @@ class Turtle:
     def setxy(self, x, y) -> dict:
         """Move the Turtle to an X Y Point, leaving a Trail if Pen Down"""
 
-        xfloat = float(x)
-        yfloat = float(y)
+        assert TurtlingDefaults["setxy_x"] == 0, (TurtlingDefaults,)
+        assert TurtlingDefaults["setxy_y"] == 0, (TurtlingDefaults,)
+        xfloat = float(0 if (x is None) else x)
+        yfloat = float(0 if (y is None) else y)
 
         # Choose the Starting Point
 
@@ -1984,7 +2026,7 @@ class Turtle:
         xfloat_ = self.xfloat
         xfloat = xfloat_ / self.xscale
 
-        self.setxy(x=xfloat, y=y)
+        self.setxy(x=xfloat, y=y)  # Y may be None
 
         d = dict(yfloat=self.yfloat)
         return d
@@ -2011,9 +2053,12 @@ class Turtle:
     def sleep(self, seconds) -> dict:
         """Hold the Turtle still for a moment"""
 
-        time.sleep(seconds)  # may raise ValueError or TypeError
+        assert TurtlingDefaults["sleep_seconds"] == 1e-3, (TurtlingDefaults,)
+        second_float = float(1e-3 if (seconds is None) else seconds)
 
-        d = dict(seconds=seconds)  # not the sticky .rest
+        time.sleep(second_float)  # may raise ValueError or TypeError
+
+        d = dict(seconds=second_float)  # not the sticky .rest
         return d
 
         # todo: give credit for delay in work before t.sleep
@@ -2488,6 +2533,7 @@ def _turtling_defaults_choose_() -> dict:
     distance = 100
     divisor = 2
     hertz = 1e3
+    mark = 2 * FullBlock  # '██'
     seconds = 1e-3
     x = 0
     xscale = 1
@@ -2502,7 +2548,7 @@ def _turtling_defaults_choose_() -> dict:
         left_angle=45,
         repeat_angle=360,
         right_angle=90,
-        setheading_angle=angle,
+        setheading_angle=angle,  # 0° North is 360° North
         #
         count=1,
         repeat_count=3,
@@ -2521,8 +2567,11 @@ def _turtling_defaults_choose_() -> dict:
         divisor=2,
         sierpiński_divisor=divisor,
         #
-        hertz=1e3,
+        hertz=1e3,  # todo: =1e3 or =1000 for hertz= ?
         sethertz_hertz=hertz,
+        #
+        mark=(2 * FullBlock),  # '██'
+        setpenpunch_mark=mark,
         #
         seconds=1e-3,
         sleep_seconds=seconds,
