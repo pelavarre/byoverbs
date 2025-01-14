@@ -55,7 +55,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.01.12"  # Sunday
+__version__ = "2025.01.14"  # Tuesday
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
@@ -3583,16 +3583,16 @@ class TurtlingServer:
         func_by_kstr = {
             "⌃A": self.do_column_go_leftmost,
             "⌃B": self.do_column_go_left,
-            "⌃D": self.do_char_delete_right,
+            # "⌃D": self.do_char_delete_right,
             "⌃F": self.do_column_go_right,
             "⌃G": self.do_alarm_ring,
-            "⌃H": self.do_char_delete_left,
-            "⌃K": self.do_row_tail_delete,
-            "Return": self.do_row_insert_go_below,
+            # "⌃H": self.do_char_delete_left,
+            # "⌃K": self.do_row_tail_delete,
+            # "Return": self.do_row_insert_go_below,
             "⌃N": self.do_row_go_down,
-            "⌃O": self.do_row_insert_below,
+            # "⌃O": self.do_row_insert_below,
             "⌃P": self.do_row_go_up,
-            "Delete": self.do_char_delete_left,
+            # "Delete": self.do_char_delete_left,
         }
 
         if kstr not in func_by_kstr.keys():
@@ -3615,17 +3615,23 @@ class TurtlingServer:
         gt = self.glass_teletype
         gt.schars_write("\b\x1B[P")  # CSI 05/00 Delete Character
 
+        # todo: join lines from left edge
+
     def do_char_delete_right(self, kchord) -> None:  # ⌃D
         """Delete 1 Character at Right (like a Windows Delete)"""
 
         gt = self.glass_teletype
         gt.schars_write("\x1B[P")  # CSI 05/00 Delete Character
 
+        # todo: join lines from right edge
+
     def do_column_go_left(self, kchord) -> None:  # ⌃B
         """Go to the Character at Left of the Turtle"""
 
         gt = self.glass_teletype
         gt.schars_write("\x1B[D")  # CSI 04/04 Cursor [Backward] Left  # could be "\b"
+
+        # todo: wrap back across left edge
 
     def do_column_go_leftmost(self, kchord) -> None:  # ⌃A
         """Go to first Character of Row"""
@@ -3638,6 +3644,8 @@ class TurtlingServer:
 
         gt = self.glass_teletype
         gt.schars_write("\x1B[C")  # CSI 04/03 Cursor [Forward] Right
+
+        # todo: wrap forward across right edge
 
     def do_row_go_down(self, kchord) -> None:  # ⌃N
         """Move as if you pressed the ↓ Down Arrow"""
@@ -3662,6 +3670,8 @@ class TurtlingServer:
         else:
             gt.schars_write("\x1B[L")  # CSI 04/12 Insert Line
 
+        # todo: split differently at left edge, at right edge, at middle
+
     def do_row_insert_go_below(self, kchord) -> None:  # Return
         """Insert a Row below this Row and move into it"""
 
@@ -3673,6 +3683,8 @@ class TurtlingServer:
         else:
             gt.schars_write("\x1B[L")  # CSI 04/12 Insert Line
             gt.schars_write("\x1B[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
+
+        # todo: split differently at left edge, at right edge, at middle
 
     def do_row_tail_delete(self, kchord) -> None:  # ⌃K
         """Delete all the Characters at or to the Right of the Turtle"""
@@ -3690,6 +3702,8 @@ class TurtlingServer:
 
                 kchord = (b"", "")  # takes ⌃K ⌃K ⌃K as ⌃K ⌃K and ⌃K
                 kchords.append(kchord)
+
+        # todo: join when run from right edge
 
     def reader_writer_serve(self, reader, writer) -> None:
         """Read a Python Text in, write back out the Repr of its Eval"""

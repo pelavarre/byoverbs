@@ -10,6 +10,9 @@ Solutions I more drop into Scraps·Txt
 pq
 should work like:  cv
 
+giw Lock
+could mean:  |grep '\<'Lock'\>'
+
 ## Copied from
 
 Posted as:  https://github.com/pelavarre/byoverbs/blob/main/futures.md<br>

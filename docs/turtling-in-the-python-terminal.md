@@ -573,40 +573,57 @@ Wiki > [Sierpiński triangle](https://en.wikipedia.org/wiki/Sierpi%C5%84ski_tria
 
 ### Edit your Drawings
 
-You can edit your Drawings
-with some of the same Keyboard Shortcuts
-that a macOS Note or Terminal Emacs understands
+You can edit your Drawings with the Keyboard Shortcuts that the Terminal itself understands
 
 Editing your Drawings like this today
 doesn't write the Logo Code that would make the same edits.
 We could come fix that. Just ask us
 
-The ordinary editing Keys of the Keyboard will mostly work as you expect
+These Keyboard Shortcuts work at macOS
 
 | Key Chord | Short Name | Meaning |
 |-----------|------------|---------|
-| Delete | char-delete-left | Delete 1 Character at the Left of the Turtle |
-| Tab | tab-go-right | Move far Right, to next Tab Stop |
-| ⇧Tab | tab-go-left | Move far Left, to next Tab Stop |
-| Return | row-insert-go-below | Insert a Row below this Row and move into it |
 | ← | column-go-left | Move Left by one Column |
 | ↑ | row-go-up | Move Up by 1 Row |
 | ↓ | row-go-down | Move Down by 1 Row |
 | → | column-go-right | Move Right by one Column |
+| Tab | tab-go-right | Move far Right, to next Tab Stop |
+| ⇧Tab | tab-go-left | Move far Left, to next Tab Stop |
+| ⎋8 | cursor-revert | Jump to far Upper Left, or to last ⎋7 |
+| ⎋7 | cursor-checkpoint | Tell ⎋8 where to go |
+
+If you see these working or not working at gShell or replIt, please tell us
+
+These Keyboard Shortcuts work at macOS and at replIt.
+But gShell takes ⌃B as a TMux Keyboard Shortcut, so out there
+you have to press ← or press ⌃B ⌃B twice to go to the Column at Left of the Turtle
+
+| Key Chord | Short Name | Meaning |
+|-----------|------------|---------|
+| ⌃A | column-go-leftmost | Go to the leftmost Column of Row |
+| ⌃B | column-go-left | Go to the Column at Left of the Turtle |
+| ⌃F | column-go-right | Go to the Character at Right of the Turtle |
+| ⌃G | alarm-ring | Ring the Terminal Bell |
+| ⌃N | row-go-down | Move as if you pressed the ↓ Down Arrow |
+| ⌃P | row-go-up | Move as if you pressed the ↑ Up Arrow |
+
+<!--
+
+Some of the editing Keys of the Keyboard will mostly work as you expect
+
+| Delete | char-delete-left | Delete 1 Character at the Left of the Turtle |
+| Return | row-insert-go-below | Insert a Row below this Row and move into it |
+
+with some of the same Keyboard Shortcuts
+that a macOS Note or Terminal Emacs understands
 
 The most ordinary editing macOS/ Emacs Key Chords will mostly work too
 
 | Key Chord | Short Name | Meaning |
 |-----------|------------|---------|
-| ⌃A | column-go-leftmost | Go to the leftmost Character of Row |
 | ⌃D | char-delete-right | Delete 1 Character at Right (like a Windows Delete) |
-| ⌃B | column-go-left | Go to the Character at Left of the Turtle |
-| ⌃F | column-go-right | Go to the Character at Right of the Turtle |
-| ⌃G | alarm-ring | Ring the Terminal Bell |
 | ⌃H | char-delete-left | Delete 1 Character at Left (same as if pressing Delete) |
 | ⌃K | row-tail-delete | Delete all the Characters at or to the Right of the Turtle |
-| ⌃N | row-go-down | Move as if you pressed the ↓ Down Arrow |
-| ⌃P | row-go-up | Move as if you pressed the ↑ Up Arrow |
 | ⌃O | row-insert-below | Insert a Row below this Row |
 | ⌃Y | chars-undelete | Paste back in the chars you deleted with ⌃K |
 
@@ -632,6 +649,8 @@ gShell grabs that Key Chord to operate a TMux Split of the Tab
 for ⌃B ⇧", ⌃B ↓, ⌃B ↑, ⌃B X. etc.
 We could grab that Key Chord to operate a TMux Split of the Tab someday too,
 just to make our Turtle Logo look & feel alike in more places
+
+-->
 
 
 ## We can just try things
