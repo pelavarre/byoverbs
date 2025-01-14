@@ -278,7 +278,9 @@ CR = "\r"  # 00/13 Carriage Return ⌃M  # akin to CSI CHA "\x1B" "[" "G"
 
 ESC = "\x1B"  # 01/11 Escape ⌃[
 
-SS3 = "\x1B" "O"  # 04/15 Single Shift Three  # in macOS F1 F2 F3 F4
+DECSC = "\x1B" "7"  # ESC 03/07 Save Cursor [Checkpoint] (DECSC)
+DECRC = "\x1B" "8"  # ESC 03/08 Restore Cursor [Revert] (DECRC)
+SS3 = "\x1B" "O"  # ESC 04/15 Single Shift Three  # in macOS F1 F2 F3 F4
 
 CSI = "\x1B" "["  # 05/11 Control Sequence Introducer
 CSI_EXTRAS = "".join(chr(_) for _ in range(0x20, 0x40))  # !"#$%&'()*+,-./0123456789:;<=>?, no @
@@ -1147,6 +1149,11 @@ class StrTerminal:
             #   \t doesn't move the Cursor at max Column X
             #
 
+        # Accept the ⎋7 cursor-checkpoint, and ⎋8 cursor-revert
+
+        if schars in ("\x1B" "7", "\x1B" "8"):
+            return True
+
         # Accept the CSI Escape Sequences that a macOS Terminal accepts
 
         (csi, p, i, f) = self.schars_csi_partition(schars)
@@ -1340,7 +1347,7 @@ class GlassTeletype:
         # self.schars_print(kcaps, end="  ")  # jitter Mon 23/Dec
 
         if not st.schars_to_writable(schars):
-            st.schars_print(kcaps)
+            st.schars_print(kcaps, end=" ")
         else:
             (csi, p, i, f) = st.schars_csi_partition(schars)
             if csi:
