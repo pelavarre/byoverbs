@@ -55,7 +55,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.01.14"  # Tuesday
+__version__ = "2025.01.19"  # Sunday
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
@@ -1262,6 +1262,16 @@ class StrTerminal:
         sbytes = schars.encode()
         bt.sbytes_write(sbytes)
 
+        # todo write through cache
+        # todo class RowCache
+        # todo + Str per Column, but "" till written
+        # todo + tell me all before/ after fully-known or not-fully-known
+        # todo + fetch a rectangular area
+        # todo do Pong & Breakout without Color known
+        # todo bring up without Window Resize
+        # todo remember Cursor Position from when fetched till next write of characters
+        # todo notify of unknown writes
+
 
 class GlassTeletype:
     """Write/ Read Chars at Screen/ Keyboard of a Monospaced Rectangular Terminal"""
@@ -1736,6 +1746,11 @@ class Turtle:
 
         gt.schars_write(line)
         self.yfloat -= 1
+
+        hiding = self.hiding
+        rest = self.rest
+        if not hiding:
+            time.sleep(rest)
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat)
         return d
@@ -4290,7 +4305,28 @@ class TurtleClient:
 #
 
 #
+# 🐢 Turtle Platforms  # todo
+#
+# Which Backgrounds are Black out of ⎋[40m, ⎋[100m, ⎋[48;5;0m, ⎋[48;5;16m, ⎋[48;5;232m?
+#
+# Does ⎋[J fill with Color, or does it forget Color before fill?
+#
+# Does ⎋7 checkpoint Color for ⎋8 to revert?
+#
+
+#
 # 🐢 Turtle Chat Engine  # todo
+#
+#
+# todo: auto-completion of \e always wrong at replIt - must be the Ast in their Python version?
+#
+# todo: auto-completion of \e when more follows in line
+# todo: auto-completion of # ... commentary don't put it inside parentheses
+#
+#
+# todo: SetPenColor c 3, c 4, c 8, rgb 24, r g b 8, r g b 24
+# todo: 'colorspace = 8' default for SetPenColor
+# todo: take the (r g b 8) in via round * 256 / 6
 #
 #
 # todo: autocomplete 'help' and 'dir' - stop mentioning Instance Fields like '.glass_terminal'
@@ -4402,6 +4438,7 @@ class TurtleClient:
 # 🐢 Garbled Ideas  # todo
 #
 # todo: Tada exists
+# todo: gShell TMux ⌃B ⇧% vertical split once shifted some Rows right by 1 Column
 #
 
 #

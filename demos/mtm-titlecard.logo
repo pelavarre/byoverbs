@@ -1,0 +1,97 @@
+# mtm-titlecard.logo
+
+
+# Draw 3 copies of the "Mary Tyler Moore" Title Card, from Sep/1970
+
+# Draw two quickly at left and right, with basic and brighter colors
+# Draw the mixed compromise slowly in the middle
+
+
+relaunch
+write("\x1B[48;5;16m")  # [40m alias works at macOS & gShell, but not at replIt
+clearscreen()  # macOS & replIt color the screen, gShell doesn't
+
+#
+
+restart
+setxyzoom 1 1
+penup  forward 50  right 90  backward 40  backward 110 pendown
+
+write("\x1B[48;5;16m")  # Black Background
+write("\x1B[1m")  # Bold
+
+label (len("  MARY TYLER MOORE  ") * " ")
+write "\x1B[36m"  label "  MARY TYLER MOORE  "
+write "\x1B[35m"  label "  MARY TYLER MOORE  "
+write "\x1B[31m"  label "  MARY TYLER MOORE  "
+write "\x1B[38;5;130m"  label "  MARY TYLER MOORE  "
+write "\x1B[33m"  label "  MARY TYLER MOORE  "
+
+write "\x1B[32m"  label "  MARY TYLER MOORE  "
+
+write "\x1B[33m"  label "  MARY TYLER MOORE  "
+write "\x1B[38;5;130m"  label "  MARY TYLER MOORE  "
+write "\x1B[31m"  label "  MARY TYLER MOORE  "
+write "\x1B[35m"  label "  MARY TYLER MOORE  "
+write "\x1B[36m"  label "  MARY TYLER MOORE  "
+label (len("  MARY TYLER MOORE  ") * " ")
+
+#
+
+restart
+setxyzoom 1 1
+penup  forward 50  right 90  backward 40  forward 110 pendown
+
+write("\x1B[48;5;16m")  # Black Background
+write("\x1B[1m")  # Bold
+
+label (len("  MARY TYLER MOORE  ") * " ")
+write "\x1B[96m"  label "  MARY TYLER MOORE  "
+write "\x1B[95m"  label "  MARY TYLER MOORE  "
+write "\x1B[91m"  label "  MARY TYLER MOORE  "
+write "\x1B[38;5;208m"  label "  MARY TYLER MOORE  "
+write "\x1B[93m"  label "  MARY TYLER MOORE  "
+
+write "\x1B[92m"  label "  MARY TYLER MOORE  "
+
+write "\x1B[93m"  label "  MARY TYLER MOORE  "
+write "\x1B[38;5;208m"  label "  MARY TYLER MOORE  "
+write "\x1B[91m"  label "  MARY TYLER MOORE  "
+write "\x1B[95m"  label "  MARY TYLER MOORE  "
+write "\x1B[96m"  label "  MARY TYLER MOORE  "
+label (len("  MARY TYLER MOORE  ") * " ")
+
+#
+
+restart
+setxyzoom 1 1
+penup  forward 50  right 90  backward 40  backward 0 pendown
+sethertz 50
+
+write("\x1B[48;5;16m")  # Black Background
+write("\x1B[1m")  # Bold
+
+label (len("  MARY TYLER MOORE  ") * " ")
+write "\x1B[96m"  label "  MARY TYLER MOORE  "
+write "\x1B[95m"  label "  MARY TYLER MOORE  "
+write "\x1B[91m"  label "  MARY TYLER MOORE  "
+write "\x1B[38;5;208m"  label "  MARY TYLER MOORE  "
+write "\x1B[93m"  label "  MARY TYLER MOORE  "
+
+write "\x1B[32m"  label "  MARY TYLER MOORE  "
+
+write "\x1B[93m"  label "  MARY TYLER MOORE  "
+write "\x1B[38;5;208m"  label "  MARY TYLER MOORE  "
+write "\x1B[91m"  label "  MARY TYLER MOORE  "
+write "\x1B[95m"  label "  MARY TYLER MOORE  "
+write "\x1B[96m"  label "  MARY TYLER MOORE  "
+label (len("  MARY TYLER MOORE  ") * " ")
+
+#
+
+restart  penup  forward 100  sleep 0.100  backward 200  sleep 0.100  # wipe out leftover cursor marks at macOS
+restart tada
+
+
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/headings.logo
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

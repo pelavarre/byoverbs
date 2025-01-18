@@ -592,6 +592,8 @@ These Keyboard Shortcuts work at macOS
 | ⎋8 | cursor-revert | Jump to far Upper Left, or to last ⎋7 |
 | ⎋7 | cursor-checkpoint | Tell ⎋8 where to go |
 
+Odds on your ⎋ ⌃ ⌥ ⇧ ⌘ Keys have letters printed on them: esc, control, option, shift, command
+
 If you see these working or not working at gShell or replIt, please tell us
 
 These Keyboard Shortcuts work at macOS and at replIt.
@@ -646,7 +648,7 @@ And same deal with Return as with ⌃O.
 
 I also fear we can't make the ⌃B work reliably.
 gShell grabs that Key Chord to operate a TMux Split of the Tab
-for ⌃B ⇧", ⌃B ↓, ⌃B ↑, ⌃B X. etc.
+for ⌃B ⇧%, ⌃B ⇧", ⌃B ↓, ⌃B ↑, ⌃B X. etc.
 We could grab that Key Chord to operate a TMux Split of the Tab someday too,
 just to make our Turtle Logo look & feel alike in more places
 
@@ -708,12 +710,16 @@ A quicker way to see all our Turtle Verbs mentioned even more briefly is
 You may believe this Md File is written in the English of Computer Engineers
 
 You're not completely wrong.
-But people often struggle to get my meaning from my first writing.
+But my English is famously difficult to read.
+People often struggle to get my meaning from my first writing.
+Let's make it better?
+
 Tell me some piece of this English doesn't just make sense, and then
-Claude·Ai & I will go work on rewriting it to make its meaning come across
+Claude·Ai & I will go work on rewriting it.
+We can make its meaning come across
 more clearly and accurately, while still brief
 
-Myself, I delight in my failures to understand your English, first try.
+Myself, I delight in my own failures to understand your English, first try.
 Like so =>
 
 > Part of the value of being oblique, done properly, is that you
@@ -829,6 +835,7 @@ In particular, presently you can paste one or all of
 > [demos/fdboxbox.logo](../demos/fdboxbox.logo)<br>
 > [demos/headings.logo](../demos/headings.logo)<br>
 > [demos/like-a-rainbow.logo](../demos/like-a-rainbow.logo)<br>
+> [demos/mtm-titlecard.logo](../demos/mtm-titlecard.logo)<br>
 > [demos/rainbow.logo](../demos/rainbow.logo)<br>
 > [demos/xyplotter.logo](../demos/xyplotter.logo)<br>
 
@@ -838,6 +845,8 @@ one clockwise, the other anticlockwise.
 Our "headings" draws Lines of 30°, 45°, 60°, and 90° in each of the four Quadrants.
 draws something a lot like concentric circles,
 somewhat miscalculated by hand, with charm.
+Our "mtm-titlecard" draws the "Mary Tyler Moore" Title Card, from Sep/1970,
+which is 11 Lines of differently colored Bold Text on a Black Background.
 Our "rainbow.logo"
 draws concentric circles, calculated by machine.
 Our "xyplotter.logo" draws a Parabola, twice,
