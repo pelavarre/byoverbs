@@ -1384,6 +1384,107 @@ glass_teletypes = list()
 
 
 #
+# Define the Abbreviations of Turtles before defining Turtles themselves
+#
+
+
+KwByGrunt = {
+    "a": "angle",
+    "d": "distance",
+    "n": "count",
+    "x": "x",
+    "y": "y",
+}
+"""Abbreviations for Turtle Verb Kw Arg Names"""
+
+
+def _turtling_defaults_choose_() -> dict:
+    """Choose default Values for KwArg Names"""
+
+    angle = 0
+    count = 1
+    diameter = 100
+    distance = 100
+    divisor = 2
+    hertz = 1e3
+    mark = 2 * FullBlock  # '██'
+    seconds = 1e-3
+    x = 0
+    xscale = 1
+    y = 0
+    yscale = 1
+
+    _ = count, diameter
+
+    d = dict(
+        #
+        angle=0,
+        arc_angle=90,
+        left_angle=45,
+        repeat_angle=360,
+        right_angle=90,
+        setheading_angle=angle,  # 0° North is 360° North
+        #
+        count=1,
+        repeat_count=3,
+        #
+        diameter=100,
+        arc_diameter=100,
+        repeat_diameter=100,
+        #
+        distance=100,
+        backward_distance=200,
+        forward_distance=distance,
+        incx_distance=10,
+        incy_distance=10,
+        repeat_distance=100,
+        sierpiński_distance=200,
+        #
+        divisor=2,
+        sierpiński_divisor=divisor,
+        #
+        hertz=1e3,  # todo: =1e3 or =1000 for hertz= ?
+        sethertz_hertz=hertz,
+        #
+        mark=(2 * FullBlock),  # '██'
+        setpenpunch_mark=mark,
+        #
+        seconds=1e-3,
+        sleep_seconds=seconds,
+        #
+        x=0,
+        xscale=1,
+        setx_x=x,
+        setxy_x=x,
+        setxyzoom_xscale=xscale,
+        #
+        y=0,
+        yscale=1,
+        sety_y=y,
+        setxy_y=y,
+        setxyzoom_yscale=yscale,
+        #
+    )
+
+    return d
+
+    # Assymetric Defaults make editable Defaults more discoverable, because harder to ignore,
+    #
+    #   backward_distance != forward_distance
+    #   count != repeat_count
+    #   left_angle != right_angle
+    #
+
+    # 🐢 Right 90° sets up 🐢 Label to print English from left to right
+
+    # todo: Choose default Values for more Kw Args, no longer just: Angle Count Distance X Y
+
+
+TurtlingDefaults = _turtling_defaults_choose_()
+"""Default Values for Turtle Verb Kw Arg Names"""
+
+
+#
 # Chat with 1 Logo Turtle
 #
 
@@ -1545,11 +1646,12 @@ class Turtle:
     # Define what 1 Turtle can do
     #
 
+    assert TurtlingDefaults["arc_angle"] == 90, (TurtlingDefaults,)
+    assert TurtlingDefaults["arc_diameter"] == 100, (TurtlingDefaults,)
+
     def arc(self, angle, diameter) -> dict:
         """Draw a Part or All of a Circle, centered at Right Forward"""
 
-        assert TurtlingDefaults["arc_angle"] == 90, (TurtlingDefaults,)
-        assert TurtlingDefaults["arc_diameter"] == 100, (TurtlingDefaults,)
         angle_float = float(90 if (angle is None) else angle)
         diameter_float = float(100 if (diameter is None) else diameter)
 
@@ -1598,10 +1700,11 @@ class Turtle:
 
         # ugh: UCB Logo centers the Circle on the Turtle and keeps the turtle Still
 
+    assert TurtlingDefaults["backward_distance"] == 200, (TurtlingDefaults,)
+
     def backward(self, distance) -> dict:
         """Move the Turtle backwards along its Heading, leaving a Trail if Pen Down"""
 
-        assert TurtlingDefaults["backward_distance"] == 200, (TurtlingDefaults,)
         distance_float = float(200 if (distance is None) else distance)
 
         self._punch_bresenham_stride_(-distance_float)
@@ -1633,10 +1736,11 @@ class Turtle:
         for pycode in pycodes:
             exec_strict(pycode, globals_, exec_locals)
 
+    assert TurtlingDefaults["forward_distance"] == 100, (TurtlingDefaults,)
+
     def forward(self, distance) -> dict:
         """Move the Turtle forwards along its Heading, leaving a Trail if Pen Down"""
 
-        assert TurtlingDefaults["forward_distance"] == 100, (TurtlingDefaults,)
         distance_float = float(100 if (distance is None) else distance)
 
         self._punch_bresenham_stride_(distance_float)
@@ -1671,10 +1775,11 @@ class Turtle:
 
         # todo: good that .home doesn't follow/ change .setxy and .setheading defaults?
 
+    assert TurtlingDefaults["incx_distance"] == 10, (TurtlingDefaults,)
+
     def incx(self, distance) -> dict:
         """Move the Turtle along the X Axis, keeping Y unchanged, leaving a Trail if Pen Down"""
 
-        assert TurtlingDefaults["incx_distance"] == 10, (TurtlingDefaults,)
         distance_float = float(10 if (distance is None) else distance)
 
         xfloat_ = self.xfloat
@@ -1690,10 +1795,11 @@ class Turtle:
 
         # Scratch: Change-X-By-10
 
+    assert TurtlingDefaults["incy_distance"] == 10, (TurtlingDefaults,)
+
     def incy(self, distance) -> dict:
         """Move the Turtle along the Y Axis, keeping X unchanged, leaving a Trail if Pen Down"""
 
-        assert TurtlingDefaults["incy_distance"] == 10, (TurtlingDefaults,)
         distance_float = float(10 if (distance is None) else distance)
 
         xfloat_ = self.xfloat
@@ -1759,10 +1865,11 @@ class Turtle:
 
         # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
 
+    assert TurtlingDefaults["left_angle"] == 45, (TurtlingDefaults,)
+
     def left(self, angle) -> dict:
         """Turn the Turtle anticlockwise, by a 45° Right Angle, or some other Angle"""
 
-        assert TurtlingDefaults["left_angle"] == 45, (TurtlingDefaults,)
         angle_float = float(45 if (angle is None) else angle)
 
         heading = self.heading
@@ -1821,12 +1928,13 @@ class Turtle:
 
         # Scratch Pen-Up
 
+    assert TurtlingDefaults["repeat_count"] == 3, (TurtlingDefaults,)
+    assert TurtlingDefaults["repeat_angle"] == 360, (TurtlingDefaults,)
+    assert TurtlingDefaults["repeat_diameter"] == 100, (TurtlingDefaults,)
+
     def repeat(self, count, angle, distance) -> dict:
         """Run some instructions a chosen number of times, often less or more than once"""
 
-        assert TurtlingDefaults["repeat_count"] == 3, (TurtlingDefaults,)
-        assert TurtlingDefaults["repeat_angle"] == 360, (TurtlingDefaults,)
-        assert TurtlingDefaults["repeat_diameter"] == 100, (TurtlingDefaults,)
         int_count = int(90 if (count is None) else count)
         angle_float = float(90 if (angle is None) else angle)
         distance_float = float(100 if (distance is None) else distance)
@@ -1843,10 +1951,11 @@ class Turtle:
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         return d
 
+    assert TurtlingDefaults["right_angle"] == 90, (TurtlingDefaults,)
+
     def right(self, angle) -> dict:
         """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
 
-        assert TurtlingDefaults["right_angle"] == 90, (TurtlingDefaults,)
         angle_float = float(90 if (angle is None) else angle)
 
         heading = self.heading  # turning clockwise
@@ -1855,10 +1964,11 @@ class Turtle:
 
         # Scratch Turn-CW-15-Degrees
 
+    assert TurtlingDefaults["setheading_angle"] == 0, (TurtlingDefaults,)
+
     def setheading(self, angle) -> dict:
         """Turn the Turtle to move 0° North, or to some other Heading"""
 
-        assert TurtlingDefaults["setheading_angle"] == 0, (TurtlingDefaults,)
         angle_float = float(0 if (angle is None) else angle)
 
         heading1 = angle_float % 360e0  # 360° Circle
@@ -1869,9 +1979,10 @@ class Turtle:
         d = dict(heading=self.heading)
         return d
 
+    assert TurtlingDefaults["sethertz_hertz"] == 1e3, (TurtlingDefaults,)
+
     def sethertz(self, hertz) -> dict:
 
-        assert TurtlingDefaults["sethertz_hertz"] == 1e3, (TurtlingDefaults,)
         hertz_float = float(1e3 if (hertz is None) else hertz)
 
         rest1 = 0e0
@@ -1951,10 +2062,10 @@ class Turtle:
         penscape = self._ansi_by_rgb_[rgb]
         return penscape
 
+    assert TurtlingDefaults["setpenpunch_mark"] == "██", (TurtlingDefaults,)
+
     def setpenpunch(self, mark) -> dict:
         """Choose which Character to draw with, or default to '*'"""
-
-        assert TurtlingDefaults["setpenpunch_mark"] == "██", (TurtlingDefaults,)
 
         floatish = isinstance(mark, float) or isinstance(mark, int) or isinstance(mark, bool)
         if mark is None:
@@ -1985,11 +2096,12 @@ class Turtle:
         d = dict(xfloat=self.xfloat)
         return d
 
+    assert TurtlingDefaults["setxy_x"] == 0, (TurtlingDefaults,)
+    assert TurtlingDefaults["setxy_y"] == 0, (TurtlingDefaults,)
+
     def setxy(self, x, y) -> dict:
         """Move the Turtle to an X Y Point, leaving a Trail if Pen Down"""
 
-        assert TurtlingDefaults["setxy_x"] == 0, (TurtlingDefaults,)
-        assert TurtlingDefaults["setxy_y"] == 0, (TurtlingDefaults,)
         xfloat = float(0 if (x is None) else x)
         yfloat = float(0 if (y is None) else y)
 
@@ -2072,10 +2184,11 @@ class Turtle:
         d = dict(hiding=self.hiding)
         return d
 
+    assert TurtlingDefaults["sleep_seconds"] == 1e-3, (TurtlingDefaults,)
+
     def sleep(self, seconds) -> dict:
         """Hold the Turtle still for a moment"""
 
-        assert TurtlingDefaults["sleep_seconds"] == 1e-3, (TurtlingDefaults,)
         second_float = float(1e-3 if (seconds is None) else seconds)
 
         time.sleep(second_float)  # may raise ValueError or TypeError
@@ -2364,6 +2477,8 @@ turtles = list()
 #
 # Define a similar 'turtling.alef(bet, gimel)' for most Methods of Class Turtle
 #
+#   note: Server Eval/ Exec of 'alef(bet, gimel)' runs as 'turtling.alef(bet, gimel)'
+#
 #   todo: solve 'turtling.breakpoint()' and 'turtling.exec'
 #
 
@@ -2534,102 +2649,6 @@ class AngleQuotedStr(str):
         return s1
 
         # <__main__.Turtle object at 0x101486a50>
-
-
-KwByGrunt = {
-    "a": "angle",
-    "d": "distance",
-    "n": "count",
-    "x": "x",
-    "y": "y",
-}
-"""Abbreviations for Turtle Verb Kw Arg Names"""
-
-
-def _turtling_defaults_choose_() -> dict:
-    """Choose default Values for KwArg Names"""
-
-    angle = 0
-    count = 1
-    diameter = 100
-    distance = 100
-    divisor = 2
-    hertz = 1e3
-    mark = 2 * FullBlock  # '██'
-    seconds = 1e-3
-    x = 0
-    xscale = 1
-    y = 0
-    yscale = 1
-
-    _ = count, diameter
-
-    d = dict(
-        #
-        angle=0,
-        arc_angle=90,
-        left_angle=45,
-        repeat_angle=360,
-        right_angle=90,
-        setheading_angle=angle,  # 0° North is 360° North
-        #
-        count=1,
-        repeat_count=3,
-        #
-        diameter=100,
-        arc_diameter=100,
-        repeat_diameter=100,
-        #
-        distance=100,
-        backward_distance=200,
-        forward_distance=distance,
-        incx_distance=10,
-        incy_distance=10,
-        repeat_distance=100,
-        sierpiński_distance=200,
-        #
-        divisor=2,
-        sierpiński_divisor=divisor,
-        #
-        hertz=1e3,  # todo: =1e3 or =1000 for hertz= ?
-        sethertz_hertz=hertz,
-        #
-        mark=(2 * FullBlock),  # '██'
-        setpenpunch_mark=mark,
-        #
-        seconds=1e-3,
-        sleep_seconds=seconds,
-        #
-        x=0,
-        xscale=1,
-        setx_x=x,
-        setxy_x=x,
-        setxyzoom_xscale=xscale,
-        #
-        y=0,
-        yscale=1,
-        sety_y=y,
-        setxy_y=y,
-        setxyzoom_yscale=yscale,
-        #
-    )
-
-    return d
-
-    # Assymetric Defaults make editable Defaults more discoverable, because harder to ignore,
-    #
-    #   backward_distance != forward_distance
-    #   count != repeat_count
-    #   left_angle != right_angle
-    #
-
-    # 🐢 Right 90° sets up 🐢 Label to print English from left to right
-
-    # todo: Choose default Values for more Kw Args, no longer just: Angle Count Distance X Y
-
-
-TurtlingDefaults = _turtling_defaults_choose_()
-"""Default Values for Turtle Verb Kw Arg Names"""
 
 
 class PythonSpeaker:
