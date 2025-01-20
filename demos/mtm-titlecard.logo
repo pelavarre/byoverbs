@@ -8,7 +8,7 @@
 
 
 relaunch
-write("\x1B[48;5;16m")  # [40m alias works at macOS & gShell, but not at replIt
+write "\e[48;5;16m"  # [40m alias works at macOS & gShell, but not at replIt
 clearscreen()  # macOS & replIt color the screen, gShell doesn't
 
 #
@@ -17,23 +17,23 @@ restart
 setxyzoom 1 1
 penup  forward 50  right 90  backward 40  backward 110 pendown
 
-write("\x1B[48;5;16m")  # Black Background
-write("\x1B[1m")  # Bold
+write "\e[48;5;16m"  # Black Background
+write "\e[1m"  # Bold
 
 label (len("  MARY TYLER MOORE  ") * " ")
-write "\x1B[36m"  label "  MARY TYLER MOORE  "
-write "\x1B[35m"  label "  MARY TYLER MOORE  "
-write "\x1B[31m"  label "  MARY TYLER MOORE  "
-write "\x1B[38;5;130m"  label "  MARY TYLER MOORE  "
-write "\x1B[33m"  label "  MARY TYLER MOORE  "
+write "\e[36m"  label "  MARY TYLER MOORE  "
+write "\e[35m"  label "  MARY TYLER MOORE  "
+write "\e[31m"  label "  MARY TYLER MOORE  "
+write "\e[38;5;130m"  label "  MARY TYLER MOORE  "
+write "\e[33m"  label "  MARY TYLER MOORE  "
 
-write "\x1B[32m"  label "  MARY TYLER MOORE  "
+write "\e[32m"  label "  MARY TYLER MOORE  "
 
-write "\x1B[33m"  label "  MARY TYLER MOORE  "
-write "\x1B[38;5;130m"  label "  MARY TYLER MOORE  "
-write "\x1B[31m"  label "  MARY TYLER MOORE  "
-write "\x1B[35m"  label "  MARY TYLER MOORE  "
-write "\x1B[36m"  label "  MARY TYLER MOORE  "
+write "\e[33m"  label "  MARY TYLER MOORE  "
+write "\e[38;5;130m"  label "  MARY TYLER MOORE  "
+write "\e[31m"  label "  MARY TYLER MOORE  "
+write "\e[35m"  label "  MARY TYLER MOORE  "
+write "\e[36m"  label "  MARY TYLER MOORE  "
 label (len("  MARY TYLER MOORE  ") * " ")
 
 #
@@ -42,23 +42,23 @@ restart
 setxyzoom 1 1
 penup  forward 50  right 90  backward 40  forward 110 pendown
 
-write("\x1B[48;5;16m")  # Black Background
-write("\x1B[1m")  # Bold
+write "\e[48;5;16m"  # Black Background
+write "\e[1m"  # Bold
 
 label (len("  MARY TYLER MOORE  ") * " ")
-write "\x1B[96m"  label "  MARY TYLER MOORE  "
-write "\x1B[95m"  label "  MARY TYLER MOORE  "
-write "\x1B[91m"  label "  MARY TYLER MOORE  "
-write "\x1B[38;5;208m"  label "  MARY TYLER MOORE  "
-write "\x1B[93m"  label "  MARY TYLER MOORE  "
+write "\e[96m"  label "  MARY TYLER MOORE  "
+write "\e[95m"  label "  MARY TYLER MOORE  "
+write "\e[91m"  label "  MARY TYLER MOORE  "
+write "\e[38;5;208m"  label "  MARY TYLER MOORE  "
+write "\e[93m"  label "  MARY TYLER MOORE  "
 
-write "\x1B[92m"  label "  MARY TYLER MOORE  "
+write "\e[92m"  label "  MARY TYLER MOORE  "
 
-write "\x1B[93m"  label "  MARY TYLER MOORE  "
-write "\x1B[38;5;208m"  label "  MARY TYLER MOORE  "
-write "\x1B[91m"  label "  MARY TYLER MOORE  "
-write "\x1B[95m"  label "  MARY TYLER MOORE  "
-write "\x1B[96m"  label "  MARY TYLER MOORE  "
+write "\e[93m"  label "  MARY TYLER MOORE  "
+write "\e[38;5;208m"  label "  MARY TYLER MOORE  "
+write "\e[91m"  label "  MARY TYLER MOORE  "
+write "\e[95m"  label "  MARY TYLER MOORE  "
+write "\e[96m"  label "  MARY TYLER MOORE  "
 label (len("  MARY TYLER MOORE  ") * " ")
 
 #
@@ -68,23 +68,23 @@ setxyzoom 1 1
 penup  forward 50  right 90  backward 40  backward 0 pendown
 sethertz 50
 
-write("\x1B[48;5;16m")  # Black Background
-write("\x1B[1m")  # Bold
+write "\e[48;5;16m"  # Black Background
+write "\e[1m"  # Bold
 
 label (len("  MARY TYLER MOORE  ") * " ")
-write "\x1B[96m"  label "  MARY TYLER MOORE  "
-write "\x1B[95m"  label "  MARY TYLER MOORE  "
-write "\x1B[91m"  label "  MARY TYLER MOORE  "
-write "\x1B[38;5;208m"  label "  MARY TYLER MOORE  "
-write "\x1B[93m"  label "  MARY TYLER MOORE  "
+write "\e[96m"  label "  MARY TYLER MOORE  "
+write "\e[95m"  label "  MARY TYLER MOORE  "
+write "\e[91m"  label "  MARY TYLER MOORE  "
+write "\e[38;5;208m"  label "  MARY TYLER MOORE  "
+write "\e[93m"  label "  MARY TYLER MOORE  "
 
-write "\x1B[32m"  label "  MARY TYLER MOORE  "
+write "\e[32m"  label "  MARY TYLER MOORE  "
 
-write "\x1B[93m"  label "  MARY TYLER MOORE  "
-write "\x1B[38;5;208m"  label "  MARY TYLER MOORE  "
-write "\x1B[91m"  label "  MARY TYLER MOORE  "
-write "\x1B[95m"  label "  MARY TYLER MOORE  "
-write "\x1B[96m"  label "  MARY TYLER MOORE  "
+write "\e[93m"  label "  MARY TYLER MOORE  "
+write "\e[38;5;208m"  label "  MARY TYLER MOORE  "
+write "\e[91m"  label "  MARY TYLER MOORE  "
+write "\e[95m"  label "  MARY TYLER MOORE  "
+write "\e[96m"  label "  MARY TYLER MOORE  "
 label (len("  MARY TYLER MOORE  ") * " ")
 
 #
