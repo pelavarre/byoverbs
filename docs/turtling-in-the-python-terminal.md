@@ -386,7 +386,7 @@ To draw a Latin Capital Letter P in five colors, try
     setpencolor none
     bk 150
 
-To draw something like the two Curves and a Line of the Atari ™ Logo, try
+To draw something like the two Curves and a Line of the 1972 Atari ™ Logo, try
 
     relaunch
     left 90  arc  fd 10 bk 10
@@ -471,8 +471,7 @@ For example, inside of a gShell, try
 
 <!-- FIXME: Work when given \e at replIt, not only when given \x1B -->
 
-This also works inside a replIt Shell
-
+This also works inside a replIt Shell.
 This does Not work inside a macOS Shell.
 Perplexity·Ai tells me that limitation is famous.
 That limitation drives people to swap in other Terminals for macOS.
@@ -492,28 +491,28 @@ Searching with ⌘F 31 will show you Wikipedia People talking of ESC[31m, as we 
 My experiments tell me that macOS Terminals only do the "8-bit" Color of "256-color lookup tables". For example, this experiment works
 
     relaunch
-    write '\e[38;5;4m'
-    fd 50  bk 50  rt 30  # Darker Purple
-    write '\e[38;5;5m'
-    fd 50  bk 50  rt 30  # Darker Pink
-    write '\e[38;5;12m'
-    fd 50  bk 50  rt 30  # Purple
-    write '\e[38;5;13m'
-    fd 50  bk 50  rt 30  # Lighter Pink
-    write '\e[38;5;40m'
-    fd 50  bk 50  rt 30  # Darker Green
-    write '\e[38;5;80m'
-    fd 50  bk 50  rt 30  # Lighter Blue Green
-    write '\e[38;5;120m'
-    fd 50  bk 50  rt 30  # Lighter Green
-    write '\e[38;5;160m'
-    fd 50  bk 50  rt 30  # Red
-    write '\e[38;5;200m'
-    fd 50  bk 50  rt 30  # Much the Same Pink
-    write '\e[38;5;241m'
-    fd 50  bk 50  rt 30  # Darker Gray
-    write '\e[38;5;249m'
-    fd 50  bk 50  rt 30  # Lighter Gray
+    write '\e[38;5;4m'  # Darker Purple
+    fd 50  bk 50  rt 30
+    write '\e[38;5;5m'  # Darker Pink
+    fd 50  bk 50  rt 30
+    write '\e[38;5;12m'  # Purple
+    fd 50  bk 50  rt 30
+    write '\e[38;5;13m'  # Lighter Pink
+    fd 50  bk 50  rt 30
+    write '\e[38;5;40m'  # Darker Green
+    fd 50  bk 50  rt 30
+    write '\e[38;5;80m'  # Lighter Blue Green
+    fd 50  bk 50  rt 30
+    write '\e[38;5;120m'  # Lighter Green
+    fd 50  bk 50  rt 30
+    write '\e[38;5;160m'  # Red
+    fd 50  bk 50  rt 30
+    write '\e[38;5;200m'  # Much the Same Pink
+    fd 50  bk 50  rt 30
+    write '\e[38;5;241m'  # Darker Gray
+    fd 50  bk 50  rt 30
+    write '\e[38;5;249m'  # Lighter Gray
+    fd 50  bk 50  rt 30
     setpc none  penup  home
     tada
 
@@ -530,8 +529,7 @@ as \x1B instead.
 I'd've guess that's impossible, but it fails there when I test it.
 I dunno why yet
 
-    write '\x1B[m'
-    # Plain Text, Uncolored
+    write '\x1B[m'  # Plain Text, Uncolored
 
 <!-- FIXME: work despite trailing # commentary -->
 <!-- FIXME: w for write -->

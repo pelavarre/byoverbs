@@ -55,7 +55,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.01.19"  # Sunday
+__version__ = "2025.01.20"  # Monday
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
@@ -2565,6 +2565,7 @@ def _turtling_defaults_choose_() -> dict:
     _ = count, diameter
 
     d = dict(
+        #
         angle=0,
         arc_angle=90,
         left_angle=45,
@@ -2577,6 +2578,7 @@ def _turtling_defaults_choose_() -> dict:
         #
         diameter=100,
         arc_diameter=100,
+        repeat_diameter=100,
         #
         distance=100,
         backward_distance=200,
@@ -2609,6 +2611,7 @@ def _turtling_defaults_choose_() -> dict:
         sety_y=y,
         setxy_y=y,
         setxyzoom_yscale=yscale,
+        #
     )
 
     return d
@@ -2697,18 +2700,20 @@ class PythonSpeaker:
                 ast_parse_strict(pyish)
                 pycodes.append(dedent)
                 return pycodes
-            except SyntaxError:  # from Ast Parse
+            except SyntaxError:  # from Ast Parse Strict
                 pass
 
-            alt_dedent = text.replace(r"\e", r"\x1B")
             alt_pyish = pyish.replace(r"\e", r"\x1B")
 
             try:
                 ast_parse_strict(alt_pyish)
-                pycodes.append(alt_dedent)
+                pycodes.append(dedent)
                 return pycodes
-            except SyntaxError:  # from Ast Parse
+            except SyntaxError:  # from Ast Parse Strict
                 pass
+
+            # rejects 'forward -50'
+            # accepts 'forward(-50)' Python to become 'turtling.forward(-50)'
 
         # Split the Text into Python Texts
 
@@ -2718,8 +2723,10 @@ class PythonSpeaker:
         call_pysplits = list()
 
         text_pysplits = self.splitpy(text) + [""]
+        trailing_pysplits = list()
         for pysplit in text_pysplits:
             if pysplit.lstrip().startswith("#"):
+                trailing_pysplits.append(pysplit)
                 continue
 
             pyrepr = self.pysplit_to_pyrepr_if(pysplit, verbs=verbs)
@@ -2742,6 +2749,9 @@ class PythonSpeaker:
                 call_pysplits.append(pysplit)
 
         assert call_pysplits == [""], (call_pysplits,)
+
+        if trailing_pysplits:
+            pycodes[-1] += "  " + "  ".join(trailing_pysplits)
 
         return pycodes
 
@@ -2848,77 +2858,90 @@ class PythonSpeaker:
     def splitpy(self, text) -> list[str]:
         """Split 1 Text into its widest parseable Py Expressions from the Left"""
 
+        lines = text.splitlines()
+        assert len(lines) <= 1, (len(lines), text)
+
+        # Loop to add Py Splits till all Text matched
+
         splits = list()
 
         more = text
         while more:
 
+            # Take the whole Text if '#' Comment found
+
             if more.lstrip().startswith("#"):
-                split = more
-                splits.append(split)
+                splits.append(more)
+                more = ""
                 break
+
+            # Search for the Widest Py Split from the Left
 
             heads = list()
             for index in range(0, len(more)):
                 length = index + 1
                 head = more[:length]
 
-                pyish = head
-                pyish = pyish.replace("-", "~")  # accepts '-' as unary op, but refuse as binary op
-                pyish = pyish.replace("+", "~")  # accepts '+' as unary op, but refuses as binary op
+                # Accept Leading and Trailing Spaces into the Py Split Syntax
+
+                strip = head.strip()  # ast.literal_eval strip's input since Oct/2021 Python 3.10
+
+                # Split before a '#' Comment, a bit too often
+
+                if "#" in strip:
+                    break
+
+                # Accept '-' and '+' as unary op always, but refuse as bin op when not bracketed
+
+                pyish = strip
+                if strip and (strip[:1] not in "([{"):
+                    pyish = pyish.replace("-", "~")
+                    pyish = pyish.replace("+", "~")
+
+                # Accept \e as meaning \x1B . a bit too often
+
+                pyish = pyish.replace(r"\e", r"\x1B")
+
+                # Collect the Py Splits of Good Syntax (although only the last found matters)
 
                 try:
-                    ast_literal_eval_strict(pyish)
+                    ast_literal_eval_strict(pyish)  # todo: send to 'pysplit_to_pyrepr_if'
                     heads.append(head)
                 except ValueError:
                     heads.append(head)
-                except SyntaxError:
-                    alt_head = head.replace(r"\e", r"\x1B")
-                    try:
-                        ast_literal_eval_strict(alt_head)
-                        heads.append(alt_head)
-                    except ValueError:
-                        pass
-                    except SyntaxError:
-                        pass
+                except SyntaxError:  # fron Ast Literal Eval Strict
+                    pass
+
+            # Take the whole Text if no Good Syntax found
 
             if not heads:
                 splits.append(more)
+                more = ""
                 break
 
+            # Take the Widest Py Split
+
             head = heads[-1]
-            assert head, (
-                head,
-                more,
-            )
+            assert head, (head, more)
 
             split = head
-            if "#" in head:
-                if ('"' not in head) and ("'" not in head):
-                    before = split.partition("#")[0]
-                    split = before.rstrip()
-                    assert split, (
-                        split,
-                        head,
-                        more,
-                    )
-
             splits.append(split)
-
             more = more[len(split) :]
 
-        alt_text = text.replace(r"\e", r"\x1B")
-        if "".join(splits) != alt_text:
-            assert "".join(splits) != text, (splits, text)
+        # Promise to drop no Characters
 
-            # FIXME: fails at input of:  w \e[37m
+        assert "".join(splits) == text, (splits, text)
 
         return splits
+
+        # ['Hello, World', '!']
+        # ['1 (2 * 3 * 4)']
 
     def pysplit_to_pyrepr_if(self, py, verbs) -> str:
         """Eval the Py as a Py Literal, else return the Empty Str"""
 
         strip = py.strip()
+        strip = strip.replace(r"\e", r"\x1B")  # replace r'\e' a bit too often
 
         title = strip.title()
         if title in ("False", "None", "True"):
@@ -2926,7 +2949,7 @@ class PythonSpeaker:
 
         try:
 
-            ast_literal_eval_strict(strip)
+            ast_literal_eval_strict(strip)  # take from 'splitpy'
 
         except ValueError:
 
@@ -2938,7 +2961,7 @@ class PythonSpeaker:
 
             #
 
-        except SyntaxError:
+        except SyntaxError:  # fron Ast Literal Eval Strict
 
             return ""
 
@@ -2957,7 +2980,8 @@ class PythonSpeaker:
 
         strip_0 = pystrips[0]
         funcname = strip_0
-        args = list(pystrips[1:])
+
+        args = list(_.replace(r"\e", r"\x1B") for _ in pystrips[1:])
 
         if strip_0 in verbs:
             if strip_0 in verb_by_grunt:  # unabbreviates the Verb, if need be
@@ -3827,7 +3851,7 @@ class TurtlingServer:
                 if ename == pyname:
                     value = ename
 
-        except SyntaxError:  # from Py Eval
+        except SyntaxError:  # from Py Eval Strict
 
             value = None
             try_exec = True
@@ -3945,7 +3969,8 @@ class TurtleClient:
         ilines = text.splitlines()
         if text == "relaunch":
             started = True
-            eprint(f"Chatting with BYO Turtling·Py {__version__} till you say:  bye")
+            eprint(f"BYO Turtling·Py {__version__}")
+            eprint("Chatting with you, till you say:  bye")
 
             trade_else = self.py_trade_else("t.relaunch(); pass")
             if trade_else is not None:
@@ -3986,6 +4011,8 @@ class TurtleClient:
                 for pycode in pycodes:
                     if pycodes != [dedent]:  # if autocompleted
                         eprint(">>>", pycode)
+
+                        # Py itself completes 'forward(50)' to 'turtling.forward(50)'
 
                     trade_else = self.py_trade_else(pycode)
                     if trade_else is None:
