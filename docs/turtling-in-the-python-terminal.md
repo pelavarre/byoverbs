@@ -465,11 +465,9 @@ from a choice of more than 16 million "24-bit" Colors
 
 For example, inside of a gShell, try
 
-    write '\x1B[38;2;255;0;0m Red'
-    write '\x1B[38;2;0;255;0m Green'
-    write '\x1B[38;2;0;0;255m Blue'
-
-<!-- FIXME: Work when given \e at replIt, not only when given \x1B -->
+    write '\e[38;2;255;0;0m Red'
+    write '\e[38;2;0;255;0m Green'
+    write '\e[38;2;0;0;255m Blue'
 
 This also works inside a replIt Shell.
 This does Not work inside a macOS Shell.
@@ -523,16 +521,10 @@ Wikipedia People tell us these '38;5' Color Numbers carry a meaning like so
     16-231:  6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
     232-255:  grayscale from dark to light in 24 steps
 
-Some tests at replIt choked unless we type our \e notation,
-extended from merely standard Python,
-as \x1B instead.
-I'd've guess that's impossible, but it fails there when I test it.
-I dunno why yet
+And the Undo for \\e m Settings of the Terminal is
 
-    write '\x1B[m'  # Plain Text, Uncolored
+    write '\e[m'  # Plain Text, Uncolored
 
-<!-- FIXME: work despite trailing # commentary -->
-<!-- FIXME: w for write -->
 <!-- FIXME: no quotes needed for \e without Spaces -->
 
 
