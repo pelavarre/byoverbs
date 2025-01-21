@@ -243,7 +243,7 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 #
 #   Our VT420 Terminal Emulation includes
 
-#       ⎋['⇧} col-insert  ⎋['⇧~ col-delete
+#       ⎋['⇧} cols-insert  ⎋['⇧~ cols-delete
 #
 #   FIXME:  Our macOS App Emulation includes
 #
@@ -1393,6 +1393,8 @@ glass_teletypes = list()
 KwByGrunt = {
     "a": "angle",
     "d": "distance",
+    "dv": "divisor",
+    "hz": "hertz",
     "n": "count",
     "x": "x",
     "y": "y",
@@ -1426,6 +1428,9 @@ def _turtling_defaults_choose_() -> dict:
         repeat_angle=360,
         right_angle=90,
         setheading_angle=angle,  # 0° North is 360° North
+        #
+        color="Plain Bold",
+        setpencolor_color="Plain Bold",
         #
         count=1,
         repeat_count=3,
@@ -1560,7 +1565,7 @@ class Turtle:
         gt.breakpoint()
 
     def bye(self) -> None:
-        """Exit Server and Client, but without clearing the Screen"""
+        """Exit Server and Client, but without clearing the Screen (EXIT or QUIT for short)"""
 
         gt = self.glass_teletype
 
@@ -1576,7 +1581,7 @@ class Turtle:
         sys.exit()
 
     def clearscreen(self) -> None:
-        """Write Spaces over every Character of every Screen Row and Column"""
+        """Write Spaces over every Character of every Screen Row and Column (CLS or CLEAR or CS for short)"""
 
         text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
         gt = self.glass_teletype
@@ -1604,7 +1609,7 @@ class Turtle:
         # PyTurtle Clear deletes 1 Turtle's Trail, without clearing its Settings
 
     def restart(self) -> dict:
-        """Warp the Turtle to Home, and clear its Settings, but do Not clear the Screen"""
+        """Warp the Turtle to Home, and clear its Settings, but do Not clear the Screen (RESET for short)"""
 
         self.hideturtle()
         self.penup()
@@ -1705,7 +1710,7 @@ class Turtle:
     assert TurtlingDefaults["backward_distance"] == 200, (TurtlingDefaults,)
 
     def backward(self, distance) -> dict:
-        """Move the Turtle backwards along its Heading, leaving a Trail if Pen Down"""
+        """Move the Turtle backwards along its Heading, leaving a Trail if Pen Down (BACK D for short)"""
 
         distance_float = float(200 if (distance is None) else distance)
 
@@ -1715,7 +1720,7 @@ class Turtle:
         return d
 
     def beep(self) -> dict:
-        """Ring the Terminal Alarm Bell once, remotely inside the Turtle"""
+        """Ring the Terminal Alarm Bell once, remotely inside the Turtle (B for short)"""
 
         text = "\a"  # Alarm Bell
         gt = self.glass_teletype
@@ -1741,7 +1746,7 @@ class Turtle:
     assert TurtlingDefaults["forward_distance"] == 100, (TurtlingDefaults,)
 
     def forward(self, distance) -> dict:
-        """Move the Turtle forwards along its Heading, leaving a Trail if Pen Down"""
+        """Move the Turtle forwards along its Heading, leaving a Trail if Pen Down (FD D for short)"""
 
         distance_float = float(100 if (distance is None) else distance)
 
@@ -1753,8 +1758,26 @@ class Turtle:
         # Scratch Move-10-Steps (with infinite speed)
         # Scratch Glide-1-Secs-To-X-0-Y-0 (locks out parallel work)
 
+    def defaults(self) -> dict:
+        """Show the Turtle's own Defaults for each Verb KwArg, until overriden by Locals"""
+
+        d = dict(TurtlingDefaults)
+        return d
+
+    def h(self) -> dict:
+        """Show the Turtle's Most Cryptic Abbreviations"""
+
+        ps = PythonSpeaker()
+
+        d0 = dict(ps.verb_by_grunt)
+        d1 = dict(_ for _ in KwByGrunt.items() if _[0] != _[-1])
+
+        d = dict(short_verbs=d0, short_argument_keywords=d1)
+
+        return d
+
     def hideturtle(self) -> dict:
-        """Stop showing where the Turtle is"""
+        """Stop showing where the Turtle is (HT for short)"""
 
         gt = self.glass_teletype
 
@@ -1870,7 +1893,7 @@ class Turtle:
     assert TurtlingDefaults["left_angle"] == 45, (TurtlingDefaults,)
 
     def left(self, angle) -> dict:
-        """Turn the Turtle anticlockwise, by a 45° Right Angle, or some other Angle"""
+        """Turn the Turtle anticlockwise, by a 45° Right Angle, or some other Angle (LT A for short)"""
 
         angle_float = float(45 if (angle is None) else angle)
 
@@ -1909,7 +1932,7 @@ class Turtle:
         # todo: Locals Tau can be 360° or 2π Radians
 
     def pendown(self) -> dict:
-        """Plan to leave a Trail as the Turtle moves"""
+        """Plan to leave a Trail as the Turtle moves (PD for short)"""
 
         self.warping = False
 
@@ -1921,7 +1944,7 @@ class Turtle:
         # todo: calculated boolean args for pd pu ht gt
 
     def penup(self) -> dict:
-        """Plan to Not leave a Trail as the Turtle moves"""
+        """Plan to Not leave a Trail as the Turtle moves (PU for short)"""
 
         self.warping = True
 
@@ -1935,7 +1958,7 @@ class Turtle:
     assert TurtlingDefaults["repeat_diameter"] == 100, (TurtlingDefaults,)
 
     def repeat(self, count, angle, distance) -> dict:
-        """Run some instructions a chosen number of times, often less or more than once"""
+        """Run some instructions a chosen number of times, often less or more than once (REP N A D for short)"""
 
         int_count = int(90 if (count is None) else count)
         angle_float = float(90 if (angle is None) else angle)
@@ -1956,7 +1979,7 @@ class Turtle:
     assert TurtlingDefaults["right_angle"] == 90, (TurtlingDefaults,)
 
     def right(self, angle) -> dict:
-        """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle"""
+        """Turn the Turtle clockwise, by a 90° Right Angle, or some other Angle (RT A for short)"""
 
         angle_float = float(90 if (angle is None) else angle)
 
@@ -1969,7 +1992,7 @@ class Turtle:
     assert TurtlingDefaults["setheading_angle"] == 0, (TurtlingDefaults,)
 
     def setheading(self, angle) -> dict:
-        """Turn the Turtle to move 0° North, or to some other Heading"""
+        """Turn the Turtle to move 0° North, or to some other Heading (SETH A for short)"""
 
         angle_float = float(0 if (angle is None) else angle)
 
@@ -1984,6 +2007,7 @@ class Turtle:
     assert TurtlingDefaults["sethertz_hertz"] == 1e3, (TurtlingDefaults,)
 
     def sethertz(self, hertz) -> dict:
+        """Say how many Characters to draw per Second with the Pen (SETHZ HZ for short)"""
 
         hertz_float = float(1e3 if (hertz is None) else hertz)
 
@@ -2001,31 +2025,75 @@ class Turtle:
         # PyTurtle Speed chooses 1..10 for faster animation, reserving 0 for no animation
 
     def setpencolor(self, color) -> dict:
-        """Choose which Color to draw with"""
+        """Add a word of what Color to draw with (SETPC for short)"""
 
         gt = self.glass_teletype
 
-        floatish = isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
         if color is None:
-            penmode1 = PlainBold
-        elif floatish or isinstance(color, decimal.Decimal):
-            penmode1 = self._rgb_to_penmode_(rgb=int(color))
+            penscape = PlainBold
         elif isinstance(color, str):
-            if color.casefold() == "None".casefold():
-                penmode1 = PlainBold
-            else:
-                penmode1 = self._colorname_to_penmode_(colorname=color)
+            penscape = self._color_to_penscape_(color)
         else:
-            assert False, (type(color), color)
+            floatish = isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
+            raise NotImplementedError(type(color), color, dict(floatish=floatish))
 
-        gt.schars_write(penmode1)
+        gt.schars_write(penscape)
 
-        self.penscape = penmode1
+        self.penscape = penscape
 
         d = dict(penscape=self.penscape)
         return d
 
         # todo: Scratch Change-Pen-Color-By-10
+
+    def _color_to_penscape_(self, color) -> str:
+        """Form an Escape Control Sequence out of a string of Color Words"""
+
+        penscape = self.penscape
+
+        scape_by_split = dict(
+            #
+            bold="\x1B[1m",
+            invert="\x1B[7m",
+            reverse="\x1B[7m",
+            #
+            white="\x1B[37m",  # 3-Bit Color
+            magenta="\x1B[35m",
+            blue="\x1B[34m",
+            cyan="\x1B[36m",
+            green="\x1B[32m",
+            yellow="\x1B[33m",
+            red="\x1B[31m",
+            black="\x1B[30m",
+        )
+
+        scape_by_split["#FFffFF".casefold()] = "\x1B[37m"  # White
+        scape_by_split["#FF00FF".casefold()] = "\x1B[35m"  # Magenta
+        scape_by_split["#0000FF".casefold()] = "\x1B[34m"  # Blue
+        scape_by_split["#00FFFF".casefold()] = "\x1B[36m"  # Cyan
+        scape_by_split["#00FF00".casefold()] = "\x1B[32m"  # Green
+        scape_by_split["#FFFF00".casefold()] = "\x1B[33m"  # Yellow
+        scape_by_split["#FF0000".casefold()] = "\x1B[31m"  # Red
+        scape_by_split["#000000".casefold()] = "\x1B[30m"  # Black
+
+        defined_color_words = list(_.title() for _ in scape_by_split.keys())
+
+        splits = color.split()
+        for split in splits:
+            casefold = split.casefold()
+
+            if casefold == "None".casefold():
+                penscape = PlainBold
+            elif casefold == "Plain".casefold():
+                penscape = "\x1B[m"
+
+            elif casefold not in scape_by_split.keys():
+                raise KeyError(f"{split!r} not in {defined_color_words}")
+
+            else:
+                penscape += scape_by_split[casefold]
+
+        return penscape
 
     _rgb_by_title_ = {
         "White": 0xFFFFFF,
@@ -2067,7 +2135,7 @@ class Turtle:
     assert TurtlingDefaults["setpenpunch_mark"] == "██", (TurtlingDefaults,)
 
     def setpenpunch(self, mark) -> dict:
-        """Choose which Character to draw with, or default to '*'"""
+        """Choose which Character to draw with, or default to '██' (SETPCH for short)"""
 
         floatish = isinstance(mark, float) or isinstance(mark, int) or isinstance(mark, bool)
         if mark is None:
@@ -2102,7 +2170,7 @@ class Turtle:
     assert TurtlingDefaults["setxy_y"] == 0, (TurtlingDefaults,)
 
     def setxy(self, x, y) -> dict:
-        """Move the Turtle to an X Y Point, leaving a Trail if Pen Down"""
+        """Move the Turtle to an X Y Point, leaving a Trail if Pen Down (GOTO or SETPOS or SETPOSITION for short)"""
 
         xfloat = float(0 if (x is None) else x)
         yfloat = float(0 if (y is None) else y)
@@ -2168,7 +2236,7 @@ class Turtle:
         return d
 
     def showturtle(self) -> dict:
-        """Start showing where the Turtle is"""
+        """Start showing where the Turtle is (ST for short)"""
 
         gt = self.glass_teletype
         # hiding = self.hiding
@@ -2189,7 +2257,7 @@ class Turtle:
     assert TurtlingDefaults["sleep_seconds"] == 1e-3, (TurtlingDefaults,)
 
     def sleep(self, seconds) -> dict:
-        """Hold the Turtle still for a moment"""
+        """Hold the Turtle still for a moment (S for short)"""
 
         second_float = float(1e-3 if (seconds is None) else seconds)
 
@@ -2203,7 +2271,7 @@ class Turtle:
         # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s  st
 
     def tada(self) -> None:
-        """Call HideTurtle immediately, and then ShowTurtle before anything else"""
+        """Call HideTurtle immediately, and then ShowTurtle before anything else (T for short)"""
 
         raise NotImplementedError("Only works when auto-complete'd")
 
@@ -2443,7 +2511,7 @@ class Turtle:
     #
 
     def sierpiński(self, distance, divisor) -> None:
-        """Draw Triangles inside Triangles, in the way of Sierpiński 1882..1969"""
+        """Draw Triangles inside Triangles, in the way of Sierpiński 1882..1969 (also known as Sierpinksi)"""
 
         assert distance >= 0, (distance,)
         assert divisor > 0, (divisor,)
@@ -4244,13 +4312,6 @@ class TurtleClient:
 # todo: Stop getting the angle wrong when drawing with the 💙 Blue-Heart in place of █
 #
 #
-# todo: Stronger discovery of Colors (and more than 8 Colors) at help(t.setpencolor)
-# todo: Stronger discovery of FD at help(t.forward)
-# todo: Stronger discovery in Doc of  \t \r  ⎋[H row-column-go  ⎋[M rows-delete  ⎋['~ col-delete
-# todo: Stronger discovery in help(t) of FD RT BK etc Abbreviations & discover of Doc
-# todo: Stronger discovery of "Drawing Window" and "Chat Window" (too easy to swap Client/ Server)
-#
-#
 # todo: equilateral small triangles of constant Area across ↑ ← ↓ → keys:  demos/arrow-keys.logo
 #
 #
@@ -4395,23 +4456,15 @@ class TurtleClient:
 # 🐢 Turtle Chat Engine  # todo
 #
 #
-# todo: auto-completion of \e always wrong at replIt - must be the Ast in their Python version?
-#
-# todo: auto-completion of \e when more follows in line
-# todo: auto-completion of # ... commentary don't put it inside parentheses
-#
-#
-# todo: SetPenColor c 3, c 4, c 8, rgb 24, r g b 8, r g b 24
-# todo: 'colorspace = 8' default for SetPenColor
-# todo: take the (r g b 8) in via round * 256 / 6
+# todo: cut the Comments properly from:  setpc '#FFffFF'  # White = Red + Green + Blue
 #
 #
 # todo: autocomplete 'help' and 'dir' - stop mentioning Instance Fields like '.glass_terminal'
 #
 #
-# todo: Put the Client Breakpoint somewhere away from ⌃C
-# todo: Take ⌃D at either side to quit the Client and Server
-# todo: Take ⌃C at the Server to quit the Client and Server
+# todo: Put the Client Breakpoint somewhere (we've taken it away from ⌃C)
+# todo: Take ⌃D at either side to quit the Client and Server - or not
+# todo: Take ⌃C at the Server to quit the Client and Server - or not
 #
 #
 # todo: 🐢 Poly(*coefficients) to plot it

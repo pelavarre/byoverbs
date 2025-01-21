@@ -20,6 +20,8 @@ Contents
     - [Light up the Turtle](#light-up-the-turtle)
   - [Draw Circles and parts of Circles](#draw-circles-and-parts-of-circles)
   - [Explore More Colors](#explore-more-colors)
+    - [3-Bit Color](#3-bit-color)
+    - [Explore 3-Bit, 4-Bit, and 8-Bit Color by Number](#explore-3-bit-4-bit-and-8-bit-color-by-number)
     - [Explore 24-Bit Color in the Cloud](#explore-24-bit-color-in-the-cloud)
     - [Explore 8-Bit Color at macOS](#explore-8-bit-color-at-macos)
   - [Draw famous Figures](#draw-famous-figures)
@@ -36,8 +38,8 @@ Contents
   - [3 Linux/ macOS Imports](#3-linux-macos-imports)
   - [0 Windows Imports](#0-windows-imports)
   - [Breakpoints](#breakpoints)
-    - [Breakpoint the Server](#breakpoint-the-server)
-    - [Breakpoint the Client](#breakpoint-the-client)
+    - [Breakpoint the Drawing Window](#breakpoint-the-drawing-window)
+    - [Breakpoint the Chat](#breakpoint-the-chat)
 - [Try out some other Turtle Logo](#try-out-some-other-turtle-logo)
   - [Does it work at your desk?](#does-it-work-at-your-desk)
   - [What kind of drawings does it make?](#what-kind-of-drawings-does-it-make)
@@ -422,19 +424,128 @@ To draw a Large Arc as a Repeat of Forward Right
 
 ### Explore More Colors
 
-The most classic most basic 8 Colors of a Sh Terminal are
+Terminal Colors come in too many kinds.
+The ways of speaking of Terminal Colors changed rapidly across the 1980s,
+and the Colors you actually find in a Terminal today
+come out as some mix of Traditions
 
-    setpc white
-    setpc magenta
-    setpc blue
-    setpc cyan
-    setpc green
-    setpc yellow
-    setpc red
-    setpc black
+Our Turtles let you speak into your choice of Tradition,
+but we can't know if your Terminal will accept your choice of Color,
+until you test it for us.
 
-You can call for these Colors like that, or
-you can cast more arcane, fiddly, intricate Terminal Spells such as
+There's a world of Colors out there, and I don't yet know it well.
+One of the websites talking of Sh Terminal Colors is
+
+Wikipedia > [ANSI escape code](https://en.wikipedia.org/wiki/ANSI_escape_code)
+
+By copying those secret spells,
+we can figure out how to tell your Terminal to draw Color Charts that look like theirs.
+But we've not really finished that work yet.
+All the same, here now is a start at trying to do that
+
+    relaunch
+    right 90
+    penup  setxy -200 200  pendown
+    label ''
+
+    label '3-Bit Color'
+    label ''
+    label '\e[30m 30  \e[31m 31  \e[32m 32  \e[33m 33  \e[34m 34  \e[35m 35  \e[36m 36  \e[37m 37  \e[m'
+    label '\e[7m\e[30m 30 \e[m \e[7m\e[31m 31 \e[m \e[7m\e[32m 32 \e[m \e[7m\e[33m 33 \e[m \e[7m\e[34m 34 \e[m \e[7m\e[35m 35 \e[m \e[7m\e[36m 36 \e[m \e[7m\e[37m 37 \e[m \e[m'
+    label '\e[40m\e[97m 40 \e[m \e[41m\e[97m 41 \e[m \e[42m\e[97m 42 \e[m \e[43m\e[97m 43 \e[m \e[44m\e[97m 44 \e[m \e[45m\e[97m 45 \e[m \e[46m\e[97m 46 \e[m \e[47m\e[30m 47 \e[m'
+    label ''
+
+    label '4-Bit Color'
+    label ''
+    label '\e[90m  90  \e[91m  91  \e[92m  92  \e[99m  99  \e[94m  94  \e[95m  95  \e[96m  96  \e[97m  97  \e[m'
+    label '\e[100m\e[97m 100 \e[m \e[101m\e[97m 101 \e[m \e[102m 102 \e[m \e[103m 103 \e[m \e[104m\e[97m 104 \e[m \e[105m\e[97m 105 \e[m \e[106m 106 \e[m \e[107m 107 \e[m'
+    label ''
+
+    label '8-Bit Color'
+    label '\e[38;5;0m0 \e[38;5;1m1 \e[38;5;2m2 \e[38;5;3m3 \e[38;5;4m4 \e[38;5;5m5 \e[38;5;6m6 \e[38;5;7m7 \e[m'
+    label '\e[38;5;8m8 \e[38;5;9m9 \e[38;5;10m10 \e[38;5;11m11 \e[38;5;12m12 \e[38;5;13m13 \e[38;5;14m14 \e[38;5;15m15 \e[m'
+    label '\e[38;5;16m16 \e[38;5;17m17 \e[38;5;18m18 \e[38;5;19m19 \e[38;5;20m20 \e[38;5;21m21 \e[38;5;22m22 \e[38;5;23m23 \e[m'
+    label '\e[38;5;24m24 \e[38;5;25m25 \e[38;5;26m26 \e[38;5;27m27 \e[38;5;28m28 \e[38;5;29m29 \e[38;5;30m30 \e[38;5;31m31 \e[m'
+    label '\e[38;5;32m32 \e[38;5;33m33 \e[38;5;34m34 \e[38;5;35m35 \e[38;5;36m36 \e[38;5;37m37 \e[38;5;38m38 \e[38;5;39m39 \e[m'
+    label '\e[38;5;40m40 \e[38;5;41m41 \e[38;5;42m42 \e[38;5;43m43 \e[38;5;44m44 \e[38;5;45m45 \e[38;5;46m46 \e[38;5;47m47 \e[m'
+    label '\e[38;5;48m48 \e[38;5;49m49 \e[38;5;50m50 \e[38;5;51m51 \e[38;5;52m52 \e[38;5;53m53 \e[38;5;54m54 \e[38;5;55m55 \e[m'
+    label '\e[38;5;56m56 \e[38;5;57m57 \e[38;5;58m58 \e[38;5;59m59 \e[38;5;60m60 \e[38;5;61m61 \e[38;5;62m62 \e[38;5;63m63 \e[m'
+    label '\e[38;5;64m64 \e[38;5;65m65 \e[38;5;66m66 \e[38;5;67m67 \e[38;5;68m68 \e[38;5;69m69 \e[38;5;70m70 \e[38;5;71m71 \e[m'
+    label '\e[38;5;72m72 \e[38;5;73m73 \e[38;5;74m74 \e[38;5;75m75 \e[38;5;76m76 \e[38;5;77m77 \e[38;5;78m78 \e[38;5;79m79 \e[m'
+    label '\e[38;5;80m80 \e[38;5;81m81 \e[38;5;82m82 \e[38;5;83m83 \e[38;5;84m84 \e[38;5;85m85 \e[38;5;86m86 \e[38;5;87m87 \e[m'
+    label '\e[38;5;88m88 \e[38;5;89m89 \e[38;5;90m90 \e[38;5;91m91 \e[38;5;92m92 \e[38;5;93m93 \e[38;5;94m94 \e[38;5;95m95 \e[m'
+    label '\e[38;5;96m96 \e[38;5;97m97 \e[38;5;98m98 \e[38;5;99m99 \e[38;5;100m100 \e[38;5;101m101 \e[38;5;102m102 \e[38;5;103m103 \e[m'
+    label '\e[38;5;104m104 \e[38;5;105m105 \e[38;5;106m106 \e[38;5;107m107 \e[38;5;108m108 \e[38;5;109m109 \e[38;5;110m110 \e[38;5;111m111 \e[m'
+    label '\e[38;5;112m112 \e[38;5;113m113 \e[38;5;114m114 \e[38;5;115m115 \e[38;5;116m116 \e[38;5;117m117 \e[38;5;118m118 \e[38;5;119m119 \e[m'
+    label '\e[38;5;120m120 \e[38;5;121m121 \e[38;5;122m122 \e[38;5;123m123 \e[38;5;124m124 \e[38;5;125m125 \e[38;5;126m126 \e[38;5;127m127 \e[m'
+    label '\e[38;5;128m128 \e[38;5;129m129 \e[38;5;130m130 \e[38;5;131m131 \e[38;5;132m132 \e[38;5;133m133 \e[38;5;134m134 \e[38;5;135m135 \e[m'
+    label '\e[38;5;136m136 \e[38;5;137m137 \e[38;5;138m138 \e[38;5;139m139 \e[38;5;140m140 \e[38;5;141m141 \e[38;5;142m142 \e[38;5;143m143 \e[m'
+    label '\e[38;5;144m144 \e[38;5;145m145 \e[38;5;146m146 \e[38;5;147m147 \e[38;5;148m148 \e[38;5;149m149 \e[38;5;150m150 \e[38;5;151m151 \e[m'
+    label '\e[38;5;152m152 \e[38;5;153m153 \e[38;5;154m154 \e[38;5;155m155 \e[38;5;156m156 \e[38;5;157m157 \e[38;5;158m158 \e[38;5;159m159 \e[m'
+    label '\e[38;5;160m160 \e[38;5;161m161 \e[38;5;162m162 \e[38;5;163m163 \e[38;5;164m164 \e[38;5;165m165 \e[38;5;166m166 \e[38;5;167m167 \e[m'
+    label '\e[38;5;168m168 \e[38;5;169m169 \e[38;5;170m170 \e[38;5;171m171 \e[38;5;172m172 \e[38;5;173m173 \e[38;5;174m174 \e[38;5;175m175 \e[m'
+    label '\e[38;5;176m176 \e[38;5;177m177 \e[38;5;178m178 \e[38;5;179m179 \e[38;5;180m180 \e[38;5;181m181 \e[38;5;182m182 \e[38;5;183m183 \e[m'
+    label '\e[38;5;184m184 \e[38;5;185m185 \e[38;5;186m186 \e[38;5;187m187 \e[38;5;188m188 \e[38;5;189m189 \e[38;5;190m190 \e[38;5;191m191 \e[m'
+    label '\e[38;5;192m192 \e[38;5;193m193 \e[38;5;194m194 \e[38;5;195m195 \e[38;5;196m196 \e[38;5;197m197 \e[38;5;198m198 \e[38;5;199m199 \e[m'
+    label '\e[38;5;200m200 \e[38;5;201m201 \e[38;5;202m202 \e[38;5;203m203 \e[38;5;204m204 \e[38;5;205m205 \e[38;5;206m206 \e[38;5;207m207 \e[m'
+    label '\e[38;5;208m208 \e[38;5;209m209 \e[38;5;210m210 \e[38;5;211m211 \e[38;5;212m212 \e[38;5;213m213 \e[38;5;214m214 \e[38;5;215m215 \e[m'
+    label '\e[38;5;216m216 \e[38;5;217m217 \e[38;5;218m218 \e[38;5;219m219 \e[38;5;220m220 \e[38;5;221m221 \e[38;5;222m222 \e[38;5;223m223 \e[m'
+    label '\e[38;5;224m224 \e[38;5;225m225 \e[38;5;226m226 \e[38;5;227m227 \e[38;5;228m228 \e[38;5;229m229 \e[38;5;230m230 \e[38;5;231m231 \e[m'
+    label '\e[38;5;232m232 \e[38;5;233m233 \e[38;5;234m234 \e[38;5;235m235 \e[38;5;236m236 \e[38;5;237m237 \e[38;5;238m238 \e[38;5;239m239 \e[m'
+    label '\e[38;5;240m240 \e[38;5;241m241 \e[38;5;242m242 \e[38;5;243m243 \e[38;5;244m244 \e[38;5;245m245 \e[38;5;246m246 \e[38;5;247m247 \e[m'
+    label '\e[38;5;248m248 \e[38;5;249m249 \e[38;5;250m250 \e[38;5;251m251 \e[38;5;252m252 \e[38;5;253m253 \e[38;5;254m254 \e[38;5;255m255 \e[m'
+
+#### 3-Bit Color
+
+The most classic most basic Colors of a Sh Terminal
+are the eight Named and Numbered Colors of the 3-Bit Tradition
+
+    setpc white  # 7
+    setpc magenta  # 5
+    setpc blue  # 4
+    setpc cyan  # 6
+    setpc green  # 2
+    setpc yellow  # 3
+    setpc red  # 1
+    setpc black  # 0
+
+The 3-Bit Tradition doesn't number these Colors like a Rainbow,
+to fit with the traditions of Physicists and Electronic Engineers.
+The 3-Bit Tradition more numbers these Colors like Business People in the West speak of colors.
+Black is most basic. Red is lots of alarm. Yellow is less alarm. Green is good.
+Cyan and Blue and Magenta are variations. White is bright
+
+These eight Named Colors look something like
+the most extreme Red/ Green/ Blue mixes of the Html 24-Bit Colors
+
+    setpc '#FFffFF'  # White = Red + Green + Blue
+    setpc '#FF00FF'  # Magenta = Red + Blue
+    setpc '#0000FF'  # Blue
+    setpc '#00FFFF'  # Cyan = Green + Blue
+    setpc '#00FF00'  # Green
+    setpc '#FFFF00'  # Yellow = Red + Green
+    setpc '#FF0000'  # Red
+    setpc '#000000'  # Black
+
+These Commands don't work yet, unless you send them without Comments
+
+    setpc '#FFffFF'
+    setpc '#FF00FF'
+    setpc '#0000FF'
+    setpc '#00FFFF'
+    setpc '#00FF00'
+    setpc '#FFFF00'
+    setpc '#FF0000'
+    setpc '#000000'
+
+Tell us that Bug of ours bothers you, and we'll fix it sooner.
+The Colors you get when you ask for Html 24-Bit Colors in this way will change.
+They're not correct now, they're falling back to substitute the 3-Bit Colors
+
+#### Explore 3-Bit, 4-Bit, and 8-Bit Color by Number
+
+You can call for Terminal Colors as above, or
+you can cast more arcane, fiddly, intricate Color Spells such as
 
     write '\e[37m'  # White
     write '\e[35m'  # Magenta
@@ -453,11 +564,6 @@ For example
 
 #### Explore 24-Bit Color in the Cloud
 
-There's a world of Colors out there, and I don't yet know it well.
-One of the websites talking of Sh Terminal Colors is
-
-Wikipedia > [ANSI escape code](https://en.wikipedia.org/wiki/ANSI_escape_code)
-
 Searching with ⌘F 31 will show you
 Wikipedia People talking of ESC[31m, as we did above
 
@@ -467,16 +573,19 @@ from a choice of more than 16 million "24-bit" Colors
 
 For example, inside of a gShell, try
 
-    write '\e[38;2;255;0;0m Red'
-    write '\e[38;2;0;255;0m Green'
-    write '\e[38;2;0;0;255m Blue'
+    write '\e[38;5;196m Red \e[38;2;255;0;0m Red \e[m'
+    write '\e[38;5;46m Green \e[38;2;0;255;0m Green \e[m'
+    write '\e[38;5;21m Blue \e[38;2;0;0;255m Blue \e[m'
 
-This also works inside a replIt Shell.
-This does Not work inside a macOS Shell.
-Perplexity·Ai tells me that limitation is famous.
-That limitation drives people to swap in other Terminals for macOS.
+These 24-bit Colors work inside a gShell and also inside a replIt Shell.
+They do Not work inside a macOS Shell.
+Apple rudely mistakes the 38;2 ask for 24-bit Color as canceling the 38;5 ask for 8-bit Color.
+You can't ask for 8-bit and ask for 24-bit and settle for what you get, not with Apple around.
+You have to discover what to ask for
+
+Perplexity·Ai tells me this limitation is famous.
+This limitation drives people to swap in other Terminals for the default macOS Terminal App from Apple.
 Such as macOS Ghostty or macOS iTerm2
-
 
 
 #### Explore 8-Bit Color at macOS
@@ -571,7 +680,14 @@ Editing your Drawings like this today
 doesn't write the Logo Code that would make the same edits.
 We could come fix that. Just ask us
 
-These Keyboard Shortcuts work at macOS
+We need to write down for us how much works where.
+Here we tell you what we've seen work somewhere,
+but we've lost track of was it working in macOS or gShell or replIt or what
+
+Odds on your ⎋ ⌃ ⌥ ⇧ ⌘ Keys have letters printed on them: esc, control, option, shift, command
+
+Forwarding what the Keyboard says straight into the Terminal Screen can work.
+These Keyboard Shortcuts work like that
 
 | Key Chord | Short Name | Meaning |
 |-----------|------------|---------|
@@ -581,15 +697,32 @@ These Keyboard Shortcuts work at macOS
 | → | column-go-right | Move Right by one Column |
 | Tab | tab-go-right | Move far Right, to next Tab Stop |
 | ⇧Tab | tab-go-left | Move far Left, to next Tab Stop |
+
+When you learn to type the ⎋ Esc Key, then you can try feeding more of the Keyboard into the Screen
+
+| Key Chord | Short Name | Meaning |
+|-----------|------------|---------|
 | ⎋8 | cursor-revert | Jump to far Upper Left, or to last ⎋7 |
 | ⎋7 | cursor-checkpoint | Tell ⎋8 where to go |
+| ⎋[⇧P | chars-delete | Delete the 1 Character beneath the Turtle |
+| ⎋[⇧@ | chars-insert | Slide the Characters past the Turtle to the right by 1 Column |
+| ⎋[⇧M | rows-delete | Lift the Rows below the Turtle up by 1 Row |
+| ⎋[⇧L | rows-insert | Push the Rows below the Turtle down by 1 Row |
+| ⎋['⇧~ | cols-delete | Slide the Columns past the Turtle to the left by 1 Column |
+| ⎋['⇧} | cols-insert | Slide the Columns past the Turtle to the right by 1 Column |
 
-Odds on your ⎋ ⌃ ⌥ ⇧ ⌘ Keys have letters printed on them: esc, control, option, shift, command
+When you learn to type decimal Digits in the middle of these Escape Control Sequences,
+then you can make them more powerful
 
-If you see these working or not working at gShell or replIt, please tell us
+| Key Chord | Short Name | Meaning |
+|-----------|------------|---------|
+| ⎋[321⇧D | ← Left Arrow | Move the Turtle to the left by 321 Columns, but stop at right edge of Screen |
+| ⎋[321⇧A | ↑ Up Arrow | Move the Turtle up by 321 Rows, but stop at top edge of Screen |
+| ⎋[321⇧C | → Right Arrow | Move the Turtle to the right by 321 Columns, but stop at right edge of Screen |
+| ⎋[321⇧B | ↓ Down Arrow | Move the Turtle down by 321 Rows, but stop at bottom edge of Screen |
 
-These Keyboard Shortcuts work at macOS and at replIt.
-But gShell takes ⌃B as a TMux Keyboard Shortcut, so out there
+Beware of gShell.
+gShell takes ⌃B as a TMux Keyboard Shortcut, so out there
 you have to press ← or press ⌃B ⌃B twice to go to the Column at Left of the Turtle
 
 | Key Chord | Short Name | Meaning |
@@ -778,17 +911,10 @@ and we tell our 't.left' to watch for you having said that
 
 Presently, to see all that we abbreviate for you, you can try
 
-    TurtlingDefaults
-    KwByGrunt
-    PythonSpeaker().verb_by_grunt
+    h
+    defaults
 
-This is an act of peeking deep into the guts.
-Odds on, we'll soon dream up some better way to disclose these secrets,
-and this exact spelling of a deep peek into the guts will stop working.
-I'd guess I'll go make typing H and pressing Return inside the 🐢 Chat
-tell you what our Abbreviations are
-
-To remember what defaults you've chosen, you can look at things like
+To remember what defaults you've chosen yourself, you can look at things like
 
     dir()
 
@@ -797,7 +923,7 @@ To remember what defaults you've chosen, you can look at things like
     distance
     left_angle
 
-To undo what you've said, you can try
+To undo your choices of alt defaults, you can try
 
     del distance
     del left_angle
@@ -816,7 +942,7 @@ then we give you the next Color of the Rainbow
 ### Paste whole Files of Input
 
 You can paste larger Turtle Logo Programs
-in to the '🐢? ' Prompt of the Client Window.
+in to the '🐢? ' Prompt of the Chat Window.
 We've not yet worked up a great way to make them more available to you,
 but they are posted out there
 
@@ -913,11 +1039,11 @@ or if you choose a Forward_Distance larger than 100
 Some Turtle Logos will wrap the Cursor at the edges,
 rather than insisting that you always center your drawings yourself.
 As an example of more centering a drawing yourself,
-you can click into the Server Window and press Return after Relaunch,
+you can click into the Drawing Window and press Return after Relaunch,
 but before the Count = and For,
 then you can draw Count as large as 10 in my Terminal today.
 If you watch for it, you can see
-our Client prints "Snap" Messages when your drawing grows too large,
+our Chat Window prints "Snap" Messages when your drawing grows too large,
 such that we clip and distort it
 
 For such Messages coming back from the Turtle to make the most sense,
@@ -937,7 +1063,7 @@ stopping you from playing this game some more?
 Tell us what it is?
 
 Like we could give this game a more game-like feel,
-if we completed a full Python Command every time you pressed a Key at the Server.
+if we completed a full Python Command every time you pressed a Key inside the Drawing Window.
 Or we could rewrite our Arrow Keys Demo to have 4 Turtles draw it, not just 1.
 Or we could figure out how to show the Turtle
 even after you split a gShell Tab
@@ -1011,9 +1137,9 @@ We've got nobody testing Microsoft Windows, but you could change that
 ### Breakpoints
 
 
-#### Breakpoint the Server
+#### Breakpoint the Drawing Window
 
-To halt the Server and open it up inside the Pdb Python Debugger, try
+To halt the Drawing and open it up inside the Pdb Python Debugger, try
 
     🐢? breakpoint
 
@@ -1037,9 +1163,13 @@ because it runs inside 'tty.setraw'
 which is practically never what you want
 
 
-#### Breakpoint the Client
+#### Breakpoint the Chat
 
-To halt the Client and open it up inside the Pdb Python Debugger, press
+Caution: Hey, this doesn't work. Too many people want ⌃C to mean ⌘C Edit > Copy.
+We need to think about this some.
+Please feel free to mention it to us
+
+To halt the Chatting and open it up inside the Pdb Python Debugger, press
 
     ⌃C
 
