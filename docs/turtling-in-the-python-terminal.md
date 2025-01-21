@@ -345,15 +345,17 @@ To get the Turtle to blink on and off,
 you can tell the Turtle to draw just 1 Square Pixel underneath it without moving away,
 in different Colors
 
-Try each of these, but one at a time
+Try each of these, but one at a time. First
 
-    pendown  setpencolor Red  forward 0  tada
+    Restart  PenDown  SetPenColor Red  Forward 0  Tada
 
-    pendown  setpencolor None  forward 0  tada
+And then
 
-    pendown  setpencolor None  write '  '  tada
+    Restart  PenDown  SetPenColor None  Forward 0  Tada
 
-<!-- FIXME: 'PenDown  SetPenColor Red  Forward 0  Tada' should work and doesn't -->
+And then
+
+    Restart  PenDown  SetPenColor None  Write '..'  Tada
 
 If you try one at a time, then you can see the changes
 

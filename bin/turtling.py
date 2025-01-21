@@ -55,7 +55,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.01.20"  # Monday
+__version__ = "2025.01.21"  # Tuesday
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
@@ -2678,9 +2678,7 @@ class PythonSpeaker:
         # todo: cache these to save ~1ms per Input Line
 
         verbs = self.cls_to_verbs(cls)
-
         kws_by_verb = self.cls_to_kws_by_verb(cls)
-
         localname_by_leftside = self.localname_by_leftside()
 
         # Extend Python to accept 'verb.kw =' or 'v.kw =' as meang 'verb_kw =',
@@ -2702,14 +2700,14 @@ class PythonSpeaker:
         # Forward Python unchanged
 
         dedent = textwrap.dedent(text)
+        lede = dedent.partition("#")[0].strip().casefold()
 
-        before_strip = dedent.partition("#")[0].strip()
-        if before_strip not in verbs:
+        title = lede.title()
+        if title in ("False", "None", "True"):
+            pycodes.append(title)
+            return pycodes
 
-            title = before_strip.title()
-            if title in ("False", "None", "True"):
-                pycodes.append(title)
-                return pycodes
+        if lede not in verbs:
 
             pyish = dedent
             pyish = pyish.replace("-", "~")  # accepts '-' as unary op, but refuse as binary op
@@ -2796,10 +2794,11 @@ class PythonSpeaker:
 
             # Require Kw or Verb.Kw at left, with either or both abbreviated or not
 
-            if left not in localname_by_leftside.keys():
+            casefold = left.casefold()
+            if casefold not in localname_by_leftside.keys():
                 return list()
 
-            localname = localname_by_leftside[left]
+            localname = localname_by_leftside[casefold]
 
             # Require a complete Py Literal at right,
             # justifying our .partition("#") and .split(";") above
@@ -2830,14 +2829,22 @@ class PythonSpeaker:
         d = dict()
 
         for key in turtling_defaults.keys():
+
+            # Collect each 'Kw =' as itself
+
             if "_" not in key:
                 assert key not in d.keys(), (key,)
                 d[key] = key  # d['angle'] = 'angle'
 
+                # Collect each 'K =' as abbreviating 'Kw ='
+
                 for kwgrunt, kwkw in kw_by_grunt.items():
                     if kwgrunt != kwkw:
                         if kwkw == key:
+                            assert kwgrunt not in d.keys(), (kwgrunt,)
                             d[kwgrunt] = key  # d['a'] = 'angle'
+
+            # Collect each 'Func_Kw =' as itself
 
             else:
                 assert key not in d.keys(), (key,)
@@ -2845,9 +2852,13 @@ class PythonSpeaker:
 
                 (verb, kw) = key.split("_")  # ('backward', 'distance')
 
+                # Collect each 'Func.Kw =' as abbreviating 'Func_Kw ='
+
                 k = f"{verb}.{kw}"
                 assert k not in d.keys(), (k,)
                 d[k] = key  # d['backward.distance'] = 'backward_distance'
+
+                # Collect each 'Func.K =' as abbreviating 'Func_Kw ='
 
                 for kwgrunt, kwkw in kw_by_grunt.items():
                     if kwgrunt != kwkw:
@@ -2855,6 +2866,8 @@ class PythonSpeaker:
                             k = f"{verb}.{kwgrunt}"
                             assert k not in d.keys(), (k,)
                             d[k] = key  # d['backward.d'] = 'backward_distance'
+
+                # Collect each 'F.Kw =' as abbreviating 'Func_Kw ='
 
                 for vgrunt, vverb in verb_by_grunt.items():
                     assert vgrunt != vverb, (vgrunt, vverb)
@@ -2864,6 +2877,8 @@ class PythonSpeaker:
                         assert k not in d.keys(), (k,)
                         d[k] = key  # d['bk.distance'] = 'backward_distance'
 
+                        # Collect each 'F.K =' as abbreviating 'Func_Kw ='
+
                         for kwgrunt, kwkw in kw_by_grunt.items():
                             if kwgrunt != kwkw:
                                 if kwkw == kw:
@@ -2871,8 +2886,13 @@ class PythonSpeaker:
                                     assert k not in d.keys(), (k,)
                                     d[k] = key  # d['bk.d'] = 'backward_distance'
 
+        for k in d.keys():
+            assert k == k.casefold(), (k, k.casefold())
+
         by_leftside = d
         return by_leftside
+
+        # {a': 'angle', 'arc_angle': 'arc_angle', ...}
 
     def splitpy(self, text) -> list[str]:
         """Split 1 Text into its widest parseable Py Expressions from the Left"""
@@ -2962,7 +2982,9 @@ class PythonSpeaker:
         strip = py.strip()
         strip = strip.replace(r"\e", r"\x1B")  # replace r'\e' a bit too often
 
+        casefold = strip.casefold()
         title = strip.title()
+
         if title in ("False", "None", "True"):
             return title
 
@@ -2972,7 +2994,7 @@ class PythonSpeaker:
 
         except ValueError:
 
-            if strip in verbs:
+            if casefold in verbs:
                 return ""
 
             pyrepr = self.pyrepr(strip)  # converts to Str Lit from undefined Name
@@ -2998,15 +3020,15 @@ class PythonSpeaker:
         held_pycodes = self.held_pycodes
 
         strip_0 = pystrips[0]
-        funcname = strip_0
+        casefold = strip_0.casefold()
 
         args = list(_.replace(r"\e", r"\x1B") for _ in pystrips[1:])
 
-        if strip_0 in verbs:
-            if strip_0 in verb_by_grunt:  # unabbreviates the Verb, if need be
-                verb = verb_by_grunt[strip_0]
-            else:
-                verb = strip_0
+        funcname = casefold
+        if casefold in verbs:
+            verb = casefold
+            if casefold in verb_by_grunt:  # unabbreviates the Verb, if need be
+                verb = verb_by_grunt[casefold]
 
             funcname = "t." + verb
 
@@ -3189,7 +3211,7 @@ class PythonSpeaker:
 
     verb_by_grunt = byo_verb_by_grunt | py_verb_by_grunt | ucb_verb_by_grunt
 
-    fgrunts = sorted(
+    fgrunts = sorted(  # rejects contradictory grunt definitions
         list(byo_verb_by_grunt.keys())
         + list(py_verb_by_grunt.keys())
         + list(ucb_verb_by_grunt.keys())
@@ -3207,6 +3229,9 @@ class PythonSpeaker:
         grunt_verbs = list(verb_by_grunt.values())
 
         verbs = sorted(set(funcnames + grunts + grunt_verbs))
+
+        for v in verbs:
+            assert v == v.casefold(), (v, v.casefold())
 
         return verbs
 
@@ -3226,6 +3251,10 @@ class PythonSpeaker:
 
             verb = funcname
             kws_by_verb[verb] = kws
+
+            assert verb == verb.casefold(), (verb, verb.casefold())
+            for kw in kws:
+                assert kw == kw.casefold(), (kw, kw.casefold())
 
         return kws_by_verb
 
