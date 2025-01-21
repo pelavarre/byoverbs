@@ -61,6 +61,8 @@ DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
 Turtle_ = unicodedata.lookup("Turtle")  # 🐢 U+01F422
 
+PlainBold = "\x1B[m" "\x1B[1m"  # Plain but Bold
+
 
 if not __debug__:
     raise NotImplementedError(str((__debug__,)))  # "'python3' is better than 'python3 -O'"
@@ -1502,7 +1504,7 @@ class Turtle:
 
     heading: float  # stride direction
 
-    penscape: str  # setup written before punching a mark  # '\x1B[m'
+    penscape: str  # setup written before punching a mark
     penmark: str  # mark to punch at each step
     warping: bool  # moving without punching pen up, else punching while moving pen down
     hiding: bool  # hiding the Turtle, else showing the Turtle
@@ -1540,7 +1542,7 @@ class Turtle:
 
         self.heading = 360e0  # 360° of North Up Clockwise
 
-        self.penscape = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)  # "" Clear
+        self.penscape = PlainBold
         self.penmark = 2 * FullBlock  # ██
         self.warping = False  # todo: imply .isdown more clearly
         self.hiding = False
@@ -2005,12 +2007,12 @@ class Turtle:
 
         floatish = isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
         if color is None:
-            penmode1 = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
+            penmode1 = PlainBold
         elif floatish or isinstance(color, decimal.Decimal):
             penmode1 = self._rgb_to_penmode_(rgb=int(color))
         elif isinstance(color, str):
             if color.casefold() == "None".casefold():
-                penmode1 = "\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR)
+                penmode1 = PlainBold
             else:
                 penmode1 = self._colorname_to_penmode_(colorname=color)
         else:
