@@ -13,6 +13,9 @@ should work like:  cv
 giw Lock
 could mean:  |grep '\<'Lock'\>'
 
+dt
+should not write Stdout
+
 ## Copied from
 
 Posted as:  https://github.com/pelavarre/byoverbs/blob/main/futures.md<br>

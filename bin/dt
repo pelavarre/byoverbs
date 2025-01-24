@@ -1,4 +1,4 @@
-(set -xe; date && time "$@")
+(set -xe; date >&2 && time "$@")
 rc=$?
-echo + exit $rc
+echo + exit $rc >&2
 exit $rc
