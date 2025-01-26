@@ -453,7 +453,7 @@ Try this test of five different kinds of Terminal Color
     SetPenColor 24 4.6  Arc 45  SetPenColor "802B00" 8  Arc  45
     SetPenColor 24 4.6  Arc 45  SetPenColor "802B00" 8  Arc  45
 
-    Tada
+    Restart Tada
 
 The 24-Bit Colors fail inside the 2024/Oct macOS Sequoia Terminal App. They come out as Black
 

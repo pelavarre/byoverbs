@@ -3826,13 +3826,12 @@ class TurtlingServer:
         if self.kchord_edit_like_macos(kchord):
             return kchord
 
-        # (kbytes, kstr) = kchord  # FIXME: paste Drawings back into place
-        # if kstr == "⌃J":
-        #     if len(kchords) > 1:
-        #         (kbytes, kstr) = kchord[-2]
-        #         if kstr != "Return":
-        #             gt.schars_write("\r\n")
-        #             return kchord
+        (kbytes, kstr) = kchord
+        if kstr == "Return":
+            gt.schars_write("\r\n")
+            return kchord
+
+            # todo: trust .kchord_edit_like_macos. to help paste Text Lines
 
         gt.kchord_write_kbytes_else_print_kstr(kchord)
 
