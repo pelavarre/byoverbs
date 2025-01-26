@@ -35,6 +35,7 @@ import math
 import os
 import pathlib
 import pdb
+import platform  # platform.system() 'Darwin' often lacks 24-Bit Terminal Color
 import re  # 're.fullmatch' since Mar/2014 Python 3.4
 import select  # Windows sad at 'select.select' of Named Pipes
 import shlex
@@ -61,7 +62,9 @@ DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
 Turtle_ = unicodedata.lookup("Turtle")  # 🐢 U+01F422
 
-PlainBold = "\x1B[m" "\x1B[1m"  # Plain but Bold
+PlainBold = ["\x1B[m", "\x1B[1m"]  # Plain but Bold
+
+COLOR_ACCENTS = (None, 3, 4, 4.6, 8, 24)  # Bits of Terminal Color (4.6 for 25-Step Grayscale)
 
 
 if not __debug__:
@@ -1422,6 +1425,9 @@ def _turtling_defaults_choose_() -> dict:
 
     d = dict(
         #
+        accent=None,
+        setpencolor_accent=None,
+        #
         angle=0,
         arc_angle=90,
         left_angle=45,
@@ -1509,7 +1515,7 @@ class Turtle:
 
     heading: float  # stride direction
 
-    penscape: str  # setup written before punching a mark
+    penscapes: list[str]  # setup written before punching a mark
     penmark: str  # mark to punch at each step
     warping: bool  # moving without punching pen up, else punching while moving pen down
     hiding: bool  # hiding the Turtle, else showing the Turtle
@@ -1522,6 +1528,8 @@ class Turtle:
             gt = GlassTeletype()
             gt.__enter__()
         gt = glass_teletypes[-1]
+
+        self.penscapes = list()
 
         exec_locals = dict()
         if turtling_servers:
@@ -1539,6 +1547,7 @@ class Turtle:
         """Clear the Turtle's Settings, but without writing the Screen"""
 
         self.exec_locals.clear()
+        self.penscapes.clear()
 
         self.xfloat = 0e0
         self.yfloat = 0e0
@@ -1547,7 +1556,7 @@ class Turtle:
 
         self.heading = 360e0  # 360° of North Up Clockwise
 
-        self.penscape = PlainBold
+        self.penscapes.extend(PlainBold)
         self.penmark = 2 * FullBlock  # ██
         self.warping = False  # todo: imply .isdown more clearly
         self.hiding = False
@@ -1616,7 +1625,7 @@ class Turtle:
         self.home()
 
         self.pendown()
-        self.setpencolor(color=None)
+        self.setpencolor(color=None, accent=None)  # todo: do we want optional 'accent='?
 
         self._reinit_()
 
@@ -1638,7 +1647,7 @@ class Turtle:
             "xfloat": self.xfloat,
             "yfloat": self.yfloat,
             "heading": self.heading,
-            "penscape": self.penscape,
+            "penscapes": self.penscapes,
             "penmark": self.penmark,
             "warping": self.warping,
             "hiding": self.hiding,
@@ -2024,113 +2033,211 @@ class Turtle:
 
         # PyTurtle Speed chooses 1..10 for faster animation, reserving 0 for no animation
 
-    def setpencolor(self, color) -> dict:
-        """Add a word of what Color to draw with (SETPC for short)"""
+    def setpencolor(self, color, accent) -> dict:
+        """Take a number, two numbers, or some words as the Color to draw with (SETPC for short)"""
+
+        assert COLOR_ACCENTS == (None, 3, 4, 4.6, 8, 24)
+        assert accent in (None, 3, 4, 4.6, 8, 24), (accent,)
 
         gt = self.glass_teletype
+        penscapes = self.penscapes
 
-        if color is None:
-            penscape = PlainBold
-        elif isinstance(color, str):
-            penscape = self._color_to_penscape_(color)
-        else:
-            floatish = isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
-            raise NotImplementedError(type(color), color, dict(floatish=floatish))
+        # Start over, but defer change until returning without Exception
 
-        gt.schars_write(penscape)
+        penscapes_ = list(penscapes)
+        penscapes_[::] = PlainBold
 
-        self.penscape = penscape
+        # Take a number, two numbers, or some words
 
-        d = dict(penscape=self.penscape)
+        if color is not None:
+            if isinstance(color, str):
+                self._penscapes_take_words_(penscapes_, color, accent=accent)
+            else:
+                floatish = (
+                    isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
+                )
+                if floatish:  # todo: or isinstance(color, decimal.Decimal):
+                    self._penscapes_take_numbers_(penscapes_, color, accent=accent)
+                else:
+                    raise NotImplementedError(type(color), type(accent), color, accent, floatish)
+
+        # Accept the change, and catch up the Terminal
+
+        penscapes[::] = penscapes_
+        gt.schars_write("".join(penscapes_))
+
+        d = dict(penscapes=penscapes_)
         return d
 
         # todo: Scratch Change-Pen-Color-By-10
 
-    def _color_to_penscape_(self, color) -> str:
-        """Form an Escape Control Sequence out of a string of Color Words"""
+    def _platform_color_accent_(self) -> int:
+        """Guess which Color Accent works best in this Terminal"""
 
-        penscape = self.penscape
+        # Find 8-bit macOS Terminal Color at 'Darwin' 'xterm-256color' without $COLORTERM
 
-        scape_by_split = dict(
-            #
-            bold="\x1B[1m",
-            invert="\x1B[7m",
-            reverse="\x1B[7m",
-            #
-            white="\x1B[37m",  # 3-Bit Color
-            magenta="\x1B[35m",
-            blue="\x1B[34m",
-            cyan="\x1B[36m",
-            green="\x1B[32m",
-            yellow="\x1B[33m",
-            red="\x1B[31m",
-            black="\x1B[30m",
-        )
+        if platform.system() == "Darwin":
+            if "TERM" in os.environ.keys():
+                env_term = os.environ["TERM"]
+                if env_term == "xterm-256color":
+                    if "COLORTERM" not in os.environ.keys():
+                        return 8
 
-        scape_by_split["#FFffFF".casefold()] = "\x1B[37m"  # White
-        scape_by_split["#FF00FF".casefold()] = "\x1B[35m"  # Magenta
-        scape_by_split["#0000FF".casefold()] = "\x1B[34m"  # Blue
-        scape_by_split["#00FFFF".casefold()] = "\x1B[36m"  # Cyan
-        scape_by_split["#00FF00".casefold()] = "\x1B[32m"  # Green
-        scape_by_split["#FFFF00".casefold()] = "\x1B[33m"  # Yellow
-        scape_by_split["#FF0000".casefold()] = "\x1B[31m"  # Red
-        scape_by_split["#000000".casefold()] = "\x1B[30m"  # Black
+                    # Or with empty $COLORTERM
 
-        defined_color_words = list(_.title() for _ in scape_by_split.keys())
+                    env_colorterm = os.environ["COLORTERM"]
+                    if not env_colorterm:
+                        return 8
+
+        # Else guess 24-bit Html Color
+
+        return 24
+
+        # 8 at macOS TERM=xterm-256color .system='Darwin'
+        # 24 at gShell TERM=screen .system='Linux'
+        # 24 at replIt TERM=xterm-256color .system='Linux'
+
+        # todo: save how much time by cacheing 'def _platform_color_accent_' per Process?
+
+    def _penscapes_take_numbers_(self, penscapes, color, accent) -> None:
+        """Choose Color by Number"""
+
+        color = int(color)
+
+        platform_accent = self._platform_color_accent_()
+        accent_ = platform_accent if (accent is None) else accent
+        assert COLOR_ACCENTS == (None, 3, 4, 4.6, 8, 24)
+        assert accent_ in (3, 4, 4.6, 8, 24), (accent,)
+
+        if accent == 4.6:
+            assert 0 <= color < 25, (color, accent_, accent)
+        else:
+            assert 0 <= color < (1 << accent_), (color, accent_, accent)
+
+        if accent_ == 3:
+
+            penscapes.append(f"\x1B[{30 + color}m")  # 3-Bit Color
+
+        elif accent_ == 4:
+
+            if color < 8:
+                penscapes.append(f"\x1B[{90 + color}m")  # second half of 4-Bit Color
+            else:
+                penscapes.append(f"\x1B[{30 + color}m")  # first half of 4-Bit Color
+
+        elif accent == 4.6:
+
+            if color < 24:
+                penscapes.append(f"\x1B[38;5;{232 + color}m")
+            else:
+                assert color == 24, (color, accent, accent_)
+                penscapes.append(f"\x1B[38;5;{232 - 1}m")  # 231 8-Bit Color R G B = Max 5 5 5
+
+        elif accent == 8:
+
+            penscapes.append(f"\x1B[38;5;{color}m")
+
+        else:
+
+            assert accent == 24, (color, accent_, accent)
+
+            r = (color >> 16) & 0xFF
+            g = (color >> 8) & 0xFF
+            b = color & 0xFF
+
+            penscapes.append(f"\x1B[38;2;{r};{g};{b}m")  # 24-Bit R:G:B Color
+
+    def _penscapes_take_words_(self, penscapes, color, accent) -> None:
+        """Choose Color by a Sequence of Words"""
+
+        # Take one Word at a time
 
         splits = color.split()
         for split in splits:
             casefold = split.casefold()
 
-            if casefold == "None".casefold():
-                penscape = PlainBold
-            elif casefold == "Plain".casefold():
-                penscape = "\x1B[m"
+            # Define words for Plain \e[m and Bold \e[1m
+            # Do define Reversed \e[7m, but don't define Unreversed \e[27m
+            # Choose words for Inverted from 'Reverse video (or invert video or inverse video or reverse screen)'
+            # Disregard the .accent
 
-            elif casefold not in scape_by_split.keys():
-                raise KeyError(f"{split!r} not in {defined_color_words}")
+            if casefold == "bold":
+                penscapes.append("\x1B[1m")
+                continue
+            if casefold in ("None".casefold(), "plain"):
+                penscapes.clear()
+                penscapes.append("\x1B[m")
+                continue
+            if casefold == "reverse":  # Python defines an unrelated 'list.reverse'
+                penscapes.append("\x1B[7m")
+                continue
 
-            else:
-                penscape += scape_by_split[casefold]
+            # Take any of the 8 smallest Color Words
 
-        return penscape
+            if casefold in self._number_by_word_.keys():
+                number = self._number_by_word_[casefold]
 
-    _rgb_by_title_ = {
-        "White": 0xFFFFFF,
-        "Magenta": 0xFF00FF,  # todo: Terminals disagree over how pure these are
-        "Blue": 0x0000FF,
-        "Cyan": 0x00FFFF,
-        "Green": 0x00FF00,
-        "Yellow": 0xFFFF00,
-        "Red": 0xFF0000,
-        "Black": 0x000000,
-    }
+                assert accent in (None, 3, 4), (accent, split, color)
+                if accent != 4:
+                    self._penscapes_take_numbers_(penscapes, color=number, accent=3)
+                else:
+                    self._penscapes_take_numbers_(penscapes, color=number, accent=4)
+                continue
 
-    _ansi_by_rgb_ = {  # CSI 06/13 Select Graphic Rendition (SGR)  # 30+ Display Foreground Color
-        0xFFFFFF: "\x1B[37m",  # White
-        0xFF00FF: "\x1B[35m",  # Magenta
-        0x0000FF: "\x1B[34m",  # Blue
-        0x00FFFF: "\x1B[36m",  # Cyan
-        0x00FF00: "\x1B[32m",  # Green
-        0xFFFF00: "\x1B[33m",  # Yellow
-        0xFF0000: "\x1B[31m",  # Red
-        0x000000: "\x1B[30m",  # Black
-    }
+            # Take 24-bit Html Hexadecimal 6 or 7 Character Color Strings
 
-    def _colorname_to_penmode_(self, colorname) -> str:
+            if casefold.strip("#0123456789abcdef") == "":
+                if "#" not in casefold:
+                    casefold = "#" + casefold
 
-        title = colorname.title()
-        colornames = sorted(_.title() for _ in self._rgb_by_title_.keys())
-        if title not in self._rgb_by_title_.keys():
-            raise KeyError(f"{colorname!r} not in {colornames}")
+                platform_accent = self._platform_color_accent_()
+                accent_ = platform_accent if (accent is None) else accent
+                assert accent_ in (8, 24), (accent_,)
 
-        rgb = self._rgb_by_title_[title]
-        penscape = self._ansi_by_rgb_[rgb]
-        return penscape
+                m = re.match(
+                    r"#([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])", string=casefold
+                )
+                assert m, (accent, split, color, "not found in #000000 .. #FFffFF")
 
-    def _rgb_to_penmode_(self, rgb) -> str:
-        penscape = self._ansi_by_rgb_[rgb]
-        return penscape
+                r = int(m.group(1), 0x10)
+                g = int(m.group(2), 0x10)
+                b = int(m.group(3), 0x10)
+
+                if accent_ == 24:
+                    number = (r << 16) + (g << 8) + b
+                else:
+                    assert accent_ == 8, (accent, split, color)
+
+                    r_ = int(r * 6 / 0x100)
+                    g_ = int(g * 6 / 0x100)
+                    b_ = int(b * 6 / 0x100)
+
+                    number = 16 + (r_ * 36) + (g_ * 6) + b_
+
+                self._penscapes_take_numbers_(penscapes, color=number, accent=accent_)
+
+                continue
+
+            # Accept Control Character Sequences
+
+            controls = any(unicodedata.category(_).startswith("C") for _ in split)
+            assert controls, (accent, split, color)
+
+            penscapes.append(split)
+            continue
+
+        # todo: drop dupes?
+
+    _number_by_word_ = dict(
+        black=0,
+        red=1,
+        yellow=3,
+        green=2,
+        cyan=6,
+        blue=4,
+        magenta=5,
+        white=7,
+    )
 
     assert TurtlingDefaults["setpenpunch_mark"] == "██", (TurtlingDefaults,)
 
@@ -2661,8 +2768,8 @@ def sethertz(hertz) -> dict:
     return turtle_demand().sethertz(hertz)
 
 
-def setpencolor(color) -> dict:
-    return turtle_demand().setpencolor(color)
+def setpencolor(color, accent) -> dict:
+    return turtle_demand().setpencolor(color, accent)
 
 
 def setpenpunch(ch) -> dict:
@@ -3112,11 +3219,11 @@ class PythonSpeaker:
             for i in range(len(args), len(args_kws)):
                 kw = args_kws[i]
 
-                arg_else = self.kw_to_arg_else(kw, verb=verb)
-                if arg_else is None:
+                (chosen, value) = self.kw_to_chosen_arg(kw, verb=verb)
+                if not chosen:
                     break
 
-                arg = arg_else
+                arg = value
 
                 pyrepr = self.pyrepr(arg)
                 argpy = f"{kw}={pyrepr}" if i else pyrepr
@@ -3138,7 +3245,7 @@ class PythonSpeaker:
 
         return pyline
 
-    def kw_to_arg_else(self, kw, verb) -> object | None:
+    def kw_to_chosen_arg(self, kw, verb) -> tuple[bool, object | None]:
         """Fetch a default Value for the Kw Arg of the Verb, else return None"""
 
         # Fetch Values suggested for KwArgs
@@ -3153,11 +3260,11 @@ class PythonSpeaker:
             for k in (f"{verb}_{kw}", f"{kw}"):  # ('backward_distance', 'distance')
                 if k in space.keys():
                     arg = space[k]
-                    return arg
+                    return (True, arg)
 
         # Else fail
 
-        return None
+        return (False, None)
 
     def pyrepr(self, obj) -> str:
         """Work like Repr, but end Float Ints with an 'e0' mark in place of '.0'"""

@@ -19,6 +19,7 @@ Contents
     - [Tina's Giraffe](#tinas-giraffe)
     - [Light up the Turtle](#light-up-the-turtle)
   - [Draw Circles and parts of Circles](#draw-circles-and-parts-of-circles)
+  - [Color by Number or Color by Words](#color-by-number-or-color-by-words)
   - [Explore More Colors](#explore-more-colors)
     - [3-Bit Color](#3-bit-color)
     - [Explore 3-Bit, 4-Bit, and 8-Bit Color by Number](#explore-3-bit-4-bit-and-8-bit-color-by-number)
@@ -349,6 +350,7 @@ in different Colors
 
 Try each of these, but one at a time. First
 
+    Relaunch
     Restart  PenDown  SetPenColor Red  Forward 0  Tada
 
 And then
@@ -420,6 +422,48 @@ To draw a Large Arc as a Repeat of Forward Right
 
     relaunch
     repeat 25 90 10
+
+
+### Color by Number or Color by Words
+
+Try this test of five different kinds of Terminal Color
+
+    Relaunch
+
+    Restart  Right 0    SetPenColor Red  Forward  # 3-Bit Color
+    Restart  Right 15   SetPenColor Red 4  Forward  # 4-Bit Color
+    Restart  Right 30   SetPenColor "FF0000" 8  Forward  # 8-Bit Color
+    Restart  Right 45   SetPenColor "FF0000" 24  Forward  # 24-Bit Color
+
+    Restart  Right 60   SetPenColor Green  Forward  # 3-Bit Color
+    Restart  Right 75   SetPenColor Green 4  Forward  # 4-Bit Color
+    Restart  Right 90   SetPenColor "00FF00" 8  Forward  # 8-Bit Color
+    Restart  Right 105  SetPenColor "00FF00" 24  Forward  # 24-Bit Color
+
+    Restart  Right 120  SetPenColor Blue  Forward  # 3-Bit Color
+    Restart  Right 135  SetPenColor Blue 4  Forward  # 4-Bit Color
+    Restart  Right 150  SetPenColor "0000FF" 8  Forward  # 8-Bit Color
+    Restart  Right 165  SetPenColor "0000FF" 24  Forward  # 24-Bit Color
+
+    Restart  Right 180  SetPenColor 0 4.6  Forward  # 25-Step Grayscale
+    Restart  Right 195  SetPenColor 8 4.6  Forward
+    Restart  Right 210  SetPenColor 16 4.6  Forward
+
+    Restart  Right 90
+    SetPenColor 24 4.6  Arc 45  SetPenColor "802B00" 8  Arc  45
+    SetPenColor 24 4.6  Arc 45  SetPenColor "802B00" 8  Arc  45
+
+The 24-Bit Colors fail inside the 2024/Oct macOS Sequoia Terminal App. They come out as Black
+
+I think I do like this way of teaching a Python Logo Turtle to speak of Terminal Colors.
+However, it's very new to me: I dreamed it up 25/Jan/2025.
+
+While I was lost and struggling to dream up some good way for Turtles to speak of Colors,
+I wrote many too many words of English about this puzzle.
+We've got all those many words thrown at you below.
+You can page over the too many words for now, till I make time to improve them.
+Or you can work on making sense of them, help me improve them.
+I'm sorry they're such a mess so far
 
 
 ### Explore More Colors
@@ -518,29 +562,37 @@ Cyan and Blue and Magenta are variations. White is bright
 These eight Named Colors look something like
 the most extreme Red/ Green/ Blue mixes of the Html 24-Bit Colors
 
-    setpc '#FFffFF'  # White = Red + Green + Blue
-    setpc '#FF00FF'  # Magenta = Red + Blue
-    setpc '#0000FF'  # Blue
-    setpc '#00FFFF'  # Cyan = Green + Blue
-    setpc '#00FF00'  # Green
-    setpc '#FFFF00'  # Yellow = Red + Green
-    setpc '#FF0000'  # Red
-    setpc '#000000'  # Black
+    Relaunch
 
-These Commands don't work yet, unless you send them without Comments
+    Restart  Right 0    SetPenColor 'FFffFF'  Forward  # White = Red + Green + Blue
+    Restart  Right 15    SetPenColor 'FF80FF'  Forward
+    Restart  Right 30   SetPenColor 'FF00FF'  Forward  # Magenta = Red + Blue
+    Restart  Right 45   SetPenColor '8000FF'  Forward
+    Restart  Right 60   SetPenColor '0000FF'  Forward  # Blue
+    Restart  Right 75   SetPenColor '0080FF'  Forward
+    Restart  Right 90   SetPenColor '00FFFF'  Forward  # Cyan = Green + Blue
+    Restart  Right 105  SetPenColor '00FF80'  Forward
 
-    setpc '#FFffFF'
-    setpc '#FF00FF'
-    setpc '#0000FF'
-    setpc '#00FFFF'
-    setpc '#00FF00'
-    setpc '#FFFF00'
-    setpc '#FF0000'
-    setpc '#000000'
+    Restart  Right 120  SetPenColor '00FF00'  Forward  # Green
+    Restart  Right 135  SetPenColor '80FF00'  Forward
+    Restart  Right 150  SetPenColor 'FFFF00'  Forward  # Yellow = Red + Green
+    Restart  Right 165  SetPenColor 'FF8000'  Forward
+    Restart  Right 180  SetPenColor 'FF0000'  Forward  # Red
+    Restart  Right 195  SetPenColor '800000'  Forward
+    Restart  Right 210  SetPenColor '000000'  Forward  # Black
+    Restart  Right 225s  SetPenColor '808080'  Forward
 
-Tell us that Bug of ours bothers you, and we'll fix it sooner.
-The Colors you get when you ask for Html 24-Bit Colors in this way will change.
-They're not correct now, they're falling back to substitute the 3-Bit Colors
+Presently, Commands like these don't work if you mix
+a ) the conventional Html '#' Hash Mark inside the two ' Quote Marks
+b ) a trailing # Comment on the Command
+
+Tell us that Bug of ours bothers you, and we'll fix it sooner
+
+When you don't explicitly spell out your choice of Accent to speak with Color,
+you get our default, often 8 or 24.
+If you dislike our default, please tell us.
+We're trying to guess what Accent works best for you in your Terminal
+
 
 #### Explore 3-Bit, 4-Bit, and 8-Bit Color by Number
 
@@ -560,7 +612,7 @@ If you dig down into the deep magic like that,
 then you can swap in deeper magic.
 For example
 
-    write '\e[38;5;130m'  # Orange
+    write '\e[38;5;130m'  # Orange  # SetPenColor "802B00" 8
 
 #### Explore 24-Bit Color in the Cloud
 
