@@ -16,6 +16,12 @@ could mean:  |grep '\<'Lock'\>'
 dt
 should not write Stdout
 
+$ qla --numstat |grep '^[0-9]'|head
+++ git log --pretty=fuller --no-decorate --numstat
+lost --author ??
+$ qla -p
+same bug
+
 ## Copied from
 
 Posted as:  https://github.com/pelavarre/byoverbs/blob/main/futures.md<br>

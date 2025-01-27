@@ -1009,7 +1009,7 @@ class StrTerminal:
         # Show more Key Caps than US-Ascii mentions
 
         if ch in kcap_by_kchars.keys():  # Mac US Key Caps for Spacebar, F12, etc
-            s = kcap_by_kchars[ch]
+            s = kcap_by_kchars[ch]  # '⌃Spacebar', 'Return', 'Delete', etc
 
         elif ch in option_kstr_by_1_kchar.keys():  # Mac US Option Accents
             s = option_kstr_by_1_kchar[ch]
@@ -1020,9 +1020,21 @@ class StrTerminal:
         # Show the Key Caps of US-Ascii, plus the ⌃ ⇧ Control/ Shift Key Caps
 
         elif (o < 0x20) or (o == 0x7F):  # C0 Control Bytes, or \x7F Delete (DEL)
-            s = "⌃" + chr(o ^ 0x40)  # '⌃@' from b'\x00'
+            s = "⌃" + chr(o ^ 0x40)  # '^ 0x40' speaks of ⌃ with one of @ A..Z [\]^_ ?
+
+            # '^ 0x40' speaks of ⌃@ but not ⌃⇧@ and not ⌃⇧2 and not ⌃Spacebar at b"\x00"
+            # '^ 0x40' speaks of ⌃M but not Return at b"\x0D"
+            # '^ 0x40' speaks of ⌃[ ⌃\ ⌃] ⌃_ but not ⎋ and not ⌃⇧_ and not ⌃⇧{ ⌃⇧| ⌃⇧} ⌃-
+            # '^ 0x40' speaks of ⌃? but not Delete at b"\x7F"
+
+            # ^` ^2 ^6 ^⇧~ don't work
+
+            # todo: can we more quickly decide that ⌃[ is only ⎋ by itself not continued?
+            # todo: should we push ⌃- above ⌃⇧_
+
         elif "A" <= ch <= "Z":  # printable Upper Case English
             s = "⇧" + chr(o)  # shifted Key Cap '⇧A' from b'A'
+
         elif "a" <= ch <= "z":  # printable Lower Case English
             s = chr(o ^ 0x20)  # plain Key Cap 'A' from b'a'
 
@@ -2123,7 +2135,7 @@ class Turtle:
             if color < 8:
                 penscapes.append(f"\x1B[{90 + color}m")  # second half of 4-Bit Color
             else:
-                penscapes.append(f"\x1B[{30 + color}m")  # first half of 4-Bit Color
+                penscapes.append(f"\x1B[{30 + color - 8}m")  # first half of 4-Bit Color
 
         elif accent == 4.6:
 
@@ -3773,7 +3785,7 @@ class TurtlingServer:
         writer.pid_create_dir_once(pid)
         writer.create_mkfifo_once(pid)
 
-        st.schars_print(f"Drawing with Pixels as Process {pid} till you press ⌃W")
+        st.schars_print(f"Drawing with Pixels as Process {pid} till you press ⌃\\")
 
         reader_fd = -1
         while True:
@@ -3795,7 +3807,7 @@ class TurtlingServer:
 
             if bt_fd in select_:
                 kchord = self.keyboard_serve_one_kchord()
-                if kchord[-1] in ("⌃W",):
+                if kchord[-1] in ("⌃\\",):
                     t = Turtle()
                     t.bye()
                     break
