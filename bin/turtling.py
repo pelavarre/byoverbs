@@ -56,7 +56,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.01.21"  # Tuesday
+__version__ = "2025.01.31"  # Friday
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
