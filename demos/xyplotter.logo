@@ -44,6 +44,9 @@ sethertz 22  setxy -192 -140
 restart tada
 
 
+# todo: You have to watch too closely to see the deceleration/ acceleration happen
+
+
 # print("pu")
 # once = False
 # for y in reversed(range(-230, 230 + 1, 10)):
