@@ -56,7 +56,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.01.31"  # Friday
+__version__ = "2025.2.1"  # Saturday
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
@@ -1517,8 +1517,8 @@ TurtlingDefaults = _turtling_defaults_choose_()
 class Turtle:
     """Chat with 1 Logo Turtle"""
 
-    glass_teletype: GlassTeletype
-    exec_locals: dict  #
+    glass_teletype: GlassTeletype  # where this Turtle draws
+    namespace: dict  # variables of this Turtle, sometimes shared with others
 
     xfloat: float  # sub-pixel horizontal x-coordinate position
     yfloat: float  # sub-pixel vertical y-coordinate position
@@ -1543,13 +1543,13 @@ class Turtle:
 
         self.penscapes = list()
 
-        exec_locals = dict()
+        namespace = dict()
         if turtling_servers:
             turtling_server = turtling_servers[-1]
-            exec_locals = turtling_server.exec_locals
+            namespace = turtling_server.namespace
 
         self.glass_teletype = gt
-        self.exec_locals = exec_locals
+        self.namespace = namespace
 
         self._reinit_()
 
@@ -1558,7 +1558,7 @@ class Turtle:
     def _reinit_(self) -> None:
         """Clear the Turtle's Settings, but without writing the Screen"""
 
-        self.exec_locals.clear()
+        self.namespace.clear()
         self.penscapes.clear()
 
         self.xfloat = 0e0
@@ -1577,7 +1577,7 @@ class Turtle:
 
         # macOS Terminal Sh Launch/ Quit doesn't clear the Graphic Rendition, Cursor Style, etc
 
-    def breakpoint(self) -> None:
+    def _breakpoint_(self) -> None:
         """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
 
         gt = self.glass_teletype
@@ -1753,16 +1753,16 @@ class Turtle:
 
         # 'def beep' not found in PyTurtle
 
-    def exec(self, text) -> None:
+    def _exec_(self, text) -> None:
         """Exec a Logo Turtle Text"""
 
         globals_ = globals()
-        exec_locals = self.exec_locals
+        locals_ = self.namespace
 
         ps = PythonSpeaker()
         pycodes = ps.text_to_pycodes(text, cls=Turtle)
         for pycode in pycodes:
-            exec_strict(pycode, globals_, exec_locals)
+            exec_strict(pycode, globals_, locals_)
 
     assert TurtlingDefaults["forward_distance"] == 100, (TurtlingDefaults,)
 
@@ -1924,7 +1924,7 @@ class Turtle:
 
         # Scratch Turn-CCW-15-Degrees
 
-    def mode(self, hints) -> dict:
+    def _mode_(self, hints) -> dict:
         """Choose a dialect of the Logo Turtle Language"""
 
         if hints is None:
@@ -2668,7 +2668,7 @@ turtles = list()
 #
 #   note: Server Eval/ Exec of 'alef(bet, gimel)' runs as 'turtling.alef(bet, gimel)'
 #
-#   todo: solve 'turtling.breakpoint()' and 'turtling.exec'
+#   todo: solve 'turtling._breakpoint_' and 'turtling._exec_'
 #
 
 
@@ -2753,7 +2753,7 @@ def left(angle) -> dict:
 
 
 def mode(hints) -> dict:
-    return turtle_demand().mode(hints)
+    return turtle_demand()._mode_(hints)
 
 
 def pendown() -> dict:
@@ -2844,12 +2844,12 @@ class PythonSpeaker:
     """Auto-complete Turtle Logo Sourcelines to run as Python"""
 
     held_pycodes: list[str]  # leftover Py Codes from an earlier Text
-    exec_locals: dict  # cloned from remote TurtlingServer  # with local TurtlingServer
+    namespace: dict  # cloned from remote TurtlingServer  # with local TurtlingServer
 
     def __init__(self) -> None:
 
         self.held_pycodes = list()
-        self.exec_locals = dict()
+        self.namespace = dict()
 
     #
     # Auto-complete Turtle Logo Sourcelines to run as Python
@@ -2880,10 +2880,10 @@ class PythonSpeaker:
             pycodes.extend(kw_text_pycodes)
             return pycodes
 
-        # Take 'breakpoint()' as meaning 't.breakpoint()' not 'breakpoint();pass'
+        # Take 'breakpoint()' as meaning 't._breakpoint_()' not 'breakpoint();pass'
 
         if re.fullmatch(r"breakpoint *[(] *[)] *", string=text):
-            pycodes.append("t.breakpoint()")
+            pycodes.append("t._breakpoint_()")
             return pycodes
 
         # Forward Python unchanged
@@ -3263,12 +3263,12 @@ class PythonSpeaker:
         # Fetch Values suggested for KwArgs
 
         turtling_defaults = TurtlingDefaults
-        exec_locals = self.exec_locals
+        namespace = self.namespace
 
         # Give the Win to the more explicit Server Locals, else to our more implicit Defaults
         # Give the Win to the more explicit f"{verb}_{kw}", else to the more implicit f"{kw}"
 
-        for space in (exec_locals, turtling_defaults):
+        for space in (namespace, turtling_defaults):
             for k in (f"{verb}_{kw}", f"{kw}"):  # ('backward_distance', 'distance')
                 if k in space.keys():
                     arg = space[k]
@@ -3325,7 +3325,7 @@ class PythonSpeaker:
         """Consume the Note and return True, else return False"""
 
         globals_ = globals()
-        exec_locals = self.exec_locals
+        locals_ = self.namespace
 
         # Pick out the Py to exec
 
@@ -3344,7 +3344,7 @@ class PythonSpeaker:
             quotable = value[1:-1]
             if value == ("<" + quotable + ">"):
                 # eprint("weakly emulate local exec of remote py:", py)
-                exec_locals[key] = AngleQuotedStr(quotable)
+                locals_[key] = AngleQuotedStr(quotable)
                 return True
 
                 # <__main__.Turtle object at 0x101486a50>
@@ -3352,7 +3352,7 @@ class PythonSpeaker:
         # More robustly emulate other the Remote Server add/ mutate/ del at a Key
 
         # eprint("local exec of remote py:", py)
-        exec_strict(py, globals_, exec_locals)  # in Class PythonSpeaker
+        exec_strict(py, globals_, locals_)  # in Class PythonSpeaker
 
         return True
 
@@ -3753,16 +3753,16 @@ def turtling_server_run() -> None:
 class TurtlingServer:
 
     glass_teletype: GlassTeletype
-    exec_locals: dict[str, object]  # with local Turtle's  # cloned by remote PythonSpeaker
+    namespace: dict[str, object]  # with local Turtle's  # cloned by remote PythonSpeaker
     kchords: list[tuple[bytes, str]]  # Key Chords served  # KeyLogger
 
     def __init__(self, gt) -> None:
 
-        exec_locals: dict[str, object]
-        exec_locals = dict()
+        namespace: dict[str, object]
+        namespace = dict()
 
         self.glass_teletype = gt
-        self.exec_locals = exec_locals
+        self.namespace = namespace
         self.kchords = list()
 
         turtling_servers.append(self)
@@ -3785,7 +3785,9 @@ class TurtlingServer:
         writer.pid_create_dir_once(pid)
         writer.create_mkfifo_once(pid)
 
-        st.schars_print(f"Drawing with Pixels as Process {pid} till you press ⌃\\")
+        st.schars_print(r"Drawing until you press ⌃\ here")
+        st.schars_print("")
+        st.schars_print("")  # just enough more Line-Feed's so ⌃\ doesn't erase the Sh Command
 
         reader_fd = -1
         while True:
@@ -3985,7 +3987,7 @@ class TurtlingServer:
 
         reader_fd = reader.fileno
 
-        exec_locals = self.exec_locals
+        namespace = self.namespace
         gt = self.glass_teletype
 
         # Read a Python Text In, or an "" Empty Str, or fail to read
@@ -4004,22 +4006,22 @@ class TurtlingServer:
         wtext = ""
         if py:
 
-            if "t" not in exec_locals.keys():
+            if "t" not in namespace.keys():
                 t0 = Turtle()
-                exec_locals["t"] = t0
+                namespace["t"] = t0
 
-            before = dict(self.exec_locals)  # sample before
+            before = dict(self.namespace)  # sample before
 
             wvalue = self.py_exec_eval(py)
 
-            if "t" not in exec_locals.keys():
+            if "t" not in namespace.keys():
                 t1 = Turtle()
-                exec_locals["t"] = t1
+                namespace["t"] = t1
 
-            t = exec_locals["t"]
+            t = namespace["t"]
             assert isinstance(t, Turtle), (type(t), t)
 
-            after = dict(self.exec_locals)  # sample after  # 'copied is better than aliased'
+            after = dict(self.namespace)  # sample after  # 'copied is better than aliased'
 
             # Watch for Changes in the Terminal Cursor Position or Repr's of Locals
 
@@ -4065,11 +4067,11 @@ class TurtlingServer:
         try_exec = False
 
         globals_ = globals()
-        exec_locals = self.exec_locals
+        locals_ = self.namespace
 
         try:  # todo: shrug off PyLance pretending eval/exec 'locals=' doesn't work
 
-            value = eval_strict(py, globals_, exec_locals)  # in Class TurtlingServer
+            value = eval_strict(py, globals_, locals_)  # in Class TurtlingServer
 
         except bdb.BdbQuit:  # from Py Eval  # of the Quit of a Pdb Breakpoint
 
@@ -4101,7 +4103,7 @@ class TurtlingServer:
         if try_exec:
             assert value is None, (value,)
             try:
-                exec_strict(py, globals_, exec_locals)  # in Class TurtlingServer
+                exec_strict(py, globals_, locals_)  # in Class TurtlingServer
             except bdb.BdbQuit:  # from Py Exec  # of the Quit of a Pdb Breakpoint
                 raise
             except Exception:
@@ -4527,6 +4529,9 @@ class TurtleClient:
 # 🐢 Turtle Graphics Engine  # todo
 #
 #
+# todo: don't echo the ⌃\ Quit where it hits, echo it far left far below, just above Quit
+#
+#
 # todo: Colors of Bold Italic Underline etc
 #
 #
@@ -4572,6 +4577,13 @@ class TurtleClient:
 
 #
 # 🐢 Turtle Chat Engine  # todo
+#
+#
+# todo: debug the loose gear surfaced by Tina's Giraffe
+# todo: take gShell TERM=screen as reason enough to say '🐢 ?' in place of '🐢?'
+# todo: take '>>> ' as request to take the rest of the line as Python without correction
+# todo: automagically discover Server Quit, don't wait for BrokenPipeError at next Send
+# todo: harness two Turtles in parallel, such as a Darkmode & Lightmode at macOS
 #
 #
 # todo: cut the Comments properly from:  setpc '#FFffFF'  # White = Red + Green + Blue
