@@ -1496,6 +1496,10 @@ But your Font choice
 will say how much of the vertical height the Full-Block should paint over.
 I've not yet found a Font that always says Full-Block should paint the full vertical height
 
+Copying from a Landscape Terminal into gDoc
+works better if you choose gDoc > File > Page Setup > Orientation = Landscape,
+to replace their default choice of Portrait Orientation
+
 Copying Foreground and Background Color
 into gDoc from macOS Terminal mostly works.
 Copying from gShell or replIt copies the Characters well, but loses all the Color.
