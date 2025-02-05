@@ -2111,53 +2111,16 @@ class Turtle:
 
         # todo: save how much time by cacheing 'def _platform_color_accent_' per Process?
 
-    def _penscapes_take_numbers_(self, penscapes, color, accent) -> None:
-        """Choose Color by Number"""
-
-        color = int(color)
-
-        platform_accent = self._platform_color_accent_()
-        accent_ = platform_accent if (accent is None) else accent
-        assert COLOR_ACCENTS == (None, 3, 4, 4.6, 8, 24)
-        assert accent_ in (3, 4, 4.6, 8, 24), (accent,)
-
-        if accent == 4.6:
-            assert 0 <= color < 25, (color, accent_, accent)
-        else:
-            assert 0 <= color < (1 << accent_), (color, accent_, accent)
-
-        if accent_ == 3:
-
-            penscapes.append(f"\x1B[{30 + color}m")  # 3-Bit Color
-
-        elif accent_ == 4:
-
-            if color < 8:
-                penscapes.append(f"\x1B[{90 + color}m")  # second half of 4-Bit Color
-            else:
-                penscapes.append(f"\x1B[{30 + color - 8}m")  # first half of 4-Bit Color
-
-        elif accent == 4.6:
-
-            if color < 24:
-                penscapes.append(f"\x1B[38;5;{232 + color}m")
-            else:
-                assert color == 24, (color, accent, accent_)
-                penscapes.append(f"\x1B[38;5;{232 - 1}m")  # 231 8-Bit Color R G B = Max 5 5 5
-
-        elif accent == 8:
-
-            penscapes.append(f"\x1B[38;5;{color}m")
-
-        else:
-
-            assert accent == 24, (color, accent_, accent)
-
-            r = (color >> 16) & 0xFF
-            g = (color >> 8) & 0xFF
-            b = color & 0xFF
-
-            penscapes.append(f"\x1B[38;2;{r};{g};{b}m")  # 24-Bit R:G:B Color
+    _number_by_word_ = dict(
+        black=0,
+        red=1,
+        yellow=3,
+        green=2,
+        cyan=6,
+        blue=4,
+        magenta=5,
+        white=7,
+    )
 
     def _penscapes_take_words_(self, penscapes, color, accent) -> None:
         """Choose Color by a Sequence of Words"""
@@ -2240,16 +2203,53 @@ class Turtle:
 
         # todo: drop dupes?
 
-    _number_by_word_ = dict(
-        black=0,
-        red=1,
-        yellow=3,
-        green=2,
-        cyan=6,
-        blue=4,
-        magenta=5,
-        white=7,
-    )
+    def _penscapes_take_numbers_(self, penscapes, color, accent) -> None:
+        """Choose Color by Number"""
+
+        color = int(color)
+
+        platform_accent = self._platform_color_accent_()
+        accent_ = platform_accent if (accent is None) else accent
+        assert COLOR_ACCENTS == (None, 3, 4, 4.6, 8, 24)
+        assert accent_ in (3, 4, 4.6, 8, 24), (accent,)
+
+        if accent == 4.6:
+            assert 0 <= color < 25, (color, accent_, accent)
+        else:
+            assert 0 <= color < (1 << accent_), (color, accent_, accent)
+
+        if accent_ == 3:
+
+            penscapes.append(f"\x1B[{30 + color}m")  # 3-Bit Color
+
+        elif accent_ == 4:
+
+            if color < 8:
+                penscapes.append(f"\x1B[{90 + color}m")  # second half of 4-Bit Color
+            else:
+                penscapes.append(f"\x1B[{30 + color - 8}m")  # first half of 4-Bit Color
+
+        elif accent == 4.6:
+
+            if color < 24:
+                penscapes.append(f"\x1B[38;5;{232 + color}m")
+            else:
+                assert color == 24, (color, accent, accent_)
+                penscapes.append(f"\x1B[38;5;{232 - 1}m")  # 231 8-Bit Color R G B = Max 5 5 5
+
+        elif accent == 8:
+
+            penscapes.append(f"\x1B[38;5;{color}m")
+
+        else:
+
+            assert accent == 24, (color, accent_, accent)
+
+            r = (color >> 16) & 0xFF
+            g = (color >> 8) & 0xFF
+            b = color & 0xFF
+
+            penscapes.append(f"\x1B[38;2;{r};{g};{b}m")  # 24-Bit R:G:B Color
 
     assert TurtlingDefaults["setpenpunch_mark"] == "██", (TurtlingDefaults,)
 
