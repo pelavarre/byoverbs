@@ -62,7 +62,8 @@ DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
 Turtle_ = unicodedata.lookup("Turtle")  # 🐢 U+01F422
 
-PlainBold = ["\x1B[m", "\x1B[1m"]  # Plain but Bold
+Plain = "\x1B[" "m"  # Unstyled, uncolored, ...
+Bold = "\x1B[" "1m"
 
 COLOR_ACCENTS = (None, 3, 4, 4.6, 8, 24)  # Bits of Terminal Color (4.6 for 25-Step Grayscale)
 
@@ -1447,8 +1448,9 @@ def _turtling_defaults_choose_() -> dict:
         right_angle=90,
         setheading_angle=angle,  # 0° North is 360° North
         #
-        color="Plain Bold",
-        setpencolor_color="Plain Bold",
+        color="Bold",
+        setpenhighlight_color="Plain",  # Uncolored
+        setpencolor_color="Bold",
         #
         count=1,
         repeat_count=3,
@@ -1527,7 +1529,8 @@ class Turtle:
 
     heading: float  # stride direction
 
-    penscapes: list[str]  # setup written before punching a mark
+    backscapes: list[str]  # configuration of penpunch backdrop
+    penscapes: list[str]  # configuration of penpunch ink
     penmark: str  # mark to punch at each step
     warping: bool  # moving without punching pen up, else punching while moving pen down
     hiding: bool  # hiding the Turtle, else showing the Turtle
@@ -1541,6 +1544,7 @@ class Turtle:
             gt.__enter__()
         gt = glass_teletypes[-1]
 
+        self.backscapes = list()
         self.penscapes = list()
 
         namespace = dict()
@@ -1559,7 +1563,6 @@ class Turtle:
         """Clear the Turtle's Settings, but without writing the Screen"""
 
         self.namespace.clear()
-        self.penscapes.clear()
 
         self.xfloat = 0e0
         self.yfloat = 0e0
@@ -1568,7 +1571,9 @@ class Turtle:
 
         self.heading = 360e0  # 360° of North Up Clockwise
 
-        self.penscapes.extend(PlainBold)
+        self.backscapes.clear()
+        self.penscapes.clear()
+        self.penscapes.append(Bold)
         self.penmark = 2 * FullBlock  # ██
         self.warping = False  # todo: imply .isdown more clearly
         self.hiding = False
@@ -1637,6 +1642,7 @@ class Turtle:
         self.home()
 
         self.pendown()
+        self.setpenhighlight(color=None, accent=None)
         self.setpencolor(color=None, accent=None)  # todo: do we want optional 'accent='?
 
         self._reinit_()
@@ -2045,25 +2051,66 @@ class Turtle:
 
         # PyTurtle Speed chooses 1..10 for faster animation, reserving 0 for no animation
 
-    def setpencolor(self, color, accent) -> dict:
+    def setpenhighlight(self, color, accent) -> dict:  # as if gDoc Highlight Color
+        """Take a number, two numbers, or some words as the Highlight to draw on (SETPH for short)"""
+
+        assert COLOR_ACCENTS == (None, 3, 4, 4.6, 8, 24)
+        assert accent in (None, 3, 4, 4.6, 8, 24), (accent,)
+
+        gt = self.glass_teletype
+        backscapes = self.backscapes
+        penscapes = self.penscapes
+
+        # Start over, but defer change until returning without Exception
+
+        backscapes_: list[str]
+        backscapes_ = []
+
+        # Take a number, two numbers, or some words
+
+        if color is not None:
+            if isinstance(color, str):
+                self._scapes_take_words_(
+                    backscapes_, color, accent=accent, func=self._backscapes_take_numbers_
+                )
+            else:
+                floatish = (
+                    isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
+                )
+                if floatish:  # todo: or isinstance(color, decimal.Decimal):
+                    self._backscapes_take_numbers_(backscapes_, color, accent=accent)
+                else:
+                    raise NotImplementedError(type(color), type(accent), color, accent, floatish)
+
+        # Accept the change, and catch up the Terminal
+
+        backscapes[::] = backscapes_
+        gt.schars_write("".join([Plain] + backscapes + penscapes))
+
+        d = dict(backscapes=backscapes_)
+        return d
+
+    def setpencolor(self, color, accent) -> dict:  # as if gDoc Text Color
         """Take a number, two numbers, or some words as the Color to draw with (SETPC for short)"""
 
         assert COLOR_ACCENTS == (None, 3, 4, 4.6, 8, 24)
         assert accent in (None, 3, 4, 4.6, 8, 24), (accent,)
 
         gt = self.glass_teletype
+        backscapes = self.backscapes
         penscapes = self.penscapes
 
         # Start over, but defer change until returning without Exception
 
-        penscapes_ = list(penscapes)
-        penscapes_[::] = PlainBold
+        penscapes_ = [Bold]
 
         # Take a number, two numbers, or some words
 
         if color is not None:
             if isinstance(color, str):
-                self._penscapes_take_words_(penscapes_, color, accent=accent)
+                self._scapes_take_words_(
+                    penscapes_, color, accent=accent, func=self._penscapes_take_numbers_
+                )
             else:
                 floatish = (
                     isinstance(color, float) or isinstance(color, int) or isinstance(color, bool)
@@ -2076,7 +2123,7 @@ class Turtle:
         # Accept the change, and catch up the Terminal
 
         penscapes[::] = penscapes_
-        gt.schars_write("".join(penscapes_))
+        gt.schars_write("".join([Plain] + backscapes + penscapes))
 
         d = dict(penscapes=penscapes_)
         return d
@@ -2122,7 +2169,7 @@ class Turtle:
         white=7,
     )
 
-    def _penscapes_take_words_(self, penscapes, color, accent) -> None:
+    def _scapes_take_words_(self, penscapes, color, accent, func) -> None:
         """Choose Color by a Sequence of Words"""
 
         # Take one Word at a time
@@ -2131,20 +2178,14 @@ class Turtle:
         for split in splits:
             casefold = split.casefold()
 
-            # Define words for Plain \e[m and Bold \e[1m
-            # Do define Reversed \e[7m, but don't define Unreversed \e[27m
-            # Choose words for Inverted from 'Reverse video (or invert video or inverse video or reverse screen)'
-            # Disregard the .accent
+            # Define words for None/ Plain and Bold
+
+            if casefold in ("None".casefold(), "plain"):
+                penscapes.clear()
+                continue
 
             if casefold == "bold":
                 penscapes.append("\x1B[1m")
-                continue
-            if casefold in ("None".casefold(), "plain"):
-                penscapes.clear()
-                penscapes.append("\x1B[m")
-                continue
-            if casefold == "reverse":  # Python defines an unrelated 'list.reverse'
-                penscapes.append("\x1B[7m")
                 continue
 
             # Take any of the 8 smallest Color Words
@@ -2154,9 +2195,9 @@ class Turtle:
 
                 assert accent in (None, 3, 4), (accent, split, color)
                 if accent != 4:
-                    self._penscapes_take_numbers_(penscapes, color=number, accent=3)
+                    func(penscapes, color=number, accent=3)
                 else:
-                    self._penscapes_take_numbers_(penscapes, color=number, accent=4)
+                    func(penscapes, color=number, accent=4)
                 continue
 
             # Take 24-bit Html Hexadecimal 6 or 7 Character Color Strings
@@ -2189,7 +2230,7 @@ class Turtle:
 
                     number = 16 + (r_ * 36) + (g_ * 6) + b_
 
-                self._penscapes_take_numbers_(penscapes, color=number, accent=accent_)
+                func(penscapes, color=number, accent=accent_)
 
                 continue
 
@@ -2203,8 +2244,55 @@ class Turtle:
 
         # todo: drop dupes?
 
+    def _backscapes_take_numbers_(self, backscapes, color, accent) -> None:
+        """Choose background Pen Highlight Escape Control Sequences by Number"""
+
+        color = int(color)
+
+        platform_accent = self._platform_color_accent_()
+        accent_ = platform_accent if (accent is None) else accent
+        assert COLOR_ACCENTS == (None, 3, 4, 4.6, 8, 24)
+        assert accent_ in (3, 4, 4.6, 8, 24), (accent,)
+
+        if accent == 4.6:
+            assert 0 <= color < 25, (color, accent_, accent)
+        else:
+            assert 0 <= color < (1 << accent_), (color, accent_, accent)
+
+        if accent_ == 3:
+
+            backscapes.append(f"\x1B[{40 + color}m")  # 3-Bit Color
+
+        elif accent_ == 4:
+
+            if color < 8:
+                backscapes.append(f"\x1B[{100 + color}m")  # second half of 4-Bit Color
+            else:
+                backscapes.append(f"\x1B[{40 + color - 8}m")  # first half of 4-Bit Color
+
+        elif accent == 4.6:
+
+            if color < 24:
+                backscapes.append(f"\x1B[48;5;{232 + color}m")
+            else:
+                assert color == 24, (color, accent, accent_)
+                backscapes.append(f"\x1B[48;5;{232 - 1}m")  # 231 8-Bit Color R G B = Max 5 5 5
+
+        elif accent == 8:
+
+            backscapes.append(f"\x1B[48;5;{color}m")
+
+        else:
+            assert accent == 24, (color, accent_, accent)
+
+            r = (color >> 16) & 0xFF
+            g = (color >> 8) & 0xFF
+            b = color & 0xFF
+
+            backscapes.append(f"\x1B[48;2;{r};{g};{b}m")  # 24-Bit R:G:B Color
+
     def _penscapes_take_numbers_(self, penscapes, color, accent) -> None:
-        """Choose Color by Number"""
+        """Choose foreground Pen Color Escape Control Sequences by Number"""
 
         color = int(color)
 
@@ -2242,7 +2330,6 @@ class Turtle:
             penscapes.append(f"\x1B[38;5;{color}m")
 
         else:
-
             assert accent == 24, (color, accent_, accent)
 
             r = (color >> 16) & 0xFF
@@ -3368,6 +3455,7 @@ class PythonSpeaker:
         "quit": "bye",
         "rep": "repeat",
         "sethz": "sethertz",
+        "setph": "setpenhighlight",  # background vs foreground "setpencolor"
         "setpch": "setpenpunch",
         "s": "sleep",
         "t": "tada",
@@ -3395,7 +3483,7 @@ class PythonSpeaker:
 
     ucb_verb_by_grunt = {  # for the UCB Logo people
         "cs": "clearscreen",
-        "setpc": "setpencolor",
+        "setpc": "setpencolor",  # foreground vs background "setpenhighlight"
     }
 
     verb_by_grunt = byo_verb_by_grunt | py_verb_by_grunt | ucb_verb_by_grunt
@@ -4193,9 +4281,6 @@ class TurtleClient:
         """Chat with Logo Turtles"""
 
         ps = self.ps
-
-        Bold = "\x1B[" "1m"  # Sgr Bold  # CSI 06/13 Select Graphic Rendition (SGR)
-        Plain = "\x1B[" "m"  # Sgr Plain
 
         ps1 = f"{Turtle_}? {Bold}"
         postedit = Plain
