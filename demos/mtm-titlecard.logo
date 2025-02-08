@@ -3,9 +3,35 @@
 
 # Draw the "Mary Tyler Moore" Title Card, from Sep/1970
 #
-# Draw it as "Mary Tyler Mary Tyler Moore" across one 3-bit, one 4-bit, three 8-bit Color Aliases
-# Then draw it in 24-bit Color, except fallback to 8-Color if unsure about 24-bit Color
+# At right, draw one Portrait Card with the 3 words "Mary Tyler Moore"
+# At left, draw one Landscape Card with the 5 words "Mary Tyler Mary Tyler Moore"
 #
+
+#
+# At right, draw all 3 Words with 24-bit Color, but rounded down to 8-bit at macOS
+#
+# At left, draw each of 5 Words as 3-bit, 4-bit, 0o00 8-Bit, 0o10 8-Bit, or 0o20 8-Bit Color
+# But fall back to White when finding no place for Orange in 3-bit or 4-bit Color
+# And split the Orange Word into Dim 0o20 8-Bit and Bright 0o20 8-Bit Color
+# And draw the last Char of the last Word, the last E, in 24-bit Color
+#
+# Show gCloud & replIt Terminal Shells
+# + draws a more Yellow-Orange at max Red max Green 8-bit Color than at 24-bit Color
+#
+# Show gCloud Terminal Shell
+# + gets Green & Yellow backwards in 3-bit and 4-bit Color, & with too much Green in its Yellow
+# + defines only 3-bit Color, collapsing 4-bit and the first 0o20 8-Bit Codes into it
+# + draws a less vertically-full U+2588 Full-Block at Grayscale (same as in all Colors)
+#
+# Show replIt Terminal Shell
+# + gets 3-bit & 4-bit backwards as Bright then Dim
+# + mistakes 3-bit White & 4-bit White as calling for Gray, far away from 0xE7 8 White
+#
+# Show macOS Terminal Shell
+# + draws 3-bit as Dim, and 4-bit as Bright, as per Wikipedia > ANSI escape code
+# + mistakes 24-bit Foreground Color as calling for no Background Color & no Foreground Color
+#
+
 
 
 # Start up
@@ -17,11 +43,16 @@ right 90
 penup  sety 110  pendown
 write "\r\n"
 
-setpenhighlight 16 8
 
-# gShell setph 0 3 is Dark Gray, 0 4 is a Lighter Gray, 16 8 is Black
-# replIt setph 0 3 is Light Grary, 0 4 is Dark Gray, 16 8 is Black
-# macOS setph 0 3 is Black, 0 4 is Dark Gray, 16 8 is Black
+# SetPenHighlight
+
+setpenhighlight 0o20 8  # ClearScreen fills with Highlight at replIt/ macOS, but not at gShell
+
+# || Logo || gShell || replIt || macOS || Platform ||
+# | setph 0 3 | Dark Gray | Light Gray | Black |
+# | setph 0 4 | Gray | Dark Gray | Dark Gray |
+# | setph 0o20 8 | Black | Black | Black |
+# | setph 0xE8 8 | Black | Black | Black |
 
 
 # 1st Blank
@@ -29,8 +60,9 @@ setpenhighlight 16 8
 penup  setx -120  pendown
 write (len("  MARY TYLER MARY TYLER MOORE  ") * " ")
 penup  forward 20  pendown
+write "\n"
 write (len("  MARY TYLER MOORE  ") * " ")
-write "\r\n"
+write "\r"
 
 
 # 1st Cyan
@@ -42,8 +74,9 @@ setpencolor 0o16 8       write " TYLER"
 setpencolor "00FFFF" 8   write " MOOR"  # 0:5:5 51m
 setpencolor "00FFFF" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
+write "\n"
 setpencolor "00FFFF"     write "  MARY TYLER MOORE  "
-write "\r\n"
+write "\r"
 
 
 # 1st Magenta
@@ -56,8 +89,9 @@ setpencolor 0o15 8       write " TYLER"
 setpencolor "FF00FF" 8   write " MOOR"  # 5:0:5 201m
 setpencolor "FF00FF" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
+write "\n"
 setpencolor "FF00FF"     write "  MARY TYLER MOORE  "
-write "\r\n"
+write "\r"
 
 
 # 1st Red
@@ -70,8 +104,9 @@ setpencolor 0o11 8       write " TYLER"
 setpencolor "FF0000" 8   write " MOOR"  # 5:0:0 196m
 setpencolor "FF0000" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
+write "\n"
 setpencolor "FF0000"     write "  MARY TYLER MOORE  "
-write "\r\n"
+write "\r"
 
 
 # 1st of 8-bit and 24-bit White & Brown & Orange
@@ -85,8 +120,9 @@ setpencolor "993300" 8   write " MO"  # 3:1:0 130m
 setpencolor "FF6600" 8   write "OR"  # 5:2:0 208m
 setpencolor "FF6600" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
+write "\n"
 setpencolor "FF6600"     write "  MARY TYLER MOORE  "
-write "\r\n"
+write "\r"
 
 
 # 1st Yellow
@@ -99,8 +135,9 @@ setpencolor 0o13 8       write " TYLER"
 setpencolor "FFFF00" 8   write " MOOR"  # 5:5:0 226m
 setpencolor "FFFF00" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
+write "\n"
 setpencolor "FFFF00"     write "  MARY TYLER MOORE  "
-write "\r\n"
+write "\r"
 
 
 # Green in the Middle
@@ -113,8 +150,9 @@ setpencolor 0o12 8       write " TYLER"
 setpencolor "00FF00" 8   write " MOOR"  # 0:5:0 46m
 setpencolor "00FF00" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
+write "\n"
 setpencolor "00FF00"     write "  MARY TYLER MOORE  "
-write "\r\n"
+write "\r"
 
 
 # 2nd Yellow
@@ -127,8 +165,9 @@ setpencolor 0o13 8       write " TYLER"
 setpencolor "FFFF00" 8   write " MOOR"  # 5:5:0 226m
 setpencolor "FFFF00" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
+write "\n"
 setpencolor "FFFF00"     write "  MARY TYLER MOORE  "
-write "\r\n"
+write "\r"
 
 
 # 2nd of 8-bit and 24-bit White & Brown & Orange
@@ -142,8 +181,9 @@ setpencolor "993300" 8   write " MO"  # 3:1:0 130m
 setpencolor "FF6600" 8   write "OR"  # 5:2:0 208m
 setpencolor "FF6600" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
+write "\n"
 setpencolor "FF6600"     write "  MARY TYLER MOORE  "
-write "\r\n"
+write "\r"
 
 
 # 2nd Red
@@ -156,8 +196,9 @@ setpencolor 0o11 8       write " TYLER"
 setpencolor "FF0000" 8   write " MOOR"  # 5:0:0 196m
 setpencolor "FF0000" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
+write "\n"
 setpencolor "FF0000"     write "  MARY TYLER MOORE  "
-write "\r\n"
+write "\r"
 
 
 # 2nd Magenta
@@ -170,8 +211,9 @@ setpencolor 0o15 8      write " TYLER"
 setpencolor "FF00FF" 8   write " MOOR"  # 5:0:5 201m
 setpencolor "FF00FF" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
+write "\n"
 setpencolor "FF00FF"     write "  MARY TYLER MOORE  "
-write "\r\n"
+write "\r"
 
 
 # 2nd Cyan
@@ -183,8 +225,9 @@ setpencolor 0o16 8       write " TYLER"
 setpencolor "00FFFF" 8   write " MOOR"  # 0:5:5 51m
 setpencolor "00FFFF" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
+write "\n"
 setpencolor "00FFFF"     write "  MARY TYLER MOORE  "
-write "\r\n"
+write "\r"
 
 
 # 2nd Blank
@@ -192,14 +235,74 @@ write "\r\n"
 penup  setx -120  pendown
 write (len("  MARY TYLER MARY TYLER MOORE  ") * " ")
 penup  forward 20  pendown
+write "\n"
 write (len("  MARY TYLER MOORE  ") * " ")
+write "\r"
+
+
+# Draw the 25 Steps of the 8-Bit Color Grayscale
+
 write "\r\n"
+
+penup  setx -120  pendown
+
+setpencolor 0xFB 8  write "█"
+setpencolor 0xFA 8  write "█"
+setpencolor 0xFC 8  write "█"
+setpencolor 0xFD 8  write "█"
+setpencolor 0xFE 8  write "█"
+setpencolor 0xFF 8  write "█"
+
+setpencolor 0xE7 8  write "█"
+
+setpencolor 0xFF 8  write "█"
+setpencolor 0xFE 8  write "█"
+setpencolor 0xFD 8  write "█"
+setpencolor 0xFC 8  write "█"
+setpencolor 0xFB 8  write "█"
+setpencolor 0xFA 8  write "█"
+setpencolor 0xF9 8  write "█"
+setpencolor 0xF8 8  write "█"
+
+setpencolor 0xF7 8  write "█"
+setpencolor 0xF6 8  write "█"
+setpencolor 0xF5 8  write "█"
+setpencolor 0xF4 8  write "█"
+setpencolor 0xF3 8  write "█"
+setpencolor 0xF2 8  write "█"
+setpencolor 0xF1 8  write "█"
+setpencolor 0xF0 8  write "█"
+
+setpencolor 0xEF 8  write "█"
+setpencolor 0xEE 8  write "█"
+setpencolor 0xED 8  write "█"
+setpencolor 0xEC 8  write "█"
+setpencolor 0xEB 8  write "█"
+setpencolor 0xEA 8  write "█"
+setpencolor 0xE9 8  write "█"
+setpencolor 0xE8 8  write "█"
 
 
 # Shut down
 
 restart  penup  forward 100  sleep 0.100  backward 200  sleep 0.100  # wipe out leftover cursor marks at macOS
-restart tada
+
+restart
+penup  setxy -110 120  pendown
+tada
+
+
+#
+# Don't work here to show
+#
+#   for i in range(0o10): print(f"setph {i} 3  setpc {i} 3  write hello")
+#   for i in range(0o10): print(f"setph {i} 4  setpc {i} 4  write hello")
+#   for i in range(0o20): print(f"setph {i} 8  setpc {i} 8  write hello")
+#
+# replIt adds in Contrast, and often plenty of Contrast, when PenColor = HighlightColor
+# gShell adds in some Contrast, when PenColor = HighlightColor at 3-bit, but no Contrast at 4-bit
+# macOS adds in no Contrast, not in 3-bit, and not in 4-bit
+#
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/mtm-titlecard.logo
