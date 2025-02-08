@@ -17,7 +17,11 @@ right 90
 penup  sety 110  pendown
 write "\r\n"
 
-setpenhighlight 16 8  # 'black 3' works at macOS & gShell, but not at replIt
+setpenhighlight 16 8
+
+# gShell setph 0 3 is Dark Gray, 0 4 is a Lighter Gray, 16 8 is Black
+# replIt setph 0 3 is Light Grary, 0 4 is Dark Gray, 16 8 is Black
+# macOS setph 0 3 is Black, 0 4 is Dark Gray, 16 8 is Black
 
 
 # 1st Blank
@@ -33,9 +37,10 @@ write "\r\n"
 penup  setx -120  pendown
 setpencolor cyan 3       write "  MARY"
 setpencolor cyan 4       write " TYLER"
-setpencolor 0o06         write " MARY"
-setpencolor 0o16         write " TYLER"
-setpencolor "00FFFF" 8   write " MOORE  "  # 0:5:5 51m
+setpencolor 0o06 8       write " MARY"
+setpencolor 0o16 8       write " TYLER"
+setpencolor "00FFFF" 8   write " MOOR"  # 0:5:5 51m
+setpencolor "00FFFF" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
 setpencolor "00FFFF"     write "  MARY TYLER MOORE  "
 write "\r\n"
@@ -46,9 +51,10 @@ write "\r\n"
 penup  setx -120  pendown
 setpencolor magenta 3    write "  MARY"
 setpencolor magenta 4    write " TYLER"
-setpencolor 0o05         write " MARY"
-setpencolor 0o15         write " TYLER"
-setpencolor "FF00FF" 8   write " MOORE  "  # 5:0:5 201m
+setpencolor 0o05 8       write " MARY"
+setpencolor 0o15 8       write " TYLER"
+setpencolor "FF00FF" 8   write " MOOR"  # 5:0:5 201m
+setpencolor "FF00FF" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
 setpencolor "FF00FF"     write "  MARY TYLER MOORE  "
 write "\r\n"
@@ -59,23 +65,25 @@ write "\r\n"
 penup  setx -120  pendown
 setpencolor red 3        write "  MARY"
 setpencolor red 4        write " TYLER"
-setpencolor 0o05         write " MARY"
-setpencolor 0o15         write " TYLER"
-setpencolor "FF0000" 8   write " MOORE  "  # 5:0:0 196m
+setpencolor 0o01 8       write " MARY"
+setpencolor 0o11 8       write " TYLER"
+setpencolor "FF0000" 8   write " MOOR"  # 5:0:0 196m
+setpencolor "FF0000" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
 setpencolor "FF0000"     write "  MARY TYLER MOORE  "
 write "\r\n"
 
 
-# 1st of 8-bit and 24-bit Brown & Orange
+# 1st of 8-bit and 24-bit White & Brown & Orange
 
 penup  setx -120  pendown
-setpencolor              write "      "
-setpencolor              write "      "
-setpencolor              write "     "
-setpencolor              write "      "
+setpencolor white 3      write "  MARY"
+setpencolor white 4      write " TYLER"
+setpencolor 0o07 8       write " MARY"
+setpencolor 0o17 8       write " TYLER"
 setpencolor "993300" 8   write " MO"  # 3:1:0 130m
-setpencolor "FF6600" 8   write "ORE  "  # 5:2:0 208m
+setpencolor "FF6600" 8   write "OR"  # 5:2:0 208m
+setpencolor "FF6600" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
 setpencolor "FF6600"     write "  MARY TYLER MOORE  "
 write "\r\n"
@@ -86,9 +94,10 @@ write "\r\n"
 penup  setx -120  pendown
 setpencolor yellow 3    write "  MARY"
 setpencolor yellow 4    write " TYLER"
-setpencolor 0o03         write " MARY"
-setpencolor 0o13         write " TYLER"
-setpencolor "FFFF00" 8   write " MOORE  "  # 5:5:0 226m
+setpencolor 0o03 8       write " MARY"
+setpencolor 0o13 8       write " TYLER"
+setpencolor "FFFF00" 8   write " MOOR"  # 5:5:0 226m
+setpencolor "FFFF00" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
 setpencolor "FFFF00"     write "  MARY TYLER MOORE  "
 write "\r\n"
@@ -99,9 +108,10 @@ write "\r\n"
 penup  setx -120  pendown
 setpencolor green 3    write "  MARY"
 setpencolor green 4    write " TYLER"
-setpencolor 0o02         write " MARY"
-setpencolor 0o12         write " TYLER"
-setpencolor "00FF00" 8   write " MOORE  "  # 0:5:0 46m
+setpencolor 0o02 8       write " MARY"
+setpencolor 0o12 8       write " TYLER"
+setpencolor "00FF00" 8   write " MOOR"  # 0:5:0 46m
+setpencolor "00FF00" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
 setpencolor "00FF00"     write "  MARY TYLER MOORE  "
 write "\r\n"
@@ -112,23 +122,25 @@ write "\r\n"
 penup  setx -120  pendown
 setpencolor yellow 3    write "  MARY"
 setpencolor yellow 4    write " TYLER"
-setpencolor 0o03         write " MARY"
-setpencolor 0o13         write " TYLER"
-setpencolor "FFFF00" 8   write " MOORE  "  # 5:5:0 226m
+setpencolor 0o03 8       write " MARY"
+setpencolor 0o13 8       write " TYLER"
+setpencolor "FFFF00" 8   write " MOOR"  # 5:5:0 226m
+setpencolor "FFFF00" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
 setpencolor "FFFF00"     write "  MARY TYLER MOORE  "
 write "\r\n"
 
 
-# 2nd of 8-bit and 24-bit Brown & Orange
+# 2nd of 8-bit and 24-bit White & Brown & Orange
 
 penup  setx -120  pendown
-setpencolor              write "      "
-setpencolor              write "      "
-setpencolor              write "     "
-setpencolor              write "      "
+setpencolor white 3      write "  MARY"
+setpencolor white 4      write " TYLER"
+setpencolor 0o07 8       write " MARY"
+setpencolor 0o17 8       write " TYLER"
 setpencolor "993300" 8   write " MO"  # 3:1:0 130m
-setpencolor "FF6600" 8   write "ORE  "  # 5:2:0 208m
+setpencolor "FF6600" 8   write "OR"  # 5:2:0 208m
+setpencolor "FF6600" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
 setpencolor "FF6600"     write "  MARY TYLER MOORE  "
 write "\r\n"
@@ -139,9 +151,10 @@ write "\r\n"
 penup  setx -120  pendown
 setpencolor red 3        write "  MARY"
 setpencolor red 4        write " TYLER"
-setpencolor 0o05         write " MARY"
-setpencolor 0o15         write " TYLER"
-setpencolor "FF0000" 8   write " MOORE  "  # 5:0:0 196m
+setpencolor 0o01 8       write " MARY"
+setpencolor 0o11 8       write " TYLER"
+setpencolor "FF0000" 8   write " MOOR"  # 5:0:0 196m
+setpencolor "FF0000" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
 setpencolor "FF0000"     write "  MARY TYLER MOORE  "
 write "\r\n"
@@ -152,9 +165,10 @@ write "\r\n"
 penup  setx -120  pendown
 setpencolor magenta 3    write "  MARY"
 setpencolor magenta 4    write " TYLER"
-setpencolor 0o05         write " MARY"
-setpencolor 0o15         write " TYLER"
-setpencolor "FF00FF" 8   write " MOORE  "  # 5:0:5 201m
+setpencolor 0o05 8       write " MARY"
+setpencolor 0o15 8      write " TYLER"
+setpencolor "FF00FF" 8   write " MOOR"  # 5:0:5 201m
+setpencolor "FF00FF" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
 setpencolor "FF00FF"     write "  MARY TYLER MOORE  "
 write "\r\n"
@@ -164,9 +178,10 @@ write "\r\n"
 penup  setx -120  pendown
 setpencolor cyan 3       write "  MARY"
 setpencolor cyan 4       write " TYLER"
-setpencolor 0o06         write " MARY"
-setpencolor 0o16         write " TYLER"
-setpencolor "00FFFF" 8   write " MOORE  "  # 0:5:5 51m
+setpencolor 0o06 8       write " MARY"
+setpencolor 0o16 8       write " TYLER"
+setpencolor "00FFFF" 8   write " MOOR"  # 0:5:5 51m
+setpencolor "00FFFF" 24  write "E"  setpencolor  write "  "
 penup  forward 20  pendown
 setpencolor "00FFFF"     write "  MARY TYLER MOORE  "
 write "\r\n"
