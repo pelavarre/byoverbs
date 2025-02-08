@@ -883,6 +883,8 @@ class StrTerminal:
     row_y: int  # -1, then Row of Cursor
     column_x: int  # -1, then Column of Cursor
 
+    writelog: dict[int, dict[int, str]]  # todo: row major or column major?
+
     #
     # Init, Enter, and Exit
     #
@@ -898,6 +900,8 @@ class StrTerminal:
         self.x_columns = -1
         self.row_y = -1
         self.column_x = -1
+
+        self.writelog = dict()
 
     def __enter__(self) -> "StrTerminal":  # -> typing.Self:
 
@@ -1236,10 +1240,10 @@ class StrTerminal:
         for y in range(1, y_rows + 1):
             ctext = "\x1B" "[" f"{y}d"
             ctext += "\x1B" "[" f"{n}P"
-            self.schars_write(ctext)
+            self.schars_write(ctext)  # for .columns_delete_n
 
         ctext = "\x1B" "[" f"{y_row}d"
-        self.schars_write(ctext)
+        self.schars_write(ctext)  # for .columns_delete_n
 
     def columns_insert_n(self, n) -> None:  # a la VT420 DECIC ⎋['}
         """Insert N Columns (but snap the Cursor back to where it started)"""
@@ -1253,14 +1257,30 @@ class StrTerminal:
         for y in range(1, y_rows + 1):
             ctext = "\x1B" "[" f"{y}d"
             ctext += "\x1B" "[" f"{n}@"
-            self.schars_write(ctext)
+            self.schars_write(ctext)  # for .columns_insert_n
 
         ctext = "\x1B" "[" f"{y_row}d"
-        self.schars_write(ctext)
+        self.schars_write(ctext)  # for .columns_insert_n
 
     #
     # Print or Write Str's of Chars
     #
+
+    def write_row_y_column_x(self, row_y, column_x) -> None:
+        """Write Cursor Row & Column"""
+
+        assert row_y >= 1, (row_y,)  # rows counted down from Row 1 at Top
+        assert column_x >= 1, (column_x,)  # columns counted up from Column 1 at Left
+
+        assert CUP_Y_X == "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position (CUP)
+
+        self.schars_write("\x1B" "[" f"{row_y};{column_x}H")
+
+        self.row_y = row_y
+        self.column_x = column_x
+
+        # todo: .write_row_y_column_x when out of bounds
+        # todo: .write_row_y_column_x when no change to Y and/or to X
 
     def schars_print(self, *args, end="\n") -> None:
         """Write Chars to the Screen as one or more Ended Lines"""
@@ -1270,15 +1290,37 @@ class StrTerminal:
         ended = join + end
 
         schars = ended.replace("\n", "\r\n")
-        self.schars_write(schars)
+        self.schars_write(schars)  # for .schars_print
 
     def schars_write(self, schars) -> None:
         """Write Chars to the Screen, but without implicitly also writing a Line-End afterwards"""
 
         bt = self.bytes_terminal
+        writelog = self.writelog
+
+        assert ED_P == "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 2 Rows, etc
 
         sbytes = schars.encode()
-        bt.sbytes_write(sbytes)
+        if schars == "\x1B" "[2J":
+            bt.sbytes_write(sbytes)
+            writelog.clear()
+        elif not schars.isprintable():
+            bt.sbytes_write(sbytes)
+        else:
+            (row_y, column_x) = self.row_y_column_x_read(timeout=0)
+            bt.sbytes_write(sbytes)
+
+            for sch in schars:
+
+                if column_x not in writelog.keys():
+                    writelog[column_x] = dict()
+
+                writelog_x = writelog[column_x]
+                writelog_x[row_y] = sch
+
+                column_x += 1
+
+                # todo: .schars_write when out of bounds
 
         # todo write through cache
         # todo class RowCache
@@ -1289,6 +1331,30 @@ class StrTerminal:
         # todo bring up without Window Resize
         # todo remember Cursor Position from when fetched till next write of characters
         # todo notify of unknown writes
+
+    def repaint(self) -> None:
+        """Write the Logged Screen back into place, but with present Highlight/ Color/ Style"""
+
+        bt = self.bytes_terminal
+
+        row_y_column_x = self.row_y_column_x_read(timeout=0)
+
+        writelog = self.writelog
+        for column_x in writelog.keys():  # insertion order
+            writelog_x = writelog[column_x]
+            for row_y in writelog_x.keys():  # insertion order
+                self.write_row_y_column_x(row_y, column_x=column_x)
+
+                sch = writelog_x[row_y]
+
+                sbytes = sch.encode()
+                bt.sbytes_write(sbytes)
+
+        (row_y, column_x) = row_y_column_x
+        self.write_row_y_column_x(row_y, column_x=column_x)
+
+        # todo: results returned from 🐢 .repaint
+        # todo: def 🐢 .monochrome to repaint without color? or Repaint with Args?
 
 
 class GlassTeletype:
@@ -1341,6 +1407,10 @@ class GlassTeletype:
     # Delegate work to the Str Terminal
     #
 
+    def repaint(self) -> None:
+        st = self.str_terminal
+        st.repaint()
+
     def schars_write(self, schars) -> None:
         st = self.str_terminal
         st.schars_write(schars)
@@ -1355,6 +1425,10 @@ class GlassTeletype:
         (y_rows, x_columns) = st.y_rows_x_columns_read(timeout=0)
         return (y_rows, x_columns)
 
+    def write_row_y_column_x(self, row_y, column_x) -> None:
+        st = self.str_terminal
+        st.write_row_y_column_x(row_y, column_x)
+
     #
     # Loop Keyboard Bytes back onto the Screen
     #
@@ -1363,16 +1437,12 @@ class GlassTeletype:
         """Write 1 Key Chord, else print its Key Caps"""
 
         (kbytes, kcaps) = kchord
-        sbytes = kbytes
         schars = kbytes.decode()  # may raise UnicodeDecodeError
 
-        bt = self.bytes_terminal
         st = self.str_terminal
 
         assert DECIC_X == "\x1B" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
         assert DECDC_X == "\x1B" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
-
-        # self.schars_print(kcaps, end="  ")  # jitter Mon 23/Dec
 
         if not st.schars_to_writable(schars):
             st.schars_print(kcaps, end=" ")
@@ -1394,7 +1464,7 @@ class GlassTeletype:
                         st.columns_delete_n(n)
                         return
 
-            bt.sbytes_write(sbytes)
+            st.schars_write(schars)
 
 
 glass_teletypes: list[GlassTeletype]
@@ -1595,23 +1665,21 @@ class Turtle:
 
         gt = self.glass_teletype
 
-        assert CUP_Y_X == "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
-
         (y_rows, x_columns) = gt.os_terminal_y_rows_x_columns()
         assert y_rows >= 4, (y_rows,)
 
         y = y_rows - 3
         x = 1
-        gt.schars_write("\x1B[" f"{y};{x}H")
+        gt.write_row_y_column_x(row_y=y, column_x=x)
 
         sys.exit()
 
     def clearscreen(self) -> None:
         """Write Spaces over every Character of every Screen Row and Column (CLS or CLEAR or CS for short)"""
 
-        text = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
+        ctext = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
         gt = self.glass_teletype
-        gt.schars_write(text)
+        gt.schars_write(ctext)
 
         # just the Screen, not also its Scrollback
 
@@ -1633,6 +1701,12 @@ class Turtle:
 
         # FmsLogo Clean deletes 1 Turtle's trail, without clearing its Settings
         # PyTurtle Clear deletes 1 Turtle's Trail, without clearing its Settings
+
+    def repaint(self) -> None:
+        """Write the Logged Screen back into place, but with present Highlight/ Color/ Style"""
+
+        gt = self.glass_teletype
+        gt.repaint()
 
     def restart(self) -> dict:
         """Warp the Turtle to Home, and clear its Settings, but do Not clear the Screen (RESET for short)"""
@@ -1749,9 +1823,9 @@ class Turtle:
     def beep(self) -> dict:
         """Ring the Terminal Alarm Bell once, remotely inside the Turtle (B for short)"""
 
-        text = "\a"  # Alarm Bell
+        ctext = "\a"  # Alarm Bell
         gt = self.glass_teletype
-        gt.schars_write(text)
+        gt.schars_write(ctext)
 
         # time.sleep(2 / 3)  # todo: guess more accurately when the Terminal Bell falls silent
 
@@ -1808,8 +1882,8 @@ class Turtle:
 
         gt = self.glass_teletype
 
-        text = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
-        gt.schars_write(text)
+        ctext = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
+        gt.schars_write(ctext)
 
         self.hiding = True
 
@@ -1898,11 +1972,12 @@ class Turtle:
 
         (y_row, x_column) = gt.os_terminal_y_row_x_column()
 
-        line = " ".join(str(_) for _ in args)
-        line += f"\x1B[{y_row};{x_column}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
-        line += "\n"  # just Line-Feed \n without Carriage-Return \r
+        text = " ".join(str(_) for _ in args)
+        ctext = f"\x1B[{y_row};{x_column}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
+        ctext += "\n"  # just Line-Feed \n without Carriage-Return \r
 
-        gt.schars_write(line)
+        gt.schars_write(text)  # for .label
+        gt.schars_write(ctext)
         self.yfloat -= 1
 
         hiding = self.hiding
@@ -1916,6 +1991,7 @@ class Turtle:
         # Scratch Say
 
         # todo: most Logo's feel the Turtle should remain unmoved after printing a Label??
+        # todo: call gt.write_row_y_column_x ?
 
     assert TurtlingDefaults["left_angle"] == 45, (TurtlingDefaults,)
 
@@ -2447,8 +2523,8 @@ class Turtle:
         gt = self.glass_teletype
         # hiding = self.hiding
 
-        text = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
-        gt.schars_write(text)
+        ctext = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+        gt.schars_write(ctext)  # for .showturtle
 
         self.hiding = False
         # if self.hiding != hiding:
@@ -2485,7 +2561,7 @@ class Turtle:
         """Write one Str to the Screen"""
 
         gt = self.glass_teletype
-        gt.schars_write(s)
+        gt.schars_write(s)  # for .write
 
         # PyTurtle Write
 
@@ -2646,12 +2722,14 @@ class Turtle:
             if eaw in ("F", "W"):
                 width += 1
 
-        text = f"{y_text}{x_text}"
-        if not warping:
+        ctext = f"{y_text}{x_text}"
+        if warping:
+            gt.schars_write(ctext)
+        else:
             backspaces = width * "\b"
-            text = f"{y_text}{x_text}{penmark}{backspaces}"
-
-        gt.schars_write(text)
+            gt.schars_write(ctext)
+            gt.schars_write(penmark)  # todo: .writelog when Controls mixed into Text
+            gt.schars_write(backspaces)
 
         if not hiding:
             time.sleep(rest)
@@ -2716,7 +2794,7 @@ class Turtle:
     # Draw some famous Figures
     #
 
-    def sierpiński(self, distance, divisor) -> None:
+    def sierpiński(self, distance, divisor) -> None:  # aka Sierpinski
         """Draw Triangles inside Triangles, in the way of Sierpiński 1882..1969 (also known as Sierpinksi)"""
 
         assert distance >= 0, (distance,)
@@ -3897,7 +3975,7 @@ class TurtlingServer:
 
             if bt_fd in select_:
                 kchord = self.keyboard_serve_one_kchord()
-                if kchord[-1] in ("⌃\\",):
+                if kchord[-1] in ("⎋⌃\\", "⌃\\"):
                     t = Turtle()
                     t.bye()
                     break
