@@ -2270,7 +2270,7 @@ class Turtle:
             else:
                 backscapes.append(f"\x1B[{40 + color - 8}m")  # first half of 4-Bit Color
 
-        elif accent == 4.6:
+        elif accent_ == 4.6:
 
             if color < 24:
                 backscapes.append(f"\x1B[48;5;{232 + color}m")
@@ -2278,12 +2278,12 @@ class Turtle:
                 assert color == 24, (color, accent, accent_)
                 backscapes.append(f"\x1B[48;5;{232 - 1}m")  # 231 8-Bit Color R G B = Max 5 5 5
 
-        elif accent == 8:
+        elif accent_ == 8:
 
             backscapes.append(f"\x1B[48;5;{color}m")
 
         else:
-            assert accent == 24, (color, accent_, accent)
+            assert accent_ == 24, (color, accent_, accent)
 
             r = (color >> 16) & 0xFF
             g = (color >> 8) & 0xFF
@@ -2301,7 +2301,7 @@ class Turtle:
         assert COLOR_ACCENTS == (None, 3, 4, 4.6, 8, 24)
         assert accent_ in (3, 4, 4.6, 8, 24), (accent,)
 
-        if accent == 4.6:
+        if accent_ == 4.6:
             assert 0 <= color < 25, (color, accent_, accent)
         else:
             assert 0 <= color < (1 << accent_), (color, accent_, accent)
@@ -2317,7 +2317,7 @@ class Turtle:
             else:
                 penscapes.append(f"\x1B[{30 + color - 8}m")  # first half of 4-Bit Color
 
-        elif accent == 4.6:
+        elif accent_ == 4.6:
 
             if color < 24:
                 penscapes.append(f"\x1B[38;5;{232 + color}m")
@@ -2325,12 +2325,12 @@ class Turtle:
                 assert color == 24, (color, accent, accent_)
                 penscapes.append(f"\x1B[38;5;{232 - 1}m")  # 231 8-Bit Color R G B = Max 5 5 5
 
-        elif accent == 8:
+        elif accent_ == 8:
 
             penscapes.append(f"\x1B[38;5;{color}m")
 
         else:
-            assert accent == 24, (color, accent_, accent)
+            assert accent_ == 24, (color, accent_, accent)
 
             r = (color >> 16) & 0xFF
             g = (color >> 8) & 0xFF

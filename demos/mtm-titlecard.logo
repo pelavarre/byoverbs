@@ -1,94 +1,191 @@
 # mtm-titlecard.logo
 
 
-# Draw 3 copies of the "Mary Tyler Moore" Title Card, from Sep/1970
+# Draw the "Mary Tyler Moore" Title Card, from Sep/1970
+#
+# Draw it as "Mary Tyler Mary Tyler Moore" across one 3-bit, one 4-bit, three 8-bit Color Aliases
+# Then draw it in 24-bit Color, except fallback to 8-Color if unsure about 24-bit Color
+#
 
-# Draw two quickly at left and right, with basic and brighter colors
-# Draw the mixed compromise slowly in the middle
 
+# Start up
 
 relaunch
-setpenhighlight 16 8  # 'black 3' alias works at macOS & gShell, but not at replIt
-clearscreen()  # macOS & replIt color the screen, gShell doesn't
-
-#
-
-restart
+clearscreen  # macOS & replIt color the screen, gShell doesn't
 setxyzoom 1 1
-penup  forward 50  right 90  backward 40  backward 110 pendown
+right 90
+penup  sety 110  pendown
+write "\r\n"
 
-setpenhighlight 16 8
+setpenhighlight 16 8  # 'black 3' works at macOS & gShell, but not at replIt
 
-label (len("  MARY TYLER MOORE  ") * " ")
-setpencolor cyan  label "  MARY TYLER MOORE  "
-setpencolor magenta  label "  MARY TYLER MOORE  "
-setpencolor red  label "  MARY TYLER MOORE  "
-setpencolor "993300"  label "  MARY TYLER MOORE  "  # 130m
-setpencolor yellow  label "  MARY TYLER MOORE  "
 
-setpencolor green  label "  MARY TYLER MOORE  "
+# 1st Blank
 
-setpencolor yellow  label "  MARY TYLER MOORE  "
-setpencolor "993300"  label "  MARY TYLER MOORE  "  # 130m
-setpencolor red  label "  MARY TYLER MOORE  "
-setpencolor magenta  label "  MARY TYLER MOORE  "
-setpencolor cyan  label "  MARY TYLER MOORE  "
-label (len("  MARY TYLER MOORE  ") * " ")
+penup  setx -120  pendown
+write (len("  MARY TYLER MARY TYLER MOORE  ") * " ")
+penup  forward 20  pendown
+write (len("  MARY TYLER MOORE  ") * " ")
+write "\r\n"
 
-#
 
-restart
-setxyzoom 1 1
-penup  forward 50  right 90  backward 40  forward 110 pendown
+# 1st Cyan
+penup  setx -120  pendown
+setpencolor cyan 3       write "  MARY"
+setpencolor cyan 4       write " TYLER"
+setpencolor 0o06         write " MARY"
+setpencolor 0o16         write " TYLER"
+setpencolor "00FFFF" 8   write " MOORE  "  # 0:5:5 51m
+penup  forward 20  pendown
+setpencolor "00FFFF"     write "  MARY TYLER MOORE  "
+write "\r\n"
 
-setpenhighlight 16 8
 
-label (len("  MARY TYLER MOORE  ") * " ")
-setpencolor cyan 4  label "  MARY TYLER MOORE  "
-setpencolor magenta 4  label "  MARY TYLER MOORE  "
-setpencolor red 4  label "  MARY TYLER MOORE  "
-setpencolor "FF6600"  label "  MARY TYLER MOORE  "  # 208m
-setpencolor yellow 4  label "  MARY TYLER MOORE  "
+# 1st Magenta
 
-setpencolor green 4  label "  MARY TYLER MOORE  "
+penup  setx -120  pendown
+setpencolor magenta 3    write "  MARY"
+setpencolor magenta 4    write " TYLER"
+setpencolor 0o05         write " MARY"
+setpencolor 0o15         write " TYLER"
+setpencolor "FF00FF" 8   write " MOORE  "  # 5:0:5 201m
+penup  forward 20  pendown
+setpencolor "FF00FF"     write "  MARY TYLER MOORE  "
+write "\r\n"
 
-setpencolor yellow 4  label "  MARY TYLER MOORE  "
-setpencolor "FF6600"  label "  MARY TYLER MOORE  "  # 208m
-setpencolor red 4  label "  MARY TYLER MOORE  "
-setpencolor magenta 4  label "  MARY TYLER MOORE  "
-setpencolor cyan 4  label "  MARY TYLER MOORE  "
-label (len("  MARY TYLER MOORE  ") * " ")
 
-#
+# 1st Red
 
-restart
-setxyzoom 1 1
-penup  forward 50  right 90  backward 40  backward 0 pendown
-sethertz 50
+penup  setx -120  pendown
+setpencolor red 3        write "  MARY"
+setpencolor red 4        write " TYLER"
+setpencolor 0o05         write " MARY"
+setpencolor 0o15         write " TYLER"
+setpencolor "FF0000" 8   write " MOORE  "  # 5:0:0 196m
+penup  forward 20  pendown
+setpencolor "FF0000"     write "  MARY TYLER MOORE  "
+write "\r\n"
 
-setpenhighlight 16 8
 
-label (len("  MARY TYLER MOORE  ") * " ")
-setpencolor cyan 4  label "  MARY TYLER MOORE  "
-setpencolor magenta 4  label "  MARY TYLER MOORE  "
-setpencolor red 4  label "  MARY TYLER MOORE  "
-setpencolor "FF6600"  label "  MARY TYLER MOORE  "  # 208m
-setpencolor yellow 4  label "  MARY TYLER MOORE  "
+# 1st of 8-bit and 24-bit Brown & Orange
 
-setpencolor green  label "  MARY TYLER MOORE  "
+penup  setx -120  pendown
+setpencolor              write "      "
+setpencolor              write "      "
+setpencolor              write "     "
+setpencolor              write "      "
+setpencolor "993300" 8   write " MO"  # 3:1:0 130m
+setpencolor "FF6600" 8   write "ORE  "  # 5:2:0 208m
+penup  forward 20  pendown
+setpencolor "FF6600"     write "  MARY TYLER MOORE  "
+write "\r\n"
 
-setpencolor yellow 4  label "  MARY TYLER MOORE  "
-setpencolor "FF6600"  label "  MARY TYLER MOORE  "  # 208m
-setpencolor red 4  label "  MARY TYLER MOORE  "
-setpencolor magenta 4  label "  MARY TYLER MOORE  "
-setpencolor cyan 4  label "  MARY TYLER MOORE  "
-label (len("  MARY TYLER MOORE  ") * " ")
 
-#
+# 1st Yellow
+
+penup  setx -120  pendown
+setpencolor yellow 3    write "  MARY"
+setpencolor yellow 4    write " TYLER"
+setpencolor 0o03         write " MARY"
+setpencolor 0o13         write " TYLER"
+setpencolor "FFFF00" 8   write " MOORE  "  # 5:5:0 226m
+penup  forward 20  pendown
+setpencolor "FFFF00"     write "  MARY TYLER MOORE  "
+write "\r\n"
+
+
+# Green in the Middle
+
+penup  setx -120  pendown
+setpencolor green 3    write "  MARY"
+setpencolor green 4    write " TYLER"
+setpencolor 0o02         write " MARY"
+setpencolor 0o12         write " TYLER"
+setpencolor "00FF00" 8   write " MOORE  "  # 0:5:0 46m
+penup  forward 20  pendown
+setpencolor "00FF00"     write "  MARY TYLER MOORE  "
+write "\r\n"
+
+
+# 2nd Yellow
+
+penup  setx -120  pendown
+setpencolor yellow 3    write "  MARY"
+setpencolor yellow 4    write " TYLER"
+setpencolor 0o03         write " MARY"
+setpencolor 0o13         write " TYLER"
+setpencolor "FFFF00" 8   write " MOORE  "  # 5:5:0 226m
+penup  forward 20  pendown
+setpencolor "FFFF00"     write "  MARY TYLER MOORE  "
+write "\r\n"
+
+
+# 2nd of 8-bit and 24-bit Brown & Orange
+
+penup  setx -120  pendown
+setpencolor              write "      "
+setpencolor              write "      "
+setpencolor              write "     "
+setpencolor              write "      "
+setpencolor "993300" 8   write " MO"  # 3:1:0 130m
+setpencolor "FF6600" 8   write "ORE  "  # 5:2:0 208m
+penup  forward 20  pendown
+setpencolor "FF6600"     write "  MARY TYLER MOORE  "
+write "\r\n"
+
+
+# 2nd Red
+
+penup  setx -120  pendown
+setpencolor red 3        write "  MARY"
+setpencolor red 4        write " TYLER"
+setpencolor 0o05         write " MARY"
+setpencolor 0o15         write " TYLER"
+setpencolor "FF0000" 8   write " MOORE  "  # 5:0:0 196m
+penup  forward 20  pendown
+setpencolor "FF0000"     write "  MARY TYLER MOORE  "
+write "\r\n"
+
+
+# 2nd Magenta
+
+penup  setx -120  pendown
+setpencolor magenta 3    write "  MARY"
+setpencolor magenta 4    write " TYLER"
+setpencolor 0o05         write " MARY"
+setpencolor 0o15         write " TYLER"
+setpencolor "FF00FF" 8   write " MOORE  "  # 5:0:5 201m
+penup  forward 20  pendown
+setpencolor "FF00FF"     write "  MARY TYLER MOORE  "
+write "\r\n"
+
+
+# 2nd Cyan
+penup  setx -120  pendown
+setpencolor cyan 3       write "  MARY"
+setpencolor cyan 4       write " TYLER"
+setpencolor 0o06         write " MARY"
+setpencolor 0o16         write " TYLER"
+setpencolor "00FFFF" 8   write " MOORE  "  # 0:5:5 51m
+penup  forward 20  pendown
+setpencolor "00FFFF"     write "  MARY TYLER MOORE  "
+write "\r\n"
+
+
+# 2nd Blank
+
+penup  setx -120  pendown
+write (len("  MARY TYLER MARY TYLER MOORE  ") * " ")
+penup  forward 20  pendown
+write (len("  MARY TYLER MOORE  ") * " ")
+write "\r\n"
+
+
+# Shut down
 
 restart  penup  forward 100  sleep 0.100  backward 200  sleep 0.100  # wipe out leftover cursor marks at macOS
 restart tada
 
 
-# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/headings.logo
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/mtm-titlecard.logo
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
