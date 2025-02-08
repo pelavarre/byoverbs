@@ -1022,12 +1022,14 @@ Forward,
 H, HideTurtle, Home,
 IncX, IncY, IsDown, IsVisible,
 Label, Left,
-PenDown, PenUp,
+PenDown, PenUp, Pong,
 Relaunch, Repaint, Repeat, Restart, Right,
 SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetXYZoom, SetY,
 ShowTurtle, Sierpiński, Sleep,
 Tada,
 and Write
+
+<!-- Breakout coming soon -->
 
 It suggest you try speaking the Nouns it knows:
 glass_teletype, heading, hiding,

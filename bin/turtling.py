@@ -877,8 +877,8 @@ class StrTerminal:
     bytes_terminal: BytesTerminal
     kchords: list[tuple[bytes, str]]  # Key Chords read ahead after DSR until CPR
 
-    y_rows: int  # -1, then Count of Screen Rows
-    x_columns: int  # -1, then Count of Screen Columns
+    y_count: int  # -1, then Count of Screen Rows
+    x_count: int  # -1, then Count of Screen Columns
 
     row_y: int  # -1, then Row of Cursor
     column_x: int  # -1, then Column of Cursor
@@ -896,8 +896,8 @@ class StrTerminal:
         self.bytes_terminal = bt
         self.kchords = list()
 
-        self.y_rows = -1
-        self.x_columns = -1
+        self.y_count = -1
+        self.x_count = -1
         self.row_y = -1
         self.column_x = -1
 
@@ -1113,22 +1113,22 @@ class StrTerminal:
 
         return (row_y, column_x)
 
-    def y_rows_x_columns_read(self, timeout) -> tuple[int, int]:
+    def y_count_x_count_read(self, timeout) -> tuple[int, int]:
         """Sample Counts of Screen Rows and Columns"""
 
         bt = self.bytes_terminal
 
         fileno = bt.fileno
         (columns, lines) = os.get_terminal_size(fileno)
-        (x_columns, y_rows) = (columns, lines)
+        (x_count, y_count) = (columns, lines)
 
-        assert y_rows >= 5, (y_rows,)  # macOS Terminal min 5 Rows
-        assert x_columns >= 20, (x_columns,)  # macOS Terminal min 20 Columns
+        assert y_count >= 5, (y_count,)  # macOS Terminal min 5 Rows
+        assert x_count >= 20, (x_count,)  # macOS Terminal min 20 Columns
 
-        self.y_rows = y_rows
-        self.x_columns = x_columns
+        self.y_count = y_count
+        self.x_count = x_count
 
-        return (y_rows, x_columns)
+        return (y_count, x_count)
 
         # .timeout unneeded when os.get_terminal_size available
 
@@ -1234,10 +1234,10 @@ class StrTerminal:
         assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-        (y_rows, x_columns) = self.y_rows_x_columns_read(timeout=0)
+        (y_count, x_count) = self.y_count_x_count_read(timeout=0)
         (y_row, x_column) = self.row_y_column_x_read(timeout=0)
 
-        for y in range(1, y_rows + 1):
+        for y in range(1, y_count + 1):
             ctext = "\x1B" "[" f"{y}d"
             ctext += "\x1B" "[" f"{n}P"
             self.schars_write(ctext)  # for .columns_delete_n
@@ -1251,10 +1251,10 @@ class StrTerminal:
         assert ICH_X == "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-        (y_rows, x_columns) = self.y_rows_x_columns_read(timeout=0)
+        (y_count, x_count) = self.y_count_x_count_read(timeout=0)
         (y_row, x_column) = self.row_y_column_x_read(timeout=0)
 
-        for y in range(1, y_rows + 1):
+        for y in range(1, y_count + 1):
             ctext = "\x1B" "[" f"{y}d"
             ctext += "\x1B" "[" f"{n}@"
             self.schars_write(ctext)  # for .columns_insert_n
@@ -1332,14 +1332,27 @@ class StrTerminal:
         # todo remember Cursor Position from when fetched till next write of characters
         # todo notify of unknown writes
 
-    def repaint(self) -> None:
+    def schar_read_if(self, row_y, column_x) -> str:
+        """Read 1 Char from the Screen, if logged before now"""
+
+        writelog = self.writelog
+
+        if column_x in writelog.keys():
+            writelog_x = writelog[column_x]
+            if row_y in writelog_x.keys():
+                sch = writelog_x[row_y]
+                return sch
+
+        return ""
+
+    def writelog_repaint(self) -> None:
         """Write the Logged Screen back into place, but with present Highlight/ Color/ Style"""
 
         bt = self.bytes_terminal
+        writelog = self.writelog
 
         row_y_column_x = self.row_y_column_x_read(timeout=0)
 
-        writelog = self.writelog
         for column_x in writelog.keys():  # insertion order
             writelog_x = writelog[column_x]
             for row_y in writelog_x.keys():  # insertion order
@@ -1352,9 +1365,6 @@ class StrTerminal:
 
         (row_y, column_x) = row_y_column_x
         self.write_row_y_column_x(row_y, column_x=column_x)
-
-        # todo: results returned from 🐢 .repaint
-        # todo: def 🐢 .monochrome to repaint without color? or Repaint with Args?
 
 
 class GlassTeletype:
@@ -1407,9 +1417,9 @@ class GlassTeletype:
     # Delegate work to the Str Terminal
     #
 
-    def repaint(self) -> None:
+    def writelog_repaint(self) -> None:
         st = self.str_terminal
-        st.repaint()
+        st.writelog_repaint()
 
     def schars_write(self, schars) -> None:
         st = self.str_terminal
@@ -1422,8 +1432,8 @@ class GlassTeletype:
 
     def os_terminal_y_rows_x_columns(self) -> tuple[int, int]:
         st = self.str_terminal
-        (y_rows, x_columns) = st.y_rows_x_columns_read(timeout=0)
-        return (y_rows, x_columns)
+        (y_count, x_count) = st.y_count_x_count_read(timeout=0)
+        return (y_count, x_count)
 
     def write_row_y_column_x(self, row_y, column_x) -> None:
         st = self.str_terminal
@@ -1523,6 +1533,7 @@ def _turtling_defaults_choose_() -> dict:
         setpencolor_color="Bold",
         #
         count=1,
+        pong_count=100,
         repeat_count=3,
         #
         diameter=100,
@@ -1665,10 +1676,10 @@ class Turtle:
 
         gt = self.glass_teletype
 
-        (y_rows, x_columns) = gt.os_terminal_y_rows_x_columns()
-        assert y_rows >= 4, (y_rows,)
+        (y_count, x_count) = gt.os_terminal_y_rows_x_columns()
+        assert y_count >= 4, (y_count,)
 
-        y = y_rows - 3
+        y = y_count - 3
         x = 1
         gt.write_row_y_column_x(row_y=y, column_x=x)
 
@@ -1702,11 +1713,15 @@ class Turtle:
         # FmsLogo Clean deletes 1 Turtle's trail, without clearing its Settings
         # PyTurtle Clear deletes 1 Turtle's Trail, without clearing its Settings
 
-    def repaint(self) -> None:
+    def repaint(self) -> dict:
         """Write the Logged Screen back into place, but with present Highlight/ Color/ Style"""
 
         gt = self.glass_teletype
-        gt.repaint()
+        gt.writelog_repaint()
+
+        return dict()
+
+        # todo: def 🐢 .monochrome to repaint without color? or Repaint with Args?
 
     def restart(self) -> dict:
         """Warp the Turtle to Home, and clear its Settings, but do Not clear the Screen (RESET for short)"""
@@ -1815,7 +1830,7 @@ class Turtle:
 
         distance_float = float(200 if (distance is None) else distance)
 
-        self._punch_bresenham_stride_(-distance_float)
+        self._punch_bresenham_stride_(-distance_float, limit=0)
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest)
         return d
@@ -1851,7 +1866,7 @@ class Turtle:
 
         distance_float = float(100 if (distance is None) else distance)
 
-        self._punch_bresenham_stride_(distance_float)
+        self._punch_bresenham_stride_(distance_float, limit=0)
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest)
         return d
@@ -2474,7 +2489,7 @@ class Turtle:
 
         # Draw the Line Segment to X2 Y2 from X1 Y1
 
-        self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2)
+        self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2, limit=0)
 
         # Catch up the Precise X Y Shadows
 
@@ -2569,7 +2584,7 @@ class Turtle:
     # Move the Turtle along the Line of its Heading, leaving a Trail if Pen Down
     #
 
-    def _punch_bresenham_stride_(self, stride) -> None:
+    def _punch_bresenham_stride_(self, stride, limit) -> None:
         """Step forwards, or backwards, along the Heading"""
 
         xstride_ = float(stride) * self.xscale
@@ -2613,8 +2628,12 @@ class Turtle:
 
         # Draw the Line Segment to X2 Y2 from X1 Y1
 
-        self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2)
+        self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2, limit=limit)
         # eprint(f"float {xfloat} {yfloat} {xfloat__} {yfloat__}")
+
+        if limit:
+            (x3, y3) = self._x_y_position_()  # may change .xfloat .yfloat
+            (x2, y2) = (x3, y3)  # replaces
 
         # Option to show why keep up Precise X Y Shadows in .xfloat .yfloat
 
@@ -2636,7 +2655,7 @@ class Turtle:
         self.xfloat = xfloat__
         self.yfloat = yfloat__
 
-    def _punch_bresenham_segment_(self, x1: int, y1: int, x2: int, y2: int) -> None:
+    def _punch_bresenham_segment_(self, x1, y1, x2, y2, limit) -> None:
         """Step forwards, or backwards, through (Row, Column) choices"""
 
         assert isinstance(x1, int), (type(x1), x1)
@@ -2644,7 +2663,10 @@ class Turtle:
         assert isinstance(y2, int), (type(y2), y2)
         assert isinstance(x2, int), (type(x2), x2)
 
-        # eprint(f"{x1=} {y1=} ({2 * y1}e0)  {x2=} {y2=} ({2 * y2}e0)")
+        gt = self.glass_teletype
+        st = gt.str_terminal
+
+        # Plan to jump & punch along the Line
 
         x2x1 = abs(x2 - x1)  # distance
         y2y1 = abs(y2 - y1)
@@ -2654,9 +2676,20 @@ class Turtle:
 
         e = x2x1 - y2y1  # Bresenham's Error Measure
 
+        # Watch the Terminal Cursor closely when limiting its movement
+
+        ya = xa = -1
+        if limit:
+            (ya, xa) = st.row_y_column_x_read(timeout=0)
+
+        # Follow the plan
+
         wx = x = x1
         wy = y = y1
+        count = 0
         while True:
+            # if limit:
+            #     print(f"{ya=} {xa=} {count=}", end="\r\n")
 
             self._jump_then_punch_(wx, wy=-wy, x=x, y=-y)
             if (x == x2) and (y == y2):
@@ -2679,6 +2712,15 @@ class Turtle:
 
             assert (x, y) != (wx, wy)
 
+            if limit:
+                (yb, xb) = st.row_y_column_x_read(timeout=0)
+                if (yb, xb) != (ya, xa):
+                    (ya, xa) = (yb, xb)
+
+                    count += 1
+                    if count >= limit:
+                        break
+
         # Wikipedia > https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 
         # To: Perplexity·Ai
@@ -2696,6 +2738,8 @@ class Turtle:
         warping = self.warping
         penmark = self.penmark
         rest = self.rest
+
+        # Plan the Jump
 
         if wx < x:
             pn = 2 * (x - wx)  # doublewide X
@@ -2715,6 +2759,13 @@ class Turtle:
         else:
             y_text = ""
 
+        # Do the Jump
+
+        ctext = f"{y_text}{x_text}"
+        gt.schars_write(ctext)
+
+        # Plan the Punch
+
         width = 0
         for ch in penmark:
             eaw = unicodedata.east_asian_width(ch)
@@ -2722,12 +2773,12 @@ class Turtle:
             if eaw in ("F", "W"):
                 width += 1
 
-        ctext = f"{y_text}{x_text}"
-        if warping:
-            gt.schars_write(ctext)
-        else:
-            backspaces = width * "\b"
-            gt.schars_write(ctext)
+        backspaces = width * "\b"
+
+        # Do the Punch, or don't
+
+        if not warping:
+
             gt.schars_write(penmark)  # todo: .writelog when Controls mixed into Text
             gt.schars_write(backspaces)
 
@@ -2753,11 +2804,11 @@ class Turtle:
 
         # Find the Center of Screen
 
-        (y_rows, x_columns) = gt.os_terminal_y_rows_x_columns()
-        x_columns = x_columns // 2  # doublewide X
+        (y_count, x_count) = gt.os_terminal_y_rows_x_columns()
+        x_count = x_count // 2  # doublewide X
 
-        cx = 1 + (x_columns // 2)
-        cy = 1 + (y_rows // 2)
+        cx = 1 + (x_count // 2)
+        cy = 1 + (y_count // 2)
 
         # Say how far away from Center the Cursor is, on a plane of Y is Up and X is Right
 
@@ -2822,6 +2873,83 @@ class Turtle:
         #   pu  setxy 170 -170  lt 90  pd
         #   sierpinski 400
         #
+
+    #
+    # Move like a Pong Game Puck
+    #
+
+    def pong(self, count) -> dict:
+        """Move like a Pong Game Puck"""
+
+        count_ = int(count)
+        assert count_ >= 0, (count_,)
+
+        if count_ == 0:
+            self.forward(0)
+        else:
+            for _ in range(count_):
+                self._pong_step_()
+
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        return d
+
+        # todo: results returned from 🐢 .pong
+
+    def _pong_step_(self) -> None:
+        """Move like a Pong Game Puck"""
+
+        gt = self.glass_teletype
+        st = gt.str_terminal
+
+        (y1, x1) = st.row_y_column_x_read(timeout=0)
+
+        # Blink out
+
+        st.schars_write("  ")
+        st.schars_write("\b\b")
+
+        # Look ahead down the Bresenham Line
+
+        warping = self.warping
+        self.warping = True
+        try:
+            distance_float = 100
+            self._punch_bresenham_stride_(distance_float, limit=1)
+            (y2, x2) = st.row_y_column_x_read(timeout=0)
+        finally:
+            self.warping = warping
+
+        x2plus = x2 + 1
+
+        # Move if no Collision
+
+        schar_0_if = st.schar_read_if(row_y=y2, column_x=x2)
+        schar_1_if = st.schar_read_if(row_y=y2, column_x=x2plus)
+
+        collision = False
+        if (y2, x2) == (y1, x1):
+            collision = True
+        elif schar_0_if.strip():
+            collision = True
+        elif schar_1_if.strip():
+            collision = True
+
+        if not collision:
+            if not warping:
+                self._punch_bresenham_stride_(0, limit=1)
+            return
+
+            # todo: stop double-rest'ing when not-warp'ing
+
+        # Else bounce
+
+        st.write_row_y_column_x(row_y=y1, column_x=x1)
+
+        heading = self.heading
+        self.setheading(heading + 180e0)
+
+        distance_float = 100
+        self._punch_bresenham_stride_(distance_float, limit=1)
 
 
 turtles: list[Turtle]
@@ -2927,6 +3055,14 @@ def pendown() -> dict:
 
 def penup() -> dict:
     return turtle_demand().penup()
+
+
+def pong(count) -> dict:
+    return turtle_demand().pong(count)
+
+
+def repaint() -> dict:
+    return turtle_demand().repaint()
 
 
 def repeat(count, angle, distance) -> dict:
