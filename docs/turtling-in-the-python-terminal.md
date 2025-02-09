@@ -7,7 +7,7 @@ Contents
   - [You start inside a Shell inside a Terminal](#you-start-inside-a-shell-inside-a-terminal)
     - [Windows](#windows)
     - [Browser Linux](#browser-linux)
-      - [gShell](#gshell)
+      - [gCloud](#gcloud)
       - [replIt](#replit)
     - [macOS](#macos)
   - [You download \& run the Source Code](#you-download--run-the-source-code)
@@ -29,7 +29,7 @@ Contents
   - [Draw Circles and parts of Circles](#draw-circles-and-parts-of-circles)
   - [Draw famous Figures](#draw-famous-figures)
   - [Color by Number or Color by Words](#color-by-number-or-color-by-words)
-    - [Terminal Shell Colors at gShell](#terminal-shell-colors-at-gshell)
+    - [Terminal Shell Colors at gCloud Terminal Shell](#terminal-shell-colors-at-gcloud-terminal-shell)
     - [Terminal Shell Colors at replIt](#terminal-shell-colors-at-replit)
     - [Terminal Shell Colors at macOS](#terminal-shell-colors-at-macos)
   - [Edit your Drawings](#edit-your-drawings)
@@ -86,15 +86,15 @@ if you come talk out how to make it happen with us
 
 #### Browser Linux
 
-##### gShell
+##### gCloud
 
 If you think you don't have a Linux Terminal, actually you do.
-You can go run the 4+ GB Terminal gShell
-that your gMail gives you free-of-charge inside its gCloud at
+You can go run the 4+ GB Terminal gCloud Linux Terminal Shell
+that your gMail gives you free-of-charge at
 
 > https://shell.cloud.google.com/?show=terminal
 
-Google gives out one Linux Terminal per Browser
+Google gives out one Linux Terminal Shell per Browser
 
 Shell people talk a lot about the Keystrokes they type into the Terminal
 Apple macBook's label their Keys like so =>
@@ -117,11 +117,26 @@ Many gShell people soon learn
 
 ⌃B ← and ⌃B ↑ and ⌃B  → and ⌃B ↓ is how you move your Cursor between Panes
 
+In history, these are the Keyboard Shortcuts of the TMux add-on,
+but the gCloud Linux Terminal Shell installs these by default
+
 
 ##### replIt
 
-The replIt·Com Startup gives Linux Terminals away free-of-charge too,
-but they force those Terminals to run stunningly slow, unless you pay money
+The replIt·Com Startup will lend you a Linux Terminal,
+if you give them an email address
+
+But they soon stop you playing, and demand like US$180/year.
+They trip you up like this after you leave a Terminal running for like 10 Hours.
+They calm down and let you back in again after like a month
+
+They don't make it reasonably easy to keep track of what deal they're offering.
+But this is what Perplexity·Ai told me in February, 2025, when I asked:
+How quickly does replIt·Com hit you with "You've used up all your Development time"?
+
+They don't accurately measure if you're around or not,
+typing on the Keyboard or moving and clicking the Mouse.
+One accident of leaving a Process running and you're done for the month
 
 
 #### macOS
@@ -320,8 +335,8 @@ Turtle Logo's disagree over whether
 to draw Dark Pixels on a Lightmode Canvas, or
 to draw Light Pixels on a Darkmode Canvas.
 In particular, the 2024 Python Import Turtle forces Lightmode,
-even when clashing with the Darkmode's of replIt or macOS.
-And it often declines to run altogether at gShell
+even when clashing with the Darkmode's of replIt or macOS
+And it often declines to run altogether at the gCloud Terminal Shell
 
 You choose your default Terminal Font.
 Presently we guess the Pixel you want is a Square pair of U+2588 Full-Block █ █ Characters.
@@ -336,8 +351,8 @@ Lately I mostly test Screens of
 in the Lightmode Basic Profile of the macOS Terminal App in Oct/2024 Sequoia macOS 15.
 I've also sent out some Screenshots from the Darkmode Homebrew Profile
 
-I'd guess most of you are working inside a free gShell.
-I've also seen free replIt Shells work.
+I'd guess most of you are working inside a free gCloud Terminal Shell.
+I've also seen replIt Terminal Shells work.
 I haven't tested macOS Ghostty, nor macOS iTerm2 either,
 nor any of the Terminal Apps of Linux and Windows
 
@@ -438,7 +453,7 @@ Our Turtle is too easy to lose
 Sometimes it's the same Color as the Background of the Screen,
 or the same Color as your Drawing in the Foreground,
 or you turned it off with HideTurtle or Tada,
-or you turned it off with gShell ⌃B and a ← ↑ → ↓ Arrow Key,
+or you turned it off with gCloud Terminal Shell TMux ⌃B and a ← ↑ → ↓ Arrow Key,
 or you didn't turn it back on with ShowTurtle
 
 To get the Turtle to blink on and off,
@@ -634,9 +649,9 @@ that look like the Wikipedia ANSI Escape Codes,
 or the Hue/ Saturation/ Brightness Sliders of MIT Scratch Logo
 
 
-#### Terminal Shell Colors at gShell
+#### Terminal Shell Colors at gCloud Terminal Shell
 
-When you run our Color Test in a Google gShell Terminal,
+When you run our Color Test in a gCloud Terminal Shell,
 they give you 1 Red, 2 Green's, and 2'Blue's.
 Who knows why
 
@@ -688,7 +703,7 @@ we'll round off a 24-Bit Html Color to a 8-Bit macOS Color, if you ask
     Restart Tada
 
 We'll also let you ask for the closest Color to a 24-Bit Color.
-At the gShell or replit Linux Terminal Shells, you'll get the 24-Bit Color you asked for.
+At the gCloud or replit Linux Terminal Shells, you'll get the 24-Bit Color you asked for.
 At macOS, you'll settle for the closest 8-Bit Color
 
     Relaunch
@@ -799,13 +814,13 @@ Searching instead with ⌘F 38; will show you
 Wikipedia People talking of "Select RGB foreground color"
 from a choice of more than 16 million "24-bit" Colors
 
-For example, inside of a gShell, try
+For example, inside of a gCloud Terminal Shell, try
 
     write '\e[38;5;196m Red \e[38;2;255;0;0m Red \e[m'
     write '\e[38;5;46m Green \e[38;2;0;255;0m Green \e[m'
     write '\e[38;5;21m Blue \e[38;2;0;0;255m Blue \e[m'
 
-These 24-bit Colors work inside a gShell and also inside a replIt Shell.
+These 24-bit Colors work at gCloud and at replIt.
 They do Not work inside a macOS Shell.
 Apple rudely mistakes the 38;2 ask for 24-bit Color as canceling the 38;5 ask for 8-bit Color.
 You can't ask for 8-bit and ask for 24-bit and settle for what you get, not with Apple around.
@@ -917,7 +932,7 @@ That change makes these Instructions lots more powerful
 
 You can also learn to type the macOS Keyboard Shortcuts.
 These came into Linux as Emacs Keyboard Shortcuts, so they do mostly work there too.
-However, gShell takes ⌃B as a TMux Keyboard Shortcut, so out there
+However, gCloud Terminal Shell takes ⌃B as a TMux Keyboard Shortcut, so out there
 you have to press ← or press ⌃B ⌃B twice
 to mean you're asking to move the Turtle left by 1 Column
 
