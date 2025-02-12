@@ -49,6 +49,7 @@ Contents
     - [Breakpoint the Drawing Window](#breakpoint-the-drawing-window)
     - [Breakpoint the Chat](#breakpoint-the-chat)
 - [Near Future Work](#near-future-work)
+  - [Bugs](#bugs)
   - [Pucks](#pucks)
   - [Paddles](#paddles)
   - [Solutions for the free-of-charge tier at replIt·Com](#solutions-for-the-free-of-charge-tier-at-replitcom)
@@ -1449,9 +1450,51 @@ but ⌃U will work
 ## Near Future Work
 
 
+### Bugs
+
+Lately I told my Shell
+
+    cat demos/arrow-keys.logo |pbcopy
+
+Then I pasted those Logo instructions into our Turtle App.
+Then I added some more Logo instructions
+
+    penup  fd 30  rt 90  fd 100  pendown
+    setpc red
+    seth  right 45
+
+    pong
+
+This experiment draws the ← ↑ ↓ → Arrow Keys with no Color,
+and then bounces a red Pong Puck around for a short while
+
+This experiments surfaces several different bugs.
+This Pong Puck wrongly leaves some extra copies of itself around.
+Both near where it bounces, and halfway in between.
+And when it hits the right edge of the screen, sometimes it spills half of itself
+
+And when you run this particular experiment on my Terminals,
+the Chat Terminal Window Pane chokes out,
+complaining of something like 'AssertionError: (8163, 9254)',
+inside 'fd_read_text_else'.
+And then you can't restart the Chat Terminal Window Pane.
+When you try, it complains of something like: "ValueError: invalid literal for int() with base 16: ''",
+again inside 'fd_read_text_else'.
+You have to press ⌃\ inside the Drawing Terminal Window Pane,
+and start that Python again. Then you can restart the Chat
+
+Plus we could come make this experiment easier to run.
+To get it going, we could let you say something like
+
+    demos.arrow_keys
+
+Presently, that doesn't work. It says:  NameError: name 'demos' is not defined
+
+
 ### Pucks
 
-We might next figure out how to add Pong and Breakout Pucks
+What we've got started on there is that
+we might next figure out how to add Pong and Breakout Pucks
 
 When you add a Pong Puck,
 it slides around,
