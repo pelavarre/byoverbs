@@ -50,8 +50,11 @@ Contents
     - [Breakpoint the Chat](#breakpoint-the-chat)
 - [Near Future Work](#near-future-work)
   - [Bugs](#bugs)
-  - [Pucks](#pucks)
-  - [Paddles](#paddles)
+    - [Pong begun, but nothing like finished](#pong-begun-but-nothing-like-finished)
+    - [11x11 found where 10x10 expected](#11x11-found-where-10x10-expected)
+    - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
+  - [Future Pucks](#future-pucks)
+  - [Future Paddles](#future-paddles)
   - [Solutions for the free-of-charge tier at replIt·Com](#solutions-for-the-free-of-charge-tier-at-replitcom)
 - [Try out some other Terminal Games](#try-out-some-other-terminal-games)
   - [Wump and more](#wump-and-more)
@@ -1452,6 +1455,8 @@ but ⌃U will work
 
 ### Bugs
 
+#### Pong begun, but nothing like finished
+
 Lately I told my Shell
 
     cat demos/arrow-keys.logo |pbcopy
@@ -1491,7 +1496,46 @@ To get it going, we could let you say something like
 Presently, that doesn't work. It says:  NameError: name 'demos' is not defined
 
 
-### Pucks
+#### 11x11 found where 10x10 expected
+
+These instructions
+
+    relaunch
+    fd 100
+    restart setpc red  rt 90  fd 100
+    setpc blue
+
+paint 11x11 pixels, not 10x10 pixels
+
+    0  ██
+    9  ██
+    8  ██
+    7  ██
+    6  ██
+    5  ██
+    4  ██
+    3  ██
+    2  ██
+    1  ██
+    0  ██████████████████████
+
+       0 1 2 3 4 5 6 7 8 9 0
+
+I feel surprised, I feel disconcerted, by 11 != 10
+
+FD 90 in place oF FD 100 gives us 10x10.
+Is this all as it should be, or should we go mess with it?
+
+
+#### Isosceles found, where Equilateral expected
+
+Can we make our Arrow Keys Demo
+come out with triangles that are enough more equilateral?
+Presently we get 10.5 X by 11 Y for Left and Right,
+vs 13 X by 11 Y for Up or Down.
+
+
+### Future Pucks
 
 What we've got started on there is that
 we might next figure out how to add Pong and Breakout Pucks
@@ -1508,7 +1552,7 @@ Leave it running for long enough, and it'll erase all of your drawing
 You can add more than one Puck
 
 
-### Paddles
+### Future Paddles
 
 We might next figure out how to add Pong and Breakout Paddles
 
