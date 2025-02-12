@@ -48,10 +48,15 @@ Contents
   - [Breakpoints](#breakpoints)
     - [Breakpoint the Drawing Window](#breakpoint-the-drawing-window)
     - [Breakpoint the Chat](#breakpoint-the-chat)
-- [Try out some other Turtle Logo](#try-out-some-other-turtle-logo)
-  - [Does it work at your desk?](#does-it-work-at-your-desk)
-  - [What kind of drawings does it make?](#what-kind-of-drawings-does-it-make)
+- [Near Future Work](#near-future-work)
+  - [Pucks](#pucks)
+  - [Paddles](#paddles)
+  - [Solutions for the free-of-charge tier at replIt·Com](#solutions-for-the-free-of-charge-tier-at-replitcom)
 - [Try out some other Terminal Games](#try-out-some-other-terminal-games)
+  - [Wump and more](#wump-and-more)
+  - [Other Turtle Logos](#other-turtle-logos)
+    - [Does it work at your desk?](#does-it-work-at-your-desk)
+    - [What kind of drawings does it make?](#what-kind-of-drawings-does-it-make)
 - [Help us please](#help-us-please)
 
 <!-- I wish VsCode ToC would number its headings -->
@@ -1441,9 +1446,85 @@ that habit won't work here,
 but ⌃U will work
 
 
-## Try out some other Turtle Logo
+## Near Future Work
 
-You can try these same tests inside other Turtle Logo Apps.
+
+### Pucks
+
+We might next figure out how to add Pong and Breakout Pucks
+
+When you add a Pong Puck,
+it slides around,
+in between the things you have told Turtles to draw.
+It bounces off of them
+
+The Breakout Puck looks much the same,
+but it erases the parts of the drawing that it bumps into.
+Leave it running for long enough, and it'll erase all of your drawing
+
+You can add more than one Puck
+
+
+### Paddles
+
+We might next figure out how to add Pong and Breakout Paddles
+
+While you add no Paddle,
+you can press the ← ↑ → ↓ Keys to push the Puck in a different direction
+
+When you add more than one Paddle,
+then pressing A S D F moves the Left Paddle,
+whereas pressing H J K L moves the Right Paddle
+
+### Solutions for the free-of-charge tier at replIt·Com
+
+The merciless copy-restriction locks at replit·Com
+often do slow you down and kick you out without explanation
+
+Well, we can pour time into reverse-engineering what it is that they want
+
+Like maybe they don't run so slow if we retune the timeouts on our 'select.select' calls
+
+Like maybe they don't randomly kick you out for a month if we figure out
+how to never run more than two Processes accidentally,
+or how to limit the run time of our every Process
+
+Like maybe they'll let you back in if you register a series of email addresses
+> jqdoe@gmail.com+1<br>
+> jqdoe@gmail.com+2<br>
+> jqdoe@gmail.com+3<br>
+
+We'll see
+
+
+## Try out some other Terminal Games
+
+### Wump and more
+
+Before Linux, there was Unix, and people published Games for the Terminal as Open-Source
+
+At gShell you can try
+
+    sudo apt-get update && sudo apt-get install -y bsdgames
+    ls /usr/games
+    /usr/games/wump
+
+At replIt you can try
+
+    nix-shell -p bsdgames --run wump
+
+At gShell, you'll see they suggest you try all of
+> adventure atc battlestar caesar cfscores dab gomoku hangman primes<br>
+> rot13 snake teachgammon trek wtf arithmetic backgammon bsdgames-adventure<br>
+> canfield cribbage go-fish hack pom robots sail snscore tetris-bsd<br>
+> worm wump<br>
+
+Tell us what you like?
+
+### Other Turtle Logos
+
+You can try these same tests inside other Turtle Logo Apps
+
 In particular, adding Python into macOS lets you try
 
     python3 -i -c ''
@@ -1457,7 +1538,9 @@ In particular, adding Python into macOS lets you try
     t.right(45)
 
 This Import Turtle demo runs just as well for me in Window Tab Panes of ReplIt,
-but they force those Terminals to run stunningly slow, unless you pay money
+but they force those Terminals to run stunningly slow,
+and even turn them off for a month,
+unless you pay money
 
 You could go ask Python·Org people
 to learn to auto-complete your Turtle Logo Input as strongly as we do.
@@ -1483,7 +1566,7 @@ Wikipedia > [Domain-specific language]([./demos/arrow-keys.logo](https://en.wiki
 Wikipedia > [Greenspun's tenth rule](https://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)<br>
 
 
-### Does it work at your desk?
+#### Does it work at your desk?
 
 Our Turtle Logo runs inside more Terminals
 > gMail gCloud gShell @ https://shell.cloud.google.com/?show=terminal<br>
@@ -1498,7 +1581,7 @@ whereas their Turtle Logo gives you problems to solve, like
 > _tkinter.TclError: no display name and no $DISPLAY environment variable<br>
 
 
-### What kind of drawings does it make?
+#### What kind of drawings does it make?
 
 Their Turtle Logo draws on a Bitmap Canvas in a separate Window that's not a Terminal Window.
 You can take screenshots of their drawings,
@@ -1533,30 +1616,6 @@ Our pixels look large and square by default,
 but you can mess with that,
 by changing the size of your Terminal Window Pane and its Font
 
-
-
-
-## Try out some other Terminal Games
-
-Before Linux, there was Unix, and people published Games for the Terminal as Open-Source
-
-At gShell you can try
-
-    sudo apt-get update && sudo apt-get install -y bsdgames
-    ls /usr/games
-    /usr/games/wump
-
-At replIt you can try
-
-    nix-shell -p bsdgames --run wump
-
-At gShell, you'll see they suggest you try all of
-> adventure atc battlestar caesar cfscores dab gomoku hangman primes<br>
-> rot13 snake teachgammon trek wtf arithmetic backgammon bsdgames-adventure<br>
-> canfield cribbage go-fish hack pom robots sail snscore tetris-bsd<br>
-> worm wump<br>
-
-Tell us what you like?
 
 ## Help us please
 
