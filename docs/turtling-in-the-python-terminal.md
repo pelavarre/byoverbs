@@ -15,6 +15,7 @@ Contents
   - [Step 3: You open one Terminal Window Tab Pane for Drawing](#step-3-you-open-one-terminal-window-tab-pane-for-drawing)
   - [Step 4: You open another Terminal Window Tab Pane for Chat](#step-4-you-open-another-terminal-window-tab-pane-for-chat)
   - [You can start over expertly](#you-can-start-over-expertly)
+  - [You can quit for now and start back up again later](#you-can-quit-for-now-and-start-back-up-again-later)
   - [Please believe we've gone wrong](#please-believe-weve-gone-wrong)
 - [You can just try things](#you-can-just-try-things)
   - [Move the Turtle](#move-the-turtle)
@@ -76,7 +77,7 @@ to show you this Md File rendered without these words
 
 ## Welcome
 
-Welcome to our game
+Welcome to our Game
 
 **Four Steps** =>
 
@@ -86,7 +87,9 @@ Welcome to our game
 You'll choose to work with
 two Terminal Window Tab Panes,
 or two Terminal Window Tabs, or two Terminal Windows.
-You need one for Turtles to draw things, and one for you to chat with the Turtles
+You need one for Turtles to draw things, and one for you to chat with the Turtles.
+We'll talk of your two Panes,
+and you'll know if you find two Panes in one Tab, or in two Tabs, or in two Windows
 
 
 #### Windows
@@ -123,7 +126,7 @@ Google gives out one Linux Terminal Shell Window per Browser.
 And they keep it current, like giving you 2023 Python 3.12 in 2025
 
 Many gCloud Shell people soon learn the Keyboard Shortcuts
-for splitting a Terminal Window into Panes
+for splitting one Terminal Window into Panes
 
 | Key Chord Sequence | Meaning |
 |--------------------|---------|
@@ -180,6 +183,13 @@ Maybe you're typing on the Keyboard and moving and clicking the Mouse, maybe you
 Even when not,
 if you have one accident of leaving a Process running then you're done for the month
 
+The replIt people also radically change how their Panes work, from time to time.
+Presently, in February of 2025,
+they more push "Shell - Move existing tab here" at you.
+When you need to work with two Panes,
+you have to search farther to find
+"Shell - Directly access your App through a command line interface (CLI)"
+
 
 ##### Sh Screen
 
@@ -221,7 +231,8 @@ We'd be curious to hear how you chose to try our Game, all the same
 
 ### Step 3: You open one Terminal Window Tab Pane for Drawing
 
-You tell our Code to move Turtles around and draw things on the Terminal Screen
+Inside of one Pane,
+you tell our Code to move Turtles around and draw things on the Terminal Screen
 
     python3 turtling.py --yolo
 
@@ -231,11 +242,12 @@ First up, it'll tell you something like
 
 ### Step 4: You open another Terminal Window Tab Pane for Chat
 
-You tell our Code to chat with you
+Inside of a second Pane,
+you tell our Code to find the Turtles in your Drawing Pane and chat with you about them
 
     python3 turtling.py -i
 
-First up, it'll tell you something like
+First up, our Code will tell you something like
 > BYO Turtling·Py 2025.2.15<br>
 > Chatting with you, till you say:  bye<br>
 
@@ -247,7 +259,7 @@ and fills them out ("auto-completes" them)
 to form Python Instructions, all carefully spelled and punctuated
 
 Our Code then has only Python Instructions to deal with.
-It forwards the Python into the Turtles of the Window Tab Pane you opened for Drawing.
+It forwards the Python into the Turtles of the Pane you opened for Drawing.
 The Turtles there then follow your Instructions.
 They move around and draw things and beep at you
 
@@ -256,33 +268,39 @@ This Doc walks you through fun tests of such Turtle Instructions
 
 ### You can start over expertly
 
-If you want just one step to remember,
-start both your Terminal Window Tab Panes with:&nbsp; `python3 turtling.py --yolo`
+If you want just one step to remember, you can
+tell the Shells in both of your Terminal Window Tab Panes
+to start up in the same way.
+You always just say:&nbsp; `./turtling.py --yolo`
 
-It turns out you can start up both of your Terminal Window Tab Panes in the same way.
-The second one figures it out is second and runs as a Chat Pane, not as a Drawing Pane
+The second Pane figures out it arrived in second place
+and runs as a Chat Pane, not as a Drawing Pane
 
-For our game to work, you have to start both Terminals inside the same Folder.
+For our Game to work, you have to start both Panes inside the same Folder.
 You can tell the Shell to tell you which Folder you chose with:&nbsp; `pwd`
 
-If you do try to run our game from a different Folder, you'll see it say something like
+If you do try to run our Game from a different Folder, you'll see it say something like
 > ... can't open file ... [Errno 2] No such file or directory
 
-When you're done playing, you can always just shut the Windows.
-If you just shut Browser Windows, that works fine.
+
+### You can quit for now and start back up again later
+
+When you're done playing, you can always just shut the Windows
+
+If you just shut Browser Windows, then that works fine.
 But if you just shut Terminal Windows,
 then sometimes your Terminal
-will refuse to play our game again until after your next Restart of your Op Sys.
+will refuse to play our Game again until after your next Restart of your Op Sys.
 Expert Shell people can work out
-combinations of 'ps aux |grep -i Turtling' and 'kill -9'
+combinations of 'pwd' and 'cd' and 'ps aux |grep -i Turtl' and 'kill -9'
 that will let you play again without restarting your Op Sys
 
 ### Please believe we've gone wrong
 
 You're meeting with us here in our early days.
-If you quit reading before we stop talking at you, then we've gone wrong.
-That's when you know you've tested our Doc and our Doc failed you.
-We'd love to have you tell us exactly how far you got, please
+If you quit reading before we stop talking at you, then we've gone wrong,
+for our Doc has failed you.
+We'd love to have you tell us exactly how far you got before we went wrong, please
 
 
 ## You can just try things
@@ -294,7 +312,10 @@ Try telling the Chat to
 
     fd
 
-We'll guess you typed that Logo Instruction to mean the Python Instructon 't.forward(100)'. So we type that out for you, as you can see.
+Our Code will guess
+you typed that Logo Instruction to mean the Python Instructon 't.forward(100)'.
+So we type out that Python Instruction for you,
+carefully spelled and punctuated, as you can see.
 You can type 'forward' to mean the same thing
 
     forward
@@ -1077,8 +1098,8 @@ To see all our Turtle Verbs listed, try
 
     help(t)
 
-The Help appears in the Window Tab Pane where the Turtles draw things,
-not the Window Tab Pane where you typed out 'help(t)' to ask for the Help.
+The Help appears in the Pane where the Turtles draw things,
+not the Pane where you typed out 'help(t)' to ask for the Help.
 When you're done reading the Help, press Q to see your Drawings again.
 Press Spacebar before Q if you want to see more Screenfuls of the Help
 
@@ -1371,11 +1392,11 @@ by sleeping as long as the last 🐢 SetHertz said to sleep
 ### Help sort our Wish List
 
 Have you found a deal-breaker that's shutting you out somehow,
-stopping you from playing this game some more?
+stopping you from playing this Game some more?
 
 Tell us what it is?
 
-Like we could give this game a more game-like feel,
+Like we could give this Game a more game-like feel,
 if we completed a full Python Command every time you pressed a Key inside the Drawing Window.
 Or we could rewrite our Arrow Keys Demo to have 4 Turtles draw it, not just 1.
 Or we could figure out how to show the Turtle
@@ -1461,7 +1482,7 @@ We'll run that as
 
     >>> t.breakpoint()
 
-And then it works, over in the Window Tab Pane where the Turtles draw things
+And then it works, over in the Pane where the Turtles draw things
 
 To quit a Pdb Debugging Session, you press C and then Return.
 To get help with the Pdb language, you press H and then Return.
