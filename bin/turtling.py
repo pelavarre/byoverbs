@@ -81,9 +81,10 @@ if not __debug__:
 
 
 def main() -> None:
-    """Run well from the Sh Command Line"""
+    """Run well from the Sh Command Line, else launch the Pdb Post-Mortem Debugger"""
 
     ns = parse_turtling_py_args_else()  # often prints help & exits
+    assert ns.yolo or ns.i or (ns.c is not None), (ns,)
 
     try:
         main_try(ns)
@@ -113,25 +114,36 @@ def main() -> None:
 
 
 def main_try(ns) -> None:
+    """Run well from the Sh Command Line, else raise an Exception"""
+
+    assert ns.yolo or ns.i or (ns.c is not None), (ns,)
+
+    # Take the Yolo Option as Auth to run as the Chat Pane of a Drawing Pane,
+    # else to run as a Drawing Pane
 
     if ns.yolo:
         assert (not ns.i) and (not ns.c), (ns.i, ns.c, ns.yolo, ns)
+
         if turtling_server_attach():
             turtling_client_run("relaunch")
         else:
             turtling_server_run()
+
         return
+
+    # Take the I or C or both Options as Auth to run as the Chat Pane of a Drawing Pane
+
+    assert ns.i or (ns.c is not None), (ns,)
 
     if not turtling_server_attach():
-        print("not turtling_server_attach")
+        workaround = "Try 'pwd' and 'cd' and 'ps aux |grep -i Turtl' and so on"
+        print(f"No Terminal Window Pane found for drawing. {workaround}", file=sys.stderr)
+        sys.exit(1)
 
-    if ns.c is not None:
-        turtling_client_run(ns.c)
-        return
+    command = "relaunch" if (ns.c is None) else ns.c
+    turtling_client_run(command)
 
-    assert ns.i, (ns.i, ns)
-    turtling_client_run("relaunch")
-    eprint("Bye")
+    eprint("Bye bye")
 
 
 def parse_turtling_py_args_else() -> argparse.Namespace:
@@ -153,14 +165,18 @@ def parse_turtling_py_args_else() -> argparse.Namespace:
     parser.add_argument("-c", metavar="COMMAND", help=c_help)
 
     ns = parse_args_else(parser)  # often prints help & exits
-    assert ns.version or ns.yolo or ns.i or (ns.c is not None), (ns,)
-
-    if ns.yolo and (ns.i or ns.c):
-        sys.exit(2)  # exits 2 for wrong Sh Args
+    commanded = ns.c is not None
 
     if ns.version:
         print(f"BYO Turtling·Py {__version__}")
         sys.exit(0)
+
+    if ns.yolo and (ns.i or commanded):
+        print("error: don't choose --yolo with -i or -c", file=sys.stderr)
+        sys.exit(2)  # exits 2 for wrong Sh Args
+
+    if not (ns.yolo or ns.i or commanded):
+        ns.yolo = 1  # replaces  # at ./turtling.py --
 
     return ns
 

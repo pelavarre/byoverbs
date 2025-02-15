@@ -7,9 +7,9 @@ Contents
   - [Step 1: You start inside a Shell inside a Terminal](#step-1-you-start-inside-a-shell-inside-a-terminal)
     - [Windows](#windows)
     - [macOS](#macos)
-    - [Browser Linux](#browser-linux)
-      - [gCloud or Sh TMux](#gcloud-or-sh-tmux)
-      - [replIt](#replit)
+    - [Linux](#linux)
+      - [gCloud Browser Linux, or Sh TMux](#gcloud-browser-linux-or-sh-tmux)
+      - [replIt Browser Linux](#replit-browser-linux)
       - [Sh Screen](#sh-screen)
   - [Step 2: You download \& run the Source Code](#step-2-you-download--run-the-source-code)
   - [Step 3: You open one Terminal Window Tab Pane for Drawing](#step-3-you-open-one-terminal-window-tab-pane-for-drawing)
@@ -83,38 +83,47 @@ Welcome to our game
 
 ### Step 1: You start inside a Shell inside a Terminal
 
+You'll choose to work with
+two Terminal Window Tab Panes,
+or two Terminal Window Tabs, or two Terminal Windows.
+You need one for Turtles to draw things, and one for you to chat with the Turtles
+
 
 #### Windows
 
 
-If you have a Windows Terminal, then please do volunteer to test our Code at your Windows.
-Microsoft locks us out of learning to work with their stuff, same as it locks out most people.
+If you have a Windows Terminal Shell, then please do test our Code.
+Microsoft Licensing locks us out of learning to work with their Code,
+same as they lock out most people.
 But your Windows could soon start working too,
-if you come talk with us about how it's going
+if you talk with us about how it's going
 
 
 #### macOS
 
 If you have a macOS Terminal, then you're already running our Code like we do.
 But you'll have to upgrade to a 2021 Python 3.10 or newer,
-else ask us to backport our Code farther into the past
+else ask us to backport our Code farther into the past.
+Apple's Licenses run sharper than Microsoft's, but I've got one for me
 
 
-#### Browser Linux
+#### Linux
 
 If you feel you don't have a Linux Terminal with a modern Python inside, actually you do
 
 
-##### gCloud or Sh TMux
+##### gCloud Browser Linux, or Sh TMux
 
-You can go run the 4+ GB Terminal gCloud Linux Terminal Shell
+You can run the 4+ GB Terminal gCloud Linux Terminal Shell
 that your gMail gives you free-of-charge at
 
 > https://shell.cloud.google.com/?show=terminal
 
 Google gives out one Linux Terminal Shell Window per Browser.
-And keeps it current, like giving you Oct/2023 Python 3.12 in 2025.
-Many gShell people soon learn these Keyboard Shortcuts
+And they keep it current, like giving you 2023 Python 3.12 in 2025
+
+Many gCloud Shell people soon learn the Keyboard Shortcuts
+for splitting a Terminal Window into Panes
 
 | Key Chord Sequence | Meaning |
 |--------------------|---------|
@@ -125,13 +134,11 @@ Many gShell people soon learn these Keyboard Shortcuts
 After you add a Pane, then
 ⌃B ← and ⌃B ↑ and ⌃B  → and ⌃B ↓ is how you move your Cursor between Panes.
 
-These Keyboard Shortcuts first appeared inside the TMux add-on for Linux Terminals.
-The gCloud Linux Terminal Shell installs these by default.
-The replIt Linux Terminal Shell gives you these same choices,
-but as Menu Choices, not as Keyboard Shortcuts
+These Keyboard Shortcuts first appeared inside the TMux Add-On for Linux Terminals,
+but the gCloud Linux Terminal Shell installs these Keyboard Shortcuts by default.
+Like you have to press ⌃B ⌃B twice to get Vi to know you want to page back
 
-The ⎋ ⌃ ⌥ ⇧ ⌘ notation for Key Caps may be new to you.
-Apple speaks of Modifier Key Caps like so =>
+Apple speaks of Modifier Key Caps with the ⎋ ⌃ ⌥ ⇧ ⌘ notation
 
 | Modifier Key | Name |
 |-----|------|
@@ -141,32 +148,43 @@ Apple speaks of Modifier Key Caps like so =>
 | ⇧ | shift |
 | ⌘ | command |
 
+When searching texts, you have to struggle.
+You have to distinguish
+U+005E ^ Circumflex-Accent from U+2303 ⌃ Up-Arrowhead.
+People differ over which punctuation mark to speak
+to mean the Modifier Key labeled as "Control" or "Ctrl" and so on
+And Gnu·Org pushes a tradition that speaks of ⇧S as 'S' and S as 's'.
+This push from last century still causes confusion today.
+As a reader, you can't know if the writer meant
+the ⇧S two-Key Chord or the S single Keystroke, when they say 'S'.
 
 
-
-##### replIt
+##### replIt Browser Linux
 
 The replIt·Com Startup will lend you a Linux Terminal,
 if you give them an email address.
-And they keep it current, like lending you Oct/2022 Python 3.11 in 2025.
+And they keep it current, like lending you 2022 Python 3.11 in 2025.
 
 But they soon stop you playing.
-Instead, suddenly, they demand like US$180/year.
-They trip you up like this after you leave a Terminal running for like 10 Hours
+They pop suddenly, and demand you pay like US$180/year.
+They trip you up like this after you leave a Terminal of theirs open for like 10 Hours
 
 They calm down and let you back in again after like a month, people tell me.
-They don't make it reasonably easy to keep track of what deal they're offering.
-But this is what Perplexity·Ai told me in February, 2025, when I asked:
+Specifically, what Perplexity·Ai told me this in February, 2025, when I asked:
 How quickly does replIt·Com hit you with "You've used up all your Development time"?
+I haven't tested this claim.
+The replIt people don't make it reasonably easy to keep track of what deal they're offering
 
-They don't accurately measure if you're around or not,
-typing on the Keyboard or moving and clicking the Mouse.
-One accident of leaving a Process running and you're done for the month
+The replIt people don't accurately measure if you're around or not.
+Maybe you're typing on the Keyboard and moving and clicking the Mouse, maybe you're not.
+Even when not,
+if you have one accident of leaving a Process running then you're done for the month
 
 
 ##### Sh Screen
 
-If you have Sh Screen and a Linux Terminal Window, then you can add a Vertical Split similarly,
+If you have Sh Screen and a Linux Terminal Window,
+then you can add a Vertical Split much as you do in gCloud Shell or Sh TMux,
 just with different Keyboard Shortcuts
 
 | Key Chord Sequence | Meaning |
@@ -195,7 +213,7 @@ Another Shell way of Downloading is
 
     git clone https://github.com/pelavarre/byoverbs.git
 
-Raw File Content is too powerful to trust.
+Sadly, Raw File Content is too powerful to trust.
 Even when you get it from someone you know,
 still someone else could have turned it against you both, without your knowledge.
 We'd be curious to hear how you chose to try our Game, all the same
@@ -231,7 +249,7 @@ to form Python Instructions, all carefully spelled and punctuated
 Our Code then has only Python Instructions to deal with.
 It forwards the Python into the Turtles of the Window Tab Pane you opened for Drawing.
 The Turtles there then follow your Instructions.
-They move around and draw things
+They move around and draw things and beep at you
 
 This Doc walks you through fun tests of such Turtle Instructions
 
@@ -990,7 +1008,7 @@ We could come fix that. Just ask us
 
 We need to write down for us how much works where.
 Here we tell you what we've seen work somewhere,
-but we've lost track of was it working in macOS or gShell or replIt or what
+but we've lost track of was it working in macOS or gCloud or replIt or what
 
 -->
 
@@ -1033,7 +1051,7 @@ Only when you try ⌃O in the leftmost Column do you see it insert a new Row.
 And same deal with Return as with ⌃O.
 
 I also fear we can't make the ⌃B work reliably.
-gShell grabs that Key Chord to operate a TMux Split of the Tab
+gCloud Shell grabs that Key Chord to operate a TMux Split of the Tab
 for ⌃B ⇧%, ⌃B ⇧", ⌃B ↓, ⌃B ↑, ⌃B X. etc.
 We could grab that Key Chord to operate a TMux Split of the Tab someday too,
 just to make our Turtle Logo look & feel alike in more places
@@ -1361,11 +1379,11 @@ Like we could give this game a more game-like feel,
 if we completed a full Python Command every time you pressed a Key inside the Drawing Window.
 Or we could rewrite our Arrow Keys Demo to have 4 Turtles draw it, not just 1.
 Or we could figure out how to show the Turtle
-even after you split a gShell Tab
+even after you split a gCloud Shell Tab
 with ⌃B ⇧" and then moved the Turtle between Splits with ⌃B ↑ and  ⌃B ↓.
 The replIt Shell has much the same disappear-the-Turtle bug,
 if you do run the replIt Turtle and the Chat in separate Browser Windows.
-gShell can't do separate Windows inside the same Browser
+gCloud Shell can't do separate Windows inside the same Browser
 
 And so on and on and on.
 Choices and choices and choices, each with intricate and unpredictable consequences.
@@ -1617,17 +1635,17 @@ We'll see
 
 Before Linux, there was Unix, and people published Games for the Terminal as Open-Source
 
-At gShell you can try
+At gCloud Shell you can try
 
     sudo apt-get update && sudo apt-get install -y bsdgames
     ls /usr/games
     /usr/games/wump
 
-At replIt you can try
+At replIt Shell you can try
 
     nix-shell -p bsdgames --run wump
 
-At gShell, you'll see they suggest you try all of
+At gCloud Shell, you'll see they suggest you try all of
 > adventure atc battlestar caesar cfscores dab gomoku hangman primes<br>
 > rot13 snake teachgammon trek wtf arithmetic backgammon bsdgames-adventure<br>
 > canfield cribbage go-fish hack pom robots sail snscore tetris-bsd<br>
@@ -1683,13 +1701,13 @@ Wikipedia > [Greenspun's tenth rule](https://en.wikipedia.org/wiki/Greenspun%27s
 #### Does it work at your desk?
 
 Our Turtle Logo runs inside more Terminals
-> gMail gCloud gShell @ https://shell.cloud.google.com/?show=terminal<br>
+> gMail gCloud Shell @ https://shell.cloud.google.com/?show=terminal<br>
 > macOS Terminal Shell<br>
 > replIt Shell @ https://replit.com<br>
 
 Their Turtle Logo runs inside a macOS Terminal, and inside a ReplIt Shell
 
-In other places, such as gShell, our Turtle Logo still works,
+In other places, such as gCloud Shell, our Turtle Logo still works,
 whereas their Turtle Logo gives you problems to solve, like
 > ModuleNotFoundError: No module named 'tkinter'<br>
 > _tkinter.TclError: no display name and no $DISPLAY environment variable<br>
@@ -1716,7 +1734,7 @@ to replace their default choice of Portrait Orientation
 
 Copying Foreground and Background Color
 into gDoc from macOS Terminal mostly works.
-Copying from gShell or replIt copies the Characters well, but loses all the Color.
+Copying from gCloud Shell or replIt copies the Characters well, but loses all the Color.
 Copying Reverse Color even from macOS Terminal loses that part of the Color
 
 To save our Drawings entirely inside the Terminal,
@@ -1745,7 +1763,7 @@ Please also thank our people for their efforts, if you catch the chance
 **Thank-you's from us, in January, 2025**
 
 Georgiana of Bucharest!
-She put the Terminal Window Tabs of gShell
+She put the Terminal Window Tab Panes of gCloud Shell
 forward as the most available Linux Hosts
 
 Natalia of Bucharest!
