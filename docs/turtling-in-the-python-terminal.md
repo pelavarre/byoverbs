@@ -51,14 +51,16 @@ Contents
     - [Breakpoint the Drawing Window](#breakpoint-the-drawing-window)
     - [Breakpoint the Chat](#breakpoint-the-chat)
 - [Near Future Work](#near-future-work)
-  - [Bugs](#bugs)
-    - [Paste arrives slowly](#paste-arrives-slowly)
+  - [Difficult Bugs](#difficult-bugs)
     - [🐢 Pong begun, but nothing like finished](#-pong-begun-but-nothing-like-finished)
-    - [🐢 Press begun, but nothing like finished](#-press-begun-but-nothing-like-finished)
     - [11x11 found where 10x10 expected](#11x11-found-where-10x10-expected)
     - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
   - [Future Pucks](#future-pucks)
   - [Future Paddles](#future-paddles)
+    - [Paste arrives slowly](#paste-arrives-slowly)
+  - [Easy Bugs](#easy-bugs)
+    - [🐢 Press begun, but nothing like finished](#-press-begun-but-nothing-like-finished)
+    - [🐢 Write guesses wrong where the Turtle will land](#-write-guesses-wrong-where-the-turtle-will-land)
   - [Solutions for the free-of-charge tier at replIt·Com](#solutions-for-the-free-of-charge-tier-at-replitcom)
 - [Try out some other Terminal Games](#try-out-some-other-terminal-games)
   - [Wump and more](#wump-and-more)
@@ -505,23 +507,6 @@ Draw Tina's Giraffe, first drawn by Tina of Monterey
     fd 10  write '   █'
     restart tada
 
-<!--
-
-FIXME: Wow. This lands the Cursor Y X at 1 1 or 2 1 when repeated.
-FIXME: Somehow our Relaunch is not-complete
-
-    relaunch
-    penup home pendown
-    rt 270  fd  lt 90  fd
-    penup home pendown  write '█'
-    bk 100
-    penup home pendown  write '█'
-    rt 45  fd 100
-    seth 0  rt 90  fd 30
-    penup home
-    fd 10  write '   '
-
--->
 
 ### Light up the Turtle
 
@@ -1145,7 +1130,7 @@ You'll see Python telling you that our Forward Verb takes a Keyword Argument nam
 
 <!-- FIXME: help(t) also lists the Fields of t -->
 <!-- FIXME: Help doesn't cite itself as a choice -->
-<!-- FIXME: Can we hide t._breakpoint_, t._exec_, t._mode_? -->
+<!-- FIXME: Can we hide t._breakpoint_, t._exec_, t._mode_ from dir(t)? -->
 
 
 
@@ -1354,7 +1339,7 @@ You can also type out the raw Python to draw this same Pentagon
     count = 5
     for _ in range(count): t.forward(100); t.right(360 / count)
 
-<!--  pu  setxy -260 -10  pd  -->
+<!--  pu  setxy -250 -10  pd  -->
 
 You hit the edges of the Screen and distort the drawing, when you make it too large.
 Like when you're drawing on the 101x42 Columns and Rows of my Terminal,
@@ -1521,16 +1506,7 @@ but ⌃U will work
 ## Near Future Work
 
 
-### Bugs
-
-
-#### Paste arrives slowly
-
-Pasting Characters into the Drawing Pane can make them arrive one at a time.
-Like try pasting 1234567890123456789.
-Sometimes you see the 1 and nothing more.
-But if you hold the Spacebar down,
-then you see the 2, and then the 3, and so on
+### Difficult Bugs
 
 
 #### 🐢 Pong begun, but nothing like finished
@@ -1572,31 +1548,6 @@ To get it going, we could let you say something like
     demos.arrow_keys
 
 Presently, that doesn't work. It says:  NameError: name 'demos' is not defined
-
-
-#### 🐢 Press begun, but nothing like finished
-
-Presently ...
-
-You can speak Logo to tell the Chat to press Keyboard Chord Sequences in the Drawing Pane
-
-    relaunch
-    press "⎋8"  # cursor-revert
-    rt 90  label '12345678901234567890'
-    restart
-
-But you can only send Printable Ascii as itself or preceded by the "⎋" Esc Key.
-Lots of Keyboard Chord Sequences don't work
-
-    press "Tab"
-    press "⇧Tab"
-    press "←"
-
-You have to fall back to encoding the Bytes yourself
-
-    write "\t"  # Tab
-    write "\e[Z"  # ⇧Tab
-    write "\e[D"  # ←
 
 
 #### 11x11 found where 10x10 expected
@@ -1665,6 +1616,60 @@ you can press the ← ↑ → ↓ Keys to push the Puck in a different direction
 When you add more than one Paddle,
 then pressing A S D F moves the Left Paddle,
 whereas pressing H J K L moves the Right Paddle
+
+
+
+
+#### Paste arrives slowly
+
+Pasting lots of Characters into the Drawing Pane can make them arrive slowly.
+
+Maybe by now we've fixed the other thing of ...
+Pasting Characters into the Drawing Pane can make them arrive one at a time.
+Like try pasting 1234567890123456789.
+Sometimes you see the 1 and nothing more.
+But if you hold the Spacebar down,
+then you see the 2, and then the 3, and so on
+
+
+### Easy Bugs
+
+
+#### 🐢 Press begun, but nothing like finished
+
+Presently ...
+
+You can speak Logo to tell the Chat to press Keyboard Chord Sequences in the Drawing Pane
+
+    relaunch
+    press "⎋8"  # cursor-revert
+    rt 90  label '12345678901234567890'
+    restart
+
+But you can only send Printable Ascii as itself or preceded by the "⎋" Esc Key.
+Lots of Keyboard Chord Sequences don't work
+
+    press "Tab"
+    press "⇧Tab"
+    press "←"
+
+You have to fall back to encoding the Bytes yourself
+
+    write "\t"  # Tab
+    write "\e[Z"  # ⇧Tab
+    write "\e[D"  # ←
+
+
+#### 🐢 Write guesses wrong where the Turtle will land
+
+Presently ...
+
+Control Sequences like "\\r" and "\\n" and so on
+do move the Turtle conventionally,
+but our Code for 🐢 Write
+always guesses the Turtle won't move,
+which is laughably wrong
+
 
 ### Solutions for the free-of-charge tier at replIt·Com
 

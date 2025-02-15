@@ -8,16 +8,16 @@ draw inside a Terminal Window with Logo Turtles
 options:
   -h, --help  show this message and exit
   --version   show version and exit
-  --yolo      launch the first server in this folder, else launch a chat client
-  -i          launch a chat client
-  -c COMMAND  things to do, before quitting or chatting
+  --yolo      draw inside this pane, else chat inside this pane
+  -i          chat inside this pane
+  -c COMMAND  do some things, before quitting if no -i, or before chatting if -i
 
 examples:
   turtling.py --h  # shows more help and quits
   turtling.py  # shows some help and quits
-  turtling.py --yolo  # tells the enclosing Terminal to start serving Turtles
-  turtling.py -i  # clears screen, adds one Turtle, and chats
-  turtling.py -i -c ''  # doesn't clear screen, doesn't add Turtle, but does chat
+  turtling.py --yolo  # draws inside this pane, else chats inside this pane
+  turtling.py -i  # clears screen, puts down one Turtle, and chats
+  turtling.py -i -c ''  # doesn't clear screen, puts down one Turtle, and chats
 """
 
 # code reviewed by People, Black, Flake8, MyPy, & PyLance-Standard
@@ -155,9 +155,9 @@ def parse_turtling_py_args_else() -> argparse.Namespace:
     parser = doc_to_parser(doc, add_help=True, startswith="examples:")
 
     version_help = "show version and exit"
-    yolo_help = "launch the first server in this folder, else launch a chat client"
-    i_help = "launch a chat client"
-    c_help = "things to do, before quitting or chatting"
+    yolo_help = "draw inside this pane, else chat inside this pane"
+    i_help = "chat inside this pane"
+    c_help = "do some things, before quitting if no -i, or before chatting if -i"
 
     parser.add_argument("--version", action="count", help=version_help)
     parser.add_argument("--yolo", action="count", help=yolo_help)
@@ -2555,7 +2555,7 @@ class Turtle:
         xfloat__ = round(xfloat_, 10)
         yfloat__ = round(yfloat_, 10)
 
-        x2 = round(xfloat_)
+        x2 = round(2 * xfloat_) / 2  # doublewide X
         y2 = round(yfloat_)
 
         # Draw the Line Segment to X2 Y2 from X1 Y1
@@ -2666,7 +2666,8 @@ class Turtle:
 
         xfloat = self.xfloat
         yfloat = self.yfloat
-        assert (x1 == round(xfloat)) and (y1 == round(yfloat)), (x1, xfloat, y1, yfloat)
+
+        assert ((2 * x1) == round(2 * xfloat)) and (y1 == round(yfloat)), (x1, xfloat, y1, yfloat)
 
         # Choose the Ending Point
 
@@ -2678,7 +2679,7 @@ class Turtle:
         xfloat__ = round(xfloat_, 10)  # todo: how round should our Float Maths be?
         yfloat__ = round(yfloat_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
 
-        x2 = round(xfloat__)
+        x2 = round(2 * xfloat__) / 2  # doublewide X
         y2 = round(yfloat__)
 
         # Option to show why Round over Int at X2 Y2
@@ -2687,7 +2688,7 @@ class Turtle:
         fuzz1 = False
         if fuzz1:
             # eprint(f"FUZZ1 {stride_=} {angle=} {x1=} {y1=} {x2=} {y2=} {xfloat_} {yfloat_} FUZZ1")
-            x2 = int(xfloat_)
+            x2 = int(2 * xfloat_) / 2  # doublewide X
             y2 = int(yfloat_)
 
             # got:  cs  pu home reset pd  rt rt fd  rt fd 400
@@ -2701,7 +2702,8 @@ class Turtle:
 
         if limit:
             (x3, y3) = self._x_y_position_()  # may change .xfloat .yfloat
-            (x2, y2) = (x3, y3)  # replaces
+            assert y3 == int(y3), (y3,)
+            (x2, y2) = (x3, int(y3))  # replaces
 
         # Option to show why keep up Precise X Y Shadows in .xfloat .yfloat
 
@@ -2726,10 +2728,8 @@ class Turtle:
     def _punch_bresenham_segment_(self, x1, y1, x2, y2, limit) -> None:
         """Step forwards, or backwards, through (Row, Column) choices"""
 
-        assert isinstance(x1, int), (type(x1), x1)
         assert isinstance(y1, int), (type(y1), y1)
         assert isinstance(y2, int), (type(y2), y2)
-        assert isinstance(x2, int), (type(x2), x2)
 
         gt = self.glass_teletype
         st = gt.str_terminal
@@ -2744,6 +2744,8 @@ class Turtle:
 
         e = x2x1 - y2y1  # Bresenham's Error Measure
 
+        # gt.notes.append(f"{x2x1=} {y2y1=} {sx=} {sy=} {e=}  # {x1=} {y1=} {x2=} {y2=}")
+
         # Watch the Terminal Cursor closely when limiting its movement
 
         ya = xa = -1
@@ -2756,10 +2758,13 @@ class Turtle:
         wy = y = y1
         count = 0
         while True:
+            # gt.notes.append(f"{wx=} {wy=} {x=} {y=}")
+
+            # Take a Jump, and maybe punch a Trail
 
             self._jump_then_punch_(wx, wy=-wy, x=x, y=-y)
-            if (x == x2) and (y == y2):
-                break
+
+            # Calculate the next Jump
 
             wx = x
             wy = y
@@ -2767,7 +2772,6 @@ class Turtle:
             ee = 2 * e
             dx = ee < x2x1
             dy = ee > -y2y1
-            assert dx or dy, (dx, dy, x, y, ee, x2x1, y2y1, x1, y1)
 
             if dy:
                 e -= y2y1
@@ -2776,7 +2780,22 @@ class Turtle:
                 e += x2x1
                 y += sy
 
-            assert (x, y) != (wx, wy)
+            # Quit if not moving closer to the Target
+
+            ex = abs(x - x2) - abs(wx - x2)
+            ey = abs(y - y2) - abs(wy - y2)
+
+            if (ex == 0) and (ey == 0):  # not moving farther nor closer
+                x = wx
+                y = wy
+                break
+
+            if (ex > 0) or (ey > 0):  # moving away
+                x = wx
+                y = wy
+                break
+
+            # Look into this Iteration of this Loop
 
             if limit:
                 (yb, xb) = st.row_y_column_x_read(timeout=0)
@@ -2786,6 +2805,25 @@ class Turtle:
                     count += 1
                     if count >= limit:
                         break
+
+            if False:  # jitter Sat 15/Feb
+                if len(gt.notes) > 100:
+                    gt.notes.append("... looping indefinitely ...")
+                    break
+
+                # todo: <= 100 while sending many Notes can break such as:  arc 45 400
+
+        # Slip Terminal Cursor to min Error in Doublewide X
+
+        e_still = abs(x - x2)
+        e_left = abs(x - (1 / 2) - x2)  # doublewide X
+        e_right = abs(x + (1 / 2) - x2)  # doublewide X
+        if e_left < e_still:
+            assert e_right >= e_still, (e_still, e_left, e_right, x, x2)
+            gt.schars_write("\x1B[D")
+        elif e_right < e_still:
+            assert e_left >= e_still, (e_still, e_left, e_right, x, x2)
+            gt.schars_write("\x1B[C")
 
         # Wikipedia > https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 
@@ -2805,22 +2843,29 @@ class Turtle:
         penmark = self.penmark
         rest = self.rest
 
-        # Plan the Jump
+        # Plan the Jump  # todo: .int or .round ?
 
         if wx < x:
-            pn = 2 * (x - wx)  # doublewide X
+            pn = int(2 * (x - wx))  # doublewide X
+            # gt.notes.append(f"{pn=} C")
+            assert pn >= 1, (pn,)
             x_text = f"\x1B[{pn}C"  # CSI 04/03 Cursor [Forward] Right
         elif wx > x:
-            pn = 2 * (wx - x)  # doublewide X
+            pn = int(2 * (wx - x))  # doublewide X
+            # gt.notes.append(f"{pn=} D")
             x_text = f"\x1B[{pn}D"  # CSI 04/04 Cursor [Backward] Left
         else:
             x_text = ""
 
         if wy < y:
-            pn = y - wy
+            pn = int(y - wy)
+            # gt.notes.append(f"{pn=} B")
+            assert pn >= 1, (pn,)
             y_text = f"\x1B[{pn}B"  # CSI 04/02 Cursor [Down] Next
         elif wy > y:
-            pn = wy - y
+            pn = int(wy - y)
+            # gt.notes.append(f"{pn=} A")
+            assert pn >= 1, (pn,)
             y_text = f"\x1B[{pn}A"  # CSI 04/01 Cursor [Up] Previous
         else:
             y_text = ""
@@ -2854,35 +2899,37 @@ class Turtle:
     # Sample the X Y Position remotely, inside the Turtle
     #
 
-    def _x_y_position_(self) -> tuple[int, int]:
+    def _x_y_position_(self) -> tuple[float, float]:
         """Sample the Turtle's X Y Position"""
 
         gt = self.glass_teletype
-
         xfloat = self.xfloat
         yfloat = self.yfloat
 
-        # Find the Cursor
+        # Find the Cursor & Center of Screen,
+        # on a Plane of Y is Down and X is Right,
+        # counted from an Upper Left (1, 1)
 
         (y_row, x_column) = gt.os_terminal_y_row_x_column()
-        x_column = x_column // 2  # doublewide X
-
-        # Find the Center of Screen
-
         (y_count, x_count) = gt.os_terminal_y_rows_x_columns()
-        x_count = x_count // 2  # doublewide X
 
-        cx = 1 + (x_count // 2)
-        cy = 1 + (y_count // 2)
+        center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
+        center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
 
-        # Say how far away from Center the Cursor is, on a plane of Y is Up and X is Right
+        # Say how far away from Center of Screen the Cursor is,
+        # on a plane of Y is Up and X is Right,
+        # counted from a (0, 0) in the Middle
 
-        x1 = x_column - cx
-        y1 = -(y_row - cy)
+        x1 = (x_column - center_x) / 2  # doublewide X
+        y1 = -(y_row - center_y)
 
         # Snap the Shadow to the Cursor Row-Column, if the Cursor moved
 
-        if (x1 != round(xfloat)) or (y1 != round(yfloat)):
+        xf = round(2 * xfloat) / 2  # doublewide X
+        yf = round(yfloat)
+        # gt.notes.append(f"{x1=} {y1=} {xf=} {yf=}")
+
+        if (x1 != xf) or (y1 != yf):
             xfloat_ = float(x1)  # 'explicit is better than implicit'
             yfloat_ = float(y1)
 
@@ -2897,6 +2944,8 @@ class Turtle:
 
             self.xfloat = xfloat_
             self.yfloat = yfloat_
+
+            # todo: still snap to Int Y when X is an exact one-half Pixel away from Int X
 
         # Succeed
 
@@ -4020,7 +4069,7 @@ class TurtlingFifoProxy:
         assert head_text == f"length=0x{encode_length:019_X}\n", (head_text, encode_length)
 
         tail_bytes_length = encode_length - len(head_bytes)
-        tail_bytes = os.read(fileno, tail_bytes_length)
+        tail_bytes = os.read(fileno, tail_bytes_length)  # todo: chokes at large lengths
         assert len(tail_bytes) == tail_bytes_length, (len(tail_bytes), tail_bytes_length)
 
         tail_text = tail_bytes.decode()
