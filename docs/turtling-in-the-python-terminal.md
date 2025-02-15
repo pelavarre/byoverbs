@@ -52,7 +52,9 @@ Contents
     - [Breakpoint the Chat](#breakpoint-the-chat)
 - [Near Future Work](#near-future-work)
   - [Bugs](#bugs)
-    - [Pong begun, but nothing like finished](#pong-begun-but-nothing-like-finished)
+    - [Paste arrives slowly](#paste-arrives-slowly)
+    - [🐢 Pong begun, but nothing like finished](#-pong-begun-but-nothing-like-finished)
+    - [🐢 Press begun, but nothing like finished](#-press-begun-but-nothing-like-finished)
     - [11x11 found where 10x10 expected](#11x11-found-where-10x10-expected)
     - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
   - [Future Pucks](#future-pucks)
@@ -1112,7 +1114,7 @@ Forward,
 H, HideTurtle, Home,
 IncX, IncY, IsDown, IsVisible,
 Label, Left,
-PenDown, PenUp, Pong,
+PenDown, PenUp, Pong, Press,
 Relaunch, Repaint, Repeat, Restart, Right,
 SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetXYZoom, SetY,
 ShowTurtle, Sierpiński, Sleep,
@@ -1521,7 +1523,17 @@ but ⌃U will work
 
 ### Bugs
 
-#### Pong begun, but nothing like finished
+
+#### Paste arrives slowly
+
+Pasting Characters into the Drawing Pane can make them arrive one at a time.
+Like try pasting 1234567890123456789.
+Sometimes you see the 1 and nothing more.
+But if you hold the Spacebar down,
+then you see the 2, and then the 3, and so on
+
+
+#### 🐢 Pong begun, but nothing like finished
 
 Lately I told my Shell
 
@@ -1560,6 +1572,31 @@ To get it going, we could let you say something like
     demos.arrow_keys
 
 Presently, that doesn't work. It says:  NameError: name 'demos' is not defined
+
+
+#### 🐢 Press begun, but nothing like finished
+
+Presently ...
+
+You can speak Logo to tell the Chat to press Keyboard Chord Sequences in the Drawing Pane
+
+    relaunch
+    press "⎋8"  # cursor-revert
+    rt 90  label '12345678901234567890'
+    restart
+
+But you can only send Printable Ascii as itself or preceded by the "⎋" Esc Key.
+Lots of Keyboard Chord Sequences don't work
+
+    press "Tab"
+    press "⇧Tab"
+    press "←"
+
+You have to fall back to encoding the Bytes yourself
+
+    write "\t"  # Tab
+    write "\e[Z"  # ⇧Tab
+    write "\e[D"  # ←
 
 
 #### 11x11 found where 10x10 expected

@@ -937,14 +937,23 @@ class StrTerminal:
         if kchords:
             self.schars_print()
             while kchords:
-                (kbytes, kcaps) = kchords.pop(0)
-                self.schars_print(kcaps)
+                (kbytes, kstr) = kchords.pop(0)
+                self.schars_print(kstr)
 
         bt.__exit__()
 
     #
     # Read Key Chords from Keyboard or Screen
     #
+
+    def kcaps_append(self, kcaps) -> None:  # todo: not much tested
+        """Add imagined Key Caps to the real Key Caps"""
+
+        kchords = self.kchords
+
+        for kcap in kcaps:
+            kchord = (b"", kcap)
+            kchords.append(kchord)
 
     def kchord_pull(self, timeout) -> tuple[bytes, str]:
         """Read 1 Key Chord, but snoop the Cursor-Position-Report's, if any"""
@@ -959,12 +968,16 @@ class StrTerminal:
             # todo: log how rarely KChords wait inside a StrTerminal
 
         kbytes = bt.kbytes_pull(timeout=timeout)  # may contain b' ' near to KCAP_SEP
+        assert kbytes, (kbytes,)
+
         kchars = kbytes.decode()  # may raise UnicodeDecodeError
         kchord = self.kbytes_to_kchord(kbytes)
 
         self.kchars_snoop_kcpr_if(kchars)
 
         return kchord
+
+        # .kbytes of the .kchord may be empty when the .kchord didn't come from the Keyboard
 
     def kchars_snoop_kcpr_if(self, kchars) -> bool:
         """Snoop the Cursor-Position-Report (CPR) out of a Key Chord, if present"""
@@ -1385,6 +1398,30 @@ class StrTerminal:
         (row_y, column_x) = row_y_column_x
         self.write_row_y_column_x(row_y, column_x=column_x)
 
+    #
+    # Imagine the Bytes pulled from the Keyboard as an Encoding of the Key Caps Chord
+    #
+
+    def kstr_to_kbytes(self, kstr) -> bytes:
+        """Imagine the Bytes pulled from the Keyboard as an Encoding of the Key Caps Chord"""
+
+        if len(kstr) == 1:
+            if kstr.isprintable():
+                kbytes = kstr.encode()
+                # print(repr(kstr), repr(kbytes), end="\r\n")
+                return kbytes
+
+        if len(kstr) == 2:
+            if kstr[0] == "⎋":
+                if kstr[-1].isprintable():
+                    kbytes = b"\x1B" + kstr[-1].encode()
+                    # print(repr(kstr), repr(kbytes), end="\r\n")
+                    return kbytes
+
+        raise NotImplementedError(kstr)
+
+        # todo: Code up the rest of StrTerminal.kstr_to_kbytes
+
 
 class GlassTeletype:
     """Write/ Read Chars at Screen/ Keyboard of a Monospaced Rectangular Terminal"""
@@ -1465,16 +1502,19 @@ class GlassTeletype:
     def kchord_write_kbytes_else_print_kstr(self, kchord) -> None:
         """Write 1 Key Chord, else print its Key Caps"""
 
-        (kbytes, kcaps) = kchord
-        schars = kbytes.decode()  # may raise UnicodeDecodeError
-
         st = self.str_terminal
+
+        (kbytes, kstr) = kchord
+        if not kbytes:
+            kbytes = st.kstr_to_kbytes(kstr)
+
+        schars = kbytes.decode()  # may raise UnicodeDecodeError
 
         assert DECIC_X == "\x1B" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
         assert DECDC_X == "\x1B" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
 
         if not st.schars_to_writable(schars):
-            st.schars_print(kcaps, end=" ")
+            st.schars_print(kstr, end=" ")
         else:
             (csi, p, i, f) = st.schars_csi_partition(schars)
             if csi:
@@ -2090,6 +2130,18 @@ class Turtle:
 
         # Scratch Pen-Up
 
+    def press(self, kstr) -> dict:
+        """Take a Keyboard Chord Sequence from the Chat Pane, as if pressed in the Drawing Pane"""
+
+        gt = self.glass_teletype
+
+        kchord = (b"", kstr)  # todo: strong coupling with StrTerminal KChord in GlassTeletype
+        gt.kchord_write_kbytes_else_print_kstr(kchord)
+
+        return dict()
+
+        # todo: 🐢 Press with multiple Arguments
+
     assert TurtlingDefaults["repeat_count"] == 3, (TurtlingDefaults,)
     assert TurtlingDefaults["repeat_angle"] == 360, (TurtlingDefaults,)
     assert TurtlingDefaults["repeat_diameter"] == 100, (TurtlingDefaults,)
@@ -2555,14 +2607,11 @@ class Turtle:
         """Start showing where the Turtle is (ST for short)"""
 
         gt = self.glass_teletype
-        # hiding = self.hiding
 
         ctext = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
-        gt.schars_write(ctext)  # for .showturtle
+        gt.schars_write(ctext)
 
         self.hiding = False
-        # if self.hiding != hiding:
-        #     eprint(f"hiding={self.hiding}  # was {hiding}")
 
         # Forward 0 leaves a Mark to show Turtle was Here
         # SetXY from Home leaves a Mark to show the X=0 Y=0 Home
@@ -2707,8 +2756,6 @@ class Turtle:
         wy = y = y1
         count = 0
         while True:
-            # if limit:
-            #     print(f"{ya=} {xa=} {count=}", end="\r\n")
 
             self._jump_then_punch_(wx, wy=-wy, x=x, y=-y)
             if (x == x2) and (y == y2):
@@ -2796,9 +2843,8 @@ class Turtle:
 
         # Do the Punch, or don't
 
-        if not warping:
-
-            gt.schars_write(penmark)  # todo: .writelog when Controls mixed into Text
+        if not warping:  # todo: .writelog when Controls mixed into Text
+            gt.schars_write(penmark)  # for ._jump_then_punch_
             gt.schars_write(backspaces)
 
         if not hiding:
@@ -4124,7 +4170,11 @@ class TurtlingServer:
 
             timeout = 0.100
             selects = select.select(fds, [], [], timeout)
+
             select_ = selects[0]
+            if not select_:
+                if st.kchords:
+                    select_ = [bt_fd]
 
             # Reply to 1 Keyboard Chord
 
