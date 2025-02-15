@@ -46,6 +46,8 @@ examples:
   grep 'seq.*[|]' bin/*.py |--a
 
   echo 'aa  bb  cc' |awk '{$1=$1};1'  # collapse each IFS into one OFS
+
+  awk '{d[$_]++}END{for(k in d){print d[k],k}}' |sort -n  # faster than |uniq -c |expand
 """
 
 import __main__

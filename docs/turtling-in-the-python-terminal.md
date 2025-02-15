@@ -4,17 +4,18 @@
 Contents
 
 - [Welcome](#welcome)
-  - [You start inside a Shell inside a Terminal](#you-start-inside-a-shell-inside-a-terminal)
+  - [Step 1: You start inside a Shell inside a Terminal](#step-1-you-start-inside-a-shell-inside-a-terminal)
     - [Windows](#windows)
-    - [Browser Linux](#browser-linux)
-      - [gCloud](#gcloud)
-      - [replIt](#replit)
     - [macOS](#macos)
-  - [You download \& run the Source Code](#you-download--run-the-source-code)
-  - [You open one Terminal Window or Tab](#you-open-one-terminal-window-or-tab)
-  - [You open another Terminal Window or Tab](#you-open-another-terminal-window-or-tab)
-  - [Starting over expertly](#starting-over-expertly)
-  - [Please expect we've gone wrong](#please-expect-weve-gone-wrong)
+    - [Browser Linux](#browser-linux)
+      - [gCloud or Sh TMux](#gcloud-or-sh-tmux)
+      - [replIt](#replit)
+      - [Sh Screen](#sh-screen)
+  - [Step 2: You download \& run the Source Code](#step-2-you-download--run-the-source-code)
+  - [Step 3: You open one Terminal Window Tab Pane for Drawing](#step-3-you-open-one-terminal-window-tab-pane-for-drawing)
+  - [Step 4: You open another Terminal Window Tab Pane for Chat](#step-4-you-open-another-terminal-window-tab-pane-for-chat)
+  - [You can start over expertly](#you-can-start-over-expertly)
+  - [Please believe we've gone wrong](#please-believe-weve-gone-wrong)
 - [You can just try things](#you-can-just-try-things)
   - [Move the Turtle](#move-the-turtle)
   - [Draw a Triangle](#draw-a-triangle)
@@ -77,36 +78,60 @@ to show you this Md File rendered without these words
 
 Welcome to our game
 
-Four Steps =>
+**Four Steps** =>
 
 
-### You start inside a Shell inside a Terminal
+### Step 1: You start inside a Shell inside a Terminal
 
 
 #### Windows
 
 
-If you have a Windows Terminal, then please volunteer to test our Code at your Windows.
-Microsoft locks most people out of learning to work with their stuff,
-and locks us out too.
+If you have a Windows Terminal, then please do volunteer to test our Code at your Windows.
+Microsoft locks us out of learning to work with their stuff, same as it locks out most people.
 But your Windows could soon start working too,
-if you come talk out how to make it happen with us
+if you come talk with us about how it's going
+
+
+#### macOS
+
+If you have a macOS Terminal, then you're already running our Code like we do.
+But you'll have to upgrade to a 2021 Python 3.10 or newer,
+else ask us to backport our Code farther into the past
 
 
 #### Browser Linux
 
-##### gCloud
+If you feel you don't have a Linux Terminal with a modern Python inside, actually you do
 
-If you think you don't have a Linux Terminal, actually you do.
+
+##### gCloud or Sh TMux
+
 You can go run the 4+ GB Terminal gCloud Linux Terminal Shell
 that your gMail gives you free-of-charge at
 
 > https://shell.cloud.google.com/?show=terminal
 
-Google gives out one Linux Terminal Shell per Browser
+Google gives out one Linux Terminal Shell Window per Browser.
+And keeps it current, like giving you Oct/2023 Python 3.12 in 2025.
+Many gShell people soon learn these Keyboard Shortcuts
 
-Shell people talk a lot about the Keystrokes they type into the Terminal
-Apple macBook's label their Keys like so =>
+| Key Chord Sequence | Meaning |
+|--------------------|---------|
+| ⌃B ⇧% | Add Pane > Insert Right |
+| ⌃B ⇧" | Add Pane > Insert Down |
+| ⌃D | Close Pane |
+
+After you add a Pane, then
+⌃B ← and ⌃B ↑ and ⌃B  → and ⌃B ↓ is how you move your Cursor between Panes.
+
+These Keyboard Shortcuts first appeared inside the TMux add-on for Linux Terminals.
+The gCloud Linux Terminal Shell installs these by default.
+The replIt Linux Terminal Shell gives you these same choices,
+but as Menu Choices, not as Keyboard Shortcuts
+
+The ⎋ ⌃ ⌥ ⇧ ⌘ notation for Key Caps may be new to you.
+Apple speaks of Modifier Key Caps like so =>
 
 | Modifier Key | Name |
 |-----|------|
@@ -116,29 +141,20 @@ Apple macBook's label their Keys like so =>
 | ⇧ | shift |
 | ⌘ | command |
 
-Many gShell people soon learn
 
-| Key Chord | Meaning |
-|-----------|---------|
-| ⌃B ⇧% | Add Pane > Insert Right |
-| ⌃B ⇧" | Add Pane > Insert Down |
-| ⌃D | Close Pane |
-
-⌃B ← and ⌃B ↑ and ⌃B  → and ⌃B ↓ is how you move your Cursor between Panes
-
-In history, these are the Keyboard Shortcuts of the TMux add-on,
-but the gCloud Linux Terminal Shell installs these by default
 
 
 ##### replIt
 
 The replIt·Com Startup will lend you a Linux Terminal,
-if you give them an email address
+if you give them an email address.
+And they keep it current, like lending you Oct/2022 Python 3.11 in 2025.
 
-But they soon stop you playing, and demand like US$180/year.
-They trip you up like this after you leave a Terminal running for like 10 Hours.
-They calm down and let you back in again after like a month
+But they soon stop you playing.
+Instead, suddenly, they demand like US$180/year.
+They trip you up like this after you leave a Terminal running for like 10 Hours
 
+They calm down and let you back in again after like a month, people tell me.
 They don't make it reasonably easy to keep track of what deal they're offering.
 But this is what Perplexity·Ai told me in February, 2025, when I asked:
 How quickly does replIt·Com hit you with "You've used up all your Development time"?
@@ -148,24 +164,32 @@ typing on the Keyboard or moving and clicking the Mouse.
 One accident of leaving a Process running and you're done for the month
 
 
-#### macOS
+##### Sh Screen
 
-If you have a macOS Terminal, then you're already running our Code more like we do
+If you have Sh Screen and a Linux Terminal Window, then you can add a Vertical Split similarly,
+just with different Keyboard Shortcuts
+
+| Key Chord Sequence | Meaning |
+|--------------------|---------|
+| ⌃A ⇧| | Add Pane > Insert Right |
+| ⌃A ⇧S | Add Pane > Insert Down |
+| ⌃A Tab | Move Cursor into Next Pane |
+| ⌃A C | Launch a Shell in New Pane |
+| ⌃A ⇧X | Close Pane |
 
 
-### You download & run the Source Code
+### Step 2: You download & run the Source Code
 
     curl -Ss https://raw.githubusercontent.com/pelavarre/byoverbs/refs/heads/main/bin/turtling.py >turtling.py
 
     wc -l turtling.py  # thousands of lines
 
 Some security setups will block you from downloading our Code this way.
-You can look for options to download our Code out where we keep it published for review:
+You can look for options to download our Code out where we keep it published for review:&nbsp;
+GitHub > [Turtling·Py](https://github.com/pelavarre/byoverbs/blob/main/bin/turtling.py)
 
-> GitHub > [Turtling·Py](https://github.com/pelavarre/byoverbs/blob/main/bin/turtling.py)
-
-We've seen ⌘S work there, as … > Raw File Content > Download.
-Their UI misleadingly tells us ⌘⇧S works for them, but it's ⌘S that works for us.
+We've seen ⌘S work there, as meaning … > Raw File Content > Download.
+Their UI misleadingly tells us ⌘⇧S works for them, but it's ⌘S that works for us, without the ⇧ Shift Modified Key
 
 Another Shell way of Downloading is
 
@@ -173,11 +197,11 @@ Another Shell way of Downloading is
 
 Raw File Content is too powerful to trust.
 Even when you get it from someone you know,
-still someone else could have turned it against you, without their knowledge.
-I'd be curious to hear how you chose to try our Game
+still someone else could have turned it against you both, without your knowledge.
+We'd be curious to hear how you chose to try our Game, all the same
 
 
-### You open one Terminal Window or Tab
+### Step 3: You open one Terminal Window Tab Pane for Drawing
 
 You tell our Code to move Turtles around and draw things on the Terminal Screen
 
@@ -187,38 +211,41 @@ First up, it'll tell you something like
 > Drawing until you press ⌃\ here<br>
 
 
-### You open another Terminal Window or Tab
+### Step 4: You open another Terminal Window Tab Pane for Chat
 
 You tell our Code to chat with you
 
     python3 turtling.py -i
 
 First up, it'll tell you something like
-> BYO Turtling·Py 2025.2.1<br>
+> BYO Turtling·Py 2025.2.15<br>
 > Chatting with you, till you say:  bye<br>
 
 You type out Logo or Python Instructions for your Turtles.
-Or you copy-paste them in from somewhere else.
+Or you copy-paste Instructions in from somewhere else.
 
 Our Code takes any brief Logo Instructions you type,
 and fills them out ("auto-completes" them)
 to form Python Instructions, all carefully spelled and punctuated
 
-Our Code then forwards the Python into the Turtles of the first Terminal Window or Tab.
+Our Code then has only Python Instructions to deal with.
+It forwards the Python into the Turtles of the Window Tab Pane you opened for Drawing.
 The Turtles there then follow your Instructions.
 They move around and draw things
 
-This Doc walks you through tests of such Turtle Instructions
+This Doc walks you through fun tests of such Turtle Instructions
 
 
-### Starting over expertly
+### You can start over expertly
 
-If you want just one thing to remember,
-it turns out you can start both Terminal Windows or Tabs in the same way.
-They both work if you always start each Tab or Window with:&nbsp; python3 turtling.py --yolo
+If you want just one step to remember,
+start both your Terminal Window Tab Panes with:&nbsp; `python3 turtling.py --yolo`
+
+It turns out you can start up both of your Terminal Window Tab Panes in the same way.
+The second one figures it out is second and runs as a Chat Pane, not as a Drawing Pane
 
 For our game to work, you have to start both Terminals inside the same Folder.
-You can tell the Shell to tell you which Folder you chose with:  pwd
+You can tell the Shell to tell you which Folder you chose with:&nbsp; `pwd`
 
 If you do try to run our game from a different Folder, you'll see it say something like
 > ... can't open file ... [Errno 2] No such file or directory
@@ -232,7 +259,7 @@ Expert Shell people can work out
 combinations of 'ps aux |grep -i Turtling' and 'kill -9'
 that will let you play again without restarting your Op Sys
 
-### Please expect we've gone wrong
+### Please believe we've gone wrong
 
 You're meeting with us here in our early days.
 If you quit reading before we stop talking at you, then we've gone wrong.
@@ -1205,7 +1232,7 @@ You can paste one or all of
 
 | File Name | Purpose |
 | --------- | ------- |
-| [demos/arrow-keys.logo](../demos/headings.logo) | Draw the four Arrow keys of a macBook Keyboard |
+| [demos/arrow-keys.logo](../demos/headings.logo) | Draw the four Arrow keys of a MacBook Keyboard |
 | [demos/bkboxbox.logo](../demos/bkboxbox.logo) | Draw two boxes, one inside the other, anti-clockwise |
 | [demos/fdboxbox.logo](../demos/fdboxbox.logo) | Draw two boxes, one inside the other clockwise |
 | [demos/headings.logo](../demos/headings.logo) | Draw Lines of 30°, 45°, 60°, and 90° in each of the four Quadrants |

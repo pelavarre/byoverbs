@@ -56,7 +56,10 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.2.7"  # Friday
+__version__ = "2025.2.15"  # Saturday
+
+_ = dict[str, int] | None  # new since Oct/2021 Python 3.10
+
 
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588

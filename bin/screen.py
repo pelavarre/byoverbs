@@ -147,6 +147,11 @@ export PS1='\$ '
 
 ⌃A ⌃D  # to disconnect
 
+⌃A ⇧| to Add Pane > Insert Right
+⌃A Tab to move Cursor between Panes
+⌃A C to launch a Shell in a new Pane
+⌃A ⇧X to Close Pane
+
 """
 
 
