@@ -934,6 +934,10 @@ class StrTerminal:
         bt = self.bytes_terminal
         kchords = self.kchords
 
+        ctext = "\x1B[m"  # 1m Sgr Plain
+        ctext += "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+        self.schars_write(ctext)  # todo: restore only after disturbing
+
         if kchords:
             self.schars_print()
             while kchords:
@@ -1672,7 +1676,8 @@ class Turtle:
     backscapes: list[str]  # configuration of penpunch backdrop
     penscapes: list[str]  # configuration of penpunch ink
     penmark: str  # mark to punch at each step
-    warping: bool  # moving without punching pen up, else punching while moving pen down
+    warping: bool  # moving without punching, else punching while moving
+    erasing: bool  # erasing punches while moving
     hiding: bool  # hiding the Turtle, else showing the Turtle
 
     rest: float  # min time between marks
@@ -1716,6 +1721,7 @@ class Turtle:
         self.penscapes.append(Bold)
         self.penmark = 2 * FullBlock  # ██
         self.warping = False  # todo: imply .isdown more clearly
+        self.erasing = False
         self.hiding = False
 
         self.rest = 1 / 1e3
@@ -1816,6 +1822,7 @@ class Turtle:
             "penscapes": self.penscapes,
             "penmark": self.penmark,
             "warping": self.warping,
+            "erasing": self.erasing,
             "hiding": self.hiding,
             "rest": self.rest,
         }
@@ -2023,6 +2030,12 @@ class Turtle:
 
         # Lisp'ish Logo's say IsDown as PenDownP and as PenDown?
 
+    def iserasing(self) -> bool:
+        """Say if the Turtle will erase a Trail as it moves"""
+
+        erasing = self.erasing
+        return erasing
+
     def isvisible(self) -> bool:
         """Say if the Turtle is showing where it is"""
 
@@ -2112,8 +2125,22 @@ class Turtle:
         """Plan to leave a Trail as the Turtle moves (PD for short)"""
 
         self.warping = False
+        self.erasing = False
 
-        d = dict(warping=self.warping)
+        d = dict(warping=self.warping, erasing=self.erasing)
+        return d
+
+        # Scratch Pen-Down
+
+        # todo: calculated boolean args for pd pu ht gt
+
+    def penerase(self) -> dict:
+        """Plan to erase a Trail as the Turtle moves"""
+
+        self.warping = False
+        self.erasing = True
+
+        d = dict(warping=self.warping, erasing=self.erasing)
         return d
 
         # Scratch Pen-Down
@@ -2124,8 +2151,9 @@ class Turtle:
         """Plan to Not leave a Trail as the Turtle moves (PU for short)"""
 
         self.warping = True
+        self.erasing = False
 
-        d = dict(warping=self.warping)
+        d = dict(warping=self.warping, erasing=self.erasing)
         return d
 
         # Scratch Pen-Up
@@ -2347,7 +2375,7 @@ class Turtle:
                 continue
 
             if casefold == "bold":
-                penscapes.append("\x1B[1m")
+                penscapes.append("\x1B[1m")  # 1m Sgr Plain
                 continue
 
             # Take any of the 8 smallest Color Words
@@ -2840,6 +2868,7 @@ class Turtle:
         gt = self.glass_teletype
         hiding = self.hiding
         warping = self.warping
+        erasing = self.erasing
         penmark = self.penmark
         rest = self.rest
 
@@ -2884,12 +2913,13 @@ class Turtle:
             if eaw in ("F", "W"):
                 width += 1
 
+        punch = (width * " ") if erasing else penmark
         backspaces = width * "\b"
 
         # Do the Punch, or don't
 
         if not warping:  # todo: .writelog when Controls mixed into Text
-            gt.schars_write(penmark)  # for ._jump_then_punch_
+            gt.schars_write(punch)  # for ._jump_then_punch_
             gt.schars_write(backspaces)
 
         if not hiding:
@@ -3147,6 +3177,10 @@ def isdown() -> bool:
     return turtle_demand().isdown()
 
 
+def iserasing() -> bool:
+    return turtle_demand().iserasing()
+
+
 def isvisible() -> bool:
     return turtle_demand().isvisible()
 
@@ -3167,12 +3201,20 @@ def pendown() -> dict:
     return turtle_demand().pendown()
 
 
+def penerase() -> dict:
+    return turtle_demand().penerase()
+
+
 def penup() -> dict:
     return turtle_demand().penup()
 
 
 def pong(count) -> dict:
     return turtle_demand().pong(count)
+
+
+def press(kstr) -> dict:
+    return turtle_demand().press(kstr)
 
 
 def repaint() -> dict:
@@ -3798,6 +3840,7 @@ class PythonSpeaker:
         "ht": "hideturtle",
         "lt": "left",
         "pd": "pendown",
+        # "pe": "penerase",  # nope, too destructive
         "pu": "penup",
         "reset": "restart",  # without ClearScreen
         "rt": "right",
@@ -4191,6 +4234,8 @@ class TurtlingServer:
         bt = gt.bytes_terminal
         bt_fd = bt.fileno  # todo: .file_descriptor
 
+        kchords = self.kchords
+
         pid = os.getpid()
 
         writer = TurtlingFifoProxy("responses")
@@ -4228,11 +4273,19 @@ class TurtlingServer:
             # Reply to 1 Keyboard Chord
 
             if bt_fd in select_:
-                kchord = self.keyboard_serve_one_kchord()
+                kchord = st.kchord_pull(timeout=1.000)
+                kchords.append(kchord)
+
                 if kchord[-1] in ("⎋⌃\\", "⌃\\"):
                     t = Turtle()
-                    t.bye()
+                    try:
+                        t.bye()
+                    finally:
+                        st.schars_print("\x1B[A", end="")
+                        st.schars_print("⎋\\", end="\r\n")
                     break
+
+                self.keyboard_serve_one_kchord(kchord)
 
             # Reply to 1 Client Text
 
@@ -4247,15 +4300,10 @@ class TurtlingServer:
                     reader_fd = reader.fd_open_read_once()
                     assert reader_fd == reader.fileno, (reader_fd, reader.fileno)
 
-    def keyboard_serve_one_kchord(self) -> tuple[bytes, str]:
+    def keyboard_serve_one_kchord(self, kchord) -> None:
         """Reply to 1 Keyboard Chord"""
 
         gt = self.glass_teletype
-        st = gt.str_terminal
-        kchords = self.kchords
-
-        kchord = st.kchord_pull(timeout=1.000)
-        kchords.append(kchord)
 
         if self.kchord_edit_like_macos(kchord):
             return kchord
@@ -4268,8 +4316,6 @@ class TurtlingServer:
             # todo: trust .kchord_edit_like_macos. to help paste Text Lines
 
         gt.kchord_write_kbytes_else_print_kstr(kchord)
-
-        return kchord
 
     def kchord_edit_like_macos(self, kchord) -> bool:
         """Reply to 1 Keyboard Chord that edits the Terminal"""

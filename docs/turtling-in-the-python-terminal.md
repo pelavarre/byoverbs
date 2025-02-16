@@ -472,11 +472,12 @@ Draw Natalia's Snake, first drawn by Natalia of Bucharest
     rt 180  fd 30
     lt 90  fd 10  rt 90  fd 10  bk 10
     lt 90  fd 10  lt 90  fd 30  bk 30
-    write '█'  fd 30
+    rt 90  fd 5  lt 90  fd 30
     rt 90  fd 10  lt 90  fd 10  bk 10
     rt 90  fd 10  lt 90  bk 30  fd 30
     rt 90  fd 10  lt 90  fd
-    rt 90  bk 10  write ' '  fd 20  write '  █'
+    rt 90  bk 15  penerase  fd 10  pd  fd 20  penerase  fd 10
+    pd  fd 5  penerase  fd 5
     restart tada
 
 <!--
@@ -1830,7 +1831,8 @@ She put the Terminal Window Tab Panes of gCloud Shell
 forward as the most available Linux Hosts
 
 Natalia of Bucharest!
-She drew our first Animal, her Snake
+She drew our first Animal, her Snake,
+and she was first to draw with Half-Pixel's
 
 Tina of Monterey!
 She drew our first Giraffe
