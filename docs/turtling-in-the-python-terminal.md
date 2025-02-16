@@ -53,20 +53,20 @@ Contents
 - [Near Future Work](#near-future-work)
   - [Difficult Bugs](#difficult-bugs)
     - [🐢 Pong begun, but bounces poorly](#-pong-begun-but-bounces-poorly)
-    - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
-  - [Future Pucks](#future-pucks)
-  - [Future Paddles](#future-paddles)
+    - [Future Pucks](#future-pucks)
+    - [Future Paddles](#future-paddles)
     - [Paste arrives slowly](#paste-arrives-slowly)
+    - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
     - [11x11 found where 10x10 Pixels expected](#11x11-found-where-10x10-pixels-expected)
   - [Easy Bugs](#easy-bugs)
     - [🐢 Press begun, but nothing like finished](#-press-begun-but-nothing-like-finished)
     - [🐢 Write guesses wrong where the Turtle will land](#-write-guesses-wrong-where-the-turtle-will-land)
   - [Solutions for the free-of-charge tier at replIt·Com](#solutions-for-the-free-of-charge-tier-at-replitcom)
-- [Try out some other Terminal Games](#try-out-some-other-terminal-games)
+- [Try out some other Terminal Games, free of charge](#try-out-some-other-terminal-games-free-of-charge)
   - [Wump and more](#wump-and-more)
   - [Other Turtle Logos](#other-turtle-logos)
-    - [Does it work at your desk?](#does-it-work-at-your-desk)
-    - [What kind of drawings does it make?](#what-kind-of-drawings-does-it-make)
+    - [Does their Turtle Logo work at your desk?](#does-their-turtle-logo-work-at-your-desk)
+    - [What kind of drawings does their Turtle Logo make?](#what-kind-of-drawings-does-their-turtle-logo-make)
 - [Help us please](#help-us-please)
 
 <!-- I wish VsCode ToC would number its headings -->
@@ -1530,10 +1530,20 @@ and then bounces a blue Pong Puck around for a short while
 
 I feel like this experiment pretty much works now?
 
+1
+
 Maybe next up is tweaking up the physics.
 Like stop bouncing always only exactly 180° onto your backtrail.
-And leave the Puck moving for longer, but slow it down with friction
-And teach the Arrow Keys to push and turn it
+And leave the Puck moving for longer, but slow it down with friction.
+And teach the Arrow Keys to push and turn the Pong Puck
+
+2
+
+The logic isn't quite right.
+Calling Pong like this sends us back some "Note: Snap" complaints.
+So something somewhere isn't predicting the Turtle movement perfectly
+
+3
 
 And we could come make this experiment easier to run.
 To get it going, we could let you say something like
@@ -1542,17 +1552,14 @@ To get it going, we could let you say something like
 
 Presently, that doesn't work. It says:  NameError: name 'demos' is not defined
 
+4
+
+The free ReplIt Tier runs this Pong Puck so slowly that you can see it blink.
+Maybe that's fun, or maybe so slow is no fun?
+I'd be curious to hear if the paid ReplIt Tiers run this Puck better?
 
 
-#### Isosceles found, where Equilateral expected
-
-Can we make our Arrow Keys Demo
-come out with triangles that are enough more equilateral?
-Presently we get 10.5 X by 11 Y for Left and Right,
-vs 13 X by 11 Y for Up or Down.
-
-
-### Future Pucks
+#### Future Pucks
 
 What we've got started on there is that
 we might next figure out how to add Pong and Breakout Pucks
@@ -1569,7 +1576,7 @@ Leave it running for long enough, and it'll erase all of your drawing
 You can add more than one Puck
 
 
-### Future Paddles
+#### Future Paddles
 
 We might next figure out how to add Pong and Breakout Paddles
 
@@ -1588,6 +1595,14 @@ whereas pressing H J K L moves the Right Paddle
 In the Drawing Pane,
 typing on the Keyboard goes lots faster than pasting the same Characters.
 I must have written some silly Code somewhere, I wish I knew where
+
+
+#### Isosceles found, where Equilateral expected
+
+Can we make our Arrow Keys Demo
+come out with triangles that are enough more equilateral?
+Presently we get 10.5 X by 11 Y for Left and Right,
+vs 13 X by 11 Y for Up or Down.
 
 
 #### 11x11 found where 10x10 Pixels expected
@@ -1689,7 +1704,7 @@ Like maybe they'll let you back in if you register a series of email addresses
 We'll see
 
 
-## Try out some other Terminal Games
+## Try out some other Terminal Games, free of charge
 
 ### Wump and more
 
@@ -1758,7 +1773,7 @@ Wikipedia > [Domain-specific language]([./demos/arrow-keys.logo](https://en.wiki
 Wikipedia > [Greenspun's tenth rule](https://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)<br>
 
 
-#### Does it work at your desk?
+#### Does their Turtle Logo work at your desk?
 
 Our Turtle Logo runs inside more Terminals
 > gMail gCloud Shell @ https://shell.cloud.google.com/?show=terminal<br>
@@ -1773,7 +1788,7 @@ whereas their Turtle Logo gives you problems to solve, like
 > _tkinter.TclError: no display name and no $DISPLAY environment variable<br>
 
 
-#### What kind of drawings does it make?
+#### What kind of drawings does their Turtle Logo make?
 
 Their Turtle Logo draws on a Bitmap Canvas in a separate Window that's not a Terminal Window.
 You can take screenshots of their drawings,
