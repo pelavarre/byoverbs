@@ -4264,8 +4264,8 @@ class TurtlingServer:
 
             timeout = 0.100
             selects = select.select(fds, [], [], timeout)
-
             select_ = selects[0]
+
             if not select_:
                 if st.kchords:
                     select_ = [bt_fd]
@@ -4307,6 +4307,8 @@ class TurtlingServer:
 
         if self.kchord_edit_like_macos(kchord):
             return kchord
+
+        # gt.notes.append(repr(kchord))
 
         (kbytes, kstr) = kchord
         if kstr == "Return":

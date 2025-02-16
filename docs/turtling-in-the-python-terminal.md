@@ -53,11 +53,11 @@ Contents
 - [Near Future Work](#near-future-work)
   - [Difficult Bugs](#difficult-bugs)
     - [🐢 Pong begun, but nothing like finished](#-pong-begun-but-nothing-like-finished)
-    - [11x11 found where 10x10 expected](#11x11-found-where-10x10-expected)
     - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
   - [Future Pucks](#future-pucks)
   - [Future Paddles](#future-paddles)
     - [Paste arrives slowly](#paste-arrives-slowly)
+    - [11x11 found where 10x10 Pixels expected](#11x11-found-where-10x10-pixels-expected)
   - [Easy Bugs](#easy-bugs)
     - [🐢 Press begun, but nothing like finished](#-press-begun-but-nothing-like-finished)
     - [🐢 Write guesses wrong where the Turtle will land](#-write-guesses-wrong-where-the-turtle-will-land)
@@ -1551,36 +1551,6 @@ To get it going, we could let you say something like
 Presently, that doesn't work. It says:  NameError: name 'demos' is not defined
 
 
-#### 11x11 found where 10x10 expected
-
-These instructions
-
-    relaunch
-    fd 100
-    restart setpc red  rt 90  fd 100
-    setpc blue
-
-paint 11x11 pixels, not 10x10 pixels
-
-    0  ██
-    9  ██
-    8  ██
-    7  ██
-    6  ██
-    5  ██
-    4  ██
-    3  ██
-    2  ██
-    1  ██
-    0  ██████████████████████
-
-       0 1 2 3 4 5 6 7 8 9 0
-
-I feel surprised, I feel disconcerted, by 11 != 10
-
-FD 90 in place oF FD 100 gives us 10x10.
-Is this all as it should be, or should we go mess with it?
-
 
 #### Isosceles found, where Equilateral expected
 
@@ -1623,14 +1593,48 @@ whereas pressing H J K L moves the Right Paddle
 
 #### Paste arrives slowly
 
-Pasting lots of Characters into the Drawing Pane can make them arrive slowly.
+In the Drawing Pane,
+typing on the Keyboard goes lots faster than pasting the same Characters.
+I must have written some silly Code somewhere, I wish I knew where
 
-Maybe by now we've fixed the other thing of ...
-Pasting Characters into the Drawing Pane can make them arrive one at a time.
-Like try pasting 1234567890123456789.
-Sometimes you see the 1 and nothing more.
-But if you hold the Spacebar down,
-then you see the 2, and then the 3, and so on
+
+#### 11x11 found where 10x10 Pixels expected
+
+These instructions
+
+    relaunch
+    fd 100
+    restart setpc red  rt 90  fd 100
+    setpc blue
+
+paint 11x11 Pixels, not 10x10 Pixels
+
+    0  ██
+    9  ██
+    8  ██
+    7  ██
+    6  ██
+    5  ██
+    4  ██
+    3  ██
+    2  ██
+    1  ██
+    0  ██████████████████████
+
+       0 1 2 3 4 5 6 7 8 9 0
+
+I feel surprised, I feel disconcerted, by 11 != 10
+
+FD 90 in place oF FD 100 gives us 10x10.
+Is this all as it should be, or should we go mess with it?
+
+FD 0 shows the Pixel where you started.
+FD 100 shows the Pixel where you ended, and all the Pixels in between.
+That's how you end up with 11, not just 10, Pixels altogether
+
+You can choose SetXYZoom 0.909 0.909
+as a way of getting FD RT FD RT FD RT FD RT
+to mean a Square of 10 Pixels per Side
 
 
 ### Easy Bugs
