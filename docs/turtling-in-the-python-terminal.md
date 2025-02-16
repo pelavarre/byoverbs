@@ -1094,7 +1094,7 @@ Press Spacebar before Q if you want to see more Screenfuls of the Help
 You'll see our Help suggests you play around
 
 It suggest you try speaking the Command Verbs it knows:
-Arc, Backward, Beep, Bye,
+Arc, Backward, Beep, Breakout, Bye,
 ClearScreen, Defaults,
 Forward,
 H, HideTurtle, Home,
@@ -1106,8 +1106,6 @@ SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetXYZoom, SetY,
 ShowTurtle, Sierpiński, Sleep,
 Tada,
 and Write
-
-<!-- Breakout coming soon -->
 
 It suggest you try speaking the Nouns it knows:
 glass_teletype, heading, hiding,

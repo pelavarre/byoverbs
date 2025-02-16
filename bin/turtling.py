@@ -1358,16 +1358,6 @@ class StrTerminal:
 
                 # todo: .schars_write when out of bounds
 
-        # todo write through cache
-        # todo class RowCache
-        # todo + Str per Column, but "" till written
-        # todo + tell me all before/ after fully-known or not-fully-known
-        # todo + fetch a rectangular area
-        # todo do Pong & Breakout without Color known
-        # todo bring up without Window Resize
-        # todo remember Cursor Position from when fetched till next write of characters
-        # todo notify of unknown writes
-
     def schar_read_if(self, row_y, column_x, default) -> str:
         """Read 1 Char from the Screen, if logged before now"""
 
@@ -1596,6 +1586,7 @@ def _turtling_defaults_choose_() -> dict:
         setpencolor_color="Bold",
         #
         count=1,
+        breakout_count=100,
         pong_count=100,
         repeat_count=3,
         #
@@ -1750,18 +1741,44 @@ class Turtle:
 
         sys.exit()
 
-    def clearscreen(self) -> None:
+    def clearscreen(self) -> dict:
         """Write Spaces over every Character of every Screen Row and Column (CLS or CLEAR or CS for short)"""
 
         ctext = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
         gt = self.glass_teletype
         gt.schars_write(ctext)
 
+        (x_min, x_max, y_min, y_max) = self.xy_min_max()
+
+        d = dict(x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max)
+        return d
+
         # just the Screen, not also its Scrollback
 
         # Scratch: Erase-All
 
         # todo: undo/ clear Turtle Trails separately
+
+    def xy_min_max(self) -> tuple[float, float, float, float]:
+        """Say the Extent of the Screen, in X Y Coordinates"""
+
+        gt = self.glass_teletype
+
+        (y_count, x_count) = gt.os_terminal_y_rows_x_columns()
+        center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
+        center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
+
+        x_min = (1 - center_x) / 2  # doublewide X
+
+        x_max = (x_count - center_x) / 2  # doublewide X
+        x_max -= 1 / 2  # todo: figure out why we need this
+        if x_count % 1:
+            x_max -= 1 / 2  # todo: draw Half-Pixels at Right of Screen
+
+        y_min = -(y_count - center_y)
+        y_max = center_y - 1
+
+        return (x_min, x_max, y_min, y_max)
 
     def relaunch(self) -> dict:
         """Warp the Turtle to Home, and clear its Settings, and clear the Screen"""
@@ -1777,6 +1794,8 @@ class Turtle:
 
         # FmsLogo Clean deletes 1 Turtle's trail, without clearing its Settings
         # PyTurtle Clear deletes 1 Turtle's Trail, without clearing its Settings
+
+        # todo: more often test the corner of:  Relaunch  Relaunch
 
     def repaint(self) -> dict:
         """Write the Logged Screen back into place, but with present Highlight/ Color/ Style"""
@@ -2691,6 +2710,10 @@ class Turtle:
 
         heading = self.heading  # 0° North Up Clockwise
 
+        # Limit travel
+
+        (x_min, x_max, y_min, y_max) = self.xy_min_max()
+
         # Choose the Starting Point
 
         if xys is None:
@@ -2710,6 +2733,9 @@ class Turtle:
 
         xfloat_ = xfloat + (xstride_ * math.cos(math.radians(angle)))
         yfloat_ = yfloat + (ystride_ * math.sin(math.radians(angle)))
+
+        xfloat_ = min(max(xfloat_, x_min), x_max)  # limits X
+        yfloat_ = min(max(yfloat_, y_min), y_max)  # limits Y
 
         xfloat__ = round(xfloat_, 10)  # todo: how round should our Float Maths be?
         yfloat__ = round(yfloat_, 10)  # todo: are we happy with -0.0 and +0.0 flopping arund?
@@ -2756,7 +2782,7 @@ class Turtle:
             self.xfloat = xfloat__
             self.yfloat = yfloat__
 
-    def _punch_bresenham_segment_(self, x1, y1, x2, y2, xys) -> None:
+    def _punch_bresenham_segment_(self, x1, y1, x2, y2, xys) -> None:  # noqa C901 complex
         """Step forwards, or backwards, through (Row, Column) choices"""
 
         assert isinstance(y1, int), (type(y1), y1)
@@ -2816,8 +2842,9 @@ class Turtle:
                 e += x2x1
                 y += sy
 
-            assert dx or dy, (dx, dy, x, y, ee, x2x1, y2y1, x1, y1)
-            assert (x, y) != (wx, wy)
+            if (x2, y2) != (x1, y1):
+                assert (x, y) != (wx, wy)
+                assert dx or dy, (dx, dy, x, y, ee, x2x1, y2y1, x1, y1)
 
             # Quit if not moving closer to the Target
 
@@ -3031,8 +3058,25 @@ class Turtle:
         #
 
     #
-    # Move like a Pong Game Puck
+    # Move like a Game Puck
     #
+
+    def breakout(self, count) -> dict:
+        """Move like a Breakout Game Puck"""
+
+        count_ = int(count)
+        assert count_ >= 0, (count_,)
+
+        if count_ == 0:
+            self.forward(0)
+        else:
+            for _ in range(count_):
+                self._puck_step_(kind="Breakout")
+
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        return d
+
+        # todo: results returned from 🐢 .breakout
 
     def pong(self, count) -> dict:
         """Move like a Pong Game Puck"""
@@ -3044,15 +3088,17 @@ class Turtle:
             self.forward(0)
         else:
             for _ in range(count_):
-                self._pong_step_()
+                self._puck_step_(kind="Pong")
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         return d
 
         # todo: results returned from 🐢 .pong
 
-    def _pong_step_(self) -> None:
-        """Move like a Pong Game Puck"""
+    def _puck_step_(self, kind) -> None:
+        """Move like a Breakout or Pong Game Puck"""
+
+        assert kind in ("Breakout", "Pong"), (kind,)
 
         heading = self.heading
 
@@ -3071,62 +3117,76 @@ class Turtle:
         (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
 
         distance_float = 1e5  # todo: calculate how far from .heading
-        self._punch_bresenham_stride_(distance_float, xys=xys)  # for ._pong_step_
+        self._punch_bresenham_stride_(distance_float, xys=xys)  # for ._puck_step_
 
-        assert len(xys) == 2, (len(xys), xys, gt.notes)
+        assert len(xys) in (1, 2), (len(xys), xys, gt.notes)  # 1 at Bounds of Screen
         xy = xys[-1]
 
-        assert xy != (x1, y1), (xy, x1, y1)
+        if len(xys) != 1:
+            assert xy != (x1, y1), (xy, x1, y1)
 
         # Find this Turtle, Here and There, on Screen
 
         (x2, y2) = xy
 
         column_x1 = int(center_x + (2 * x1))
+        column_x1_plus = int(column_x1 + 1)
         column_x2 = int(center_x + (2 * x2))
         column_x2_plus = int(column_x2 + 1)
         row_y1 = int(center_y - y1)
         row_y2 = int(center_y - y2)
 
-        # Blink out before looking for Collision
-
-        st.schars_write(f"\x1B[{row_y1};{column_x1}H")
-        st.schars_write("  ")
-
-        st.schars_write(f"\x1B[{row_y1};{column_x1}H")
+        xy1a = (column_x1, row_y1)
+        xy1b = (column_x1_plus, row_y1)
+        xy2a = (column_x2, row_y2)
+        xy2b = (column_x2_plus, row_y2)
 
         # Look for collision
 
-        schar_0_if = st.schar_read_if(row_y=row_y2, column_x=column_x2, default="")
-        schar_1_if = st.schar_read_if(row_y=row_y2, column_x=column_x2_plus, default="")
-
         collision = False
-        if schar_0_if.strip() or schar_1_if.strip():
+
+        if len(xys) != 2:
             collision = True
+
+        if xy2a not in (xy1a, xy1b):
+            schar_2a_if = st.schar_read_if(row_y=row_y2, column_x=column_x2, default="")
+            if schar_2a_if.strip():
+                collision = True
+
+        if xy2b not in (xy1a, xy1b):
+            schar_2b_if = st.schar_read_if(row_y=row_y2, column_x=column_x2_plus, default="")
+            if schar_2b_if.strip():
+                collision = True
+
         if (column_x2 < 1) or (column_x2_plus >= x_count):
-            collision = True
+            collision = True  # todo: rare now that ._punch_bresenham_stride_ checks bounds
+
         if (row_y2 < 1) or (row_y2 >= y_count):
-            collision = True
+            collision = True  # todo: rare now that ._punch_bresenham_stride_ checks bounds
 
         # Step ahead
 
-        if not collision:
+        if (not collision) or (kind == "Breakout"):
 
-            self._punch_bresenham_stride_(distance_float, xys=xys)  # for ._pong_step_
+            self._punch_bresenham_stride_(distance_float, xys=xys)  # for ._puck_step_
             self.xfloat = x2
             self.yfloat = y2
 
+            if collision:
+                self.setheading(heading + 180e0)
+
         else:
+            assert collision, (collision,)
 
             xys2: list[tuple[float, float]]
             xys2 = list()
 
             self.setheading(heading + 180e0)
-            self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._pong_step_
+            self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._puck_step_
             assert len(xys2) == 2, (len(xys2), xys2, gt.notes)
 
             xy2 = xys2[-1]
-            self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._pong_step_
+            self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._puck_step_
 
             (x2, y2) = xy2  # replaces
             column_x2 = int(center_x + (2 * x2))  # replaces
@@ -3177,7 +3237,7 @@ def bye() -> None:
     return turtle_demand().bye()
 
 
-def clearscreen() -> None:
+def clearscreen() -> dict:
     return turtle_demand().clearscreen()
 
 
@@ -3195,6 +3255,10 @@ def backward(distance) -> dict:
 
 def beep() -> dict:
     return turtle_demand().beep()
+
+
+def breakout(count) -> dict:
+    return turtle_demand().pong(count)
 
 
 def forward(distance) -> dict:
