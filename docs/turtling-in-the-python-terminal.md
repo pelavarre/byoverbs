@@ -1831,8 +1831,9 @@ She put the Terminal Window Tab Panes of gCloud Shell
 forward as the most available Linux Hosts
 
 Natalia of Bucharest!
-She drew our first Animal, her Snake,
-and she was first to draw with Half-Pixel's
+She drew our first Animal, her Snake.
+She was first to draw with Half-Pixel's,
+and the first to erase Half-Pixel's and Whole-Pixel's
 
 Tina of Monterey!
 She drew our first Giraffe
