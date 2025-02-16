@@ -52,7 +52,7 @@ Contents
     - [Breakpoint the Chat](#breakpoint-the-chat)
 - [Near Future Work](#near-future-work)
   - [Difficult Bugs](#difficult-bugs)
-    - [🐢 Pong begun, but nothing like finished](#-pong-begun-but-nothing-like-finished)
+    - [🐢 Pong begun, but bounces poorly](#-pong-begun-but-bounces-poorly)
     - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
   - [Future Pucks](#future-pucks)
   - [Future Paddles](#future-paddles)
@@ -1510,7 +1510,7 @@ but ⌃U will work
 ### Difficult Bugs
 
 
-#### 🐢 Pong begun, but nothing like finished
+#### 🐢 Pong begun, but bounces poorly
 
 Lately I told my Shell
 
@@ -1520,30 +1520,22 @@ Then I pasted those Logo instructions into our Turtle App.
 Then I added some more Logo instructions
 
     penup  fd 30  rt 90  fd 100  pendown
-    setpc red
+    setpc blue
     seth  right 45
 
     pong
 
-This experiment draws the ← ↑ ↓ → Arrow Keys with no Color,
-and then bounces a red Pong Puck around for a short while
+This experiment draws the Key Caps of the ← ↑ ↓ → Arrow Keys with no Color,
+and then bounces a blue Pong Puck around for a short while
 
-This experiments surfaces several different bugs.
-This Pong Puck wrongly leaves some extra copies of itself around.
-Both near where it bounces, and halfway in between.
-And when it hits the right edge of the screen, sometimes it spills half of itself
+I feel like this experiment pretty much works now?
 
-And when you run this particular experiment on my Terminals,
-the Chat Terminal Window Pane chokes out,
-complaining of something like 'AssertionError: (8163, 9254)',
-inside 'fd_read_text_else'.
-And then you can't restart the Chat Terminal Window Pane.
-When you try, it complains of something like: "ValueError: invalid literal for int() with base 16: ''",
-again inside 'fd_read_text_else'.
-You have to press ⌃\ inside the Drawing Terminal Window Pane,
-and start that Python again. Then you can restart the Chat
+Maybe next up is tweaking up the physics.
+Like stop bouncing always only exactly 180° onto your backtrail.
+And leave the Puck moving for longer, but slow it down with friction
+And teach the Arrow Keys to push and turn it
 
-Plus we could come make this experiment easier to run.
+And we could come make this experiment easier to run.
 To get it going, we could let you say something like
 
     demos.arrow_keys

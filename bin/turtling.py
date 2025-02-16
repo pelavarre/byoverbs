@@ -56,7 +56,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.2.15"  # Saturday
+__version__ = "2025.2.16"  # Sunday
 
 _ = dict[str, int] | None  # new since Oct/2021 Python 3.10
 
@@ -1368,7 +1368,7 @@ class StrTerminal:
         # todo remember Cursor Position from when fetched till next write of characters
         # todo notify of unknown writes
 
-    def schar_read_if(self, row_y, column_x) -> str:
+    def schar_read_if(self, row_y, column_x, default) -> str:
         """Read 1 Char from the Screen, if logged before now"""
 
         writelog = self.writelog
@@ -1379,7 +1379,7 @@ class StrTerminal:
                 sch = writelog_x[row_y]
                 return sch
 
-        return ""
+        return default
 
     def writelog_repaint(self) -> None:
         """Write the Logged Screen back into place, but with present Highlight/ Color/ Style"""
@@ -1896,7 +1896,7 @@ class Turtle:
 
         distance_float = float(200 if (distance is None) else distance)
 
-        self._punch_bresenham_stride_(-distance_float, limit=0)
+        self._punch_bresenham_stride_(-distance_float, xys=None)  # for .backward
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest)
         return d
@@ -1932,7 +1932,7 @@ class Turtle:
 
         distance_float = float(100 if (distance is None) else distance)
 
-        self._punch_bresenham_stride_(distance_float, limit=0)
+        self._punch_bresenham_stride_(distance_float, xys=None)  # for .forward
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest)
         return d
@@ -2588,7 +2588,7 @@ class Turtle:
 
         # Draw the Line Segment to X2 Y2 from X1 Y1
 
-        self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2, limit=0)
+        self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2, xys=None)
 
         # Catch up the Precise X Y Shadows
 
@@ -2680,8 +2680,11 @@ class Turtle:
     # Move the Turtle along the Line of its Heading, leaving a Trail if Pen Down
     #
 
-    def _punch_bresenham_stride_(self, stride, limit) -> None:
+    def _punch_bresenham_stride_(self, stride, xys) -> None:
         """Step forwards, or backwards, along the Heading"""
+
+        xfloat = self.xfloat
+        yfloat = self.yfloat
 
         xstride_ = float(stride) * self.xscale
         ystride_ = float(stride) * self.yscale
@@ -2690,7 +2693,11 @@ class Turtle:
 
         # Choose the Starting Point
 
-        (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
+        if xys is None:
+            (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
+        else:
+            x1 = round(2 * xfloat) / 2  # doublewide X
+            y1 = round(yfloat)
 
         xfloat = self.xfloat
         yfloat = self.yfloat
@@ -2725,13 +2732,8 @@ class Turtle:
 
         # Draw the Line Segment to X2 Y2 from X1 Y1
 
-        self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2, limit=limit)
+        self._punch_bresenham_segment_(x1, y1=y1, x2=x2, y2=y2, xys=xys)
         # eprint(f"float {xfloat} {yfloat} {xfloat__} {yfloat__}")
-
-        if limit:
-            (x3, y3) = self._x_y_position_()  # may change .xfloat .yfloat
-            assert y3 == int(y3), (y3,)
-            (x2, y2) = (x3, int(y3))  # replaces
 
         # Option to show why keep up Precise X Y Shadows in .xfloat .yfloat
 
@@ -2750,17 +2752,17 @@ class Turtle:
 
         # Catch up the Precise X Y Shadows
 
-        self.xfloat = xfloat__
-        self.yfloat = yfloat__
+        if xys is None:
+            self.xfloat = xfloat__
+            self.yfloat = yfloat__
 
-    def _punch_bresenham_segment_(self, x1, y1, x2, y2, limit) -> None:
+    def _punch_bresenham_segment_(self, x1, y1, x2, y2, xys) -> None:
         """Step forwards, or backwards, through (Row, Column) choices"""
 
         assert isinstance(y1, int), (type(y1), y1)
         assert isinstance(y2, int), (type(y2), y2)
 
         gt = self.glass_teletype
-        st = gt.str_terminal
 
         # Plan to jump & punch along the Line
 
@@ -2774,23 +2776,29 @@ class Turtle:
 
         # gt.notes.append(f"{x2x1=} {y2y1=} {sx=} {sy=} {e=}  # {x1=} {y1=} {x2=} {y2=}")
 
-        # Watch the Terminal Cursor closely when limiting its movement
-
-        ya = xa = -1
-        if limit:
-            (ya, xa) = st.row_y_column_x_read(timeout=0)
-
         # Follow the plan
+
+        fresh_xys: list[tuple[float, float]]
+        fresh_xys = list()
 
         wx = x = x1
         wy = y = y1
-        count = 0
         while True:
             # gt.notes.append(f"{wx=} {wy=} {x=} {y=}")
 
-            # Take a Jump, and maybe punch a Trail
+            # Take a Jump, and maybe punch (or erase) a Trail
 
-            self._jump_then_punch_(wx, wy=-wy, x=x, y=-y)
+            if xys is None:
+                self._jump_punch_rest_if_(wx, wy=-wy, x=x, y=-y)
+            else:
+                xy = (x, y)
+                if xys:
+                    assert xys[len(fresh_xys)] == xy, (xy, xys, fresh_xys, gt.notes)
+                    self._jump_punch_rest_if_(wx, wy=-wy, x=x, y=-y)
+
+                fresh_xys.append(xy)
+                if len(fresh_xys) > 1:
+                    break
 
             # Calculate the next Jump
 
@@ -2808,6 +2816,9 @@ class Turtle:
                 e += x2x1
                 y += sy
 
+            assert dx or dy, (dx, dy, x, y, ee, x2x1, y2y1, x1, y1)
+            assert (x, y) != (wx, wy)
+
             # Quit if not moving closer to the Target
 
             ex = abs(x - x2) - abs(wx - x2)
@@ -2823,35 +2834,34 @@ class Turtle:
                 y = wy
                 break
 
-            # Look into this Iteration of this Loop
+            # # Look into this Iteration of this Loop
+            #
+            # if False:  # jitter Sat 15/Feb
+            #     if len(gt.notes) > 100:
+            #         gt.notes.append("... looping indefinitely ...")
+            #         break
+            #
+            #     # todo: <= 100 while sending many Notes can break such as:  arc 45 400
 
-            if limit:
-                (yb, xb) = st.row_y_column_x_read(timeout=0)
-                if (yb, xb) != (ya, xa):
-                    (ya, xa) = (yb, xb)
-
-                    count += 1
-                    if count >= limit:
-                        break
-
-            if False:  # jitter Sat 15/Feb
-                if len(gt.notes) > 100:
-                    gt.notes.append("... looping indefinitely ...")
-                    break
-
-                # todo: <= 100 while sending many Notes can break such as:  arc 45 400
-
-        # Slip Terminal Cursor to min Error in Doublewide X
+        # Slip Terminal Cursor to min Error in Doublewide X  # todo: pong, breakout
 
         e_still = abs(x - x2)
         e_left = abs(x - (1 / 2) - x2)  # doublewide X
         e_right = abs(x + (1 / 2) - x2)  # doublewide X
         if e_left < e_still:
             assert e_right >= e_still, (e_still, e_left, e_right, x, x2)
-            gt.schars_write("\x1B[D")
+            if xys is None:
+                gt.schars_write("\x1B[D")
         elif e_right < e_still:
             assert e_left >= e_still, (e_still, e_left, e_right, x, x2)
-            gt.schars_write("\x1B[C")
+            if xys is None:
+                gt.schars_write("\x1B[C")
+
+        # Pass back the look ahead, on request
+
+        if xys is not None:
+            if not xys:
+                xys.extend(fresh_xys)
 
         # Wikipedia > https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 
@@ -2862,7 +2872,7 @@ class Turtle:
         #   to turn my y = a*x + b equation into a list of pixels to turn on?
         #
 
-    def _jump_then_punch_(self, wx, wy, x, y) -> None:
+    def _jump_punch_rest_if_(self, wx, wy, x, y) -> None:
         """Move the Turtle by 1 Column or 1 Row or both, and punch out a Mark if Pen Down"""
 
         gt = self.glass_teletype
@@ -2904,7 +2914,7 @@ class Turtle:
         ctext = f"{y_text}{x_text}"
         gt.schars_write(ctext)
 
-        # Plan the Punch
+        # Plan to write the PenMark, else to erase the Penmark while 🐢 PenErase
 
         width = 0
         for ch in penmark:
@@ -2916,11 +2926,13 @@ class Turtle:
         punch = (width * " ") if erasing else penmark
         backspaces = width * "\b"
 
-        # Do the Punch, or don't
+        # Do the Punch or Erase, except don't while 🐢 PenUp
 
         if not warping:  # todo: .writelog when Controls mixed into Text
-            gt.schars_write(punch)  # for ._jump_then_punch_
+            gt.schars_write(punch)  # for ._jump_punch_rest_if_
             gt.schars_write(backspaces)
+
+        # Do rest awhile, except don't while 🐢 HideTurtle
 
         if not hiding:
             time.sleep(rest)
@@ -3042,58 +3054,90 @@ class Turtle:
     def _pong_step_(self) -> None:
         """Move like a Pong Game Puck"""
 
+        heading = self.heading
+
         gt = self.glass_teletype
         st = gt.str_terminal
 
-        (y1, x1) = st.row_y_column_x_read(timeout=0)
-
-        # Blink out
-
-        st.schars_write("  ")
-        st.schars_write("\b\b")
-
         # Look ahead down the Bresenham Line
 
-        warping = self.warping
-        self.warping = True
-        try:
-            distance_float = 100
-            self._punch_bresenham_stride_(distance_float, limit=1)
-            (y2, x2) = st.row_y_column_x_read(timeout=0)
-        finally:
-            self.warping = warping
+        xys: list[tuple[float, float]]
+        xys = list()
 
-        x2plus = x2 + 1
+        (y_count, x_count) = gt.os_terminal_y_rows_x_columns()
+        center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
+        center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
 
-        # Move if no Collision
+        (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
 
-        schar_0_if = st.schar_read_if(row_y=y2, column_x=x2)
-        schar_1_if = st.schar_read_if(row_y=y2, column_x=x2plus)
+        distance_float = 1e5  # todo: calculate how far from .heading
+        self._punch_bresenham_stride_(distance_float, xys=xys)  # for ._pong_step_
+
+        assert len(xys) == 2, (len(xys), xys, gt.notes)
+        xy = xys[-1]
+
+        assert xy != (x1, y1), (xy, x1, y1)
+
+        # Find this Turtle, Here and There, on Screen
+
+        (x2, y2) = xy
+
+        column_x1 = int(center_x + (2 * x1))
+        column_x2 = int(center_x + (2 * x2))
+        column_x2_plus = int(column_x2 + 1)
+        row_y1 = int(center_y - y1)
+        row_y2 = int(center_y - y2)
+
+        # Blink out before looking for Collision
+
+        st.schars_write(f"\x1B[{row_y1};{column_x1}H")
+        st.schars_write("  ")
+
+        st.schars_write(f"\x1B[{row_y1};{column_x1}H")
+
+        # Look for collision
+
+        schar_0_if = st.schar_read_if(row_y=row_y2, column_x=column_x2, default="")
+        schar_1_if = st.schar_read_if(row_y=row_y2, column_x=column_x2_plus, default="")
 
         collision = False
-        if (y2, x2) == (y1, x1):
+        if schar_0_if.strip() or schar_1_if.strip():
             collision = True
-        elif schar_0_if.strip():
+        if (column_x2 < 1) or (column_x2_plus >= x_count):
             collision = True
-        elif schar_1_if.strip():
+        if (row_y2 < 1) or (row_y2 >= y_count):
             collision = True
+
+        # Step ahead
 
         if not collision:
-            if not warping:
-                self._punch_bresenham_stride_(0, limit=1)
-            return
 
-            # todo: stop double-rest'ing when not-warp'ing
+            self._punch_bresenham_stride_(distance_float, xys=xys)  # for ._pong_step_
+            self.xfloat = x2
+            self.yfloat = y2
 
-        # Else bounce
+        else:
 
-        st.write_row_y_column_x(row_y=y1, column_x=x1)
+            xys2: list[tuple[float, float]]
+            xys2 = list()
 
-        heading = self.heading
-        self.setheading(heading + 180e0)
+            self.setheading(heading + 180e0)
+            self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._pong_step_
+            assert len(xys2) == 2, (len(xys2), xys2, gt.notes)
 
-        distance_float = 100
-        self._punch_bresenham_stride_(distance_float, limit=1)
+            xy2 = xys2[-1]
+            self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._pong_step_
+
+            (x2, y2) = xy2  # replaces
+            column_x2 = int(center_x + (2 * x2))  # replaces
+            row_y2 = int(center_y - y2)  # replaces
+
+        # Blink out after drawing over Here and There
+
+        st.schars_write(f"\x1B[{row_y1};{column_x1}H")
+        st.schars_write("  ")
+
+        st.schars_write(f"\x1B[{row_y2};{column_x2}H")  # todo: skip if unmoving
 
 
 turtles: list[Turtle]
