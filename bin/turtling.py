@@ -36,6 +36,7 @@ import os
 import pathlib
 import pdb
 import platform  # platform.system() 'Darwin' often lacks 24-Bit Terminal Color
+import random
 import re  # 're.fullmatch' since Mar/2014 Python 3.4
 import select  # Windows sad at 'select.select' of Named Pipes
 import shlex
@@ -1588,6 +1589,7 @@ def _turtling_defaults_choose_() -> dict:
         count=1,
         breakout_count=100,
         pong_count=100,
+        puck_count=100,
         repeat_count=3,
         #
         diameter=100,
@@ -2870,7 +2872,8 @@ class Turtle:
             #
             #     # todo: <= 100 while sending many Notes can break such as:  arc 45 400
 
-        # Slip Terminal Cursor to min Error in Doublewide X  # todo: pong, breakout
+        # Slip Terminal Cursor to min Error in Doublewide X
+        # todo: Terminal Cursor Slips for Breakout, for Pong, for Puck
 
         e_still = abs(x - x2)
         e_left = abs(x - (1 / 2) - x2)  # doublewide X
@@ -3028,6 +3031,98 @@ class Turtle:
     # Draw some famous Figures
     #
 
+    def puckland(self) -> dict:
+        """Draw something like a Pac-Man™ Game Board"""
+
+        gt = self.glass_teletype
+        warping = self.warping
+        xscale = self.xscale
+        yscale = self.yscale
+
+        # Choose what to draw, copy-edited from https://en.wikipedia.org/wiki/Pac-Man
+
+        git_text = """
+
+            ┌──────────────────────────────────────────────────────┐
+            │┌────────────────────────┐  ┌────────────────────────┐│
+            ││()()()()()()()()()()()()│  │()()()()()()()()()()()()││
+            ││()┌──────┐()┌────────┐()│  │()┌────────┐()┌──────┐()││
+            ││@@│      │()│        │()│  │()│        │()│      │@@││
+            ││()└──────┘()└────────┘()└──┘()└────────┘()└──────┘()││
+            ││()()()()()()()()()()()()()()()()()()()()()()()()()()││
+            ││()┌──────┐()┌──┐()┌──────────────┐()┌──┐()┌──────┐()││
+            ││()└──────┘()│  │()└─────┐  ┌─────┘()│  │()└──────┘()││
+            ││()()()()()()│  │()()()()│  │()()()()│  │()()()()()()││
+            │└─────────┐()│  └─────┐  │  │  ┌─────┘  │()┌─────────┘│
+            └─────────┐│()│  ┌─────┘  └──┘  └─────┐  │()│┌─────────┘
+                      ││()│  │                    │  │()││
+            ──────────┘│()│  │  ┌─────----─────┐  │  │()│└──────────
+            ───────────┘()└──┘  │┌────----────┐│  └──┘()└───────────
+                        ()      ││            ││      ()
+            ───────────┐()┌──┐  │└────────────┘│  ┌──┐()┌───────────
+            ──────────┐│()│  │  └──────────────┘  │  │()│┌──────────
+                      ││()│  │                    │  │()││
+            ┌─────────┘│()│  │  ┌──────────────┐  │  │()│└─────────┐
+            │┌─────────┘()└──┘  └─────┐  ┌─────┘  └──┘()└─────────┐│
+            ││()()()()()()()()()()()()│  │()()()()()()()()()()()()││
+            ││()┌──────┐()┌────────┐()│  │()┌────────┐()┌──────┐()││
+            ││()└───┐  │()└────────┘()└──┘()└────────┘()│  ┌───┘()││
+            ││@@()()│  │()()()()()()()()()()()()()()()()│  │()()@@││
+            │└───┐()│  │()┌──┐()┌──────────────┐()┌──┐()│  │()┌───┘│
+            │┌───┘()└──┘()│  │()└─────┐  ┌─────┘()│  │()└──┘()└───┐│
+            ││()()()()()()│  │()()()()│  │()()()()│  │()()()()()()││
+            ││()┌─────────┘  └─────┐()│  │()┌─────┘  └─────────┐()││
+            ││()└──────────────────┘()└──┘()└──────────────────┘()││
+            ││()()()()()()()()()()()()()()()()()()()()()()()()()()││
+            │└────────────────────────────────────────────────────┘│
+            └──────────────────────────────────────────────────────┘
+
+        """
+
+        text = textwrap.dedent(git_text).strip()
+        lines = text.splitlines()
+
+        assert len(lines) == 33, (len(lines), lines[16:])
+
+        # Place its Upper Left Corner
+
+        if not warping:
+            self.penup()
+
+        x1 = -(56 / 2 / 2) / xscale
+        y1 = 16 / yscale  # because (15 + 1 + 17) == 33
+        self.setxy(x=x1, y=y1)
+
+        if not warping:
+            self.pendown()
+
+        # Draw this Game Board
+
+        for line in lines:
+            assert len(line) <= 56, (len(line), line)
+            writable = (line + (56 * " "))[:56]
+
+            gt.schars_write(writable)
+            gt.schars_write("\n")
+            gt.schars_write(len(writable) * "\b")
+
+        (x2, y2) = self._x_y_position_()  # may change .xfloat .yfloat
+
+        # End over the left Dot beneath Home
+
+        if not warping:
+            self.penup()
+
+        self.setxy(-1 / xscale, -8 / yscale)  # (-1, -8), because I measured it : -)
+
+        if not warping:
+            self.pendown()
+
+        # Succeed
+
+        d = dict(x1=x1, y1=y1, x2=x2, y2=y2)
+        return d
+
     def sierpiński(self, distance, divisor) -> None:  # aka Sierpinski
         """Draw Triangles inside Triangles, in the way of Sierpiński 1882..1969 (also known as Sierpinksi)"""
 
@@ -3095,10 +3190,27 @@ class Turtle:
 
         # todo: results returned from 🐢 .pong
 
-    def _puck_step_(self, kind) -> None:
+    def puck(self, count) -> dict:
+        """Move like a Pac-Man™ Game Puck"""
+
+        count_ = int(count)
+        assert count_ >= 0, (count_,)
+
+        if count_ == 0:
+            self.forward(0)
+        else:
+            for _ in range(count_):
+                self._puck_step_(kind="Puck")
+
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        return d
+
+        # todo: results returned from 🐢 .pong
+
+    def _puck_step_(self, kind) -> None:  # noqa C901 Too Complex
         """Move like a Breakout or Pong Game Puck"""
 
-        assert kind in ("Breakout", "Pong"), (kind,)
+        assert kind in ("Breakout", "Pong", "Puck"), (kind,)
 
         heading = self.heading
 
@@ -3150,11 +3262,17 @@ class Turtle:
 
         if xy2a not in (xy1a, xy1b):
             schar_2a_if = st.schar_read_if(row_y=row_y2, column_x=column_x2, default="")
+            if kind == "Puck":
+                for ch in "()@█":
+                    schar_2a_if = schar_2a_if.replace(ch, " ")
             if schar_2a_if.strip():
                 collision = True
 
         if xy2b not in (xy1a, xy1b):
             schar_2b_if = st.schar_read_if(row_y=row_y2, column_x=column_x2_plus, default="")
+            if kind == "Puck":
+                for ch in "()@█":
+                    schar_2b_if = schar_2b_if.replace(ch, " ")
             if schar_2b_if.strip():
                 collision = True
 
@@ -3177,11 +3295,17 @@ class Turtle:
 
         else:
             assert collision, (collision,)
+            assert kind in ("Pong", "Puck"), (kind,)
 
             xys2: list[tuple[float, float]]
             xys2 = list()
 
-            self.setheading(heading + 180e0)
+            if kind == "Pong":
+                self.setheading(heading + 180e0)
+            else:
+                assert kind == "Puck", (kind,)
+                self._puck_set_heading_(column_x1, row_y1=row_y1)
+
             self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._puck_step_
             assert len(xys2) == 2, (len(xys2), xys2, gt.notes)
 
@@ -3198,6 +3322,54 @@ class Turtle:
         st.schars_write("  ")
 
         st.schars_write(f"\x1B[{row_y2};{column_x2}H")  # todo: skip if unmoving
+
+    def _puck_set_heading_(self, column_x1, row_y1) -> None:
+        """Choose a Heading something like a Pac-man™ Game Puck would"""
+
+        heading = self.heading
+
+        gt = self.glass_teletype
+        st = gt.str_terminal
+
+        sibs = [  # Look right/ down/ left/ up in a Y X Plane of Y Down Double-X Right
+            (2, 0, 90),
+            (0, 1, 180),
+            (-2, 0, 270),
+            (0, -1, 360),
+        ]
+
+        headings = list()
+        better_headings = list()
+        for sib in sibs:  # todo: wider awareness
+            (dx, dy, h) = sib
+
+            x = column_x1 + dx
+            x_plus = x + 1
+            y = row_y1 + dy
+
+            schar_xya_if = st.schar_read_if(row_y=y, column_x=x, default="")
+            schar_xya_if = schar_xya_if.replace("█", "")
+
+            schar_xyb_if = st.schar_read_if(row_y=y, column_x=x_plus, default="")
+            schar_xyb_if = schar_xyb_if.replace("█", "")
+
+            schars = schar_xya_if + schar_xyb_if
+            if schars in ("  ", "()", "@@"):
+                headings.append(h)
+                if schars in ("()", "@@"):
+                    better_headings.append(h)
+
+        if not headings:
+            raise NotImplementedError("Puck boxed in")
+
+        assert heading not in headings, (heading, headings, column_x1, row_y1)
+
+        if better_headings:
+            h = random.choice(better_headings)
+        else:
+            h = random.choice(headings)
+
+        self.setheading(h)
 
 
 turtles: list[Turtle]
@@ -3323,6 +3495,10 @@ def pong(count) -> dict:
 
 def press(kstr) -> dict:
     return turtle_demand().press(kstr)
+
+
+def puckland(self) -> dict:
+    return turtle_demand().puckland()
 
 
 def repaint() -> dict:

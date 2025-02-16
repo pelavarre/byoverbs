@@ -52,15 +52,19 @@ Contents
     - [Breakpoint the Chat](#breakpoint-the-chat)
 - [Near Future Work](#near-future-work)
   - [Difficult Bugs](#difficult-bugs)
+    - [🐢 Puckland begun, but needs hints](#-puckland-begun-but-needs-hints)
     - [🐢 Pong begun, but bounces poorly](#-pong-begun-but-bounces-poorly)
     - [Future Pucks](#future-pucks)
     - [Future Paddles](#future-paddles)
+    - [Turtles of unusual size](#turtles-of-unusual-size)
     - [Paste arrives slowly](#paste-arrives-slowly)
     - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
     - [11x11 found where 10x10 Pixels expected](#11x11-found-where-10x10-pixels-expected)
+    - [Undo Destruction](#undo-destruction)
   - [Easy Bugs](#easy-bugs)
     - [🐢 Press begun, but nothing like finished](#-press-begun-but-nothing-like-finished)
     - [🐢 Write guesses wrong where the Turtle will land](#-write-guesses-wrong-where-the-turtle-will-land)
+    - [Random, and not repeatable](#random-and-not-repeatable)
   - [Solutions for the free-of-charge tier at replIt·Com](#solutions-for-the-free-of-charge-tier-at-replitcom)
 - [Try out some other Terminal Games, free of charge](#try-out-some-other-terminal-games-free-of-charge)
   - [Wump and more](#wump-and-more)
@@ -1100,7 +1104,7 @@ Forward,
 H, HideTurtle, Home,
 IncX, IncY, IsDown, IsVisible,
 Label, Left,
-PenDown, PenErase, PenUp, Pong, Press,
+PenDown, PenErase, PenUp, Pong, Press, Puckland, Puck,
 Relaunch, Repaint, Repeat, Restart, Right,
 SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetXYZoom, SetY,
 ShowTurtle, Sierpiński, Sleep,
@@ -1508,6 +1512,63 @@ but ⌃U will work
 ### Difficult Bugs
 
 
+#### 🐢 Puckland begun, but needs hints
+
+You can draw a Game Board that resembles a classic first Level of the Pac-Man™ video game, and move a Puck around it
+
+    relaunch
+    puckland
+    puck 1
+    puck 1
+    puck 1
+
+Presently . . .
+
+1
+
+Our Puckland is colorless.
+The Wikipedia image of Pac-Man™ has
+Dark Blue Walls, a Bright Yellow Puck
+and the Dots & Pellets drawn in a very Pink kind of Brown.
+All on a Darkmode Black Screen.
+Odds on we'll go looking
+for a Pallette of 8-Bit Terminal Colors
+encoded as 24-bit R:G:B.
+Some Pallette that gives higher Contrast for the Puck & Dots & Pellets
+against a Lightmode White or Darkmode Black Screen,
+and lower Contrast for the Blue Walls
+
+2
+
+PUCK 2000 often runs for long enough to eat all the Dots and Pellets
+that this Version of Puck will eat.
+Our Puck doesn't look around to choose a heading,
+except when it collides with a wall.
+So it always misses all its chances to eat the Dots and Pellets
+that hide in the corners away from the main thoroughfares
+
+3
+
+Our logic isn't quite right.
+Calling Puck or Pong like this sends us back some "Note: Snap" complaints.
+Something somewhere isn't correctly perfectly predicting our Turtle movement
+
+If you get enough dozens of "Note: Snap" complaints going,
+then you can break our underlying Named Pipes logic
+and trigger an AssertionError inside of that.
+Then you have to restart our Turtle Logo App
+
+4
+
+Our Puck moves more wrong if you stress it
+by moving it just a Half-Pixel to either side
+by pressing ← Left Arrow or → Right Arrow inside the Drawing Pane
+
+You can get it to say "Puck boxed in" and give up trying to move,
+if you do this while it's got walls on both sides
+
+
+
 #### 🐢 Pong begun, but bounces poorly
 
 Lately I told my Shell
@@ -1527,6 +1588,7 @@ This experiment draws the Key Caps of the ← ↑ ↓ → Arrow Keys with no Col
 and then bounces a blue Pong Puck around for a short while
 
 I feel like this experiment pretty much works now?
+You can try a 'breakout' Puck instead, when you want to damage your Drawing
 
 1
 
@@ -1537,9 +1599,9 @@ And teach the Arrow Keys to push and turn the Pong Puck
 
 2
 
-The logic isn't quite right.
-Calling Pong like this sends us back some "Note: Snap" complaints.
-So something somewhere isn't predicting the Turtle movement perfectly
+Our logic isn't quite right.
+Calling Puck or Pong like this sends us back some "Note: Snap" complaints.
+Something somewhere isn't correctly perfectly predicting our Turtle movement
 
 3
 
@@ -1560,7 +1622,7 @@ I'd be curious to hear if the paid ReplIt Tiers run this Puck better?
 #### Future Pucks
 
 What we've got started on there is that
-we might next figure out how to add Pong and Breakout Pucks
+you can add Pong and Breakout Pucks
 
 When you add a Pong Puck,
 it slides around,
@@ -1571,7 +1633,9 @@ The Breakout Puck looks much the same,
 but it erases the parts of the drawing that it bumps into.
 Leave it running for long enough, and it'll erase all of your drawing
 
-You can add more than one Puck
+=>
+
+We've not yet worked out well how to add more than one Puck
 
 
 #### Future Paddles
@@ -1586,6 +1650,16 @@ then pressing A S D F moves the Left Paddle,
 whereas pressing H J K L moves the Right Paddle
 
 
+#### Turtles of unusual size
+
+Presently . . .
+
+We mostly only test Turtles of 2 X 1 Y Size,
+indeed mainly only a pair of U+2588 Full-Block ██ Characters
+
+SetPenPunch lets you try some other sizes.
+We should let you make your Turtle as large as you please,
+and choose independently how high and wide a trail it leaves behind
 
 
 #### Paste arrives slowly
@@ -1642,6 +1716,29 @@ as a way of getting FD RT FD RT FD RT FD RT
 to mean a Square of 10 Pixels per Side
 
 
+#### Undo Destruction
+
+Presently ...
+
+If you make a mistake, you might destroy much or all of your drawing.
+All the hassle of making back up copies is yours to own
+
+When you crash out of the Chat Pane,
+you have to remember to go back in with 'python3 turtling.py -i'.
+Most other ways for you to go back in start by erasing your last drawing,
+a bit too enthusiastically, much too automagically
+
+Myself, I did once lose a Game Board I had drawn
+from the Unicode Box Drawings Double Characters, as fan art of the Pac-Man™ video game
+
+=>
+
+We could log all your choices so that you can edit and replay them
+
+We could work from that log to let you walk time backward,
+undoing your last choice, and then the choice before that, and so on
+
+
 ### Easy Bugs
 
 
@@ -1681,10 +1778,19 @@ always guesses the Turtle won't move,
 which is laughably wrong
 
 
+#### Random, and not repeatable
+
+We should give you ways of playing exactly the same game again
+
+Presently, we give you random numbers that change every time you play
+
+
 ### Solutions for the free-of-charge tier at replIt·Com
 
 The merciless copy-restriction locks at replit·Com
 often do slow you down and kick you out without explanation
+
+=>
 
 Well, we can pour time into reverse-engineering what it is that they want
 
