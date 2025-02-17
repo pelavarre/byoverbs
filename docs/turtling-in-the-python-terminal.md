@@ -52,8 +52,8 @@ Contents
     - [Breakpoint the Chat](#breakpoint-the-chat)
 - [Near Future Work](#near-future-work)
   - [Difficult Bugs](#difficult-bugs)
-    - [🐢 Puckland begun, but doesn't know when to quit](#-puckland-begun-but-doesnt-know-when-to-quit)
-    - [🐢 Pong begun, but bounces poorly](#-pong-begun-but-bounces-poorly)
+    - [Puckland begun, but doesn't know when to quit](#puckland-begun-but-doesnt-know-when-to-quit)
+    - [Pong begun, but bounces poorly](#pong-begun-but-bounces-poorly)
     - [Future Pucks](#future-pucks)
     - [Future Paddles](#future-paddles)
     - [Turtles of unusual size](#turtles-of-unusual-size)
@@ -63,8 +63,8 @@ Contents
     - [11x11 found where 10x10 Pixels expected](#11x11-found-where-10x10-pixels-expected)
     - [Undo Destruction](#undo-destruction)
   - [Easy Bugs](#easy-bugs)
-    - [🐢 Press begun, but nothing like finished](#-press-begun-but-nothing-like-finished)
-    - [🐢 Write guesses wrong where the Turtle will land](#-write-guesses-wrong-where-the-turtle-will-land)
+    - [Press begun, but nothing like finished](#press-begun-but-nothing-like-finished)
+    - [Write guesses wrong where the Turtle will land](#write-guesses-wrong-where-the-turtle-will-land)
     - [Random, and not repeatable](#random-and-not-repeatable)
   - [Solutions for the free-of-charge tier at replIt·Com](#solutions-for-the-free-of-charge-tier-at-replitcom)
 - [Try out some other Terminal Games, free of charge](#try-out-some-other-terminal-games-free-of-charge)
@@ -1513,7 +1513,7 @@ but ⌃U will work
 ### Difficult Bugs
 
 
-#### 🐢 Puckland begun, but doesn't know when to quit
+#### Puckland begun, but doesn't know when to quit
 
 You can draw a Game Board that resembles a classic first Level of the Pac-Man™ video game, and move a Puck around it
 
@@ -1564,7 +1564,7 @@ if you do this while it's got walls on both sides
 
 
 
-#### 🐢 Pong begun, but bounces poorly
+#### Pong begun, but bounces poorly
 
 Lately I told my Shell
 
@@ -1759,7 +1759,7 @@ undoing your last choice, and then the choice before that, and so on
 ### Easy Bugs
 
 
-#### 🐢 Press begun, but nothing like finished
+#### Press begun, but nothing like finished
 
 Presently ...
 
@@ -1784,7 +1784,7 @@ You have to fall back to encoding the Bytes yourself
     write "\e[D"  # ←
 
 
-#### 🐢 Write guesses wrong where the Turtle will land
+#### Write guesses wrong where the Turtle will land
 
 Presently ...
 
