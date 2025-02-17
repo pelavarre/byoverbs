@@ -42,12 +42,16 @@ if not hasattr(__builtins__, "breakpoint"):
     breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
 
 
+__version__ = "2025.2.17"  # Monday
+
+
 #
 # Auto-complete the Help Lines
 #
 
 
 DOC = __main__.__doc__
+assert DOC, (DOC,)
 
 DOC = DOC.replace("$B", "\N{Black Square}")  # ■ U+25A0
 DOC = DOC.replace("$D", "\N{Downwards Arrow}")  # ↓ U+2193
@@ -156,7 +160,7 @@ DIGIT_WIDTH_5 = 5
 SCORE_CAPS = list("-0123456789=")  # '=' for '=' itself, and for '+' at '⇧ ='
 SCORE_CAPS.sort()
 
-HOT_CAPS = list("← ↑ ↓ → W A S D H J K L Space".split())
+HOT_CAPS = list("← ↑ ↓ → W A S D H J K L . Space".split())
 HOT_CAPS += SCORE_CAPS
 HOT_CAPS.sort()
 
@@ -228,6 +232,8 @@ def run_shpong():
 
 
 class ShPongGame:
+
+    selves: list["ShPongGame"]
     selves = list()
 
     def __init__(self, tui):
@@ -237,7 +243,7 @@ class ShPongGame:
         self.reinit()
 
     def reinit(self):
-        self.caps = []  # trace of 'tui.cap_from_stroke' of 'tui.readline'
+        self.caps = list()  # keylogger  # trace of 'tui.cap_from_stroke' of 'tui.readline'
 
         self.ball_vector_yx = (0, +1)
         self.scores = [0, 0]
@@ -328,6 +334,7 @@ class ShPongGame:
         caps = self.caps
         scores = self.scores
 
+        paused = False
         while True:
             # Draw one Ball, two Paddles, one Colon, two Scores
 
@@ -341,7 +348,7 @@ class ShPongGame:
 
             stroke = None
             if not tui.kbhit(timeout=0.100):
-                cap = Space
+                cap = Space  # mmm, not really the Spacebar, rather the absence of a Key
             else:
                 stroke = tui.readline()
 
@@ -351,8 +358,11 @@ class ShPongGame:
 
                 caps.append(cap)
                 if caps[-3:] == (3 * [cap]):
-                    if cap not in HOT_CAPS:
+                    if cap not in HOT_CAPS:  # todo: kind of drastic?
                         break
+
+                if cap == Space:
+                    paused = not paused
 
             # Change the Score on request
 
@@ -378,9 +388,10 @@ class ShPongGame:
             if cap == "@":
                 self.reinit()
 
-            # Step the Ball along
+            # Step the Ball along, unless Paused
 
-            self.ball_step()
+            if not paused:
+                self.ball_step()
 
         status = "".center(self.status_width)
         tui.print(CUP_Y_X.format(self.status_y, self.status_x) + status, end="")
@@ -717,6 +728,8 @@ def sys_exit_if_argdoc_ne(doc, parser):
 
     # Fetch the Main Doc, and note where from
 
+    assert __main__.__doc__, (__main__.__doc__,)
+
     main_doc = __main__.__doc__.strip()
     main_filename = os.path.split(__file__)[-1]
     got_filename = "./{} --help".format(main_filename)
@@ -801,9 +814,15 @@ if __name__ == "__main__":
     main()
 
 
+# todo:  adjust to resized Terminal Window Pane without quitting & relaunching the Game
+
+# todo:  explain/change how Spacebar toggles Pause
+# todo:  explain/change how holding down Dot . temporarily speeds up the Ball
+# todo:  explain/change how pressing any undefined Key 3 times quits the Game
+
+
 # todo:  accept Tab in place of W Up, accept Return in place of K Up
 # todo:  accept Letters near the Hot Letters in their place
-# todo:  don't exit for Punctuation Key Caps struck by accident
 # todo:  Bell for rejected Letters
 
 # todo:  heat up the Paddle Colors with each Bounced Ball between Points

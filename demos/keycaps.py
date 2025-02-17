@@ -45,6 +45,9 @@ import sys
 import textwrap
 import time
 
+termios: object | None
+tty: object | None
+
 try:
     import termios
     import tty
@@ -58,6 +61,9 @@ _ = time
 
 if not hasattr(__builtins__, "breakpoint"):
     breakpoint = pdb.set_trace  # needed till Jun/2018 Python 3.7
+
+
+__version__ = "2025.2.17"  # Monday
 
 
 #
@@ -114,6 +120,7 @@ COLOR_500MS = 500e-3  # milliseconds of Key Cap life per color
 
 assert len(COLOR_BY_AGE) == 8, len(COLOR_BY_AGE)
 COLOR_AS = " ".join("\x1B[{}m{}\x1B[0m".format(_, "color") for _ in COLOR_BY_AGE)
+assert __main__.__doc__, (__main__.__doc__,)
 __main__.__doc__ = __main__.__doc__.replace(8 * " color", " " + COLOR_AS)
 
 BRIGHT_COLORS = (37, 36, 32, 33, 35, 31, 34, 30)
@@ -1406,6 +1413,9 @@ def try_put_terminal_size(stdio, size):
 
 if __name__ == "__main__":
     main()
+
+
+# todo: rewrite the declarations of Global Variables to conform to PyLance Standard
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/keycaps.py
