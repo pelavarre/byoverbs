@@ -52,12 +52,13 @@ Contents
     - [Breakpoint the Chat](#breakpoint-the-chat)
 - [Near Future Work](#near-future-work)
   - [Difficult Bugs](#difficult-bugs)
-    - [🐢 Puckland begun, but needs hints](#-puckland-begun-but-needs-hints)
+    - [🐢 Puckland begun, but doesn't know when to quit](#-puckland-begun-but-doesnt-know-when-to-quit)
     - [🐢 Pong begun, but bounces poorly](#-pong-begun-but-bounces-poorly)
     - [Future Pucks](#future-pucks)
     - [Future Paddles](#future-paddles)
     - [Turtles of unusual size](#turtles-of-unusual-size)
     - [Paste arrives slowly](#paste-arrives-slowly)
+    - [macOS Thin Flat Lines](#macos-thin-flat-lines)
     - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
     - [11x11 found where 10x10 Pixels expected](#11x11-found-where-10x10-pixels-expected)
     - [Undo Destruction](#undo-destruction)
@@ -1512,42 +1513,36 @@ but ⌃U will work
 ### Difficult Bugs
 
 
-#### 🐢 Puckland begun, but needs hints
+#### 🐢 Puckland begun, but doesn't know when to quit
 
 You can draw a Game Board that resembles a classic first Level of the Pac-Man™ video game, and move a Puck around it
 
     relaunch
+    setpenhighlight 0o20 8  # the Black of 8-Bit Terminal Color R G B 0/5 0/5 0/5
     puckland
+
     puck 1
     puck 1
     puck 1
+
+After you learn how this works,
+you can run through it much more quickly
+
+    puckland  puck 1000
+
+A thousands Steps is often enough to eat all the Dot & Pellet Food,
+but not always enough
 
 Presently . . .
 
 1
 
-Our Puckland is colorless.
-The Wikipedia image of Pac-Man™ has
-Dark Blue Walls, a Bright Yellow Puck
-and the Dots & Pellets drawn in a very Pink kind of Brown.
-All on a Darkmode Black Screen.
-Odds on we'll go looking
-for a Pallette of 8-Bit Terminal Colors
-encoded as 24-bit R:G:B.
-Some Pallette that gives higher Contrast for the Puck & Dots & Pellets
-against a Lightmode White or Darkmode Black Screen,
-and lower Contrast for the Blue Walls
+Our Puck doesn't yet count how much it ate,
+and it doesn't know when it ate its last Dot or Pellet,
+so it doesn't know when to quit.
+It will keep wandering forever, unless you stop it
 
 2
-
-PUCK 2000 often runs for long enough to eat all the Dots and Pellets
-that this Version of Puck will eat.
-Our Puck doesn't look around to choose a heading,
-except when it collides with a wall.
-So it always misses all its chances to eat the Dots and Pellets
-that hide in the corners away from the main thoroughfares
-
-3
 
 Our logic isn't quite right.
 Calling Puck or Pong like this sends us back some "Note: Snap" complaints.
@@ -1558,7 +1553,7 @@ then you can break our underlying Named Pipes logic
 and trigger an AssertionError inside of that.
 Then you have to restart our Turtle Logo App
 
-4
+3
 
 Our Puck moves more wrong if you stress it
 by moving it just a Half-Pixel to either side
@@ -1664,17 +1659,39 @@ and choose independently how high and wide a trail it leaves behind
 
 #### Paste arrives slowly
 
+Presently . . .
+
 In the Drawing Pane,
 typing on the Keyboard goes lots faster than pasting the same Characters.
 I must have written some silly Code somewhere, I wish I knew where
 
 
+#### macOS Thin Flat Lines
+
+Presently . . .
+
+Something about how I'm writing the macOS Screen
+makes it litter the Screen with thin colored flat Lines
+in the lowest row of the Bits of a Character.
+I think these appear when I move the Cursor down.
+They go away when I move the Cursor back up through the Screen Row that holds them
+
+I haven't figured out how to reproduce them reliably.
+I haven't developed & deployed a workaround,
+though I'm inclined to hope that moving Down Up Down would fix them.
+We'll see how this goes . . .
+
+
 #### Isosceles found, where Equilateral expected
 
-Can we make our Arrow Keys Demo
-come out with triangles that are enough more equilateral?
-Presently we get 10.5 X by 11 Y for Left and Right,
-vs 13 X by 11 Y for Up or Down.
+Presently . . .
+
+In our Arrow Key Caps Demo,
+we get 10.5 X by 11 Y for Left and Right Arrow Key Caps,
+vs 13 X by 11 Y for Up or Down Arrow Key Caps
+
+Can we make our Demo
+come out with triangles that are lots more equilateral?
 
 
 #### 11x11 found where 10x10 Pixels expected

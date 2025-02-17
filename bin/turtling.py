@@ -2336,10 +2336,52 @@ class Turtle:
         penscapes[::] = penscapes_
         gt.schars_write("".join([Plain] + backscapes + penscapes))
 
-        d = dict(penscapes=penscapes_)
+        d = self._penscapes_disassemble_(penscapes_)
+        assert "penscapes" not in d.keys()
+        d["penscapes"] = penscapes_
+
         return d
 
         # todo: Scratch Change-Pen-Color-By-10
+
+    def _penscapes_disassemble_(self, penscapes) -> dict:
+        """Disassemble the R:G:B and Grayscale of 8-bit Terminal Color"""
+
+        d: dict[str, str]
+        d = dict()
+
+        for penscape in penscapes:
+            part = penscape
+            part = part.partition("\x1B[38;5;")[-1]
+            part = part.partition("m")[0]
+            if f"\x1B[38;5;{part}m" == penscape:
+                code = int(part)
+
+                assert (16 + (6 * 6 * 6) + 24) == 0x100
+
+                if (16 + (6 * 6 * 6) - 1) < code < 0x100:
+                    gray25 = 24
+                    if code >= (16 + (6 * 6 * 6)):
+                        gray25 = code - (16 + (6 * 6 * 6))
+
+                    assert "grayscale" not in d.keys()
+                    d["grayscale"] = f"{gray25}/24"
+
+                if 16 <= code < (16 + (6 * 6 * 6)):
+                    r6g6b6 = code - 16
+
+                    r6 = r6g6b6 // 36
+                    g6 = (r6g6b6 // 6) % 6
+                    b6 = r6g6b6 % 6
+
+                    r = int(r6 * 0xFF / 5)  # todo: off-by-one in either direction?
+                    g = int(g6 * 0xFF / 5)
+                    b = int(b6 * 0xFF / 5)
+
+                    assert "rrggbb" not in d.keys()
+                    d["rrggbb"] = f"{r:02X}{g:02X}{b:02X}"
+
+        return d
 
     def _platform_color_accent_(self) -> int:
         """Guess which Color Accent works best in this Terminal"""
@@ -3081,16 +3123,17 @@ class Turtle:
 
         text = textwrap.dedent(git_text).strip()
         lines = text.splitlines()
+        lines = ["", ""] + lines + ["", ""]
 
-        assert len(lines) == 33, (len(lines), lines[16:])
+        assert len(lines) == 37, (len(lines), lines[37:])
 
         # Place its Upper Left Corner
 
         if not warping:
             self.penup()
 
-        x1 = -(56 / 2 / 2) / xscale
-        y1 = 16 / yscale  # because (15 + 1 + 17) == 33
+        x1 = -(((2 * 4) + 56) / 2 / 2) / xscale
+        y1 = 18 / yscale  # because (2 + 15 + 1 + 17 + 2) == 37
         self.setxy(x=x1, y=y1)
         (xa, ya) = self._x_y_position_()  # may change .xfloat .yfloat
 
@@ -3099,13 +3142,26 @@ class Turtle:
 
         # Draw this Game Board
 
-        for index, line in enumerate(lines):
+        Blue = "0000FF"
+        Yellow = "CCCC00"
+        Melon = "CC9999"
+
+        self.setpencolor(Blue, accent=8)
+
+        for line in lines:
             assert len(line) <= 56, (len(line), line)
             writable = (line + (56 * " "))[:56]
+            writable = (4 * " ") + writable + (4 * " ")
 
-            gt.schars_write(writable)
+            for ch in writable:
+                color = Melon if (ch in "()@") else Blue
+                self.setpencolor(color, accent=8)
+                gt.schars_write(ch)
+
             gt.schars_write(len(writable) * "\b")
             gt.schars_write("\n")
+
+        self.setpencolor(Yellow, accent=8)
 
         self.xfloat = xa  # todo: teach 'gt.schars_write' to stop snap'ping over text
         self.yfloat = -ya - 1
@@ -3219,21 +3275,36 @@ class Turtle:
 
         assert kind in ("Breakout", "Pong", "Puck"), (kind,)
 
-        heading = self.heading
-
         gt = self.glass_teletype
         st = gt.str_terminal
 
-        # Look ahead down the Bresenham Line
-
-        xys: list[tuple[float, float]]
-        xys = list()
+        # Find the Place of this Turtle on Screen
 
         (y_count, x_count) = gt.os_terminal_y_rows_x_columns()
         center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
         center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
 
         (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
+
+        column_x1 = int(center_x + (2 * x1))
+        column_x1_plus = int(column_x1 + 1)
+
+        row_y1 = int(center_y - y1)
+
+        xy1a = (column_x1, row_y1)
+        xy1b = (column_x1_plus, row_y1)
+
+        # Turn the Puck aside if Food on the side, while None ahead and None behind
+
+        if kind == "Puck":
+            self._puck_chase_(column_x1, row_y1=row_y1)
+
+        heading = self.heading  # sampled only after ._puck_chase_
+
+        # Look ahead down the Bresenham Line
+
+        xys: list[tuple[float, float]]
+        xys = list()
 
         distance_float = 1e5  # todo: calculate how far from .heading
         self._punch_bresenham_stride_(distance_float, xys=xys)  # for ._puck_step_
@@ -3244,23 +3315,18 @@ class Turtle:
         if len(xys) != 1:
             assert xy != (x1, y1), (xy, x1, y1)
 
-        # Find this Turtle, Here and There, on Screen
+        # Find the Next Place of this Turtle on Screen
 
         (x2, y2) = xy
 
-        column_x1 = int(center_x + (2 * x1))
-        column_x1_plus = int(column_x1 + 1)
         column_x2 = int(center_x + (2 * x2))
         column_x2_plus = int(column_x2 + 1)
-        row_y1 = int(center_y - y1)
         row_y2 = int(center_y - y2)
 
-        xy1a = (column_x1, row_y1)
-        xy1b = (column_x1_plus, row_y1)
         xy2a = (column_x2, row_y2)
         xy2b = (column_x2_plus, row_y2)
 
-        # Look for collision
+        # Look for Collision
 
         collision = False
 
@@ -3311,7 +3377,7 @@ class Turtle:
                 self.setheading(heading + 180e0)
             else:
                 assert kind == "Puck", (kind,)
-                self._puck_set_heading_(column_x1, row_y1=row_y1)
+                self._puck_bounce_(column_x1, row_y1=row_y1)
 
             self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._puck_step_
             assert len(xys2) == 2, (len(xys2), xys2, gt.notes)
@@ -3330,8 +3396,66 @@ class Turtle:
 
         st.schars_write(f"\x1B[{row_y2};{column_x2}H")  # todo: skip if unmoving
 
-    def _puck_set_heading_(self, column_x1, row_y1) -> None:
-        """Choose a Heading something like a Pac-man™ Game Puck would"""
+    def _puck_chase_(self, column_x1, row_y1) -> None:
+        """Turn aside if Food on the side, while Nne ahead and None behind"""
+
+        heading = self.heading
+
+        gt = self.glass_teletype
+        st = gt.str_terminal
+
+        # Do nothing if not moving along a Puckland Heading
+
+        if heading not in (90, 180, 270, 360):
+            return
+
+        # Look around
+
+        (ya, xa) = (row_y1 - 1, column_x1)  # Up
+        (yb, xb) = (row_y1 + 1, column_x1)  # Down
+        (yc, xc) = (row_y1, column_x1 + 2)  # Right
+        (yd, xd) = (row_y1, column_x1 - 2)  # Left
+
+        sa0 = st.schar_read_if(row_y=ya, column_x=xa, default="")
+        sa1 = st.schar_read_if(row_y=ya, column_x=xa + 1, default="")
+        sb0 = st.schar_read_if(row_y=yb, column_x=xb, default="")
+        sb1 = st.schar_read_if(row_y=yb, column_x=xb + 1, default="")
+        sc0 = st.schar_read_if(row_y=yc, column_x=xc, default="")
+        sc1 = st.schar_read_if(row_y=yc, column_x=xc + 1, default="")
+        sd0 = st.schar_read_if(row_y=yd, column_x=xd, default="")
+        sd1 = st.schar_read_if(row_y=yd, column_x=xd + 1, default="")
+
+        sa = sa0 + sa1
+        sb = sb0 + sb1
+        sc = sc0 + sc1
+        sd = sd0 + sd1
+
+        # Look for Food on the side, while None ahead and None behind
+
+        food_headings = list()
+
+        if heading in (180, 360):  # Down, Up
+            if sa == sb == "  ":
+                if sc in ("()", "@@"):
+                    food_headings.append(90)
+                if sd in ("()", "@@"):
+                    food_headings.append(270)
+        else:
+            assert heading in (90, 270), (heading,)  # Right, Left
+            if sc == sd == "  ":
+                if sa in ("()", "@@"):
+                    food_headings.append(360)
+                if sb in ("()", "@@"):
+                    food_headings.append(180)
+
+        # Turn aside if found
+
+        if food_headings:
+            h = random.choice(food_headings)
+            self.setheading(h)
+
+    def _puck_bounce_(self, column_x1, row_y1) -> None:
+        """Choose a Heading to bounce off of a Collision"""
 
         heading = self.heading
 
@@ -3346,7 +3470,7 @@ class Turtle:
         ]
 
         headings = list()
-        better_headings = list()
+        food_headings = list()
         for sib in sibs:  # todo: wider awareness
             (dx, dy, h) = sib
 
@@ -3364,15 +3488,15 @@ class Turtle:
             if schars in ("  ", "()", "@@"):
                 headings.append(h)
                 if schars in ("()", "@@"):
-                    better_headings.append(h)
+                    food_headings.append(h)
 
         if not headings:
             raise NotImplementedError("Puck boxed in")
 
         assert heading not in headings, (heading, headings, column_x1, row_y1)
 
-        if better_headings:
-            h = random.choice(better_headings)
+        if food_headings:
+            h = random.choice(food_headings)
         else:
             h = random.choice(headings)
 
