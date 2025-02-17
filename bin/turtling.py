@@ -3092,21 +3092,25 @@ class Turtle:
         x1 = -(56 / 2 / 2) / xscale
         y1 = 16 / yscale  # because (15 + 1 + 17) == 33
         self.setxy(x=x1, y=y1)
+        (xa, ya) = self._x_y_position_()  # may change .xfloat .yfloat
 
         if not warping:
             self.pendown()
 
         # Draw this Game Board
 
-        for line in lines:
+        for index, line in enumerate(lines):
             assert len(line) <= 56, (len(line), line)
             writable = (line + (56 * " "))[:56]
 
             gt.schars_write(writable)
-            gt.schars_write("\n")
             gt.schars_write(len(writable) * "\b")
+            gt.schars_write("\n")
 
-        (x2, y2) = self._x_y_position_()  # may change .xfloat .yfloat
+        self.xfloat = xa  # todo: teach 'gt.schars_write' to stop snap'ping over text
+        self.yfloat = -ya - 1
+
+        (xb, yb) = self._x_y_position_()  # may change .xfloat .yfloat
 
         # End over the left Dot beneath Home
 
@@ -3114,13 +3118,16 @@ class Turtle:
             self.penup()
 
         self.setxy(-1 / xscale, -8 / yscale)  # (-1, -8), because I measured it : -)
+        (xc, yc) = self._x_y_position_()  # may change .xfloat .yfloat
 
         if not warping:
             self.pendown()
 
         # Succeed
 
-        d = dict(x1=x1, y1=y1, x2=x2, y2=y2)
+        gt.notes.append("Next try:  puck 1")
+
+        d = dict(xa=xa, ya=ya, xb=xb, yb=yb, xc=xc, yc=yc)
         return d
 
     def sierpiński(self, distance, divisor) -> None:  # aka Sierpinski
