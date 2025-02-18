@@ -31,6 +31,8 @@ Contents
   - [Draw Circles and parts of Circles](#draw-circles-and-parts-of-circles)
   - [Draw famous Figures](#draw-famous-figures)
   - [Color by Number or Color by Words](#color-by-number-or-color-by-words)
+    - [Hello Color World](#hello-color-world)
+    - [Color Test](#color-test)
     - [Terminal Shell Colors at gCloud Terminal Shell](#terminal-shell-colors-at-gcloud-terminal-shell)
     - [Terminal Shell Colors at replIt](#terminal-shell-colors-at-replit)
     - [Terminal Shell Colors at macOS](#terminal-shell-colors-at-macos)
@@ -62,9 +64,12 @@ Contents
     - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
     - [11x11 found where 10x10 Pixels expected](#11x11-found-where-10x10-pixels-expected)
     - [Undo Destruction](#undo-destruction)
+    - [Auto-correct 24-Bit Html Colors](#auto-correct-24-bit-html-colors)
   - [Easy Bugs](#easy-bugs)
+    - [8-bit Color Welcome should settle for always only Html Triple Hex else Octal](#8-bit-color-welcome-should-settle-for-always-only-html-triple-hex-else-octal)
     - [Press begun, but nothing like finished](#press-begun-but-nothing-like-finished)
     - [Write guesses wrong where the Turtle will land](#write-guesses-wrong-where-the-turtle-will-land)
+    - [Pathnames have an obvious meaning](#pathnames-have-an-obvious-meaning)
     - [Random, and not repeatable](#random-and-not-repeatable)
   - [Solutions for the free-of-charge tier at replIt·Com](#solutions-for-the-free-of-charge-tier-at-replitcom)
 - [Try out some other Terminal Games, free of charge](#try-out-some-other-terminal-games-free-of-charge)
@@ -637,6 +642,32 @@ Wikipedia > [Sierpiński triangle](https://en.wikipedia.org/wiki/Sierpi%C5%84ski
 
 
 ### Color by Number or Color by Words
+
+#### Hello Color World
+
+To show you can draw Words in Color, try
+
+    Relaunch
+    PenUp  SetXY -120 120  PenDown
+    SetPenColor "FF0000"
+    SetPenHighlight "000000"
+    Right 90
+    Label "                       "
+    Label "  *******************  "
+    Label "  *                 *  "
+    Label "  *  Hello, World!  *  "
+    Label "  *                 *  "
+    Label "  *******************  "
+    Label "                       "
+
+
+#### Color Test
+
+Terminal Shells disagree over how many Colors to give you
+
+Our Color Test here draws a drawing that gives you an idea of what you've got.
+Our [demos/mtm-titlecard.logo](../demos/mtm-titlecard.logo) Logo Script
+shows off a wider variety of Colors, not so much focused on just Red, Green, Blue, & White
 
 People made & sold Terminals in the 1970's and 1980's without much forethought.
 They competed so fiercely, in such a rush, that they ended up
@@ -1253,7 +1284,7 @@ then we give you the next Color of the Rainbow
 
 ### Paste whole Files of Input
 
-You can paste larger Turtle Logo Programs
+You can paste larger Turtle Logo Scripts
 into the '🐢? ' Prompt of the Chat Window.
 We've not yet worked up a great way to make them more available to you,
 but they are posted out there
@@ -1756,7 +1787,37 @@ We could work from that log to let you walk time backward,
 undoing your last choice, and then the choice before that, and so on
 
 
+#### Auto-correct 24-Bit Html Colors
+
+Presently ...
+
+We only sometimes allow or require Quotes and Comments near to
+
+    SetPenColor "FF0000"  # max Red, no Green, no Blue
+    SetPenHighlight "000000"  # no Red, no Green, and no Blue
+
+We should come clean that up.
+Always let you say FF0000 and 000000 and 00FF00 without Quotes.
+Always let you say #FF0000 and #000000 and #00FF00 with a # Comment afterwards
+
+
 ### Easy Bugs
+
+
+#### 8-bit Color Welcome should settle for always only Html Triple Hex else Octal
+
+Presently ...
+
+Our [demos/mtm-titlecard.logo](../demos/mtm-titlecard.logo) Logo Script
+forces you to learn more Octal Color than you need
+
+Its Octal "0o20 8" could be the more widely understood "000000" Html Triple Hex
+
+Its 8-bit Hex 0xE7 and 0xFF down to 0xE8 could be Octal 0o347 and 0o377 down to 0o350
+
+That way we'd come out as
+encoding 8-bit Terminal Shell Color as only Html Triple Hex else Octal.
+Still a mess, but something less of a mess
 
 
 #### Press begun, but nothing like finished
@@ -1793,6 +1854,24 @@ do move the Turtle conventionally,
 but our Code for 🐢 Write
 always guesses the Turtle won't move,
 which is laughably wrong
+
+
+#### Pathnames have an obvious meaning
+
+We should let you call Logo Scripts, and give them arguments
+
+To get started,
+we can call ImportLib on an empty File
+and then patch the Script into that new Module and call it
+
+I'm guessing this is easy to start, and only difficult to finish.
+A first testcase could be
+
+    ../demos/mtm-titlecard.logo
+
+And we should let you type just
+
+    mtm-titlecard.logo
 
 
 #### Random, and not repeatable

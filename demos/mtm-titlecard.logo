@@ -37,7 +37,6 @@
 # Start up
 
 relaunch
-clearscreen  # macOS & replIt color the screen, gShell doesn't
 setxyzoom 1 1
 right 90
 penup  sety 110  pendown
@@ -46,7 +45,8 @@ write "\r\n"
 
 # SetPenHighlight
 
-setpenhighlight 0o20 8  # ClearScreen fills with Highlight at replIt/ macOS, but not at gShell
+clearscreen  # ClearScreen fills with Highlight at replIt/ macOS, but not at gShell
+setpenhighlight 0o20 8
 
 # || Logo || gShell || replIt || macOS || Platform ||
 # | setph 0 3 | Dark Gray | Light Gray | Black |

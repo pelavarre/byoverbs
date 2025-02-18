@@ -57,7 +57,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.2.16"  # Sunday
+__version__ = "2025.2.18"  # Tuesday
 
 _ = dict[str, int] | None  # new since Oct/2021 Python 3.10
 
