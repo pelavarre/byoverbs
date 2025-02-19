@@ -22,7 +22,9 @@ Contents
   - [Draw a Triangle](#draw-a-triangle)
     - [Relaunch](#relaunch)
     - [Symmetry](#symmetry)
-    - [Terminal Window Shape, Size, Darkmode, Lightmode, \& Fonts](#terminal-window-shape-size-darkmode-lightmode--fonts)
+    - [Terminal Window Shape, Size, Darkmode and Lightmode](#terminal-window-shape-size-darkmode-and-lightmode)
+    - [Terminal Window Font Size \& Font Choice](#terminal-window-font-size--font-choice)
+    - [Terminal Pixel Shape \& Ink](#terminal-pixel-shape--ink)
   - [Draw a Huge Square](#draw-a-huge-square)
   - [Draw Animals](#draw-animals)
     - [Natalia's Snake](#natalias-snake)
@@ -262,7 +264,7 @@ you tell our Code to find the Turtles in your Drawing Pane and chat with you abo
     python3 turtling.py -i
 
 First up, our Code will tell you something like
-> BYO Turtling·Py 2025.2.15<br>
+> BYO Turtling·Py 2025.2.18<br>
 > Chatting with you, till you say:  bye<br>
 
 You type out Logo or Python Instructions for your Turtles.
@@ -407,19 +409,18 @@ Our Triangles pointing up and down don't yet exactly match
 our Triangles pointing left and right
 
 
-#### Terminal Window Shape, Size, Darkmode, Lightmode, & Fonts
+#### Terminal Window Shape, Size, Darkmode and Lightmode
 
 We rely on you to make your own Terminal Windows, Tabs, & Panes.
 So you make many choices for us
 
 You chose your Shape of Window for us.
 Turtle Logo's disagree over whether
-to draw in a Landscape, Portrait, or Square Window
-
+to draw in a Landscape, Portrait, or Square Window.
 You choose your Size of Window for us.
-Turtle Logo's disagree over how large to make the Window
+Turtle Logo's disagree over how large to make the Window.
+You choose Lightmode or Darkmode
 
-You choose Lightmode or Darkmode.
 Turtle Logo's disagree over whether
 to draw Dark Pixels on a Lightmode Canvas, or
 to draw Light Pixels on a Darkmode Canvas.
@@ -427,19 +428,10 @@ In particular, the 2024 Python Import Turtle forces Lightmode,
 even when clashing with the Darkmode's of replIt or macOS
 And it often declines to run altogether at the gCloud Terminal Shell
 
-You choose your default Terminal Font.
-Presently we guess the Pixel you want is a Square pair of U+2588 Full-Block █ █ Characters.
-Lotsa of Terminal Fonts disagree over how to draw a U+2588 Full-Block █ Character.
-Many Fonts agree Full-Block means paint the full horizontal width,
-but lots of Terminal Fonts disagree over how much of the vertical height to paint over.
-I've not yet found a Font that always says Full-Block should paint the full vertical height.
-Except the default Font at replIt does paint the full vertical height
-
-Lately I mostly test Screens of
+Me, lately I mostly test Screens of
 101 Columns and 42 Rows of Andale Mono 18
 in the Lightmode Basic Profile of the macOS Terminal App in Oct/2024 Sequoia macOS 15.
-I've also sent out some Screenshots from the Darkmode Homebrew Profile
-
+I've also sent out some Screenshots from the Darkmode Homebrew Profile.
 I'd guess most of you are working inside a free gCloud Terminal Shell.
 I've also seen replIt Terminal Shells work.
 I haven't tested macOS Ghostty, nor macOS iTerm2 either,
@@ -449,6 +441,50 @@ I'd love to see screenshots or video of how well the Turtle Logos work for you,
 on the Terminals you choose to test.
 I've posted mine into LinkedIn, Mastodon, and Twitter.
 I can send you copies. We can trade
+
+
+#### Terminal Window Font Size & Font Choice
+
+You choose your Font Size and Font Choice inside your Terminal Shell
+
+The macOS Apple Safari Browser and the macOS Google Chrome Browser
+will change how large your Font Size looks to you,
+as will the macOS Terminal
+
+| Key Chord Sequence | Meaning |
+|--------------------|---------|
+| ⌘- | View > Zoom Out |
+| ⇧⌘+ | View > Zoom In |
+| ⌘0 | View > Actual Size |
+
+At macOS and replIt, you can have two Windows,
+so there you can choose very different Fonts
+for your Drawing Window Tab Pane and your Window Tab Chat Pane,
+while you visit your Terminal Settings > Profiles > Text Font.
+The gCloud Shell is much less flexible, so far as we know.
+There, you must choose the same Font Choices and the same Font Size
+for both your Drawing Pane and your Chat Pane.
+The replIt Shell can be persuaded to run in two Browser Windows,
+so it can be as flexible as macOS,
+but it's more naturally as rigid as a gCloud Shell,
+that's the experience you more get by default there
+
+
+#### Terminal Pixel Shape & Ink
+
+We first choose the Pixel you draw with,
+you can quickly & simply come back and tell us draw with some other Pixel instead.
+after you more know what's going on
+"SetPenPunch" is our secret word for talking of drawing with some other Pixel instead,
+if you want to search ahead inside this Doc
+
+Presently we start out by guessing
+you want a Square pair of U+2588 Full-Block █ █ Characters.
+Lotsa of Terminal Fonts disagree over how to draw a U+2588 Full-Block █ Character.
+Many Fonts agree Full-Block means paint the full horizontal width,
+but lots of Terminal Fonts disagree over how much of the vertical height to paint over.
+I've not yet found a Font that always says Full-Block should paint the full vertical height.
+Except the default Font at replIt does paint the full vertical height
 
 
 ### Draw a Huge Square
