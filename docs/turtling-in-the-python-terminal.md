@@ -91,6 +91,21 @@ to show you this Md File rendered without these words
 -->
 
 
+<u>Note</u>
+
+When you next visit this Web Page,
+all you need to remember to get going again is
+> https://shell.cloud.google.com/?show=terminal
+
+And two Terminal Window Panes of
+
+    python3 <(curl -Ss https://raw.githubusercontent.com/pelavarre/byoverbs/refs/heads/main/bin/turtling.py) --yolo
+
+You can get your second Terminal Window Pane from
+the gCloud Shell TMux Keyboard Shortcut ⌃B ⇧%
+that means Add Pane > Insert Right
+
+
 ## Welcome
 
 Welcome to our Game

@@ -3186,6 +3186,8 @@ class Turtle:
         d = dict(xa=xa, ya=ya, xb=xb, yb=yb, xc=xc, yc=yc)
         return d
 
+        # see also 'def puck'
+
     def sierpiński(self, distance, divisor) -> None:  # aka Sierpinski
         """Draw Triangles inside Triangles, in the way of Sierpiński 1882..1969 (also known as Sierpinksi)"""
 
@@ -3234,8 +3236,6 @@ class Turtle:
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         return d
 
-        # todo: results returned from 🐢 .breakout
-
     def pong(self, count) -> dict:
         """Move like a Pong Game Puck"""
 
@@ -3250,8 +3250,6 @@ class Turtle:
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         return d
-
-        # todo: results returned from 🐢 .pong
 
     def puck(self, count) -> dict:
         """Move like a Pac-Man™ Game Puck"""
@@ -3268,7 +3266,7 @@ class Turtle:
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         return d
 
-        # todo: results returned from 🐢 .pong
+        # see also 'def puckland'
 
     def _puck_step_(self, kind) -> None:  # noqa C901 Too Complex
         """Move like a Breakout or Pong Game Puck"""
@@ -3298,6 +3296,9 @@ class Turtle:
 
         if kind == "Puck":
             self._puck_chase_(column_x1, row_y1=row_y1)
+
+            # todo: option to Chase Food more randomly
+            # todo: option to Not-Chase Food
 
         heading = self.heading  # sampled only after ._puck_chase_
 
