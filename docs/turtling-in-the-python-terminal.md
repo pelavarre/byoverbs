@@ -284,6 +284,8 @@ This Doc walks you through fun tests of such Turtle Instructions
 
 ### You can start over expertly
 
+1
+
 If you want just one step to remember, you can
 tell the Shells in both of your Terminal Window Tab Panes
 to start up in the same way.
@@ -292,11 +294,22 @@ You always just say:&nbsp; `./turtling.py --yolo`
 The second Pane figures out it arrived in second place
 and runs as a Chat Pane, not as a Drawing Pane
 
+2
+
 For our Game to work, you have to start both Panes inside the same Folder.
 You can tell the Shell to tell you which Folder you chose with:&nbsp; `pwd`
 
 If you do try to run our Game from a different Folder, you'll see it say something like
 > ... can't open file ... [Errno 2] No such file or directory
+
+3
+
+While your Internet connection is strong & inexpensive,
+a way to tell Sh to run just our latest Code is
+
+    python3 <(curl -Ss https://raw.githubusercontent.com/pelavarre/byoverbs/refs/heads/main/bin/turtling.py) --yolo
+
+Bash understands this syntax, Zsh understands this syntax, Dash will say Syntax Error
 
 
 ### You can quit for now and start back up again later
