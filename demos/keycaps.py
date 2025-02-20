@@ -44,9 +44,10 @@ import string
 import sys
 import textwrap
 import time
+import types
 
-termios: object | None
-tty: object | None
+termios: types.ModuleType | None
+tty: types.ModuleType | None
 
 try:
     import termios

@@ -22,6 +22,9 @@ lost --author ??
 $ qla -p
 same bug
 
+pq dent
+could be pq dent |pq rstrip
+
 ## Copied from
 
 Posted as:  https://github.com/pelavarre/byoverbs/blob/main/futures.md<br>
