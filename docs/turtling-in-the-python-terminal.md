@@ -156,6 +156,13 @@ that your gMail gives you free-of-charge at
 Google gives out one Linux Terminal Shell Window per Browser.
 And they keep it current, like giving you 2023 Python 3.12 in 2025
 
+Google does often make it weirdly difficult to close your Browser Tab.
+They keep insisting you have a problem,
+of the "Leave site?" "Changes you made may not be saved" kind.
+But they lie.
+It's not an actual problem.
+If you ignore it, life rocks on, just fine, no worries
+
 Many gCloud Shell people soon learn the Keyboard Shortcuts
 for splitting one Terminal Window into Panes
 
