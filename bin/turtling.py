@@ -3702,27 +3702,30 @@ def sierpiński(distance, divisor) -> None:
 #
 
 
-class AngleQuotedStr(str):
-    """Work like a Str, but enclose Repr in '<' '>' Angle Marks"""
-
-    def __repr__(self) -> str:
-        s0 = str.__repr__(self)
-        s1 = "<" + s0[1:-1] + ">"
-        return s1
-
-        # <__main__.Turtle object at 0x101486a50>
-
-
 class PythonSpeaker:
     """Auto-complete Turtle Logo Sourcelines to run as Python"""
 
-    held_pycodes: list[str]  # leftover Py Codes from an earlier Text
     namespace: dict  # cloned from remote TurtlingServer  # with local TurtlingServer
+    held_pycodes: list[str]  # leftover Py Codes from an earlier Text
+
+    verbs: list[str]  # the Turtles' Verbs
+    kws_by_verb: dict[str, list[str]]  # the Turtles' Kw Args
+    localname_by_leftside: dict[str, str]  # the Turtles' Local Variables
 
     def __init__(self) -> None:
 
-        self.held_pycodes = list()
-        self.namespace = dict()
+        verbs = self.cls_to_verbs(cls=Turtle)
+        kws_by_verb = self.cls_to_kws_by_verb(cls=Turtle)
+        localname_by_leftside = self.to_localname_by_leftside()
+
+        self.namespace = dict()  # Local Variable Names to not-auto-complete into Quoted Strings
+        self.held_pycodes = list()  # like to add ShowTurtle after returning HideTurtle of Tada
+
+        self.verbs = verbs
+        self.kws_by_verb = kws_by_verb
+        self.localname_by_leftside = localname_by_leftside
+
+        # todo: Solve Tada in the Client, not here
 
     #
     # Auto-complete Turtle Logo Sourcelines to run as Python
@@ -3730,6 +3733,11 @@ class PythonSpeaker:
 
     def text_to_pycodes(self, text, cls) -> list[str]:
         """Auto-complete Turtle Logo Sourcelines to run as Python"""
+
+        assert cls is Turtle, (cls,)
+
+        verbs = self.verbs
+        kws_by_verb = self.kws_by_verb
 
         held_pycodes = self.held_pycodes
         pycodes = list(held_pycodes)
@@ -3739,15 +3747,9 @@ class PythonSpeaker:
         # Fetch the Turtle's Verbs and their Kw Args
         # todo: cache these to save ~1ms per Input Line
 
-        verbs = self.cls_to_verbs(cls)
-        kws_by_verb = self.cls_to_kws_by_verb(cls)
-        localname_by_leftside = self.localname_by_leftside()
-
         # Extend Python to accept 'verb.kw =' or 'v.kw =' as meang 'verb_kw =',
 
-        kw_text_pycodes = self.kw_text_to_pycodes_if(
-            text, localname_by_leftside=localname_by_leftside
-        )
+        kw_text_pycodes = self.kw_text_to_pycodes_if(text)
 
         if kw_text_pycodes:
             pycodes.extend(kw_text_pycodes)
@@ -3834,8 +3836,10 @@ class PythonSpeaker:
 
         return pycodes
 
-    def kw_text_to_pycodes_if(self, text, localname_by_leftside) -> list[str]:
+    def kw_text_to_pycodes_if(self, text) -> list[str]:
         """Extend Python to accept 'verb.kw =' or 'v.kw =' as meaning 'verb_kw ='"""
+
+        localname_by_leftside = self.localname_by_leftside
 
         # Drop a trailing Comment, but require something more
 
@@ -3878,83 +3882,6 @@ class PythonSpeaker:
         # Succeed
 
         return pycodes
-
-    def localname_by_leftside(self) -> dict[str, str]:
-        """List the Kw Arg Names and their abbreviations"""
-
-        verb_by_grunt = self.verb_by_grunt
-
-        kw_by_grunt = KwByGrunt
-        turtling_defaults = TurtlingDefaults
-
-        d: dict[str, str]
-        d = dict()
-
-        for key in turtling_defaults.keys():
-
-            # Collect each 'Kw =' as itself
-
-            if "_" not in key:
-                assert key not in d.keys(), (key,)
-                d[key] = key  # d['angle'] = 'angle'
-
-                # Collect each 'K =' as abbreviating 'Kw ='
-
-                for kwgrunt, kwkw in kw_by_grunt.items():
-                    if kwgrunt != kwkw:
-                        if kwkw == key:
-                            assert kwgrunt not in d.keys(), (kwgrunt,)
-                            d[kwgrunt] = key  # d['a'] = 'angle'
-
-            # Collect each 'Func_Kw =' as itself
-
-            else:
-                assert key not in d.keys(), (key,)
-                d[key] = key  # d['backward_distance'] = 'backward_distance'
-
-                (verb, kw) = key.split("_")  # ('backward', 'distance')
-
-                # Collect each 'Func.Kw =' as abbreviating 'Func_Kw ='
-
-                k = f"{verb}.{kw}"
-                assert k not in d.keys(), (k,)
-                d[k] = key  # d['backward.distance'] = 'backward_distance'
-
-                # Collect each 'Func.K =' as abbreviating 'Func_Kw ='
-
-                for kwgrunt, kwkw in kw_by_grunt.items():
-                    if kwgrunt != kwkw:
-                        if kwkw == kw:
-                            k = f"{verb}.{kwgrunt}"
-                            assert k not in d.keys(), (k,)
-                            d[k] = key  # d['backward.d'] = 'backward_distance'
-
-                # Collect each 'F.Kw =' as abbreviating 'Func_Kw ='
-
-                for vgrunt, vverb in verb_by_grunt.items():
-                    assert vgrunt != vverb, (vgrunt, vverb)
-                    if vverb == verb:
-
-                        k = f"{vgrunt}.{kw}"
-                        assert k not in d.keys(), (k,)
-                        d[k] = key  # d['bk.distance'] = 'backward_distance'
-
-                        # Collect each 'F.K =' as abbreviating 'Func_Kw ='
-
-                        for kwgrunt, kwkw in kw_by_grunt.items():
-                            if kwgrunt != kwkw:
-                                if kwkw == kw:
-                                    k = f"{vgrunt}.{kwgrunt}"
-                                    assert k not in d.keys(), (k,)
-                                    d[k] = key  # d['bk.d'] = 'backward_distance'
-
-        for k in d.keys():
-            assert k == k.casefold(), (k, k.casefold())
-
-        by_leftside = d
-        return by_leftside
-
-        # {a': 'angle', 'arc_angle': 'arc_angle', ...}
 
     def splitpy(self, text) -> list[str]:
         """Split 1 Text into its widest parseable Py Expressions from the Left"""
@@ -4324,6 +4251,169 @@ class PythonSpeaker:
 
         # todo: .cls_to_names imprecisely incorrect outside of
         #   parm.kind in inspect.Parameter. POSITIONAL_OR_KEYWORD, KEYWORD_ONLY
+
+    def to_localname_by_leftside(self) -> dict[str, str]:
+        """List the Kw Arg Names and their abbreviations"""
+
+        verb_by_grunt = self.verb_by_grunt
+
+        kw_by_grunt = KwByGrunt
+        turtling_defaults = TurtlingDefaults
+
+        d: dict[str, str]
+        d = dict()
+
+        for key in turtling_defaults.keys():
+
+            # Collect each 'Kw =' as itself
+
+            if "_" not in key:
+                assert key not in d.keys(), (key,)
+                d[key] = key  # d['angle'] = 'angle'
+
+                # Collect each 'K =' as abbreviating 'Kw ='
+
+                for kwgrunt, kwkw in kw_by_grunt.items():
+                    if kwgrunt != kwkw:
+                        if kwkw == key:
+                            assert kwgrunt not in d.keys(), (kwgrunt,)
+                            d[kwgrunt] = key  # d['a'] = 'angle'
+
+            # Collect each 'Func_Kw =' as itself
+
+            else:
+                assert key not in d.keys(), (key,)
+                d[key] = key  # d['backward_distance'] = 'backward_distance'
+
+                (verb, kw) = key.split("_")  # ('backward', 'distance')
+
+                # Collect each 'Func.Kw =' as abbreviating 'Func_Kw ='
+
+                k = f"{verb}.{kw}"
+                assert k not in d.keys(), (k,)
+                d[k] = key  # d['backward.distance'] = 'backward_distance'
+
+                # Collect each 'Func.K =' as abbreviating 'Func_Kw ='
+
+                for kwgrunt, kwkw in kw_by_grunt.items():
+                    if kwgrunt != kwkw:
+                        if kwkw == kw:
+                            k = f"{verb}.{kwgrunt}"
+                            assert k not in d.keys(), (k,)
+                            d[k] = key  # d['backward.d'] = 'backward_distance'
+
+                # Collect each 'F.Kw =' as abbreviating 'Func_Kw ='
+
+                for vgrunt, vverb in verb_by_grunt.items():
+                    assert vgrunt != vverb, (vgrunt, vverb)
+                    if vverb == verb:
+
+                        k = f"{vgrunt}.{kw}"
+                        assert k not in d.keys(), (k,)
+                        d[k] = key  # d['bk.distance'] = 'backward_distance'
+
+                        # Collect each 'F.K =' as abbreviating 'Func_Kw ='
+
+                        for kwgrunt, kwkw in kw_by_grunt.items():
+                            if kwgrunt != kwkw:
+                                if kwkw == kw:
+                                    k = f"{vgrunt}.{kwgrunt}"
+                                    assert k not in d.keys(), (k,)
+                                    d[k] = key  # d['bk.d'] = 'backward_distance'
+
+        for k in d.keys():
+            assert k == k.casefold(), (k, k.casefold())
+
+        by_leftside = d
+        return by_leftside
+
+        # {a': 'angle', 'arc_angle': 'arc_angle', ...}
+
+    #
+    # Print the results of some Auto-Completion's
+    #
+
+    @staticmethod
+    def try_some() -> None:
+        """Try some Auto-Completion's"""
+
+        PythonSpeaker.try_some_logo_files()
+        PythonSpeaker.try_some_md_files()
+
+        # python3 -c 'import bin.turtling; bin.turtling.PythonSpeaker.try_some()' >a
+
+    @staticmethod
+    def try_some_logo_files() -> None:
+        """Try our Auto-Completion of each Line of each Logo File found in our Demos Dir"""
+
+        filenames = os.listdir("demos")
+        for filename in filenames:
+            if not filename.endswith(".logo"):
+                continue
+
+            print()
+            print(filename)
+
+            pathname = os.path.join("demos", filename)
+            path = pathlib.Path(pathname)
+            text = path.read_text()
+            lines = text.splitlines()
+
+            for line in lines:
+                ps = PythonSpeaker()
+
+                try:
+                    pycodes = ps.text_to_pycodes(line, cls=Turtle)
+                    printable = repr(pycodes)
+                except Exception as exc:
+                    printable = str(exc)
+
+                print()
+                # print(pathname)
+                print(line)
+                print(printable)
+
+    @staticmethod
+    def try_some_md_files() -> None:
+        """Try our Auto-Completion of each Indented Line of our Docs Md File"""
+
+        filename = "turtling-in-the-python-terminal.md"
+
+        print()
+        print(filename)
+
+        pathname = os.path.join("docs", filename)
+        path = pathlib.Path(pathname)
+        text = path.read_text()
+        lines = text.splitlines()
+
+        for line in lines:
+            if not line.startswith(4 * " "):
+                continue
+
+            ps = PythonSpeaker()
+
+            try:
+                pycodes = ps.text_to_pycodes(line, cls=Turtle)
+                printable = repr(pycodes)
+            except Exception as exc:
+                printable = str(exc)
+
+            print()
+            # print(pathname)
+            print(line)
+            print(printable)
+
+
+class AngleQuotedStr(str):
+    """Work like a Str, but enclose Repr in '<' '>' Angle Marks"""
+
+    def __repr__(self) -> str:
+        s0 = str.__repr__(self)
+        s1 = "<" + s0[1:-1] + ">"
+        return s1
+
+        # <__main__.Turtle object at 0x101486a50>
 
 
 #

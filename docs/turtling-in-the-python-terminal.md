@@ -173,7 +173,7 @@ for splitting one Terminal Window into Panes
 | ⌃D | Close Pane |
 
 After you add a Pane, then
-⌃B ← and ⌃B ↑ and ⌃B  → and ⌃B ↓ is how you move your Cursor between Panes.
+⌃B ← and ⌃B ↑ and ⌃B → and ⌃B ↓ is how you move your Cursor between Panes.
 
 These Keyboard Shortcuts first appeared inside the TMux Add-On for Linux Terminals,
 but the gCloud Linux Terminal Shell installs these Keyboard Shortcuts by default.
@@ -196,8 +196,8 @@ People differ over which punctuation mark to speak
 to mean the Modifier Key labeled as "Control" or "Ctrl" and so on
 And Gnu·Org pushes a tradition that speaks of ⇧S as 'S' and S as 's'.
 This push from last century still causes confusion today.
-As a reader, you can't know if the writer meant
-the ⇧S two-Key Chord or the S single Keystroke, when they say 'S'.
+As a reader, when they say 'S', you can't know if they meant
+the ⇧S two-Key Chord or the S single Keystroke
 
 
 ##### replIt Browser Linux
@@ -800,7 +800,7 @@ So every test of SetPenColor 9 4 gives the same results as for SetPenColor 1 3,
 so we don't test SetPenColor 9 4 here
 
 Ironically, our first shipping revision of SetPenColor 9 4 got this wrong.
-But we fixed it a week later.  : -)
+But we fixed it a week later. : -)
 
 -->
 
@@ -1040,10 +1040,10 @@ My experiments tell me that macOS Terminals only do the "8-bit" Color of "256-co
 
 Wikipedia People tell us these '38;5' Color Numbers carry a meaning like so
 
-    0-  7:  standard colors (as in ESC [ 30–37 m)
-    8- 15:  high intensity colors (as in ESC [ 90–97 m)
-    16-231:  6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
-    232-255:  grayscale from dark to light in 24 steps
+    0..7:  standard colors (as in ESC [ 30–37 m)
+    8..15:  high intensity colors (as in ESC [ 90–97 m)
+    16..231:  6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
+    232..255:  grayscale from dark to light in 24 steps
 
 And the Undo for \\e m Settings of the Terminal is
 
@@ -1494,7 +1494,7 @@ if we completed a full Python Command every time you pressed a Key inside the Dr
 Or we could rewrite our Arrow Keys Demo to have 4 Turtles draw it, not just 1.
 Or we could figure out how to show the Turtle
 even after you split a gCloud Shell Tab
-with ⌃B ⇧" and then moved the Turtle between Splits with ⌃B ↑ and  ⌃B ↓.
+with ⌃B ⇧" and then moved the Turtle between Splits with ⌃B ↑ and ⌃B ↓.
 The replIt Shell has much the same disappear-the-Turtle bug,
 if you do run the replIt Turtle and the Chat in separate Browser Windows.
 gCloud Shell can't do separate Windows inside the same Browser
