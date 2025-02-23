@@ -57,7 +57,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.2.18"  # Tuesday
+__version__ = "2025.2.22"  # Saturday
 
 _ = dict[str, int] | None  # new since Oct/2021 Python 3.10
 
@@ -2726,10 +2726,13 @@ class Turtle:
 
         # tested with:  sethertz 5  st s ht s  st s ht s  st s ht s  st
 
-    def tada(self) -> None:
+    def tada(self) -> dict:
         """Call HideTurtle immediately, and then ShowTurtle before anything else (T for short)"""
 
-        raise NotImplementedError("Only works when auto-complete'd")
+        self.hideturtle()
+
+        d = dict(next_python_codes=["t.showturtle()"])
+        return d
 
     def write(self, s) -> None:
         """Write one Str to the Screen"""
@@ -3685,8 +3688,8 @@ def sleep(seconds) -> dict:
     return turtle_demand().sleep(seconds)
 
 
-def tada() -> None:
-    turtle_demand().tada()
+def tada() -> dict:
+    return turtle_demand().tada()
 
 
 def write(s) -> None:
@@ -3705,12 +3708,11 @@ def sierpiński(distance, divisor) -> None:
 class PythonSpeaker:
     """Auto-complete Turtle Logo Sourcelines to run as Python"""
 
-    namespace: dict  # cloned from remote TurtlingServer  # with local TurtlingServer
-    held_pycodes: list[str]  # leftover Py Codes from an earlier Text
+    namespace: dict  # Names to take as Names, not auto-complete into Quoted Strings
 
-    verbs: list[str]  # the Turtles' Verbs
-    kws_by_verb: dict[str, list[str]]  # the Turtles' Kw Args
-    localname_by_leftside: dict[str, str]  # the Turtles' Local Variables
+    verbs: list[str]  # Verbs to call
+    kws_by_verb: dict[str, list[str]]  # Kw Args to unabbreviate and find Defaults for
+    localname_by_leftside: dict[str, str]  # Variables to hold Default Values
 
     def __init__(self) -> None:
 
@@ -3718,14 +3720,11 @@ class PythonSpeaker:
         kws_by_verb = self.cls_to_kws_by_verb(cls=Turtle)
         localname_by_leftside = self.to_localname_by_leftside()
 
-        self.namespace = dict()  # Local Variable Names to not-auto-complete into Quoted Strings
-        self.held_pycodes = list()  # like to add ShowTurtle after returning HideTurtle of Tada
+        self.namespace = dict()  # cloned from remote TurtlingServer  # with local TurtlingServer
 
         self.verbs = verbs
         self.kws_by_verb = kws_by_verb
         self.localname_by_leftside = localname_by_leftside
-
-        # todo: Solve Tada in the Client, not here
 
     #
     # Auto-complete Turtle Logo Sourcelines to run as Python
@@ -3739,10 +3738,7 @@ class PythonSpeaker:
         verbs = self.verbs
         kws_by_verb = self.kws_by_verb
 
-        held_pycodes = self.held_pycodes
-        pycodes = list(held_pycodes)
-
-        held_pycodes.clear()
+        pycodes = list()
 
         # Fetch the Turtle's Verbs and their Kw Args
         # todo: cache these to save ~1ms per Input Line
@@ -4006,7 +4002,6 @@ class PythonSpeaker:
         # Guess a 't.' prefix implied by any Verb of the Class
 
         verb_by_grunt = self.verb_by_grunt
-        held_pycodes = self.held_pycodes
 
         strip_0 = pystrips[0]
         casefold = strip_0.casefold()
@@ -4046,12 +4041,6 @@ class PythonSpeaker:
 
         join = ", ".join(_.strip() for _ in args)
         pyline = f"{funcname}({join})"
-
-        # Auto-complete some things also later, not only now
-
-        if pyline == "t.tada()":
-            pyline = "t.hideturtle()  # front half of tada"
-            held_pycodes.append("t.showturtle()  # back half of tada")
 
         # Succeed
 
@@ -4171,7 +4160,7 @@ class PythonSpeaker:
         "setph": "setpenhighlight",  # background vs foreground "setpencolor"
         "setpch": "setpenpunch",
         "s": "sleep",
-        "t": "tada",
+        # "t": "tada",  # todo: 't()' collides too close to '(t)' and 't.' ?
     }
 
     py_verb_by_grunt = {  # for the PyTurtle people of:  import turtle
@@ -5153,6 +5142,9 @@ class TurtleClient:
 
     ps = PythonSpeaker()
 
+    pycodes: list[str]  # Python Calls to send to the Server later
+    pycodes = list()
+
     def breakpoint(self) -> None:
         """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
 
@@ -5163,10 +5155,11 @@ class TurtleClient:
 
         signal.signal(signal.SIGINT, getsignal)
 
-    def client_run_till(self, text) -> None:
+    def client_run_till(self, text) -> None:  # noqa C901 too complex
         """Chat with Logo Turtles"""
 
         ps = self.ps
+        pycodes = self.pycodes
 
         ps1 = f"{Turtle_}? {Bold}"
         postedit = Plain
@@ -5181,7 +5174,7 @@ class TurtleClient:
             eprint(f"BYO Turtling·Py {__version__}")
             eprint("Chatting with you, till you say:  bye")
 
-            trade_else = self.py_trade_else("t.relaunch(); pass")
+            (trade_else, value_else) = self.py_trade_else("t.relaunch(); pass")
             if trade_else is not None:
                 eprint(trade_else)
                 assert False
@@ -5215,15 +5208,18 @@ class TurtleClient:
                 # Auto-correct till it's Python
                 # Send each Python Call to the Server, trace its Reply
 
-                pycodes = ps.text_to_pycodes(iline, cls=Turtle)
+                more_pycodes = ps.text_to_pycodes(iline, cls=Turtle)
+                enough_pycodes = pycodes + more_pycodes
+                pycodes.clear()
+
                 trades = list()
-                for pycode in pycodes:
-                    if pycodes != [dedent]:  # if autocompleted
+                for pycode in enough_pycodes:
+                    if enough_pycodes != [dedent]:  # if autocompleted
                         eprint(">>>", pycode)
 
                         # Py itself completes 'forward(50)' to 'turtling.forward(50)'
 
-                    trade_else = self.py_trade_else(pycode)
+                    (trade_else, value_else) = self.py_trade_else(pycode)
                     if trade_else is None:
                         continue
 
@@ -5231,6 +5227,12 @@ class TurtleClient:
                     trades.append(trade)
 
                     eprint(trade)
+
+                    if isinstance(value_else, dict):
+                        d = value_else
+                        if "next_python_codes" in d.keys():
+                            next_python_codes = d["next_python_codes"]
+                            pycodes.extend(next_python_codes)
 
                 if trades:
                     eprint()
@@ -5308,7 +5310,7 @@ class TurtleClient:
 
         return False
 
-    def py_trade_else(self, py) -> str | None:
+    def py_trade_else(self, py) -> tuple[str | None, object | None]:
         """Send Python to the Server, trace its Reply"""
 
         # Trade with the Server
@@ -5321,7 +5323,7 @@ class TurtleClient:
                 sys.exit()
 
             ptext = "EOFError"
-            return ptext
+            return (ptext, EOFError())
 
         rtext = rtext_else
 
@@ -5329,25 +5331,26 @@ class TurtleClient:
 
         try:
             value = ast_literal_eval_strict(rtext)
-        except Exception:
+        except Exception as exc:
             ptext = rtext
-            return rtext
+            return (rtext, exc)
 
         # Take a None as None, such as from Turtle.breakpoint
 
         if value is None:
-            return None
+            return (None, None)
 
         # Take a Python Traceback as Quoted Lines to Print
 
         if rtext.startswith("'Traceback (most recent call last):"):
             assert isinstance(value, str), (value, type(value), rtext)
             ptext = value.rstrip()
-            return ptext
+            return (ptext, "Traceback")
 
         # Print the Top-Level Notes on a Dict before returning the Dict
 
         if isinstance(value, dict):
+
             if "notes" in value.keys():
                 clone = dict(value)
 
@@ -5358,15 +5361,15 @@ class TurtleClient:
                     self.server_note_client_eval(note)
 
                 if not clone:  # lets a Dict carry Notes on behalf of None
-                    return None
+                    return (None, None)
 
                 ptext = repr(clone)
-                return ptext
+                return (ptext, value)
 
         # Else fall back to returning the Text without Eval
 
         ptext = rtext
-        return ptext
+        return (ptext, value)
 
     def server_note_client_eval(self, note) -> None:
         """Print 1 Server Note, or otherwise consume it"""
@@ -5432,7 +5435,6 @@ class TurtleClient:
 # todo: when to default to cyclic choices, such as inc color, or spiral fd
 #
 #
-# todo: let people say 't.tada()', not just 'tada'
 # todo: poll the Server while waiting for next Client Input
 # todo: like quick Client reply to Server Mouse/ Arrow
 # todo: but sum up the Server Arrow, don't only react to each individually
