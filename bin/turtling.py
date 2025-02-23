@@ -1540,6 +1540,19 @@ glass_teletypes = list()
 #
 
 
+CompassesByHeading = {
+    45: ["NE", "Northeast"],
+    90: ["E", "East"],
+    135: ["SE", "Southeast"],
+    180: ["S", "South"],
+    225: ["SW", "Southwest"],
+    270: ["W", "West"],
+    315: ["NW", "Northwest"],
+    360: ["N", "North"],
+}
+"""Names for Exact Compass Heading Floats"""
+
+
 KwByGrunt = {
     "a": "angle",
     "d": "distance",
@@ -1858,6 +1871,8 @@ class Turtle:
             "rest": self.rest,
         }
 
+        self._dict_insert_compass_if_(d)
+
         return d
 
         # omits .glass_teletype, .restarting
@@ -1916,11 +1931,34 @@ class Turtle:
         d = dict(
             xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading, a="angle", d="diameter"
         )
+        self._dict_insert_compass_if_(d)
         return d
 
         # todo: Turn the Turtle Heading WHILE we draw the Arc - Unneeded till we have Sprites
 
         # ugh: UCB Logo centers the Circle on the Turtle and keeps the turtle Still
+
+    def _dict_insert_compass_if_(self, d) -> None:
+        """Insert Compass Direction, if Heading is exact"""
+
+        compasses_by_heading = CompassesByHeading
+
+        items = list()
+        for item in d.items():
+            items.append(item)
+
+            (k, v) = item
+            if k == "heading":
+                heading = v
+                if heading in compasses_by_heading.keys():
+                    compasses = compasses_by_heading[heading]
+                    compass = compasses[-1]
+
+                    item = ("compass", compass)
+                    items.append(item)
+
+        d.clear()
+        d.update(items)
 
     assert TurtlingDefaults["backward_distance"] == 200, (TurtlingDefaults,)
 
@@ -2013,6 +2051,7 @@ class Turtle:
         self._setheading_(360e0)
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        self._dict_insert_compass_if_(d)
         return d
 
         # todo: good that .home doesn't follow/ change .setxy and .setheading defaults?
@@ -2126,6 +2165,7 @@ class Turtle:
         self._setheading_(heading - angle_float)
 
         d = dict(heading=self.heading, lt="left", a="angle")
+        self._dict_insert_compass_if_(d)
         return d
 
         # Scratch Turn-CCW-15-Degrees
@@ -2239,6 +2279,8 @@ class Turtle:
             a="angle",
             d="distance",
         )
+        self._dict_insert_compass_if_(d)
+
         return d
 
     assert TurtlingDefaults["right_angle"] == 90, (TurtlingDefaults,)
@@ -2252,6 +2294,7 @@ class Turtle:
         self._setheading_(heading + angle_float)
 
         d = dict(heading=self.heading, rt="right", a="angle")
+        self._dict_insert_compass_if_(d)
         return d
 
         # Scratch Turn-CW-15-Degrees
@@ -2261,10 +2304,43 @@ class Turtle:
     def setheading(self, angle) -> dict:
         """Turn the Turtle to move 0° North, or to some other Heading (SETH A for short)"""
 
-        self._setheading_(angle)
+        h = self._heading_to_float_(angle)
+        self._setheading_(h)
 
         d = dict(heading=self.heading, seth="setheading", a="angle")
+        self._dict_insert_compass_if_(d)
+
         return d
+
+    def _heading_to_float_(self, heading) -> float | object:
+        """Take Str Heading as Name of Float, else return Heading unchanged"""
+
+        compasses_by_heading = CompassesByHeading
+
+        # Tabulate Heading Float by Compass Heading Name
+
+        heading_by_compass: dict[str, float | None]
+        heading_by_compass = dict()
+
+        for h, cc in compasses_by_heading.items():
+            for c in cc:
+                s = c.casefold()
+                if s not in heading_by_compass.keys():
+                    heading_by_compass[s] = h
+                else:
+                    heading_by_compass[s] = None  # replaces
+
+        # Return Angle unchanged, when not Str
+
+        if not isinstance(heading, str):
+            return heading
+
+        str_heading = heading.casefold()
+
+        # Convert Compass Heading Str to Float
+
+        float_heading = heading_by_compass[str_heading]  # raises ValueError when undefined
+        return float_heading
 
     def _setheading_(self, angle) -> None:
         """Turn the Turtle to move 0° North, or to some other Heading (SETH A for short)"""
@@ -3219,6 +3295,10 @@ class Turtle:
         if not warping:
             self.pendown()
 
+        # Show the Puck
+
+        self.puck(0)
+
         # Succeed
 
         gt.notes.append("Next try:  puck 1")
@@ -3276,6 +3356,7 @@ class Turtle:
                 self._puck_step_(kind="Breakout")
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        self._dict_insert_compass_if_(d)
         return d
 
     def pong(self, count) -> dict:
@@ -3291,6 +3372,7 @@ class Turtle:
                 self._puck_step_(kind="Pong")
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        self._dict_insert_compass_if_(d)
         return d
 
     def puck(self, count) -> dict:
@@ -3306,6 +3388,7 @@ class Turtle:
                 self._puck_step_(kind="Puck")
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        self._dict_insert_compass_if_(d)
         return d
 
         # see also 'def puckland'
