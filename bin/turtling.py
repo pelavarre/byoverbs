@@ -4111,11 +4111,11 @@ class PythonSpeaker:
         return (False, None)
 
     def pyrepr(self, obj) -> str:
-        """Work like Repr, but end Float Ints with an 'e0' mark in place of '.0'"""
+        """Work like Repr, but better"""
 
         s0 = repr(obj)
 
-        # End Float Int Lits with an 'e0' mark in place of '.0'
+        # End Float Int Lits with an '' Int mark in place of '.0' Float mark
 
         if isinstance(obj, float):
             f = obj
@@ -4123,7 +4123,8 @@ class PythonSpeaker:
                 assert s0.endswith(".0"), (s0,)
                 assert "e" not in s0, (s0,)
 
-                s1 = s0.removesuffix(".0") + "e0"
+                # s1 = s0.removesuffix(".0") + "e0"
+                s1 = s0.removesuffix(".0")
 
                 return s1
 
@@ -5270,10 +5271,14 @@ class TurtleClient:
                     trade = trade_else
                     trades.append(trade)
 
-                    eprint(trade)
-
-                    if isinstance(value_else, dict):
+                    if not isinstance(value_else, dict):
+                        eprint(trade)
+                    else:
                         d = value_else
+                        items = list(d.items())
+                        py = "dict(" + ", ".join(f"{k}={ps.pyrepr(v)}" for (k, v) in items) + ")"
+                        eprint(py)
+
                         if "next_python_codes" in d.keys():
                             next_python_codes = d["next_python_codes"]
                             pycodes.extend(next_python_codes)
@@ -5408,7 +5413,7 @@ class TurtleClient:
                     return (None, None)
 
                 ptext = repr(clone)
-                return (ptext, value)
+                return (ptext, clone)  # .clone is .value, but without its .notes
 
         # Else fall back to returning the Text without Eval
 
