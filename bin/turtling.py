@@ -59,7 +59,7 @@ import warnings
 
 
 turtling = __main__
-__version__ = "2025.2.22"  # Saturday
+__version__ = "2025.2.23"  # Sunday
 
 _ = dict[str, int] | None  # new since Oct/2021 Python 3.10
 
@@ -3086,14 +3086,18 @@ class Turtle:
         #
 
     def _jump_punch_rest_if_(self, wx, wy, x, y) -> None:
-        """Move the Turtle by 1 Column or 1 Row or both, and punch out a Mark if Pen Down"""
+        """Slip into next Column or next Row, and punch, and rest, or some or none"""
+
+        self._next_jump_punch_rest_if_()
+
+        self._jump_if_(wx, wy=wy, x=x, y=y)
+        self._punch_or_erase_if_()
+        self._rest_if_()
+
+    def _jump_if_(self, wx, wy, x, y) -> None:
+        """Slip into next Column or next Row, or don't"""
 
         gt = self.glass_teletype
-        hiding = self.hiding
-        warping = self.warping
-        erasing = self.erasing
-        penmark = self.penmark
-        rest = self.rest
 
         # Plan the Jump  # todo: .int or .round ?
 
@@ -3127,6 +3131,15 @@ class Turtle:
         ctext = f"{y_text}{x_text}"
         gt.schars_write(ctext)
 
+    def _punch_or_erase_if_(self) -> None:
+        """Punch or Erase, except don't while 🐢 PenUp"""
+
+        gt = self.glass_teletype
+
+        warping = self.warping
+        erasing = self.erasing
+        penmark = self.penmark
+
         # Plan to write the PenMark, else to erase the Penmark while 🐢 PenErase
 
         width = 0
@@ -3145,10 +3158,69 @@ class Turtle:
             gt.schars_write(punch)  # for ._jump_punch_rest_if_
             gt.schars_write(backspaces)
 
-        # Do rest awhile, except don't while 🐢 HideTurtle
+    def _rest_if_(self) -> None:
+        """Do rest awhile, except don't while 🐢 HideTurtle"""
+
+        hiding = self.hiding
+        rest = self.rest
 
         if not hiding:
             time.sleep(rest)
+
+    #
+    # Rotate Settings, if setup for that
+    #
+
+    def _next_jump_punch_rest_if_(self) -> None:
+        """Rotate the Jump/ Punch/ Rest Settings, or don't"""
+
+        self._next_setpencolor_()
+
+        # todo: Rotate .highlights
+
+    def _next_setpencolor_(self) -> None:
+        """Rotate the Color and Accent at SetPenColor"""
+
+        namespace = self.namespace
+
+        # Peek at Color and Accent
+
+        rotations = list()
+
+        if "setpencolor_color" in namespace.keys():
+            color = namespace["setpencolor_color"]
+        elif "color" in namespace.keys():
+            color = namespace["color"]
+        else:
+            if "setpencolor_colors" in namespace.keys():
+                setpencolor_colors = namespace["setpencolor_colors"]
+                color = setpencolor_colors[0]
+                rotations.append("setpencolor_colors")
+            else:
+                color = TurtlingDefaults["setpencolor_color"]
+
+        if "setpencolor_accent" in namespace.keys():
+            accent = namespace["setpencolor_accent"]
+        elif "accent" in namespace.keys():
+            accent = namespace["accent"]
+        else:
+            if "setpencolor_accents" in namespace.keys():
+                setpencolor_accents = namespace["setpencolor_accents"]
+                accent = setpencolor_accents[0]
+                rotations.append("setpencolor_accents")
+            else:
+                accent = TurtlingDefaults["setpencolor_accent"]
+
+        # Do set & rotate the Color and Accent, or don't
+
+        if rotations:
+
+            self.setpencolor(color, accent=accent)
+
+            for rotation in rotations:
+                values = namespace[rotation]
+                pop = values.pop(0)
+                values.append(pop)
 
     #
     # Sample the X Y Position remotely, inside the Turtle
@@ -4282,6 +4354,16 @@ class PythonSpeaker:
             return False
 
         py = note.removeprefix("locals: ")
+
+        # Count Delete of Name as done already, if done already,
+        # like after quitting one Client while launching the next Client
+
+        if py.startswith("del "):
+            key = py.removeprefix("del ")
+            if key not in globals_.keys():
+                if key not in locals_.keys():
+                    print(f">>> {py}  # already done at Chat Pane")
+                    return True
 
         # Weakly emulate the Remote Server assignment of an Object with a default Repr
 

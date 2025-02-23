@@ -1,0 +1,475 @@
+# fukuda.logo
+
+
+#
+# Try, and fail, to animate 45' Northeast/ Southwest Red-Green Lines
+#
+# Future work:  Animate more than 1 Line
+#
+# References:  Illusion by Haruaki Fukuda
+# References:  Via 22/Feb/2025 Twitter /waitbutwhy/status/1893542085829046419
+#
+
+
+# Start up
+
+relaunch
+sethertz 1e9
+hideturtle
+
+setpencolor_colors = ["FF0000", "00FF00"]
+
+
+# -150
+
+penup  home  seth east   fd -150  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -160  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -140
+
+penup  home  seth east   fd -140  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -150  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -130
+
+penup  home  seth east   fd -130  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -140  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -120
+
+penup  home  seth east   fd -120  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -130  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -110
+
+penup  home  seth east   fd -110  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -120  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -100
+
+penup  home  seth east   fd -100  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -110  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -90
+
+penup  home  seth east   fd -90  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -100  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -80
+
+penup  home  seth east   fd -80  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -90  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -70
+
+penup  home  seth east   fd -70  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -80  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -60
+
+penup  home  seth east   fd -60  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -70  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -50
+
+penup  home  seth east   fd -50  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -60  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -40
+
+penup  home  seth east   fd -40  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -50  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -30
+
+penup  home  seth east   fd -30  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -40  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -20
+
+penup  home  seth east   fd -20  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -30  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# -10
+
+penup  home  seth east   fd -10  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -20  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 0
+
+penup  home  seth east   fd 0  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd -10  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 10
+
+penup  home  seth east   fd 10  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 0  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 20
+
+penup  home  seth east   fd 20  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 10  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 30
+
+penup  home  seth east   fd 30  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 20  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 40
+
+penup  home  seth east   fd 40  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 30  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 50
+
+penup  home  seth east   fd 50  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 40  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 60
+
+penup  home  seth east   fd 60  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 50  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 70
+
+penup  home  seth east   fd 70  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 60  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 80
+
+penup  home  seth east   fd 80  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 70  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 90
+
+penup  home  seth east   fd 90  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 80  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 100
+
+penup  home  seth east   fd 100  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 90  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 110
+
+penup  home  seth east   fd 110  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 100  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 120
+
+penup  home  seth east   fd 120  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 110  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 130
+
+penup  home  seth east   fd 130  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 120  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# 140
+
+penup  home  seth east   fd 140  pendown
+seth northeast
+penup  backward 100  pendown
+forward 200
+
+penup  home  seth east   fd 130  pendown
+seth northeast
+penup  backward 100  PenErase
+forward 200
+
+
+# Shut down
+
+del setpencolor_colors
+restart
+tada
+
+
+# import pathlib
+# import textwrap
+#
+# text0 = """
+#
+#     relaunch
+#     sethertz 1e9
+#     hideturtle
+#
+#     setpencolor_colors = ["FF0000", "00FF00"]
+#
+# """
+#
+# text0 = textwrap.dedent(text0).strip()
+#
+# text1 = """
+#
+#     # $X1
+#
+#     penup  home  seth east   fd $X1  pendown
+#     seth northeast
+#     penup  backward 100  pendown
+#     forward 200
+#
+#     penup  home  seth east   fd $X0  pendown
+#     seth northeast
+#     penup  backward 100  PenErase
+#     forward 200
+#
+# """
+#
+# text1 = textwrap.dedent(text1).strip()
+#
+# print()
+# print()
+# print(text0)
+#
+# for x in range(-150, 150, 10):
+#     text1b = text1
+#     text1b = text1b.replace("$X1", str(x))
+#     text1b = text1b.replace("$X0", str(x - 10))
+#     print()
+#     print()
+#     print(text1b)
+#
+# print()
+# print()
+#
+# path = pathlib.Path("p.py")
+# text = path.read_text()
+# lines = text.splitlines()
+# print("\n".join(f"# {_}" for _ in lines))
+
+
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/fukada.logo
+# copied from:  git clone https://github.com/pelavarre/byoverbs.git

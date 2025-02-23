@@ -1831,6 +1831,7 @@ Can we make our Demo
 come out with triangles that are lots more equilateral?
 
 
+
 #### 11x11 found where 10x10 Pixels expected
 
 These instructions
@@ -1868,6 +1869,27 @@ That's how you end up with 11, not just 10, Pixels altogether
 You can choose SetXYZoom 0.909 0.909
 as a way of getting FD RT FD RT FD RT FD RT
 to mean a Square of 10 Pixels per Side
+
+
+# Pixel by pixel, in color
+
+We're up playing with a new idea in Auto-Completion
+
+Here's a way of drawing Line Segments in which every few Pixels change color
+
+    relaunch
+
+    setpencolor_colors = [ "FF0000", "FF0000", "FF7F00", "FF7F00", "CCCC00", "CCCC00", "00FF00", "00FF00", "0000FF", "0000FF", "330099", "330099", "9900CC", "9900CC", "9900CC"]
+
+    fd 120
+
+    rt 135
+    fd 240
+
+    del setpencolor_colors
+
+Maybe looking for more symmetries in this kind of Drawing
+could persuade us to change what exactly we mean by Forward 120 and Forward 240
 
 
 #### Auto-correct 24-Bit Html Colors
@@ -1998,6 +2020,11 @@ A first testcase could be
 And we should let you type just
 
     mtm-titlecard.logo
+
+We could come define a more explicit Import to do
+the classic Python Thing of run it at most once per Process
+
+    import mtm-titlecard.logo
 
 
 #### Random, and not repeatable
