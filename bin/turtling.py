@@ -5481,7 +5481,7 @@ class TurtleClient:
         ps = self.ps
         pycodes = self.pycodes
 
-        ps1 = f"{Turtle_}? {Bold}"
+        ps1 = f"{Turtle_}\x1B[2D\x1B[2C? {Bold}"  # gCloud Shell needs the 2D 2C
         postedit = Plain
 
         # Till quit

@@ -1954,14 +1954,6 @@ undoing your last choice, and then the choice before that, and so on
 ### Easy Bugs
 
 
-#### Separate talk of "🐢" and "?"
-
-The gCloud Shells blur the "🐢" and "?" together in the Chat Pane.
-We can workaround that, make them come out properly separated, as they do here =>
-
-    🐢?
-
-
 #### 8-bit Color Welcome should settle for always only Html Triple Hex else Octal
 
 Presently ...
