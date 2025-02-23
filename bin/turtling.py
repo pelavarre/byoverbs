@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 r"""
-usage: turtling.py [-h] [--version] [--yolo] [-i] [-c COMMAND]
+usage: turtling.py [-h] [--version] [--yolo] [--stop] [-i] [-c COMMAND]
 
 draw inside a Terminal Window with Logo Turtles
 
@@ -9,6 +9,7 @@ options:
   -h, --help  show this message and exit
   --version   show version and exit
   --yolo      draw inside this pane, else chat inside this pane
+  --stop      send Signal·SigKill to each Turtling·Py Process, as if Sh 'kill -9'
   -i          chat inside this pane
   -c COMMAND  do some things, before quitting if no -i, or before chatting if -i
 
@@ -18,6 +19,7 @@ examples:
   turtling.py --yolo  # draws inside this pane, else chats inside this pane
   turtling.py -i  # clears screen, puts down one Turtle, and chats
   turtling.py -i -c ''  # doesn't clear screen, puts down one Turtle, and chats
+  turtling.py --stop  # sends Signal·SigKill to each Turtling·Py Process, as if Sh 'kill -9'
 """
 
 # code reviewed by People, Black, Flake8, MyPy, & PyLance-Standard
@@ -119,6 +121,12 @@ def main_try(ns) -> None:
 
     assert ns.yolo or ns.i or (ns.c is not None), (ns,)
 
+    # Take the Stop Option as Auth to signal each Turtling Process
+
+    if ns.stop:
+        turtling_processes_stop()
+        return
+
     # Take the Yolo Option as Auth to run as the Chat Pane of a Drawing Pane,
     # else to run as a Drawing Pane
 
@@ -157,11 +165,13 @@ def parse_turtling_py_args_else() -> argparse.Namespace:
 
     version_help = "show version and exit"
     yolo_help = "draw inside this pane, else chat inside this pane"
+    stop_help = "send Signal·SigKill to each Turtling·Py Process, as if Sh 'kill -9'"
     i_help = "chat inside this pane"
     c_help = "do some things, before quitting if no -i, or before chatting if -i"
 
     parser.add_argument("--version", action="count", help=version_help)
     parser.add_argument("--yolo", action="count", help=yolo_help)
+    parser.add_argument("--stop", action="count", help=stop_help)
     parser.add_argument("-i", action="count", help=i_help)
     parser.add_argument("-c", metavar="COMMAND", help=c_help)
 
@@ -171,6 +181,10 @@ def parse_turtling_py_args_else() -> argparse.Namespace:
     if ns.version:
         print(f"BYO Turtling·Py {__version__}")
         sys.exit(0)
+
+    if ns.stop and (ns.yolo or ns.i or commanded):
+        print("error: don't choose --stop with --yolo or -i or -c", file=sys.stderr)
+        sys.exit(2)  # exits 2 for wrong Sh Args
 
     if ns.yolo and (ns.i or commanded):
         print("error: don't choose --yolo with -i or -c", file=sys.stderr)
@@ -4789,6 +4803,70 @@ class TurtlingFifoProxy:
 TurtlingWriter = TurtlingFifoProxy("requests")
 
 TurtlingReader = TurtlingFifoProxy("responses")
+
+
+def turtling_processes_stop() -> None:
+    """Send Signal·SigKill to each Turtling Process"""
+
+    # Trace & Scrape one Sh Line
+
+    ps_shline = "ps auwx"
+    print("+", ps_shline, "|grep ...")
+
+    run = subprocess.run(shlex.split(ps_shline), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    assert run.returncode == 0, (run.returncode, run.stderr, ps_shline)
+    assert not run.stderr, (run.returncode, run.stderr, ps_shline)
+
+    stdout = run.stdout.decode()
+    lines = stdout.splitlines()
+    assert lines, (lines, ps_shline)
+
+    # Trace & Scrape the Output Header Line
+
+    words = lines[0].split()  # user pid %cpu %mem vsz rss tty stat start time command
+    print(" ".join(words).casefold())
+    assert words, (words, lines[0], ps_shline)
+
+    pid_at = words.index("PID")  # commonly 1
+    command_at = words.index("COMMAND")  # commonly 11
+
+    # Trace & Scrape the Output Data Lines
+
+    os_getpid = os.getpid()
+
+    pids = list()
+    for line in lines[1:]:
+        words = line.split()
+
+        if pid_at < len(words):
+            pid = int(words[pid_at])
+            if (command_at + 1) < len(words):
+                command_0 = words[command_at]
+                command_1 = words[command_at + 1]
+
+                basename_0 = os.path.basename(command_0)
+                basename_1 = os.path.basename(command_1)
+                # print(basename_0, basename_1)
+
+                if basename_0.casefold() in ("python", "python2", "python3"):
+                    if basename_1 == "turtling.py":
+                        if os_getpid != pid:  # todo: could Assert finding Self
+                            pids.append(pid)
+
+                            print(line)
+
+    if not pids:
+        print("... Found no Turtling·Py Processes, sent no Signals ...")
+
+    for pid in pids:
+        print(f"+ kill -{signal.SIGKILL}", pid)
+        os.kill(pid, signal.SIGKILL)
+
+    print("+")
+
+    print("")
+    print("Closing the Window Terminal Pane of each Signalled Process often helps")
+    print("Or you can try to keep running them, like after telling the Shell to:  reset")
 
 
 def turtling_server_attach() -> bool:

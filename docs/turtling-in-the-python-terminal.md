@@ -65,8 +65,9 @@ Contents
     - [macOS Thin Flat Lines](#macos-thin-flat-lines)
     - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
     - [11x11 found where 10x10 Pixels expected](#11x11-found-where-10x10-pixels-expected)
-    - [Undo Destruction](#undo-destruction)
     - [Auto-correct 24-Bit Html Colors](#auto-correct-24-bit-html-colors)
+    - [More than Two Processes](#more-than-two-processes)
+    - [Undo Destruction](#undo-destruction)
   - [Easy Bugs](#easy-bugs)
     - [8-bit Color Welcome should settle for always only Html Triple Hex else Octal](#8-bit-color-welcome-should-settle-for-always-only-html-triple-hex-else-octal)
     - [Press begun, but nothing like finished](#press-begun-but-nothing-like-finished)
@@ -156,12 +157,31 @@ that your gMail gives you free-of-charge at
 Google gives out one Linux Terminal Shell Window per Browser.
 And they keep it current, like giving you 2023 Python 3.12 in 2025
 
+Notes =>
+
+1
+
 Google does often make it weirdly difficult to close your Browser Tab.
 They keep insisting you have a problem,
 of the "Leave site?" "Changes you made may not be saved" kind.
 But they lie.
 It's not an actual problem.
 If you ignore it, life rocks on, just fine, no worries
+
+2
+
+Every so often Google pops up and yammers at you
+> Authorize Cloud Shell<br>
+> Cloud Shell needs permission to use your credentials to make Google API calls<br>
+> Click Authorize to grant permission to this and future calls<br>
+> &lt;Reject&gt; &lt;Authorize&gt;<br>
+
+I have no idea what this means, nor do I know when and why it comes at you.
+I shrug, I click through, I move on,
+for I do remember the Infinite Scroll of Apple iTunes' Terms and Conditions.
+I do hope such casual ignorant choices never do come to hurt you or me
+
+3
 
 Many gCloud Shell people soon learn the Keyboard Shortcuts
 for splitting one Terminal Window into Panes
@@ -178,6 +198,8 @@ After you add a Pane, then
 These Keyboard Shortcuts first appeared inside the TMux Add-On for Linux Terminals,
 but the gCloud Linux Terminal Shell installs these Keyboard Shortcuts by default.
 Like you have to press ⌃B ⌃B twice to get Vi to know you want to page back
+
+3
 
 Apple speaks of Modifier Key Caps with the ⎋ ⌃ ⌥ ⇧ ⌘ notation
 
@@ -1835,6 +1857,40 @@ as a way of getting FD RT FD RT FD RT FD RT
 to mean a Square of 10 Pixels per Side
 
 
+#### Auto-correct 24-Bit Html Colors
+
+Presently ...
+
+We only sometimes allow or require Quotes and Comments near to
+
+    SetPenColor "FF0000"  # max Red, no Green, no Blue
+    SetPenHighlight "000000"  # no Red, no Green, and no Blue
+
+We should come clean that up.
+Always let you say FF0000 and 000000 and 00FF00 without Quotes.
+Always let you say #FF0000 and #000000 and #00FF00 with a # Comment afterwards
+
+
+#### More than Two Processes
+
+Presently ...
+
+We ordinarily test with two Processes, one for Drawing and one for Chatting.
+Or just the one for Drawing
+
+We could spend time testing other choices
+
+In particular, we already know,
+adding a second Chatting Process crashes the Drawing Process
+if you tell the earlier Chatting Process to talk to the Drawing Process
+
+Meanwhile, when you just want things to work,
+then you launch just one or two Processes.
+To help you get back to zero Processes quickly and easily, we did go ahead and code up
+
+    ./bin/turtling.py --stop
+
+
 #### Undo Destruction
 
 Presently ...
@@ -1856,20 +1912,6 @@ We could log all your choices so that you can edit and replay them
 
 We could work from that log to let you walk time backward,
 undoing your last choice, and then the choice before that, and so on
-
-
-#### Auto-correct 24-Bit Html Colors
-
-Presently ...
-
-We only sometimes allow or require Quotes and Comments near to
-
-    SetPenColor "FF0000"  # max Red, no Green, no Blue
-    SetPenHighlight "000000"  # no Red, no Green, and no Blue
-
-We should come clean that up.
-Always let you say FF0000 and 000000 and 00FF00 without Quotes.
-Always let you say #FF0000 and #000000 and #00FF00 with a # Comment afterwards
 
 
 ### Easy Bugs
