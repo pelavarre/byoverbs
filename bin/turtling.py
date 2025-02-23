@@ -1743,6 +1743,8 @@ class Turtle:
 
         sys.exit()
 
+        # todo: surface "bye", "exit", "quit", more strongly
+
     def clearscreen(self) -> dict:
         """Write Spaces over every Character of every Screen Row and Column (CLS or CLEAR or CS for short)"""
 
@@ -1752,7 +1754,15 @@ class Turtle:
 
         (x_min, x_max, y_min, y_max) = self.xy_min_max()
 
-        d = dict(x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max)
+        d = dict(
+            x_min=x_min,
+            x_max=x_max,
+            y_min=y_min,
+            y_max=y_max,
+            clear="clearscreen",
+            cls="clearscreen",
+            cs="clearscreen",
+        )
         return d
 
         # just the Screen, not also its Scrollback
@@ -1903,7 +1913,9 @@ class Turtle:
 
         self.right(angle_float)
 
-        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        d = dict(
+            xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading, a="angle", d="diameter"
+        )
         return d
 
         # todo: Turn the Turtle Heading WHILE we draw the Arc - Unneeded till we have Sprites
@@ -1919,7 +1931,9 @@ class Turtle:
 
         self._punch_bresenham_stride_(-distance_float, xys=None)  # for .backward
 
-        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest)
+        d = dict(
+            xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest, back="backward", bk="backward"
+        )
         return d
 
     def beep(self) -> dict:
@@ -1931,7 +1945,7 @@ class Turtle:
 
         # time.sleep(2 / 3)  # todo: guess more accurately when the Terminal Bell falls silent
 
-        return dict()
+        return dict(b="beep")
 
         # 'def beep' not found in PyTurtle
 
@@ -1955,7 +1969,7 @@ class Turtle:
 
         self._punch_bresenham_stride_(distance_float, xys=None)  # for .forward
 
-        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest)
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, rest=self.rest, fd="forward", d="distance")
         return d
 
         # Scratch Move-10-Steps (with infinite speed)
@@ -1989,14 +2003,14 @@ class Turtle:
 
         self.hiding = True
 
-        d = dict(hiding=self.hiding)
+        d = dict(hiding=self.hiding, ht="hideturtle")
         return d
 
     def home(self) -> dict:
         """Move the Turtle to its Home and turn it North, leaving a Trail if Pen Down"""
 
         self.setxy(x=0e0, y=0e0)  # todo: different Homes for different Turtles
-        self.setheading(360e0)
+        self._setheading_(360e0)
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         return d
@@ -2018,7 +2032,7 @@ class Turtle:
         xplus = xfloat + distance_float
         self.setxy(x=xplus, y=yfloat)
 
-        d = dict(xfloat=self.xfloat)
+        d = dict(xfloat=self.xfloat, d="distance")
         return d
 
         # Scratch: Change-X-By-10
@@ -2038,7 +2052,7 @@ class Turtle:
         yplus = yfloat + distance_float
         self.setxy(x=xfloat, y=yplus)
 
-        d = dict(yfloat=self.yfloat)
+        d = dict(yfloat=self.yfloat, d="distance")
         return d
 
         # Scratch: Change-Y-By-10
@@ -2109,7 +2123,9 @@ class Turtle:
         angle_float = float(45 if (angle is None) else angle)
 
         heading = self.heading
-        d = self.setheading(heading - angle_float)
+        self._setheading_(heading - angle_float)
+
+        d = dict(heading=self.heading, lt="left", a="angle")
         return d
 
         # Scratch Turn-CCW-15-Degrees
@@ -2142,13 +2158,16 @@ class Turtle:
         # todo: Logo Angles starts at 0° North and rise to turn Right
         # todo: Locals Tau can be 360° or 2π Radians
 
+    def pe(self) -> dict:
+        raise NotImplementedError("Did you mean PenErase?")
+
     def pendown(self) -> dict:
         """Plan to leave a Trail as the Turtle moves (PD for short)"""
 
         self.warping = False
         self.erasing = False
 
-        d = dict(warping=self.warping, erasing=self.erasing)
+        d = dict(warping=self.warping, erasing=self.erasing, pd="pendown")
         return d
 
         # Scratch Pen-Down
@@ -2174,7 +2193,7 @@ class Turtle:
         self.warping = True
         self.erasing = False
 
-        d = dict(warping=self.warping, erasing=self.erasing)
+        d = dict(warping=self.warping, erasing=self.erasing, pu="penup")
         return d
 
         # Scratch Pen-Up
@@ -2211,7 +2230,15 @@ class Turtle:
 
             # the traditional [fd rt], never the countercultural [rt fd]
 
-        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        d = dict(
+            xfloat=self.xfloat,
+            yfloat=self.yfloat,
+            heading=self.heading,
+            rep="repeat",
+            n="count",
+            a="angle",
+            d="distance",
+        )
         return d
 
     assert TurtlingDefaults["right_angle"] == 90, (TurtlingDefaults,)
@@ -2222,7 +2249,9 @@ class Turtle:
         angle_float = float(90 if (angle is None) else angle)
 
         heading = self.heading  # turning clockwise
-        d = self.setheading(heading + angle_float)
+        self._setheading_(heading + angle_float)
+
+        d = dict(heading=self.heading, rt="right", a="angle")
         return d
 
         # Scratch Turn-CW-15-Degrees
@@ -2232,15 +2261,20 @@ class Turtle:
     def setheading(self, angle) -> dict:
         """Turn the Turtle to move 0° North, or to some other Heading (SETH A for short)"""
 
+        self._setheading_(angle)
+
+        d = dict(heading=self.heading, seth="setheading", a="angle")
+        return d
+
+    def _setheading_(self, angle) -> None:
+        """Turn the Turtle to move 0° North, or to some other Heading (SETH A for short)"""
+
         angle_float = float(0 if (angle is None) else angle)
 
         heading1 = angle_float % 360e0  # 360° Circle
         heading2 = 360e0 if not heading1 else heading1
 
         self.heading = heading2
-
-        d = dict(heading=self.heading)
-        return d
 
     assert TurtlingDefaults["sethertz_hertz"] == 1e3, (TurtlingDefaults,)
 
@@ -2257,7 +2291,7 @@ class Turtle:
 
         self.rest = rest1
 
-        d = dict(rest=self.rest)
+        d = dict(rest=self.rest, sethz="sethertz", hz="hertz")
         return d
 
         # PyTurtle Speed chooses 1..10 for faster animation, reserving 0 for no animation
@@ -2298,7 +2332,7 @@ class Turtle:
         backscapes[::] = backscapes_
         gt.schars_write("".join([Plain] + backscapes + penscapes))
 
-        d = dict(backscapes=backscapes_)
+        d = dict(backscapes=backscapes_, setph="setpenhighlight")
         return d
 
     def setpencolor(self, color, accent) -> dict:  # as if gDoc Text Color
@@ -2339,6 +2373,7 @@ class Turtle:
         d = self._penscapes_disassemble_(penscapes_)
         assert "penscapes" not in d.keys()
         d["penscapes"] = penscapes_
+        d["setpc"] = "setpencolor"
 
         return d
 
@@ -2608,7 +2643,7 @@ class Turtle:
 
         self.penmark = penmark1
 
-        d = dict(penmark=self.penmark)
+        d = dict(penmark=self.penmark, setpenpunch="setpenpunch", mark="mark")
         return d
 
         # todo: cyclic US Ascii Penmarks:  "!" if (penmark == "~") else chr(ord(penmark) + 1)
@@ -2658,7 +2693,9 @@ class Turtle:
         self.xfloat = xfloat__
         self.yfloat = yfloat__
 
-        d = dict(xfloat=self.xfloat, yfloat=self.yfloat)
+        d = dict(
+            xfloat=self.xfloat, yfloat=self.yfloat, setposition="setxy", setpos="setxy", goto="setxy"
+        )
         return d
 
         # todo: Share most of .setxy with ._punch_bresenham_stride_ of .forward/ .backward
@@ -2707,7 +2744,7 @@ class Turtle:
         # Forward 0 leaves a Mark to show Turtle was Here
         # SetXY from Home leaves a Mark to show the X=0 Y=0 Home
 
-        d = dict(hiding=self.hiding)
+        d = dict(hiding=self.hiding, st="showturtle")
         return d
 
     assert TurtlingDefaults["sleep_seconds"] == 1e-3, (TurtlingDefaults,)
@@ -2719,7 +2756,7 @@ class Turtle:
 
         time.sleep(second_float)  # may raise ValueError or TypeError
 
-        d = dict(seconds=second_float)  # not the sticky .rest
+        d = dict(seconds=second_float, s="sleep")  # not the sticky .rest
         return d
 
         # todo: give credit for delay in work before t.sleep
@@ -3191,7 +3228,7 @@ class Turtle:
 
         # see also 'def puck'
 
-    def sierpiński(self, distance, divisor) -> None:  # aka Sierpinski
+    def sierpiński(self, distance, divisor) -> dict:  # aka Sierpinski
         """Draw Triangles inside Triangles, in the way of Sierpiński 1882..1969 (also known as Sierpinksi)"""
 
         assert distance >= 0, (distance,)
@@ -3209,6 +3246,8 @@ class Turtle:
 
                 t.forward(distance)
                 t.right(120)
+
+        return dict(sierpinski="sierpiński", d="distance", dv="divisor")
 
         # todo: cyclic colors for Sierpiński's Triangle/ Sieve/ Gasket
 
@@ -3368,7 +3407,7 @@ class Turtle:
             self.yfloat = y2
 
             if collision:
-                self.setheading(heading + 180e0)
+                self._setheading_(heading + 180e0)
 
         else:
             assert collision, (collision,)
@@ -3378,7 +3417,7 @@ class Turtle:
             xys2 = list()
 
             if kind == "Pong":
-                self.setheading(heading + 180e0)
+                self._setheading_(heading + 180e0)
             else:
                 assert kind == "Puck", (kind,)
                 self._puck_bounce_(column_x1, row_y1=row_y1)
@@ -3456,7 +3495,7 @@ class Turtle:
 
         if food_headings:
             h = random.choice(food_headings)
-            self.setheading(h)
+            self._setheading_(h)
 
     def _puck_bounce_(self, column_x1, row_y1) -> None:
         """Choose a Heading to bounce off of a Collision"""
@@ -3504,7 +3543,7 @@ class Turtle:
         else:
             h = random.choice(headings)
 
-        self.setheading(h)
+        self._setheading_(h)
 
 
 turtles: list[Turtle]
@@ -3616,6 +3655,10 @@ def pendown() -> dict:
     return turtle_demand().pendown()
 
 
+def pe(self) -> dict:
+    return turtle_demand().pe()
+
+
 def penerase() -> dict:
     return turtle_demand().penerase()
 
@@ -3696,7 +3739,7 @@ def write(s) -> None:
     return turtle_demand().write(s)
 
 
-def sierpiński(distance, divisor) -> None:
+def sierpiński(distance, divisor) -> dict:
     return turtle_demand().sierpiński(distance, divisor=divisor)
 
 
@@ -4161,6 +4204,7 @@ class PythonSpeaker:
         "setpch": "setpenpunch",
         "s": "sleep",
         # "t": "tada",  # todo: 't()' collides too close to '(t)' and 't.' ?
+        # "w": "write",
     }
 
     py_verb_by_grunt = {  # for the PyTurtle people of:  import turtle
