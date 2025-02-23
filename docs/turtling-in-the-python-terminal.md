@@ -1654,6 +1654,19 @@ you can run through it much more quickly
 
     puckland  puck 1000
 
+You can turn the Puck
+
+    seth North
+    rt
+
+You can run variations
+
+    puckland
+    mode("TunnelVision")
+    puck 1000
+    turtling_modes.clear()  # new and unstable Syntax here
+    puck 1000
+
 A thousands Steps is often enough to eat all the Dot & Pellet Food,
 but not always enough
 

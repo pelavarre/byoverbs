@@ -1668,8 +1668,6 @@ def _turtling_defaults_choose_() -> dict:
 
     # 🐢 Right 90° sets up 🐢 Label to print English from left to right
 
-    # todo: Choose default Values for more Kw Args, no longer just: Angle Count Distance X Y
-
 
 TurtlingDefaults = _turtling_defaults_choose_()
 """Default Values for Turtle Verb Kw Arg Names"""
@@ -1678,6 +1676,15 @@ TurtlingDefaults = _turtling_defaults_choose_()
 #
 # Chat with 1 Logo Turtle
 #
+
+
+Logo = "Logo".casefold()
+Trig = "Trig".casefold()  # todo: NotImplementedError vs Trig
+Trigonometry = "Trigonometry".casefold()  # todo: NotImplementedError vs Trigonometry
+TunnelVision = "TunnelVision".casefold()  # todo: TunnelVision relevant only to Puck?
+
+turtling_modes: list[str]
+turtling_modes = list()
 
 
 class Turtle:
@@ -1821,6 +1828,8 @@ class Turtle:
 
     def relaunch(self) -> dict:
         """Warp the Turtle to Home, and clear its Settings, and clear the Screen"""
+
+        turtling_modes.clear()
 
         self.restart()
         self.clearscreen()
@@ -2190,10 +2199,6 @@ class Turtle:
         if hints is None:
             return dict()
 
-        Logo = "Logo".casefold()
-        Trig = "Trig".casefold()
-        Trigonometry = "Trigonometry".casefold()
-
         for hint in hints.split():
             cfold = hint.casefold()
 
@@ -2203,10 +2208,16 @@ class Turtle:
             elif cfold.startswith(Trig) and Trigonometry.startswith(cfold):
                 raise NotImplementedError("🐢 Mode Trigonometry")
 
+            elif cfold.startswith(TunnelVision):
+                if TunnelVision not in turtling_modes:
+                    turtling_modes.append(TunnelVision)
+                    # todo: how to undo TunnelVision, short of a full 🐢 Relaunch?
+
             else:
                 raise ValueError(f"Choose Mode from ['Logo', 'Trigonometry'], not {hint!r}")
 
-        return dict()
+        modes = list(turtling_modes)  # 'copied is better than aliased'
+        return dict(modes=modes)
 
         # todo: Trigonometry Angles start at 90° North and rise to turn Left
         # todo: Logo Angles starts at 0° North and rise to turn Right
@@ -3392,14 +3403,22 @@ class Turtle:
     def puck(self, count) -> dict:
         """Move like a Pac-Man™ Game Puck"""
 
+        gt = self.glass_teletype
+        notes = gt.notes
+
         count_ = int(count)
         assert count_ >= 0, (count_,)
 
         if count_ == 0:
             self.forward(0)
         else:
+            n = len(notes)
             for _ in range(count_):
                 self._puck_step_(kind="Puck")
+
+                if len(notes) > 9:
+                    n += len(notes) - 9
+                    notes[::] = notes[:8] + [f"... 😰 Too many notes ({n}) ..."]
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         self._dict_insert_compass_if_(d)
@@ -3434,10 +3453,10 @@ class Turtle:
         # Turn the Puck aside if Food on the side, while None ahead and None behind
 
         if kind == "Puck":
-            self._puck_chase_(column_x1, row_y1=row_y1)
+            if TunnelVision not in turtling_modes:
+                self._puck_chase_(column_x1, row_y1=row_y1)
 
             # todo: option to Chase Food more randomly
-            # todo: option to Not-Chase Food
 
         heading = self.heading  # sampled only after ._puck_chase_
 
@@ -4558,7 +4577,7 @@ class TurtlingFifoProxy:
     basename: str  # 'requests'
 
     find: str  # '__pycache__/turtling/pid=12345/responses.mkfifo'
-    pid: int  # 12345
+    pid: int  # 12345  # Process Id of the Drawing Server  # not the Chatting Client
     fileno: int  # 3
     index: int  # -1
 
@@ -4653,6 +4672,16 @@ class TurtlingFifoProxy:
         # Succeed
 
         return True
+
+    def remove_mkfifo(self) -> None:
+        """Remove 1 Named Pipe"""
+
+        find = self.find  # '__pycache__/turtling/pid=92877/responses.mkfifo'
+        assert find, (find,)
+
+        os.remove(find)
+
+        self.find = ""
 
     def write_text(self, text) -> None:
         """Write Chars out as an indexed Packet that starts with its own Length"""
@@ -4878,6 +4907,9 @@ def turtling_server_attach() -> bool:
     if not reader.find_mkfifo_once_if(pid="*"):
         return False  # Turtling Server not-found
     assert reader.pid >= 0, (reader.pid,)
+
+    os_pid = os.getpid()
+    assert reader.pid != os_pid, (reader.pid, os_pid)
 
     pid = reader.pid
 
