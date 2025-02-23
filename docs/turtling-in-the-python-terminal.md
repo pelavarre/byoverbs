@@ -1873,23 +1873,25 @@ to mean a Square of 10 Pixels per Side
 
 # Pixel by pixel, in color
 
-We're up playing with a new idea in Auto-Completion
+We're up playing with a new idea in Auto-Completion, a kind of Rainbow Ink
 
-Here's a way of drawing Line Segments in which every few Pixels change color
+We've got this way of drawing Line Segments in which every few Pixels change color
 
     relaunch
 
-    setpencolor_colors = [ "FF0000", "FF0000", "FF7F00", "FF7F00", "CCCC00", "CCCC00", "00FF00", "00FF00", "0000FF", "0000FF", "330099", "330099", "9900CC", "9900CC", "9900CC"]
+    setpencolor_colors = [ "9900CC", "9900CC", "330099", "330099", "0000FF", "0000FF", "00FF00", "00FF00", "CCCC00", "CCCC00", "FF7F00", "FF7F00", "FF0000", "FF0000" ]
 
-    fd 120
+    fd 130
+
+    setpencolor_colors = [ "FF0000", "FF7F00", "FF7F00", "CCCC00", "CCCC00", "00FF00", "00FF00", "0000FF", "0000FF", "330099", "330099", "9900CC", "9900CC", "FF0000" ]
 
     rt 135
-    fd 240
+    fd 170
 
     del setpencolor_colors
 
 Maybe looking for more symmetries in this kind of Drawing
-could persuade us to change what exactly we mean by Forward 120 and Forward 240
+could persuade us to change what exactly we mean by Forward 120, Forward 240, and Right 135
 
 
 #### Auto-correct 24-Bit Html Colors
@@ -1950,6 +1952,14 @@ undoing your last choice, and then the choice before that, and so on
 
 
 ### Easy Bugs
+
+
+#### Separate talk of "🐢" and "?"
+
+The gCloud Shells blur the "🐢" and "?" together in the Chat Pane.
+We can workaround that, make them come out properly separated, as they do here =>
+
+    🐢?
 
 
 #### 8-bit Color Welcome should settle for always only Html Triple Hex else Octal
