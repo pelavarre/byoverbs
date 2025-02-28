@@ -25,6 +25,18 @@ same bug
 pq dent
 could be pq dent |pq rstrip
 
+cal.py --yolo
+could hold the keyboard, looking for Q vs up/down to offer more
+and before that, it could compose the next and previous lines
++ cal -m 10 2024
++ cal -m 11 2024
++ cal -m 12 2024
+...
++ cal -m 4 2025
++ cal -m 5 2025
++ cal -m 6 2025
+
+
 ## Copied from
 
 Posted as:  https://github.com/pelavarre/byoverbs/blob/main/futures.md<br>
