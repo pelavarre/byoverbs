@@ -102,14 +102,16 @@ And two Terminal Window Panes of
 
     python3 <(curl -Ss https://raw.githubusercontent.com/pelavarre/byoverbs/refs/heads/main/bin/turtling.py) --yolo
 
-You can get your second Terminal Window Pane from
-the gCloud Shell TMux Keyboard Shortcut ⌃B ⇧%
-that means Add Pane > Insert Right
+You can get your second Terminal Window Pane easy quick somewhere.
+Like you can get your second Pane inside of a gCloud Shell
+from the Keyboard Shortcut ⌃B ⇧% of the TMux tradition.
+ReplIt speaks this idea as Add Pane > Insert Right.
+macOS speaks this idea as Terminal > Shell > New Window
 
 
 ## Welcome
 
-Welcome to our Game
+Welcome to our Turtling Game
 
 **Four Steps** =>
 
@@ -123,15 +125,21 @@ You need one for Turtles to draw things, and one for you to chat with the Turtle
 We'll talk of your two Panes,
 and you'll know if you find two Panes in one Tab, or in two Tabs, or in two Windows
 
+You may already know about Turtles or Cursors or Sprites.
+These words are technically different names for pretty much the same idea:
+a thing you tell to move around the two or three or four dimensions
+of a Terminal Window Tab Pane on your Screen
+
 
 #### Windows
 
 
-If you have a Windows Terminal Shell, then please do test our Code.
+If you have Microsoft Windows, then please do test our Code.
 Microsoft Licensing locks us out of learning to work with their Code,
 same as they lock out most people.
 But your Windows could soon start working too,
-if you talk with us about how it's going
+if you talk with us about how it's going.
+Turtling won't become a Battery Included of Python till we make Windows work too
 
 
 #### macOS
@@ -139,7 +147,7 @@ if you talk with us about how it's going
 If you have a macOS Terminal, then you're already running our Code like we do.
 But you'll have to upgrade to a 2021 Python 3.10 or newer,
 else ask us to backport our Code farther into the past.
-Apple's Licenses run sharper than Microsoft's, but I've got one for me
+Apple's Licenses run sharper than Microsoft's, but I've got a MacBook for me
 
 
 #### Linux
@@ -147,17 +155,17 @@ Apple's Licenses run sharper than Microsoft's, but I've got one for me
 If you feel you don't have a Linux Terminal with a modern Python inside, actually you do
 
 
-##### gCloud Browser Linux, or Sh TMux
+##### gCloud Browser Linux Shell
 
-You can run the 4+ GB Terminal gCloud Linux Terminal Shell
+You can run the 4+ GB Terminal gCloud Linux Shell
 that your gMail gives you free-of-charge at
 
 > https://shell.cloud.google.com/?show=terminal
 
-Google gives out one Linux Terminal Shell Window per Browser.
+Google gives out one Linux Shell Window per Browser.
 And they keep it current, like giving you 2023 Python 3.12 in 2025
 
-Notes =>
+Four Notes =>
 
 1
 
@@ -176,10 +184,11 @@ Every so often Google pops up and yammers at you
 > Click Authorize to grant permission to this and future calls<br>
 > &lt;Reject&gt; &lt;Authorize&gt;<br>
 
-I have no idea what this means, nor do I know when and why it comes at you.
-I shrug, I click through, I move on,
-for I do remember the Infinite Scroll of Apple iTunes' Terms and Conditions.
-I do hope such casual ignorant choices never do come to hurt you or me
+I have no idea what this means, nor do I know when and why it comes at you
+
+I shrug, I click through, I move on.
+I do also remember the Infinite Scroll of Apple iTunes Terms-and-Conditions.
+I do hope such casual ignorant click-through choices never do come to hurt you or me
 
 3
 
@@ -196,12 +205,13 @@ After you add a Pane, then
 ⌃B ← and ⌃B ↑ and ⌃B → and ⌃B ↓ is how you move your Cursor between Panes.
 
 These Keyboard Shortcuts first appeared inside the TMux Add-On for Linux Terminals,
-but the gCloud Linux Terminal Shell installs these Keyboard Shortcuts by default.
-Like you have to press ⌃B ⌃B twice to get Vi to know you want to page back
+but the gCloud Linux Shell installs
+these Keyboard Shortcuts of the TMux tradition by default.
+Like you have to press ⌃B ⌃B twice to get Vi to hear you say you want Vi to page back
 
-3
+4
 
-Apple speaks of Modifier Key Caps with the ⎋ ⌃ ⌥ ⇧ ⌘ notation
+We speaks of Modifier Key Caps with the ⎋ ⌃ ⌥ ⇧ ⌘ notation, same as Apple does
 
 | Modifier Key | Name |
 |-----|------|
@@ -211,37 +221,43 @@ Apple speaks of Modifier Key Caps with the ⎋ ⌃ ⌥ ⇧ ⌘ notation
 | ⇧ | shift |
 | ⌘ | command |
 
-When searching texts, you have to struggle.
-You have to distinguish
-U+005E ^ Circumflex-Accent from U+2303 ⌃ Up-Arrowhead.
-People differ over which punctuation mark to speak
+So when searching different texts from random people, you'll have to struggle.
+You'll have to learn to distinguish
+U+005E ^ Circumflex-Accent from U+2303 ⌃ Up-Arrowhead, often enough.
+People differ over which of these two punctuation marks to speak
 to mean the Modifier Key labeled as "Control" or "Ctrl" and so on
-And Gnu·Org pushes a tradition that speaks of ⇧S as 'S' and S as 's'.
+
+Similarly, the Emacs people push a tradition that speaks of ⇧S as 'S' and S as 's'.
 This push from last century still causes confusion today.
-As a reader, when they say 'S', you can't know if they meant
-the ⇧S two-Key Chord or the S single Keystroke
+As a reader, when they say S, you can't know if they meant
+the ⇧S two-Key Chord or the S single Keystroke.
+When it's us speaking like Apple speaks, then S means S and ⇧S means ⇧S
 
 
-##### replIt Browser Linux
+##### replIt Browser Linux Shell
 
 The replIt·Com Startup will lend you a Linux Terminal,
 if you give them an email address.
 And they keep it current, like lending you 2022 Python 3.11 in 2025.
 
 But they soon stop you playing.
-They pop suddenly, and demand you pay like US$180/year.
-They trip you up like this after you leave a Terminal of theirs open for like 10 Hours
+They pop up suddenly, and demand you pay like US$180/year.
+They trip you up like this after you leave a Terminal of theirs open for like 10 Hours,
+which they count down on some secret hidden clock of theirs
 
-They calm down and let you back in again after like a month, people tell me.
-Specifically, what Perplexity·Ai told me this in February, 2025, when I asked:
-How quickly does replIt·Com hit you with "You've used up all your Development time"?
-I haven't tested this claim.
+They'll calm down and let you back in again after like a month, random people tell me.
+Specifically, Perplexity·Ai told me this in February, 2025, when I asked:
+How quickly does replIt Shell hit you with "You've used up all your Development time"?
+
+Myself, I haven't yet seen Perplexity·Ai let me back in,
+except when I resort to registering a different email address.
 The replIt people don't make it reasonably easy to keep track of what deal they're offering
 
-The replIt people don't accurately measure if you're around or not.
+And these replIt people don't accurately measure if you're around or not.
 Maybe you're typing on the Keyboard and moving and clicking the Mouse, maybe you're not.
 Even when not,
-if you have one accident of leaving a Process running then you're done for the month
+if you have one accident of leaving a Process running then you're done for the month.
+Thanks for playing
 
 The replIt people also radically change how their Panes work, from time to time.
 Presently, in February of 2025,
@@ -253,13 +269,13 @@ you have to search farther to find
 
 ##### Sh Screen
 
-If you have Sh Screen and a Linux Terminal Window,
-then you can add a Vertical Split much as you do in gCloud Shell or Sh TMux,
+If you have Sh Screen and a Linux Terminal Window, in place of Sh TMux,
+then you can add a Vertical Split much as you do in gCloud Shell,
 just with different Keyboard Shortcuts
 
 | Key Chord Sequence | Meaning |
 |--------------------|---------|
-| ⌃A ⇧| | Add Pane > Insert Right |
+| ⌃A ⇧\| | Add Pane > Insert Right |
 | ⌃A ⇧S | Add Pane > Insert Down |
 | ⌃A Tab | Move Cursor into Next Pane |
 | ⌃A C | Launch a Shell in New Pane |
@@ -296,7 +312,7 @@ you tell our Code to move Turtles around and draw things on the Terminal Screen
 
     python3 turtling.py --yolo
 
-First up, it'll tell you something like
+First up, our Code will tell you something like
 > Drawing until you press ⌃\ here<br>
 
 
@@ -307,20 +323,20 @@ you tell our Code to find the Turtles in your Drawing Pane and chat with you abo
 
     python3 turtling.py -i
 
-First up, our Code will tell you something like
+In this second Pane, our Code will tell you something like
 > BYO Turtling·Py 2025.2.18<br>
-> Chatting with you, till you say:  bye<br>
+> Chatting with you, till you say:&nbsp; bye<br>
 
 You type out Logo or Python Instructions for your Turtles.
 Or you copy-paste Instructions in from somewhere else.
 
-Our Code takes any brief Logo Instructions you type,
+Our Code takes any brief Logo Instructions you type or paste,
 and fills them out ("auto-completes" them)
 to form Python Instructions, all carefully spelled and punctuated
 
 Our Code then has only Python Instructions to deal with.
 It forwards the Python into the Turtles of the Pane you opened for Drawing.
-The Turtles there then follow your Instructions.
+The Turtles out there then follow your Instructions.
 They move around and draw things and beep at you
 
 This Doc walks you through fun tests of such Turtle Instructions
@@ -328,12 +344,18 @@ This Doc walks you through fun tests of such Turtle Instructions
 
 ### You can start over expertly
 
+With practice, you can start over more and more easily and quickly
+
+Three Notes =>
+
 1
 
 If you want just one step to remember, you can
 tell the Shells in both of your Terminal Window Tab Panes
 to start up in the same way.
-You always just say:&nbsp; `./turtling.py --yolo`
+You don't bother with "-i".
+You don't bother to make one Pane different from another.
+You just always say:&nbsp; `./turtling.py --yolo`
 
 The second Pane figures out it arrived in second place
 and runs as a Chat Pane, not as a Drawing Pane
@@ -348,8 +370,8 @@ If you do try to run our Game from a different Folder, you'll see it say somethi
 
 3
 
-While your Internet connection is strong & inexpensive,
-a way to tell Sh to run just our latest Code is
+While your Internet connection is like WiFi -- strong & inexpensive --
+then a one-step way to tell Sh to run just our latest Code is
 
     python3 <(curl -Ss https://raw.githubusercontent.com/pelavarre/byoverbs/refs/heads/main/bin/turtling.py) --yolo
 
@@ -358,7 +380,7 @@ Bash understands this syntax, Zsh understands this syntax, Dash will say Syntax 
 
 ### You can quit for now and start back up again later
 
-When you're done playing, you can always just shut the Windows
+When you're done playing, you can always just shut your Terminal Window Tab Panes
 
 If you just shut Browser Windows, then that works fine.
 But if you just shut Terminal Windows,
@@ -368,7 +390,10 @@ Expert Shell people can work out
 combinations of 'pwd' and 'cd' and 'ps aux |grep -i Turtl' and 'kill -9'
 that will let you play again without restarting your Op Sys
 
-### Please believe we've gone wrong
+<!-- mmm, maybe just shut Browser Windows isn't totally reliable either? -->
+
+
+### Please believe we've gone wrong on you
 
 You're meeting with us here in our early days.
 If you quit reading before we stop talking at you, then we've gone wrong,
@@ -385,27 +410,33 @@ Try telling the Chat to
 
     fd
 
-Our Code will guess
-you typed that Logo Instruction to mean the Python Instructon 't.forward(100)'.
-So we type out that Python Instruction for you,
-carefully spelled and punctuated, as you can see.
-You can type 'forward' to mean the same thing
+Our Code will answer back,
+carefully spelling and punctuating the Python Instruction 't.forward(100)'.
+It's showing you that it guessed you typed out your abbreviated Logo FD Instruction
+to mean just this
+
+You can also type 'forward' to mean the same thing
 
     forward
 
-Over inside your Turtle's Tab or Window,
-you can see it drew a Line of 11 Squares for you.
+Inside the Chat Pane, you can see that FD and FORWARD mean the same thing.
+They both turn into exactly the same Python
+
+And when you send the Forward Instruction to the Drawing Pane from the Chat Pane,
+then you can see your first main Turtle over there drew a Line of 11 Squares for you.
 
 Why 11 and not 10?
 Well, I'm not sure about that.
 You're meeting with us here in our early days.
 We're still figuring out what it means to turtle well
 
-You can type out the full Python yourself if you want:
+You can type out all of the Python yourself if you want:
 
     import turtling
     t = turtling.Turtle()
     t.forward(100)
+
+But I practically never bother. I let our Code type all that out for me
 
 Note: We define 'import turtling'.
 The people at Python·Org and at PyPi·Org define only 'import turtle'
@@ -420,7 +451,7 @@ Try
     relaunch
     fd 100 rt 120  fd 100 rt 120  fd 100 rt 120
 
-You'll see your Turtle drew a Triangle. Something like
+You'll see your Turtle drew a Triangle. Something much like
 
     ██
     ██████
@@ -469,44 +500,48 @@ our Triangles pointing left and right
 #### Terminal Window Shape, Size, Darkmode and Lightmode
 
 We rely on you to make your own Terminal Windows, Tabs, & Panes.
-So you make many choices for us
+So you're making many presentation style choices for us
 
 You chose your Shape of Window for us.
 Turtle Logo's disagree over whether
 to draw in a Landscape, Portrait, or Square Window.
 You choose your Size of Window for us.
 Turtle Logo's disagree over how large to make the Window.
-You choose Lightmode or Darkmode
+You choose Lightmode or Darkmode.
+Turtle Logo's disagree over which should exist and which should be the default
 
 Turtle Logo's disagree over whether
 to draw Dark Pixels on a Lightmode Canvas, or
 to draw Light Pixels on a Darkmode Canvas.
 In particular, the 2024 Python Import Turtle forces Lightmode,
-even when clashing with the Darkmode's of replIt or macOS
-And it often declines to run altogether at the gCloud Terminal Shell
+even when clashing with the Darkmode's of replIt or macOS.
+And the 2024 Python Import Turtle
+runs at macOS Shell or replIt Shell, but often declines to run at gCloud Shell
 
 Me, lately I mostly test Screens of
 101 Columns and 42 Rows of Andale Mono 18
 in the Lightmode Basic Profile of the macOS Terminal App in Oct/2024 Sequoia macOS 15.
 I've also sent out some Screenshots from the Darkmode Homebrew Profile.
-I'd guess most of you are working inside a free gCloud Terminal Shell.
-I've also seen replIt Terminal Shells work.
+I'd guess most of you are working inside the Darkmode of a free gCloud Shell.
+I've also seen replIt Shells work.
 I haven't tested macOS Ghostty, nor macOS iTerm2 either,
-nor any of the Terminal Apps of Linux and Windows
+nor any of the Terminal Apps of Linux and Windows.
+But I'd be curious to hear how well our Turtle Logo works for you out there
 
-I'd love to see screenshots or video of how well the Turtle Logos work for you,
-on the Terminals you choose to test.
-I've posted mine into LinkedIn, Mastodon, and Twitter.
-I can send you copies. We can trade
+Send us copies posted as docs or screenshots or video?
+I've posted copies of what I see here into LinkedIn, Mastodon, and Twitter.
+We can trade
 
 
 #### Terminal Window Font Size & Font Choice
 
-You choose your Font Size and Font Choice inside your Terminal Shell
+You choose your Font Size and Font Choice inside your Shell
 
-The macOS Apple Safari Browser and the macOS Google Chrome Browser
-will change how large your Font Size looks to you,
-as will the macOS Terminal
+You can tell
+the macOS Apple Safari Browser and the macOS Google Chrome Browser
+to change how large your Font Size looks to you.
+And you can tell the macOS Terminal.
+All of them in the same way =>
 
 | Key Chord Sequence | Meaning |
 |--------------------|---------|
@@ -518,30 +553,31 @@ At macOS and replIt, you can have two Windows,
 so there you can choose very different Fonts
 for your Drawing Window Tab Pane and your Window Tab Chat Pane,
 while you visit your Terminal Settings > Profiles > Text Font.
-The gCloud Shell is much less flexible, so far as we know.
+The gCloud Shell is much less flexible, so far as we know: just one Font Size per Browser.
 There, you must choose the same Font Choices and the same Font Size
 for both your Drawing Pane and your Chat Pane.
 The replIt Shell can be persuaded to run in two Browser Windows,
 so it can be as flexible as macOS,
 but it's more naturally as rigid as a gCloud Shell,
-that's the experience you more get by default there
+two Panes of the same Font Size is the experience you more get by default there
 
 
 #### Terminal Pixel Shape & Ink
 
-We first choose the Pixel you draw with,
-you can quickly & simply come back and tell us draw with some other Pixel instead.
-after you more know what's going on
+We choose a Pixel for you to draw with.
+You can tell us draw with some other Pixel instead,
+after you more know what's going on.
 "SetPenPunch" is our secret word for talking of drawing with some other Pixel instead,
 if you want to search ahead inside this Doc
 
 Presently we start out by guessing
-you want a Square pair of U+2588 Full-Block █ █ Characters.
-Lotsa of Terminal Fonts disagree over how to draw a U+2588 Full-Block █ Character.
+you want a Square pair of U+2588 Full-Block █ █ Characters
+
+Lots of Terminal Fonts disagree over how to draw a U+2588 Full-Block █ Character.
 Many Fonts agree Full-Block means paint the full horizontal width,
 but lots of Terminal Fonts disagree over how much of the vertical height to paint over.
 I've not yet found a Font that always says Full-Block should paint the full vertical height.
-Except the default Font at replIt does paint the full vertical height
+Except the default Font at replIt Shell does paint the full vertical height
 
 
 ### Draw a Huge Square
@@ -599,16 +635,33 @@ bin/turtling.py --yolo  # todo: some way to say run to draw & edit, never to cha
 
 Draw Tina's Giraffe, first drawn by Tina of Monterey
 
+<!-- Earlier Code which digs down into the deeper magic of Write
+
     relaunch
-    penup home pendown
+    setpc red
+    penup  home  pendown
     rt 270  fd  lt 90  fd
-    penup home pendown  write '█'
+    penup  home  pendown  write '█'
     bk 100
-    penup home pendown  write '█'
+    penup  home  pendown  write '█'
     rt 45  fd 100
     seth 0  rt 90  fd 30
-    penup home
-    fd 10  write '   █'
+    penup  home
+    restart tada
+
+Followed by Later Code which digs down into the deeper magic of non-integral X Coordinates
+
+-->
+
+    relaunch
+    penup  home  pendown
+    rt 270  fd  lt 90  fd
+    penup  home  pendown  rt 90  fd 3  fd 0  lt 90
+    bk 100
+    penup  home  pendown  rt 90  fd 3  fd 0  lt 90
+    rt 45  fd 100
+    seth 0  rt 90  fd 30
+    penup  home
     restart tada
 
 
@@ -619,7 +672,7 @@ Our Turtle is too easy to lose
 Sometimes it's the same Color as the Background of the Screen,
 or the same Color as your Drawing in the Foreground,
 or you turned it off with HideTurtle or Tada,
-or you turned it off with gCloud Terminal Shell TMux ⌃B and a ← ↑ → ↓ Arrow Key,
+or you turned it off with gCloud Shell TMux ⌃B and a ← ↑ → ↓ Arrow Key,
 or you didn't turn it back on with ShowTurtle
 
 To get the Turtle to blink on and off,
@@ -738,11 +791,12 @@ Wikipedia > [Sierpiński triangle](https://en.wikipedia.org/wiki/Sierpi%C5%84ski
 
 #### Hello Color World
 
-To show you can draw Words in Color, try
+You can draw Words in Color.
+Like here is Bright Green Text on Dark Black
 
     Relaunch
     PenUp  SetXY -120 120  PenDown
-    SetPenColor "FF0000"
+    SetPenColor "00FF00"
     SetPenHighlight "000000"
     Right 90
     Label "                       "
@@ -758,9 +812,7 @@ To show you can draw Words in Color, try
 
 Terminal Shells disagree over how many Colors to give you
 
-Our Color Test here draws a drawing that gives you an idea of what you've got.
-Our [demos/mtm-titlecard.logo](../demos/mtm-titlecard.logo) Logo Script
-shows off a wider variety of Colors, not so much focused on just Red, Green, Blue, & White
+Our Color Test here draws a drawing that gives you an idea of what you've got
 
 People made & sold Terminals in the 1970's and 1980's without much forethought.
 They competed so fiercely, in such a rush, that they ended up
@@ -804,6 +856,10 @@ Try running our Color Test
 
 Our Color Test here tries out all Five Ways of speaking of Terminal Color
 
+Our [demos/mtm-titlecard.logo](../demos/mtm-titlecard.logo) Logo Script
+shows off a wider variety of Color Codes,
+not so much focused on just Red, Green, Blue, & White
+
 <!--
 
 There are also many more,
@@ -826,7 +882,7 @@ But we fixed it a week later. : -)
 
 -->
 
-This drawing comes out differently on different Terminals.
+Our Color Test comes out differently on different Terminals.
 Because the people who make the Terminals have been arguing for fifty years,
 without talking well enough
 to come into full agreement about which Color Code means which Color.
@@ -840,13 +896,18 @@ like we could draw out examples of Terminal Color Palettes
 that look like the Wikipedia ANSI Escape Codes,
 or the Hue/ Saturation/ Brightness Sliders of MIT Scratch Logo
 
+We've made a start at this with
+our [demos/wikipedia-colors.logo](../demos/wikipedia-colors.logo) Logo Script
+
+
+### Color Test Results
+
 
 #### Terminal Shell Colors at gCloud Terminal Shell
 
 When you run our Color Test in a gCloud Terminal Shell,
 they give you 1 Red, 2 Green's, and 2'Blue's.
-Who knows why
-
+Who knows why.
 All the same, you can search through their 8-Bit Colors,
 or through their 24-Bit Colors,
 till you find the Color Palette you need
@@ -857,8 +918,8 @@ till you find the Color Palette you need
 When you run our Color Test in a replIt Terminal,
 they give you 3 Red's, 3 Green's, and 3 Blue's.
 In this way, they make it easy to guess
-which 8-Bit Colors are the same as which 24-Bit Colors
-
+which 8-Bit Colors are the same as which 24-Bit Colors.
+Same bottom line.
 You can search through their 8-Bit Colors,
 or through their 24-Bit Colors,
 till you find the Color Palette you need
@@ -908,6 +969,13 @@ At macOS, you'll settle for the closest 8-Bit Color
     Restart  Right 160  SetPenColor "4000C0"    Forward  # settle for closest
 
     Restart Tada
+
+<!--
+
+At macOS, this last Logo Script above does make two Red's, two Green's, and two Blue's.
+We could work on the English till that result is less of a surprise
+
+-->
 
 <!--
 
@@ -1098,7 +1166,7 @@ When you learn to type the ⎋ Esc Key, then
 you can try feeding more of the Keyboard into the Screen.
 These can work, but they're more difficult to make work.
 For these to work,
-you have to type each Key in less than 1 Second after the previous Key
+you have to type each Key Chord in less than 1 Second after the previous Key Chord
 
 | Key Chord | Name | Meaning |
 |-----------|------------|---------|
@@ -1200,16 +1268,40 @@ just to make our Turtle Logo look & feel alike in more places
 ## We can just try things together
 
 Could our Game ever earn a place alongside /usr/games/wump in Linux?
-Could our Game Engine become the standard Engine to fall back on,
+Could our Game Engine become the standard Turtling Engine for Python folk to fall back on,
 when complexities of TkInter blocks 'import turtle' from working?
 
 Those would be fun stunts. Want to help us get there?
 
 
+### Asking for help can hurt you
+
+Asking for help can damage your Drawing on Screen,
+so don't ask until you're ok with that limitation.
+Last I checked, gCloud Shell and reoplIt Shell were great about this,
+saving your Drawing before showing you Help Lines in place of the Drawing
+
+At gCloud Shell,
+Press ⌃B ← to get your Terminal Cursor into the Drawing Pane,
+press Q to get your Drawing back,
+press ⌃B → to move your Terminal Cursor back into the Chat Pane,
+be happy.
+
+At repliIt Shell, same good deal,
+but you click your Mouse to move your Terminal Cursor
+to the Drawing Pane or back to the Chat Pane
+
+At macOS Shell, life is not so good.
+Asking for help damages your Drawing Pane,
+and there's no undoing the damage.
+You have to make a copy of your Drawing before you damage it
+
+
 ### Glance through the Help Texts
 
 Asking for help can damage your Drawing on Screen,
-so don't ask until you're ok with that limitation
+so don't ask until you're ok with that limitation.
+Details above
 
 To see all our Turtle Verbs listed, try
 
@@ -1239,22 +1331,27 @@ and Write
 It suggest you try speaking the Nouns it knows:
 glass_teletype, heading, hiding,
 namespace, penmark, penscapes, rest, warping, xfloat, xscale, yfloat, yscale.
-These kind of do work if you mark them up with a 't.' in front
+These Nouns kind of do work if you mark them up with a 't.' in front
 
     t.xfloat, t.yfloat
 
 These Nouns let you peek at the internal details of the Turtle.
-How they work might change a lot, as we keep developing our idea of how to turtle well
+How they work might change a lot,
+as we keep on rapidly developing our idea of how to turtle well
 
-A quicker way to see all this suggested more briefly is
+A quicker way to see all these Verbs and Nouns suggested more briefly is
 
     dir(t)
+
+And asking for that kind of help should all come just into the Chat Pane,
+not jumping over into the Drawing Pane to damage your Drawing there
 
 Try
 
     help(t.forward)
 
-You'll see Python telling you that our Forward Verb takes a Keyword Argument named:  distance
+You'll see Python telling your Drawing Pane
+that our Forward Verb takes a Keyword Argument named:  distance
 
 <!-- FIXME: help(t) also lists the Fields of t -->
 <!-- FIXME: Help doesn't cite itself as a choice -->
@@ -1284,7 +1381,7 @@ Like so =>
 > This is vastly superior to them taking an answer at face-value, with no depth or nuance,
 > in a way that can be worse than having no answer at all
 >
-> ~ Twitter > Visakan Veerasamy (@visakanv),
+> ~ Twitter > Visakan Veerasamy (@visakanv), 12/Jan/2025
 
 And before him
 
@@ -1368,11 +1465,6 @@ To undo your choices of alt defaults, you can try
 These works of Dir and Del and Locals and so on
 are standard, arcane, intricate Python ways of speaking.
 They work without us pouring any special effort into making them work
-
-I'd guess I'll soon make lots of the defaults cyclic.
-Like when you ask for SetPenColor None then we'll give you back how we started,
-but every time you ask for SetPenColor without picking a Color,
-then we give you the next Color of the Rainbow
 
 
 ### Paste whole Files of Input
@@ -1463,20 +1555,26 @@ We let you type out more or less arguments as you please
 
 You can also type out the raw Python to draw this same Pentagon
 
-    relaunch
+    t.relaunch()
     count = 5
     for _ in range(count): t.forward(100); t.right(360 / count)
+    del count
 
 <!--  pu  setxy -250 -10  pd  -->
 
 You hit the edges of the Screen and distort the drawing, when you make it too large.
 Like when you're drawing on the 101x42 Columns and Rows of my Terminal,
-it'll be too large if you choose a Repeat_Count of 8 or more,
+it'll be too large if you choose a Repeat_Count of 9 or more,
 or if you choose a Forward_Distance of 153 or more
 
-    relaunch  rep 8
+    relaunch  rep 9
 
     relaunch  rep 5 360 160
+
+Often you can notice the distortion visually.
+Always you can look for the "Note: Snap" Messages
+coming into the Chat Pane to tell you we tried to make the moves you called for,
+but then they didn't fit
 
 Turtle Logo's disagree over how to move and draw across the edges of the Screen
 
@@ -1489,13 +1587,7 @@ That way, you can draw Count as large as 10 in my Terminal today
 
     rep 10
 
-If you watch for it, you can see
-our Chat Window prints "Snap" Messages when your drawing grows too large,
-such that we clip and distort it
-
-    rep 11
-
-For such Messages coming back from the Turtle to make the most sense,
+For the "Note: Snap" Messages coming back from the Turtle to make the most sense,
 you'll want to see them in real-time.
 If you try 'sleep 0' after you press Return, before the Count = and For,
 then you'll see the Note on you having pressed Return pops up then.
@@ -1507,7 +1599,7 @@ by sleeping as long as the last 🐢 SetHertz said to sleep
 ### Help sort our Wish List
 
 Have you found a deal-breaker that's shutting you out somehow,
-stopping you from playing this Game some more?
+stopping you from playing our Turtling Game some more?
 
 Tell us what it is?
 
@@ -1541,7 +1633,7 @@ Our Turtle Logo App here is thousands of lines large.
 It's large enough that it gives
 its own kind of a tour of the Standard Python Library.
 
-It mixes together 28 Python Imports
+It mixes together like 28 Python Imports
 
 ### 25 Cross-Platform Python Imports
 
@@ -1589,6 +1681,10 @@ We've got nobody testing Microsoft Windows, but you could change that
 
 #### Breakpoint the Drawing Window
 
+Caution: Hey, this part doesn't work.
+We need to think about this some more.
+Please feel free to mention it to us
+
 To halt the Drawing and open it up inside the Pdb Python Debugger, try
 
     🐢? breakpoint
@@ -1615,7 +1711,8 @@ which is practically never what you want
 
 #### Breakpoint the Chat
 
-Caution: Hey, this doesn't work. Too many people want ⌃C to mean ⌘C Edit > Copy.
+Caution: Hey, this part doesn't work.
+Too many people want ⌃C to mean ⌘C Edit > Copy.
 We need to think about this some.
 Please feel free to mention it to us
 
@@ -1907,6 +2004,8 @@ We should come clean that up.
 Always let you say FF0000 and 000000 and 00FF00 without Quotes.
 Always let you say #FF0000 and #000000 and #00FF00 with a # Comment afterwards
 
+<!-- Confusing to demo a PenHighlight with a Full-Block SetPenColor ignoring it? -->
+
 
 #### More than Two Processes
 
@@ -1970,7 +2069,7 @@ encoding 8-bit Terminal Shell Color as only Html Triple Hex else Octal.
 Still a mess, but something less of a mess
 
 
-#### Press begun, but nothing like finished
+#### Turtle Press begun, but nothing like finished
 
 Presently ...
 
