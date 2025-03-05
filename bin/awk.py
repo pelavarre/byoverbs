@@ -38,7 +38,7 @@ examples:
   seq 20 |awk '!(NR%2){print o, $0} {o=$0}'  # print 1 2, 3 4, ... paired
   seq 20 |awk '!f{f=1;print} {o=$0} END{if (NR > 1) {print "..."; print o}}'  # first, sep, last
 
-  find * |awk -F/ -vOFS=/ '{$NF=""; print}' |sort |uniq |grep   # dirs not empty/hidden
+  find * |awk -F/ -vOFS=/ '{$NF=""; print}' |sort |uniq  # dirs not empty/hidden
 
   A='{if (k!=$1) {print ""; print $1":"; k = $1}; gsub(/^[^:]*:/, ""); print "   ", $0}'
   alias -- --a="awk -F: '$A'"

@@ -5,6 +5,12 @@ What works for me is that first, I chat with you a bit, over at README·Md, calm
 But by the day, I stream insights in real-time in here at Futures·Md, as they bubble up out of my brain.
 Solutions I more drop into Scraps·Txt
 
+## Mar/2025
+
+turtling: Draw the text on highlights of the Comaford Emotion Wheel
+turtling: Draw electronic circuits
+turtling: Draw the game of marbles
+
 ## Jan/2025
 
 pq
