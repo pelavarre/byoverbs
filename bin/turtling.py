@@ -1495,7 +1495,7 @@ class GlassTeletype:
         (y_row, x_column) = st.row_y_column_x_read(timeout=0)
         return (y_row, x_column)
 
-    def os_terminal_y_rows_x_columns(self) -> tuple[int, int]:
+    def os_terminal_y_count_x_count(self) -> tuple[int, int]:
         st = self.str_terminal
         (y_count, x_count) = st.y_count_x_count_read(timeout=0)
         return (y_count, x_count)
@@ -1768,7 +1768,7 @@ class Turtle:
 
         gt = self.glass_teletype
 
-        (y_count, x_count) = gt.os_terminal_y_rows_x_columns()
+        (y_count, x_count) = gt.os_terminal_y_count_x_count()
         assert y_count >= 4, (y_count,)
 
         y = y_count - 3
@@ -1810,7 +1810,7 @@ class Turtle:
 
         gt = self.glass_teletype
 
-        (y_count, x_count) = gt.os_terminal_y_rows_x_columns()
+        (y_count, x_count) = gt.os_terminal_y_count_x_count()
         center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
         center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
 
@@ -3105,30 +3105,34 @@ class Turtle:
             pn = int(2 * (x - wx))  # doublewide X
             # gt.notes.append(f"{pn=} C")
             assert pn >= 1, (pn,)
-            x_text = f"\x1B[{pn}C"  # CSI 04/03 Cursor [Forward] Right
+            x_ctext = f"\x1B[{pn}C"  # CSI 04/03 Cursor [Forward] Right
         elif wx > x:
             pn = int(2 * (wx - x))  # doublewide X
             # gt.notes.append(f"{pn=} D")
-            x_text = f"\x1B[{pn}D"  # CSI 04/04 Cursor [Backward] Left
+            x_ctext = f"\x1B[{pn}D"  # CSI 04/04 Cursor [Backward] Left
         else:
-            x_text = ""
+            x_ctext = ""
 
         if wy < y:
             pn = int(y - wy)
             # gt.notes.append(f"{pn=} B")
             assert pn >= 1, (pn,)
-            y_text = f"\x1B[{pn}B"  # CSI 04/02 Cursor [Down] Next
+            y_ctext = f"\x1B[{pn}B"  # CSI 04/02 Cursor [Down] Next
         elif wy > y:
             pn = int(wy - y)
             # gt.notes.append(f"{pn=} A")
             assert pn >= 1, (pn,)
-            y_text = f"\x1B[{pn}A"  # CSI 04/01 Cursor [Up] Previous
+            y_ctext = f"\x1B[{pn}A"  # CSI 04/01 Cursor [Up] Previous
         else:
-            y_text = ""
+            y_ctext = ""
 
         # Do the Jump
 
-        ctext = f"{y_text}{x_text}"
+        ctext = f"{y_ctext}{x_ctext}"
+        if ctext:
+            if platform.system() == "Darwin":
+                ctext = f"\x1B[A\x1B[B{ctext}"  # else macOS leaves thin 1-pixel base lines
+
         gt.schars_write(ctext)
 
     def _punch_or_erase_if_(self) -> None:
@@ -3238,7 +3242,7 @@ class Turtle:
         # counted from an Upper Left (1, 1)
 
         (y_row, x_column) = gt.os_terminal_y_row_x_column()
-        (y_count, x_count) = gt.os_terminal_y_rows_x_columns()
+        (y_count, x_count) = gt.os_terminal_y_count_x_count()
 
         center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
         center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
@@ -3508,7 +3512,7 @@ class Turtle:
 
         # Find the Place of this Turtle on Screen
 
-        (y_count, x_count) = gt.os_terminal_y_rows_x_columns()
+        (y_count, x_count) = gt.os_terminal_y_count_x_count()
         center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
         center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
 
@@ -5733,7 +5737,7 @@ class TurtleClient:
 # todo: equilateral small triangles of constant Area across ↑ ← ↓ → keys:  demos/arrow-keys.logo
 #
 #
-# todo: vs macOS Terminal thin grey lines
+# todo: vs macOS Terminal thin grey lines, 1-pixel base lines
 # todo: solve the thin flats left on screen behind:  reset cs pu  sethertz 10 rep 8
 # also differs by Hertz:  reset cs pu  sethertz rep 8
 # also:  sethertz cs pu setxy 250 250  sethertz 100 home
