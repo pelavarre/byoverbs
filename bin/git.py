@@ -44,6 +44,8 @@ git clean -dffxq
 git clean -dffxq -e /env
 
 
+git fetch --prune --prune-tags --force
+
 git tag -l --format='%(taggerdate)  %(refname:short)' 2023.12.15
 git show --no-patch 2025.03.11
 
