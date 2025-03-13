@@ -1037,8 +1037,8 @@ class StrTerminal:
         kbytes = bt.kbytes_pull(timeout=timeout)  # may contain b' ' near to KCAP_SEP
         assert kbytes, (kbytes,)
 
-        kchars = kbytes.decode()  # may raise UnicodeDecodeError
-        kchord = self.kbytes_to_kchord(kbytes)
+        [kchars, kcaps] = self.kbytes_to_kchars_kcaps(kbytes)  # may raise UnicodeDecodeError
+        kchord = (kbytes, kcaps)
 
         self.kchars_snoop_kcpr_if(kchars)
 
@@ -1070,7 +1070,7 @@ class StrTerminal:
 
         return True
 
-    def kbytes_to_kchord(self, kbytes) -> tuple[bytes, str]:
+    def kbytes_to_kchars_kcaps(self, kbytes) -> tuple[str, str]:
         """Choose 1 Key Cap to speak of the Bytes of 1 Key Chord"""
 
         kchars = kbytes.decode()  # may raise UnicodeDecodeError
@@ -1096,7 +1096,7 @@ class StrTerminal:
         assert KCAP_SEP == " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', etc
         assert " " not in kcaps, (kcaps,)
 
-        return (kbytes, kcaps)
+        return (kchars, kcaps)
 
         # '⌃L'  # '⇧Z'
         # '⎋A' from ⌥A while macOS Keyboard > Option as Meta Key
@@ -1190,19 +1190,26 @@ class StrTerminal:
 
         assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
 
-        self.schars_write("\x1B" "[" "6n")
+        # Settle for a stale Sample,
+        # else call for a fresh Sample and block till it comes
 
-        while True:
-            kbytes = bt.kbytes_pull(timeout=timeout)  # may contain b' ' near to KCAP_SEP
-            kchars = kbytes.decode()  # may raise UnicodeDecodeError
-            kchord = self.kbytes_to_kchord(kbytes)
+        if bt.sbytes_list[-1:] != [DSR_6.encode()]:  # todo: looser bt/st coupling
 
-            if self.kchars_snoop_kcpr_if(kchars):
-                break
+            self.schars_write("\x1B" "[" "6n")
 
-            kchords.append(kchord)
+            while True:
+                kbytes = bt.kbytes_pull(timeout=timeout)  # may contain b' ' near to KCAP_SEP
+                [kchars, kcaps] = self.kbytes_to_kchars_kcaps(kbytes)  # may raise UnicodeDecodeError
+                kchord = (kbytes, kcaps)
 
-            # todo: log how rarely KChords wait inside a StrTerminal
+                if self.kchars_snoop_kcpr_if(kchars):
+                    break
+
+                kchords.append(kchord)
+
+                # todo: log how rarely KChords wait inside a StrTerminal
+
+        # Pass back the fresh Sample
 
         row_y = self.row_y
         column_x = self.column_x
@@ -1229,7 +1236,7 @@ class StrTerminal:
 
         return (y_count, x_count)
 
-        # .timeout unneeded when os.get_terminal_size available
+        # .timeout unneeded where os.get_terminal_size available
 
     #
     # Say if writing these Screen Chars as Bytes would show their meaning clearly
