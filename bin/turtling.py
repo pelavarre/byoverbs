@@ -3,23 +3,28 @@
 r"""
 usage: turtling.py [-h] [--version] [--yolo] [--stop] [-i] [-c COMMAND]
 
-draw inside a Terminal Window with Logo Turtles
+draw with Logo Python Turtles on a Terminal Window Tab Pane
 
 options:
   -h, --help  show this message and exit
   --version   show version and exit
-  --yolo      draw inside this pane, else chat inside this pane
-  --stop      send Signal·SigKill to each Turtling·Py Process, as if Sh 'kill -9'
-  -i          chat inside this pane
+  --yolo      draw inside this Pane, else chat inside this Pane
+  --stop      send Signal·SigKill to every Turtling·Py Process, as if Sh 'kill -9'
+  -i          chat inside this Pane
   -c COMMAND  do some things, before quitting if no -i, or before chatting if -i
 
+how to run the freshest Code from the web:
+  python3 <(curl -Ss https://raw.githubusercontent.com/pelavarre/byoverbs/refs/heads/main/bin/turtling.py) --yolo
+
+calls for help:
+  turtling.py  # shows examples
+  turtling.py --  # shorthand for turtling.py --yolo
+  turtling.py --help  # shows this message and exits zero
+
 examples:
-  turtling.py --h  # shows more help and quits
-  turtling.py  # shows some help and quits
-  turtling.py --yolo  # draws inside this pane, else chats inside this pane
-  turtling.py -i  # clears screen, puts down one Turtle, and chats
-  turtling.py -i -c ''  # doesn't clear screen, puts down one Turtle, and chats
-  turtling.py --stop  # sends Signal·SigKill to each Turtling·Py Process, as if Sh 'kill -9'
+  turtling.py --yolo  # draws inside this Pane, else chats inside this Pane
+  turtling.py -i  # clears Pane, puts down one Turtle, and chats
+  turtling.py -i -c ''  # doesn't clear Pane, puts down one Turtle, and chats
 """
 
 # code reviewed by People, Black, Flake8, MyPy, & PyLance-Standard
@@ -58,8 +63,7 @@ import warnings
 # todo: add 'import mscvrt' at Windows
 
 
-turtling = __main__
-__version__ = "2025.2.23"  # Sunday
+__version__ = "2025.3.12"  # Wednesday
 
 _ = dict[str, int] | None  # new since Oct/2021 Python 3.10
 
@@ -70,6 +74,7 @@ Turtle_ = unicodedata.lookup("Turtle")  # 🐢 U+01F422
 
 Plain = "\x1B[" "m"  # Unstyled, uncolored, ...
 Bold = "\x1B[" "1m"
+
 
 COLOR_ACCENTS = (None, 3, 4, 4.6, 8, 24)  # Bits of Terminal Color (4.6 for 25-Step Grayscale)
 
@@ -87,7 +92,6 @@ def main() -> None:
     """Run well from the Sh Command Line, else launch the Pdb Post-Mortem Debugger"""
 
     ns = parse_turtling_py_args_else()  # often prints help & exits
-    assert ns.yolo or ns.i or (ns.c is not None), (ns,)
 
     try:
         main_try(ns)
@@ -119,24 +123,24 @@ def main() -> None:
 def main_try(ns) -> None:
     """Run well from the Sh Command Line, else raise an Exception"""
 
-    assert ns.yolo or ns.i or (ns.c is not None), (ns,)
-
     # Take the Stop Option as Auth to signal each Turtling Process
 
     if ns.stop:
+        assert (not ns.i) and (ns.c is None), (ns.i, ns.c, ns.yolo, ns)
+
         turtling_processes_stop()
         return
 
-    # Take the Yolo Option as Auth to run as the Chat Pane of a Drawing Pane,
-    # else to run as a Drawing Pane
+    # Take the Yolo Option as Auth to run as a Chat Pane of the first Drawing Pane,
+    # else to run as the first Drawing Pane
 
     if ns.yolo:
-        assert (not ns.i) and (not ns.c), (ns.i, ns.c, ns.yolo, ns)
+        assert (not ns.i) and (ns.c is None), (ns.i, ns.c, ns.yolo, ns)
 
-        if turtling_server_attach():
-            turtling_client_run("relaunch")
+        if turtling_draw_find():
+            turtling_chat_run("relaunch")
         else:
-            turtling_server_run()
+            turtling_draw_run()
 
         return
 
@@ -144,13 +148,14 @@ def main_try(ns) -> None:
 
     assert ns.i or (ns.c is not None), (ns,)
 
-    if not turtling_server_attach():
+    if not turtling_draw_find():
         workaround = "Try 'pwd' and 'cd' and 'ps aux |grep -i Turtl' and so on"
+        workaround += ", like via:  python3 turtling.py --stop"
         print(f"No Terminal Window Pane found for drawing. {workaround}", file=sys.stderr)
         sys.exit(1)
 
     command = "relaunch" if (ns.c is None) else ns.c
-    turtling_client_run(command)
+    turtling_chat_run(command)
 
     eprint("Bye bye")
 
@@ -161,11 +166,11 @@ def parse_turtling_py_args_else() -> argparse.Namespace:
     doc = __main__.__doc__
     assert doc, (doc,)
 
-    parser = doc_to_parser(doc, add_help=True, startswith="examples:")
+    parser = doc_to_parser(doc, add_help=True, startswith="how to run")
 
     version_help = "show version and exit"
-    yolo_help = "draw inside this pane, else chat inside this pane"
-    stop_help = "send Signal·SigKill to each Turtling·Py Process, as if Sh 'kill -9'"
+    yolo_help = "draw inside this Pane, else chat inside this pane"
+    stop_help = "send Signal·SigKill to every Turtling·Py Process, as if Sh 'kill -9'"
     i_help = "chat inside this pane"
     c_help = "do some things, before quitting if no -i, or before chatting if -i"
 
@@ -176,21 +181,20 @@ def parse_turtling_py_args_else() -> argparse.Namespace:
     parser.add_argument("-c", metavar="COMMAND", help=c_help)
 
     ns = parse_args_else(parser)  # often prints help & exits
-    commanded = ns.c is not None
 
     if ns.version:
         print(f"BYO Turtling·Py {__version__}")
         sys.exit(0)
 
-    if ns.stop and (ns.yolo or ns.i or commanded):
+    if ns.stop and (ns.yolo or ns.i or (ns.c is not None)):
         print("error: don't choose --stop with --yolo or -i or -c", file=sys.stderr)
         sys.exit(2)  # exits 2 for wrong Sh Args
 
-    if ns.yolo and (ns.i or commanded):
+    if ns.yolo and (ns.i or (ns.c is not None)):
         print("error: don't choose --yolo with -i or -c", file=sys.stderr)
         sys.exit(2)  # exits 2 for wrong Sh Args
 
-    if not (ns.yolo or ns.i or commanded):
+    if (not ns.yolo) and (not ns.i) and (ns.c is None):
         ns.yolo = 1  # replaces  # at ./turtling.py --
 
     return ns
@@ -256,7 +260,7 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 #
 #   macOS Terminals also understand a LIFO Stack of 1 Copy of the Y X Terminal Cursor
 #
-#       FIXME:  ⎋7 cursor-checkpoint  ⎋8 cursor-revert  reverting to Y 1 X 1
+#       ⎋7 cursor-checkpoint  ⎋8 cursor-revert  (reverting defaults to Y 1 X 1)
 #
 #   The ⇧ @ABCDEGHIJKLMPSTZ & dhlm forms of ⎋[ Csi, without ⇧R n q t ⇧} ⇧~, are
 #
@@ -280,10 +284,10 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 #       ⎋[⇧E \r\n
 #
 #   Our VT420 Terminal Emulation includes
-
+#
 #       ⎋['⇧} cols-insert  ⎋['⇧~ cols-delete
 #
-#   FIXME:  Our macOS App Emulation includes
+#   Our macOS App Emulation includes  # FIXME: make it so
 #
 #       ⌃A column-go-leftmost
 #       ⌃B column-go-left
@@ -293,17 +297,13 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 #       ⌃H char-delete-left
 #       ⌃K row-tail-erase
 #       ⌃N ↓
-#       ⌃O row-insert  # works only in leftmost column
+#       ⌃O row-insert
 #       ⌃P ↑
 #       Delete char-delete-left
 #
-#   For Terminals who don't understand that a macOS ⌘K means erase the Screen without backup
+#   Our Emulation of macOS ⌘K erasing the Window Tab Pane and Scrollback includes
 #
-#       FIXME:  ⌃L scrollback-and-screen-erase
-#
-#   For Terminals who end each Line of Os-Copy/Paste-Clipboard only with ⌃J and not also ⌃M
-#
-#       FIXME: ⌃J without ⌃M  ⏎ including its ↓
+#       ⌃L scrollback-and-screen-erase  # FIXME: make it so
 #
 
 
@@ -316,7 +316,7 @@ HT = "\t"  # 00/09 Character Tabulation ⌃I
 LF = "\n"  # 00/10 Line Feed ⌃J  # akin to CSI CUD "\x1B" "[" "B"
 CR = "\r"  # 00/13 Carriage Return ⌃M  # akin to CSI CHA "\x1B" "[" "G"
 
-ESC = "\x1B"  # 01/11 Escape ⌃[
+ESC = "\x1B"  # 01/11 Escape ⌃[  # also known as printf '\e'  # but Python doesn't define \e
 
 DECSC = "\x1B" "7"  # ESC 03/07 Save Cursor [Checkpoint] (DECSC)
 DECRC = "\x1B" "8"  # ESC 03/08 Restore Cursor [Revert] (DECRC)
@@ -380,9 +380,9 @@ XTWINOPS_8 = "\x1B" "[" "8t"  # CSI 07/04 [Response]   # Ps 8 In because XTWINOP
 XTWINOPS_18 = "\x1B" "[" "18t"  # CSI 07/04 [Request]   # Ps 18 Out for XTWINOPS_8 In
 
 
-# the quoted Str above sorted mostly by their CSI Final Byte's:  A, B, C, D, G, Z, m, etc
+# we've sorted the Str Literals above mostly by their CSI Final Byte's:  A, B, C, D, G, Z, m, etc
 
-# to test in Sh, run variations of:  printf '\e[18t' && read
+# to test in Sh, we run variations of:  printf '\e[18t' && read
 
 
 # CSI 05/02 Active [Cursor] Position Report (CPR) In because DSR_6 Out
@@ -394,22 +394,29 @@ CSI_PIF_REGEX = r"(\x1B\[)" r"([0-?]*)" r"([ -/]*)" r"(.)"  # Parameter/ Interme
 
 
 MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlm"
+
+#
 # omits "R" of CPR_Y_X_REGEX In
 # omits "n" of DSR_5 DSR_6 Out, so as to omit "n" of DSR_0 In
 # omits "t" of XTWINOPS_18 Out, so as to omit "t" of XTWINOPS_8 In
 # omits " q", "'}", "'~" of DECIC_X DECSCUSR and DECDC_X Out
+#
 
 
 #
 # Terminal Interventions
 #
+#   macOS > Terminal > Settings > Profiles > Keyboard > Use Option as Meta Key
+#       chooses whether ⌥9 comes through as itself ⌥9, or instead as ⎋9
+#
+#   bind 'set enable-bracketed-paste off' 2>/dev/null  # for Bash
+#   unset zle_bracketed_paste  # for Zsh
+#       accepts Line-Break's from Paste
+#
 #   tput clear && printf '\e[3J'  # clears Screen plus Terminal Scrollback Line Buffer
 #
 #   echo "POSTEDIT='$POSTEDIT'" |hexdump -C && echo "PS1='$PS1'"  # says if Zsh is bolding Input
 #   echo "PS0='$PSO'" && echo "PS1='$PS1'" && trap  # says if Bash is bolding Input
-#
-#   macOS > Terminal > Settings > Profiles > Keyboard > Use Option as Meta Key
-#       chooses whether ⌥9 comes through as itself ⌥9, or instead as ⎋9
 #
 
 
@@ -419,13 +426,23 @@ MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlm"
 #   https://unicode.org/charts/PDF/U0000.pdf
 #   https://unicode.org/charts/PDF/U0080.pdf
 #   https://en.wikipedia.org/wiki/ANSI_escape_code
-#   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 #
 #   https://www.ecma-international.org/publications-and-standards/standards/ecma-48
 #     /wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
 #
-#   termios.TCSADRAIN doesn't drop Queued Input but blocks till Queued Output gone
-#   termios.TCSAFLUSH drops Queued Input and blocks till Queued Output gone
+#   https://github.com/tmux/tmux/blob/master/tools/ansicode.txt  <= close to h/t jvns.ca
+#   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+#   https://jvns.ca/blog/2025/03/07/escape-code-standards
+#   https://man7.org/linux/man-pages/man4/console_codes.4.html  <= h/t jvns.ca
+#   https://sw.kovidgoyal.net/kitty/keyboard-protocol  <= h/t jvns.ca
+#   https://vt100.net/docs/vt100-ug/chapter3.html  <= h/t jvns.ca
+#
+#   https://iterm2.com/feature-reporting  <= h/t jvns.ca
+#   https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda  <= h/t jvns.ca
+#   https://github.com/Alhadis/OSC8-Adoption?tab=readme-ov-file  <= h/t jvns.ca
+#
+#   termios.TCSADRAIN doesn't drop Queued Input, but blocks till Queued Output gone
+#   termios.TCSAFLUSH drops Queued Input, and blocks till Queued Output gone
 #
 
 
@@ -440,9 +457,9 @@ class BytesTerminal:
     stdio: typing.TextIO  # sys.stderr
     fileno: int  # 2
 
-    before: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Entry
+    before: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # written at Entry
     tcgetattr_else: list[int | list[bytes | int]] | None  # sampled at Entry
-    after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # at Exit
+    after: int  # termios.TCSADRAIN  # termios.TCSAFLUSH  # written at Exit
 
     kbytes_list: list[bytes]  # Bytes of each Keyboard Chord in  # KeyLogger
     sbytes_list: list[bytes]  # Bytes of each Screen Write out  # ScreenLogger
@@ -526,7 +543,7 @@ class BytesTerminal:
 
         self.__exit__()
 
-        eprint("Pq Terminal Stop: ⌃Z F G Return")
+        eprint("Turtling·Py Terminal Stop: ⌃Z F G Return")
         eprint("macOS ⌃C might stop working till you close Window")  # even past:  reset
         eprint("Linux might freak lots more than that")
 
@@ -543,7 +560,7 @@ class BytesTerminal:
     #
 
     def sbytes_write(self, sbytes) -> None:
-        """Write Bytes to the Screen, but without implicitly also writing a Line-End afterwards"""
+        """Write Bytes to the Screen, but without also writing a Line-End afterwards"""
 
         assert self.tcgetattr_else, (self.tcgetattr_else,)
 
@@ -554,8 +571,6 @@ class BytesTerminal:
         os.write(fileno, sbytes)
 
         # doesn't raise UnicodeEncodeError
-        # called with end=b"" to write without adding b"\r\n"
-        # called with end=b"n" to add b"\n" in place of b"\r\n"
 
     #
     # Read Key Chords as 1 or more Keyboard Bytes
@@ -572,7 +587,7 @@ class BytesTerminal:
         return kbytes
 
     def kbytes_read(self, timeout) -> bytes:
-        """Read the Bytes of 1 Incomplete/ Complete Key Chord, without recording them"""
+        """Read the 1 or more Bytes of 1 Key Chord, but let it stop short"""
 
         assert ESC == "\x1B"
         assert CSI == "\x1B" "["
@@ -580,81 +595,104 @@ class BytesTerminal:
 
         # Block to fetch at least 1 Byte
 
-        kbytes1 = self.kchar_bytes_read_if()  # for .kbytes_read
+        kbytes1 = self.kchar_bytes_read()  # for .kbytes_read
 
-        many_kbytes = kbytes1
+        taken_kbytes = kbytes1
         if kbytes1 != b"\x1B":
-            return many_kbytes
+            return taken_kbytes
 
         # Accept 1 or more Esc Bytes, such as x 1B 1B in ⌥⌃FnDelete
+        # And take the next Byte too
 
         while True:
             if not self.kbhit(timeout=timeout):
-                return many_kbytes
+                return taken_kbytes
 
                 # 1st loop:  ⎋ Esc that isn't ⎋⎋ Meta Esc
                 # 2nd loop:  ⎋⎋ Meta Esc that doesn't come with more Bytes
 
-            kbytes2 = self.kchar_bytes_read_if()  # for .kbytes_read
-            many_kbytes += kbytes2
+            kbytes2 = self.kchar_bytes_read()  # for .kbytes_read
+            taken_kbytes += kbytes2
             if kbytes2 != b"\x1B":
                 break
 
         if kbytes2 == b"O":  # 01/11 04/15 SS3
-            kbytes3 = self.kchar_bytes_read_if()  # for .kbytes_read
-            many_kbytes += kbytes3  # todo: rarely in range(0x20, 0x40) CSI_EXTRAS
-            return many_kbytes
+            if not self.kbhit(timeout=timeout):
+                return taken_kbytes  # ⎋ Esc and then ⇧O but no more Bytes
+
+            kbytes3 = self.kchar_bytes_read()  # for .kbytes_read
+            taken_kbytes += kbytes3  # todo: rarely in range(0x20, 0x40) CSI_EXTRAS
+            return taken_kbytes
+
+            # ⎋⇧O⇧P for F1, etc
 
         # Accept ⎋[ Meta [ cut short by itself, or longer CSI Escape Sequences
 
         if kbytes2 == b"[":  # 01/11 ... 05/11 CSI
-            assert many_kbytes.endswith(b"\x1B\x5B"), (many_kbytes,)
+            assert taken_kbytes.endswith(b"\x1B\x5B"), (taken_kbytes,)
             if not self.kbhit(timeout=timeout):
-                return many_kbytes
+                return taken_kbytes
 
                 # ⎋[ Meta Esc that doesn't come with more Bytes
 
-            many_kbytes = self.csi_kchord_bytes_read_if(many_kbytes)
+            taken_kbytes = self.csi_kchord_bytes_read_if(taken_kbytes, timeout=timeout)
 
         # Succeed
 
-        return many_kbytes
+        return taken_kbytes
 
-        # cut short by end-of-input, or by undecodable Bytes
+        # often returns the Bytes of a complete Key Chord
         # doesn't raise UnicodeDecodeError
 
-    def csi_kchord_bytes_read_if(self, kbytes) -> bytes:
-        """Block to read the rest of 1 CSI Escape Sequence"""
+        # may be cut short by end-of-input, or by undecodable Bytes
+        # may take one too many Bytes if begun by ⎋⇧O and not ended normally
+        # may take one too many Bytes if begun by ⎋[ and not ended normally
+
+    def csi_kchord_bytes_read_if(self, kbytes, timeout) -> bytes:
+        """Read the 1 or more Bytes of 1 CSI Escape Sequence, but let it stop short"""
 
         assert CSI_EXTRAS == "".join(chr(_) for _ in range(0x20, 0x40))
 
-        many_kchord_bytes = kbytes
+        taken_kbytes = kbytes
+        intermediate_bytes = b""
         while True:
-            kbytes_ = self.kchar_bytes_read_if()  # for .kbytes_read via .read_csi_...
-            many_kchord_bytes += kbytes_
+            if not self.kbhit(timeout=timeout):
+                return taken_kbytes
 
-            if len(kbytes_) == 1:  # as when ord(kbytes_.encode()) < 0x80
-                kord = kbytes_[-1]
-                if 0x20 <= kord < 0x40:
+            more_kbytes = self.kchar_bytes_read()  # for .csi_kchord_bytes_read_if
+            taken_kbytes += more_kbytes
+
+            if len(more_kbytes) == 1:  # as when ord(kbytes_.encode()) < 0x80
+                kord = more_kbytes[-1]
+
+                if not intermediate_bytes:
+                    if 0x30 <= kord < 0x40:
+                        continue
+
+                        # 16 Parameter Bytes in 0123456789:;<=>? at Codes 0x30..0x3F
+
+                if 0x20 <= kord < 0x30:
+                    intermediate_bytes += more_kbytes
                     continue
 
-                    # 16 Parameter Bytes in 0123456789:;<=>?
-                    # 16 Intermediate Bytes of Space or in !"#$%&'()*+,-./
-
-                    # todo: accept Parameter Bytes only before Intermediate Bytes
+                    # 16 Intermediate Bytes of Space or in !"#$%&'()*+,-./ at Codes 0x20..0x2F
 
             break
 
-        return many_kchord_bytes
+            # 63 Final Bytes of @ A..Z [\]^_ ` a..z {|}~ at Codes 0x40..0x7E
 
-        # continues indefinitely while next Bytes in CSI_EXTRAS
-        # cut short by end-of-input, or by undecodable Bytes
+        return taken_kbytes
+
+        # often returns the Bytes of 1 CSI Escape Sequence
         # doesn't raise UnicodeDecodeError
+
+        # may be cut short by end-of-input, or by undecodable Bytes
+        # may take one too many Bytes if begun by ⎋[ and not ended normally
 
         # todo: limit the length of the CSI Escape Sequence
 
-    def kchar_bytes_read_if(self) -> bytes:
-        """Read the Bytes of 1 Incomplete/ Complete Char from Keyboard"""
+    def kchar_bytes_read(self) -> bytes:
+        """Read the 1 or more Bytes of 1 UTF-8 Char, but let it stop short"""
 
         def decodable(kbytes: bytes) -> bool:
             try:
@@ -663,27 +701,34 @@ class BytesTerminal:
             except UnicodeDecodeError:
                 return False
 
-        kbytes = b""
-        while True:  # till KChar Bytes complete
-            kbyte = self.kbyte_read()  # for .kchar_bytes_read_if  # todo: test end-of-input
-            assert kbyte, (kbyte,)
-            kbytes += kbyte
+        taken_kbytes = b""
+        while True:
+            kbyte = self.kbyte_read()
+            assert kbyte, (kbyte,)  # todo: test end-of-input
+            taken_kbytes += kbyte
 
-            if not decodable(kbytes):  # todo: invent Unicode Ord > 0x110000
-                suffixes = (b"\xBF", b"\xBF\xBF", b"\xBF\xBF\xBF")
-                if any(decodable(kbytes + _) for _ in suffixes):
-                    continue
+            if decodable(taken_kbytes):
+                break
+
+            suffixes = (b"\xBF", b"\xBF\xBF", b"\xBF\xBF\xBF")
+            if any(decodable(taken_kbytes + _) for _ in suffixes):
+                continue
 
                 # b"\xC2\x80", b"\xE0\xA0\x80", b"\xF0\x90\x80\x80" .. b"\xF4\x8F\xBF\xBF"
 
             break
 
-        assert kbytes  # todo: test end-of-input
+            # todo: invent Unicode Code > 0x110000
 
-        return kbytes
+        assert taken_kbytes  # todo: test end-of-input
 
-        # cut short by end-of-input, or by undecodable Bytes
+        return taken_kbytes
+
+        # often returns the bytes of 1 UTF-8 Char
         # doesn't raise UnicodeDecodeError
+
+        # may be cut short by end-of-input, or by undecodable Bytes
+        # may take one too many bytes if fed decodable Bytes then an undecodable Byte
 
     def kbyte_read(self) -> bytes:
         """Read 1 Keyboard Byte"""
@@ -692,14 +737,14 @@ class BytesTerminal:
         assert self.tcgetattr_else, (self.tcgetattr_else,)
 
         self.sbytes_flush()  # for 'kbyte_read'
-        kbyte = os.read(fileno, 1)  # 1 or more Bytes, begun as 1 Byte
+        kbyte = os.read(fileno, 1)  # 1 or more Bytes
 
         return kbyte
 
         # ⌃C comes through as b"\x03" and doesn't raise KeyboardInterrupt
-        # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
+        # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash  # not ¥ Yen-Sign
 
-    def kbhit(self, timeout) -> bool:  # 'timeout' in seconds - 0 for now, None for forever
+    def kbhit(self, timeout) -> bool:
         """Block till next Input Byte, else till Timeout, else till forever"""
 
         fileno = self.fileno
@@ -712,9 +757,10 @@ class BytesTerminal:
 
         return hit
 
+        # 'timeout' is 0 for Now, None for Never, else count of Seconds
+
 
 # Name the Shifting Keys
-# Meta hides inside macOS Terminal > Settings > Keyboard > Use Option as Meta Key
 
 Meta = unicodedata.lookup("Broken Circle With Northwest Arrow")  # ⎋
 Control = unicodedata.lookup("Up Arrowhead")  # ⌃
@@ -723,6 +769,8 @@ Shift = unicodedata.lookup("Upwards White Arrow")  # ⇧
 Command = unicodedata.lookup("Place of Interest Sign")  # ⌘  # Super  # Windows
 # 'Fn'
 
+# note: Meta hides inside macOS Terminal > Settings > Keyboard > Use Option as Meta Key
+
 
 # Define ⌃Q ⌃V and ⌃V ⌃Q
 # to strongly abbreviate a few of the KCAP_BY_KCHARS Values
@@ -730,7 +778,7 @@ Command = unicodedata.lookup("Place of Interest Sign")  # ⌘  # Super  # Window
 KCAP_QUOTE_BY_STR = {
     "Delete": unicodedata.lookup("Erase To The Left"),  # ⌫
     "Return": unicodedata.lookup("Return Symbol"),  # ⏎
-    "Spacebar": unicodedata.lookup("Bottom Square Bracket"),  # ⎵  # ␣ Open Box
+    "Spacebar": unicodedata.lookup("Bottom Square Bracket"),  # ⎵  # not ␣ Open-Box
     "Tab": unicodedata.lookup("Rightwards Arrow To Bar"),  # ⇥
     "⇧Tab": unicodedata.lookup("Leftwards Arrow To Bar"),  # ⇤
 }
@@ -804,8 +852,8 @@ assert KCAP_SEP == " "
 for _KCAP in KCAP_BY_KCHARS.values():
     assert " " not in _KCAP, (_KCAP,)
 
-# the ⌥⇧Fn Key Cap quotes only the Shifting Keys, drops the substantive final Key Cap,
-# except that ⎋⇧Fn← ⎋⇧Fn→ ⎋⇧Fn↑ ⎋⇧Fn also exist
+# the ⌥⇧Fn Key Cap quotes only the Shifting Keys, dropping the substantive final Key Cap,
+# except that four Shifted Arrows exist at ⎋⇧Fn← ⎋⇧Fn→ ⎋⇧Fn↑ ⎋⇧Fn↓
 
 
 OPTION_KSTR_BY_1_KCHAR = {
@@ -917,7 +965,7 @@ class StrTerminal:
     row_y: int  # -1, then Row of Cursor
     column_x: int  # -1, then Column of Cursor
 
-    writelog: dict[int, dict[int, str]]  # todo: row major or column major?
+    writelog: dict[int, dict[int, str]]  # todo: row major or column major?  # ScreenLogger
 
     #
     # Init, Enter, and Exit
@@ -975,7 +1023,7 @@ class StrTerminal:
             kchords.append(kchord)
 
     def kchord_pull(self, timeout) -> tuple[bytes, str]:
-        """Read 1 Key Chord, but snoop the Cursor-Position-Report's, if any"""
+        """Read 1 Key Chord, and snoop the Cursor Position out of it, if present"""
 
         bt = self.bytes_terminal
         kchords = self.kchords
@@ -996,20 +1044,20 @@ class StrTerminal:
 
         return kchord
 
-        # .kbytes of the .kchord may be empty when the .kchord didn't come from the Keyboard
+        # .kbytes empty inside the .kchord when .kchord from .kcaps_append
 
     def kchars_snoop_kcpr_if(self, kchars) -> bool:
-        """Snoop the Cursor-Position-Report (CPR) out of a Key Chord, if present"""
+        """Snoop the Cursor Position out of a Key Chord, if present"""
 
         assert CPR_Y_X_REGEX == r"\x1B\[([0-9]+);([0-9]+)R"  # CSI 05/02 CPR
 
-        # Never mind, if no CPR present
+        # Never mind, if no Keyboard Cursor-Position-Report (K CPR) present
 
         m = re.fullmatch(r"\x1B\[([0-9]+);([0-9]+)R", string=kchars)
         if not m:
             return False
 
-        # Interpret the CPR
+        # Interpret the K CPR
 
         row_y = int(m.group(1))
         column_x = int(m.group(2))
@@ -1041,7 +1089,7 @@ class StrTerminal:
                 # '⎋[25;80t' Rows x Column Terminal Size Report
                 # '⎋[200~' and '⎋[201~' before/ after Paste to bracket it
 
-            # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash
+            # ⌥Y often comes through as \ U+005C Reverse-Solidus aka Backslash  # not ¥ Yen-Sign
 
         # Succeed
 
@@ -3755,8 +3803,8 @@ def turtle_demand() -> Turtle:
     """Find or form a Turtle to work with"""
 
     if not glass_teletypes:
-        if not turtling_server_attach():
-            turtling_server_run()
+        if not turtling_draw_find():
+            turtling_draw_run()
             sys.exit()
 
     if not turtles:
@@ -4984,7 +5032,7 @@ def turtling_processes_stop() -> None:
     print("Or you can try to keep running them, like after telling the Shell to:  reset")
 
 
-def turtling_server_attach() -> bool:
+def turtling_draw_find() -> bool:
     """Start trading Texts with a Turtling Server"""
 
     reader = TurtlingReader
@@ -5020,7 +5068,7 @@ def turtling_server_attach() -> bool:
 #
 
 
-def turtling_server_run() -> None:
+def turtling_draw_run() -> None:
     "Run as a Server drawing with Logo Turtles and return True, else return False"
 
     with GlassTeletype() as gt:
@@ -5451,7 +5499,7 @@ turtling_servers = list()
 #
 
 
-def turtling_client_run(text) -> None:
+def turtling_chat_run(text) -> None:
     "Run as a Client chatting with Logo Turtles and return True, else return False"
 
     tc1 = TurtleClient()

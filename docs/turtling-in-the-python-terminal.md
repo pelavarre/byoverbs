@@ -1516,7 +1516,7 @@ Or you press ⌃C if you want to stop before trying them all
 
 Your macOS Sh Window can also try them all together, one after another
 
-    cat demos/*.logo |sed 's,tada,ht sleep 1 st,' |pq
+    cat demos/*.logo |sed 's,tada,ht sleep 1 st,' |pbcopy
 
 **Links**
 
