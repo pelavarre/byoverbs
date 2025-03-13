@@ -1758,9 +1758,12 @@ You can turn the Puck
 
 You can run variations
 
+    relaunch
+    setpenhighlight 0o20 8  # the Black of 8-Bit Terminal Color R G B 0/5 0/5 0/5
     puckland
     mode("TunnelVision")
     puck 1000
+
     turtling_modes.clear()  # new and unstable Syntax here
     puck 1000
 

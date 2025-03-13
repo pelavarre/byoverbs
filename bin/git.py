@@ -45,6 +45,7 @@ git clean -dffxq -e /env
 
 
 git tag -l --format='%(taggerdate)  %(refname:short)' 2023.12.15
+git show --no-patch 2025.03.11
 
 for X in 2023.12.15{,^{tag},^{commit},^{tree}}; do
     (set -xe; git show --name-only $X |grep TaggerDate)

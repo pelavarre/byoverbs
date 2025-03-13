@@ -1,6 +1,6 @@
 if [ $# -eq 0 ]; then
     set -xe
-    git fetch --prune
+    git fetch --prune --prune-tags
 else
     set -xe
     git fetch "$@"
