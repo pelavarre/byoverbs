@@ -13,7 +13,7 @@ pwd |sed "s,^$HOME$,~,; s,^$HOME/,~/,"  # as if Bash:  dirs -p |tail -1
 
 git log --oneline --no-decorate -3
 
-git fetch
+git fetch --prune --prune-tags --force
 git rebase
 
 git log --oneline --no-decorate -3

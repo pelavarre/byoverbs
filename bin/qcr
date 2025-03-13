@@ -1,2 +1,2 @@
 set -xe
-git fetch --prune && git checkout "$@" && git rebase
+git fetch --prune --prune-tags --force && git checkout "$@" && git rebase

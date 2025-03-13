@@ -33,7 +33,7 @@ git push origin HEAD:guests/jqdoe  # create remote for: git branch
 # everywhere all at once, distributed consistency
 
 ssh host1, ssh host2, etc
-git fetch
+git fetch --prune --prune-tags --force
 git checkout guests/jqdoe
 
 
