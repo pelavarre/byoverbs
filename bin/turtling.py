@@ -1487,7 +1487,7 @@ class StrTerminal:
 
         assert CSI_PIF_REGEX == r"(\x1B\[)" r"([0-?]*)" r"([ -/]*)" r"(.)"
 
-        m = re.fullmatch(CSI_PIF_REGEX, string=schars)
+        m = re.fullmatch(CSI_PIF_REGEX, string=schars)  # todo: merge with .schars_csi_partition
         if not m:
             return
 
@@ -3148,9 +3148,16 @@ class Turtle:
 
         self._schars_write_(s)  # for .write  # arbitrary mix of Controls and Text
 
-        # Secretly silently snap our Turtle to the emulated Cursor Row-Column
-
         (row_y, column_x) = (st.row_y, st.column_x)
+        self._snap_to_xy_(column_x, row_y=row_y)
+
+        # PyTurtle Write
+
+    def _snap_to_xy_(self, column_x, row_y) -> None:
+        """Secretly silently snap to the emulated Cursor Row-Column"""
+
+        gt = self.glass_teletype
+
         (y_count, x_count) = gt.os_terminal_y_count_x_count()
 
         center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
@@ -3164,8 +3171,6 @@ class Turtle:
 
         self.xfloat = xfloat_
         self.yfloat = yfloat_
-
-        # PyTurtle Write
 
     def _schars_write_(self, s) -> None:
         """Write one Str to the Screen"""
@@ -3295,10 +3300,21 @@ class Turtle:
             if xys is None:
                 self._jump_punch_rest_if_(wx, wy=-wy, x=x, y=-y)
             else:
+
+                st = gt.str_terminal
+                # gt.notes.append(f"before _jump_punch_rest_if_ {st.row_y=} {st.column_x=}")
+                # self._x_y_position_()
+
                 xy = (x, y)
                 if xys:
                     assert xys[len(fresh_xys)] == xy, (xy, xys, fresh_xys, gt.notes)
                     self._jump_punch_rest_if_(wx, wy=-wy, x=x, y=-y)
+
+                    (row_y, column_x) = (st.row_y, st.column_x)  # FIXME: derive from (x, y)
+                    self._snap_to_xy_(column_x=column_x, row_y=row_y)
+
+                # gt.notes.append(f"after _jump_punch_rest_if_ {st.row_y=} {st.column_x=}")
+                # self._x_y_position_()
 
                 fresh_xys.append(xy)
                 if len(fresh_xys) > 1:
@@ -3394,24 +3410,20 @@ class Turtle:
 
         if wx < x:
             pn = int(2 * (x - wx))  # doublewide X
-            # gt.notes.append(f"{pn=} C")
             assert pn >= 1, (pn,)
             x_ctext = f"\x1B[{pn}C"  # CSI 04/03 Cursor [Forward] Right
         elif wx > x:
             pn = int(2 * (wx - x))  # doublewide X
-            # gt.notes.append(f"{pn=} D")
             x_ctext = f"\x1B[{pn}D"  # CSI 04/04 Cursor [Backward] Left
         else:
             x_ctext = ""
 
         if wy < y:
             pn = int(y - wy)
-            # gt.notes.append(f"{pn=} B")
             assert pn >= 1, (pn,)
             y_ctext = f"\x1B[{pn}B"  # CSI 04/02 Cursor [Down] Next
         elif wy > y:
             pn = int(wy - y)
-            # gt.notes.append(f"{pn=} A")
             assert pn >= 1, (pn,)
             y_ctext = f"\x1B[{pn}A"  # CSI 04/01 Cursor [Up] Previous
         else:
@@ -3556,9 +3568,9 @@ class Turtle:
             floats = (xfloat_, yfloat_, xfloat, yfloat)
             (ix_, iy_, ix, iy) = (int(xfloat_), int(yfloat_), int(xfloat), int(yfloat))
             if floats == (ix_, iy_, ix, iy):
-                note = f"Snap to X Y {ix_} {iy_} from {ix} {iy}"
+                note = f"Snap to X Y {ix_} {iy_} from {ix} {iy} for Y X {row_y} {column_x}"
             else:
-                note = f"Snap to X Y {xfloat_} {yfloat_} from {xfloat} {yfloat}"
+                note = f"Snap to X Y {xfloat_} {yfloat_} from {xfloat} {yfloat} for Y X {row_y} {column_x}"
 
             gt.notes.append(note)  # todo: should all Glass-Terminal Notes be Exceptions?
 
@@ -3781,9 +3793,9 @@ class Turtle:
             for _ in range(count_):
                 self._puck_step_(kind="Puck")
 
-                if len(notes) > 9:
-                    n += len(notes) - 9
-                    notes[::] = notes[:8] + [f"... 😰 Too many notes ({n}) ..."]
+                if len(notes) > 25:
+                    n += len(notes) - 25
+                    notes[::] = notes[:8] + [f"... 😰 Too many notes, dropping {n} ..."]
 
         d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
         self._dict_insert_compass_if_(d)
@@ -3829,6 +3841,9 @@ class Turtle:
 
         xys: list[tuple[float, float]]
         xys = list()
+
+        # gt.notes.append(f"looking ahead from {st.row_y=} {st.column_x=}")
+        # self._x_y_position_()
 
         distance_float = 1e5  # todo: calculate how far from .heading
         self._punch_bresenham_stride_(distance_float, xys=xys)  # for ._puck_step_
@@ -3894,6 +3909,9 @@ class Turtle:
             assert collision, (collision,)
             assert kind in ("Pong", "Puck"), (kind,)
 
+            # gt.notes.append(f"colliding near {st.row_y=} {st.column_x=}")
+            # self._x_y_position_()
+
             xys2: list[tuple[float, float]]
             xys2 = list()
 
@@ -3903,11 +3921,20 @@ class Turtle:
                 assert kind == "Puck", (kind,)
                 self._puck_bounce_(column_x1, row_y1=row_y1)
 
+            # gt.notes.append(f"after bouncing {st.row_y=} {st.column_x=}")
+            # self._x_y_position_()
+
             self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._puck_step_
             assert len(xys2) == 2, (len(xys2), xys2, gt.notes)
 
+            # gt.notes.append(f"after colliding A {st.row_y=} {st.column_x=}")
+            # self._x_y_position_()
+
             xy2 = xys2[-1]
             self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._puck_step_
+
+            # gt.notes.append(f"after colliding B {st.row_y=} {st.column_x=}")
+            # self._x_y_position_()
 
             (x2, y2) = xy2  # replaces
             column_x2 = int(center_x + (2 * x2))  # replaces
@@ -3915,10 +3942,16 @@ class Turtle:
 
         # Blink out after drawing over Here and There
 
+        # gt.notes.append(f"before CUP overrides of {st.row_y=} {st.column_x=}")
+        # self._x_y_position_()
+
         st.schars_write(f"\x1B[{row_y1};{column_x1}H")
         st.schars_write("  ")
 
         st.schars_write(f"\x1B[{row_y2};{column_x2}H")  # todo: skip if unmoving
+
+        # gt.notes.append(f"_puck_step_ exiting with {st.row_y=} {st.column_x=}")
+        # self._x_y_position_()
 
     def _puck_chase_(self, column_x1, row_y1) -> None:
         """Turn aside if Food on the side, while Nne ahead and None behind"""
