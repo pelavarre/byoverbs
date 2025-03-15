@@ -1334,8 +1334,6 @@ class StrTerminal:
 
         # returns Falsey Csi when not a CSI Escape Sequence
 
-        # FIXME: chokes at ⎋['28}  # because Pn after first Intermediate
-
     #
     # Emulate a more functional Terminal
     #
@@ -3149,11 +3147,11 @@ class Turtle:
         self._schars_write_(s)  # for .write  # arbitrary mix of Controls and Text
 
         (row_y, column_x) = (st.row_y, st.column_x)
-        self._snap_to_xy_(column_x, row_y=row_y)
+        self._snap_to_column_x_row_y_(column_x, row_y=row_y)
 
         # PyTurtle Write
 
-    def _snap_to_xy_(self, column_x, row_y) -> None:
+    def _snap_to_column_x_row_y_(self, column_x, row_y) -> None:
         """Secretly silently snap to the emulated Cursor Row-Column"""
 
         gt = self.glass_teletype
@@ -3300,21 +3298,13 @@ class Turtle:
             if xys is None:
                 self._jump_punch_rest_if_(wx, wy=-wy, x=x, y=-y)
             else:
-
-                st = gt.str_terminal
-                # gt.notes.append(f"before _jump_punch_rest_if_ {st.row_y=} {st.column_x=}")
-                # self._x_y_position_()
-
                 xy = (x, y)
                 if xys:
                     assert xys[len(fresh_xys)] == xy, (xy, xys, fresh_xys, gt.notes)
+
                     self._jump_punch_rest_if_(wx, wy=-wy, x=x, y=-y)
-
-                    (row_y, column_x) = (st.row_y, st.column_x)  # FIXME: derive from (x, y)
-                    self._snap_to_xy_(column_x=column_x, row_y=row_y)
-
-                # gt.notes.append(f"after _jump_punch_rest_if_ {st.row_y=} {st.column_x=}")
-                # self._x_y_position_()
+                    self.xfloat = float(x)
+                    self.yfloat = float(y)
 
                 fresh_xys.append(xy)
                 if len(fresh_xys) > 1:
@@ -3842,9 +3832,6 @@ class Turtle:
         xys: list[tuple[float, float]]
         xys = list()
 
-        # gt.notes.append(f"looking ahead from {st.row_y=} {st.column_x=}")
-        # self._x_y_position_()
-
         distance_float = 1e5  # todo: calculate how far from .heading
         self._punch_bresenham_stride_(distance_float, xys=xys)  # for ._puck_step_
 
@@ -3909,9 +3896,6 @@ class Turtle:
             assert collision, (collision,)
             assert kind in ("Pong", "Puck"), (kind,)
 
-            # gt.notes.append(f"colliding near {st.row_y=} {st.column_x=}")
-            # self._x_y_position_()
-
             xys2: list[tuple[float, float]]
             xys2 = list()
 
@@ -3921,20 +3905,11 @@ class Turtle:
                 assert kind == "Puck", (kind,)
                 self._puck_bounce_(column_x1, row_y1=row_y1)
 
-            # gt.notes.append(f"after bouncing {st.row_y=} {st.column_x=}")
-            # self._x_y_position_()
-
             self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._puck_step_
             assert len(xys2) == 2, (len(xys2), xys2, gt.notes)
 
-            # gt.notes.append(f"after colliding A {st.row_y=} {st.column_x=}")
-            # self._x_y_position_()
-
             xy2 = xys2[-1]
             self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._puck_step_
-
-            # gt.notes.append(f"after colliding B {st.row_y=} {st.column_x=}")
-            # self._x_y_position_()
 
             (x2, y2) = xy2  # replaces
             column_x2 = int(center_x + (2 * x2))  # replaces
@@ -3942,16 +3917,10 @@ class Turtle:
 
         # Blink out after drawing over Here and There
 
-        # gt.notes.append(f"before CUP overrides of {st.row_y=} {st.column_x=}")
-        # self._x_y_position_()
-
         st.schars_write(f"\x1B[{row_y1};{column_x1}H")
         st.schars_write("  ")
 
         st.schars_write(f"\x1B[{row_y2};{column_x2}H")  # todo: skip if unmoving
-
-        # gt.notes.append(f"_puck_step_ exiting with {st.row_y=} {st.column_x=}")
-        # self._x_y_position_()
 
     def _puck_chase_(self, column_x1, row_y1) -> None:
         """Turn aside if Food on the side, while Nne ahead and None behind"""

@@ -1739,6 +1739,7 @@ but ⌃U will work
 You can draw a Game Board that resembles a classic first Level of the Pac-Man™ video game, and move a Puck around it
 
     relaunch
+
     setpenhighlight 0o20 8  # the Black of 8-Bit Terminal Color R G B 0/5 0/5 0/5
     puckland
 
@@ -1759,6 +1760,8 @@ You can turn the Puck
 You can run variations
 
     relaunch
+    sethertz 10e3
+
     setpenhighlight 0o20 8  # the Black of 8-Bit Terminal Color R G B 0/5 0/5 0/5
     puckland
     mode("TunnelVision")
