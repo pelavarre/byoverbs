@@ -137,10 +137,10 @@ def main_try(ns) -> None:
     if ns.yolo:
         assert (not ns.i) and (ns.c is None), (ns.i, ns.c, ns.yolo, ns)
 
-        if turtling_draw_find():
-            turtling_chat_run("relaunch")
+        if turtling_sketchist_find():
+            turtling_run_as_chat_client("relaunch")
         else:
-            turtling_draw_run()
+            turtling_run_as_sketchist()
 
         return
 
@@ -148,14 +148,14 @@ def main_try(ns) -> None:
 
     assert ns.i or (ns.c is not None), (ns,)
 
-    if not turtling_draw_find():
+    if not turtling_sketchist_find():
         workaround = "Try 'pwd' and 'cd' and 'ps aux |grep -i Turtl' and so on"
         workaround += ", like via:  python3 turtling.py --stop"
         print(f"No Terminal Window Pane found for drawing. {workaround}", file=sys.stderr)
         sys.exit(1)
 
     command = "relaunch" if (ns.c is None) else ns.c
-    turtling_chat_run(command)
+    turtling_run_as_chat_client(command)
 
     eprint("Bye bye")
 
@@ -1994,9 +1994,9 @@ class Turtle:
         self.penscapes = list()
 
         namespace = dict()
-        if turtling_servers:
-            turtling_server = turtling_servers[-1]
-            namespace = turtling_server.namespace
+        if turtling_sketchists:
+            turtling_sketchist = turtling_sketchists[-1]
+            namespace = turtling_sketchist.namespace
 
         self.glass_teletype = gt
         self.namespace = namespace
@@ -2038,7 +2038,7 @@ class Turtle:
         gt.breakpoint()
 
     def bye(self) -> None:
-        """Exit Server and Client, but without clearing the Screen (EXIT or QUIT for short)"""
+        """Exit Sketchist & Client, without clearing the Sketchist Screen (EXIT or QUIT for short)"""
 
         gt = self.glass_teletype
 
@@ -4036,7 +4036,7 @@ turtles = list()
 #
 # Define a similar 'turtling.alef(bet, gimel)' for most Methods of Class Turtle
 #
-#   note: Server Eval/ Exec of 'alef(bet, gimel)' runs as 'turtling.alef(bet, gimel)'
+#   note: Sketchist Eval/ Exec of 'alef(bet, gimel)' runs as 'turtling.alef(bet, gimel)'
 #
 #   todo: solve 'turtling._breakpoint_' and 'turtling._exec_'
 #
@@ -4046,8 +4046,8 @@ def turtle_demand() -> Turtle:
     """Find or form a Turtle to work with"""
 
     if not glass_teletypes:
-        if not turtling_draw_find():
-            turtling_draw_run()
+        if not turtling_sketchist_find():
+            turtling_run_as_sketchist()
             sys.exit()
 
     if not turtles:
@@ -4246,7 +4246,7 @@ class PythonSpeaker:
         kws_by_verb = self.cls_to_kws_by_verb(cls=Turtle)
         localname_by_leftside = self.to_localname_by_leftside()
 
-        self.namespace = dict()  # cloned from remote TurtlingServer  # with local TurtlingServer
+        self.namespace = dict()
 
         self.verbs = verbs
         self.kws_by_verb = kws_by_verb
@@ -4580,7 +4580,7 @@ class PythonSpeaker:
         turtling_defaults = TurtlingDefaults
         namespace = self.namespace
 
-        # Give the Win to the more explicit Server Locals, else to our more implicit Defaults
+        # Give the Win to the more explicit Sketchist Locals, else to our more implicit Defaults
         # Give the Win to the more explicit f"{verb}_{kw}", else to the more implicit f"{kw}"
 
         for space in (namespace, turtling_defaults):
@@ -4634,7 +4634,7 @@ class PythonSpeaker:
         # 'One char " can show you two ticks'
 
     #
-    # Shadow Changes to Server Locals
+    # Shadow Changes to Sketchist Locals
     #
 
     def note_snoop(self, note) -> bool:
@@ -4660,7 +4660,7 @@ class PythonSpeaker:
                     print(f">>> {py}  # already done at Chat Pane")
                     return True
 
-        # Weakly emulate the Remote Server assignment of an Object with a default Repr
+        # Weakly emulate the Remote Sketchist assignment of an Object with a default Repr
 
         (key, sep, value) = py.partition("=")
         key = key.strip()
@@ -4675,7 +4675,7 @@ class PythonSpeaker:
 
                 # <__main__.Turtle object at 0x101486a50>
 
-        # More robustly emulate other the Remote Server add/ mutate/ del at a Key
+        # More robustly emulate other the Remote Sketchist add/ mutate/ del at a Key
 
         # eprint("local exec of remote py:", py)
         exec_strict(py, globals_, locals_)  # in Class PythonSpeaker
@@ -4954,7 +4954,7 @@ class TurtlingFifoProxy:
     basename: str  # 'requests'
 
     find: str  # '__pycache__/turtling/pid=12345/responses.mkfifo'
-    pid: int  # 12345  # Process Id of the Drawing Server  # not the Chatting Client
+    pid: int  # 12345  # Process Id of the Sketchist  # not the Client
     fileno: int  # 3
     index: int  # -1
 
@@ -5202,7 +5202,7 @@ class TurtlingFifoProxy:
 
 
 #
-# Attach to a Turtling Server
+# Attach to a Turtling Sketchist
 #
 
 
@@ -5275,14 +5275,14 @@ def turtling_processes_stop() -> None:
     print("Or you can try to keep running them, like after telling the Shell to:  reset")
 
 
-def turtling_draw_find() -> bool:
-    """Start trading Texts with a Turtling Server"""
+def turtling_sketchist_find() -> bool:
+    """Start trading Texts with a Turtling Sketchist"""
 
     reader = TurtlingReader
     writer = TurtlingWriter
 
     if not reader.find_mkfifo_once_if(pid="*"):
-        return False  # Turtling Server not-found
+        return False  # Turtling Sketchist not-found
     assert reader.pid >= 0, (reader.pid,)
 
     os_pid = os.getpid()
@@ -5296,7 +5296,7 @@ def turtling_draw_find() -> bool:
     writer.write_text("")
     read_text_else = reader.read_text_else()
     if read_text_else != "":
-        assert False, (read_text_else,)  # Turtling Server texts index not synch'ed
+        assert False, (read_text_else,)  # Turtling Sketchist texts index not synch'ed
 
     assert writer.index == 0, (writer.index, reader.index)
     if reader.index != writer.index:
@@ -5307,19 +5307,19 @@ def turtling_draw_find() -> bool:
 
 
 #
-# Run as a Server drawing with Logo Turtles
+# Run as a Sketchist, hosting Logo Python Turtles
 #
 
 
-def turtling_draw_run() -> None:
-    "Run as a Server drawing with Logo Turtles and return True, else return False"
+def turtling_run_as_sketchist() -> None:
+    "Run as a Sketchist, hosting Logo Python Turtles and return True, else return False"
 
     with GlassTeletype() as gt:
-        ts1 = TurtlingServer(gt)
-        ts1.server_run_till()
+        ts1 = TurtlingSketchist(gt)
+        ts1.sketchist_run_till()
 
 
-class TurtlingServer:
+class TurtlingSketchist:
 
     glass_teletype: GlassTeletype
     namespace: dict[str, object]  # with local Turtle's  # cloned by remote PythonSpeaker
@@ -5334,9 +5334,9 @@ class TurtlingServer:
         self.namespace = namespace
         self.kchords = list()
 
-        turtling_servers.append(self)
+        turtling_sketchists.append(self)
 
-    def server_run_till(self) -> None:
+    def sketchist_run_till(self) -> None:
         """Draw with Logo Turtles"""
 
         gt = self.glass_teletype
@@ -5649,7 +5649,7 @@ class TurtlingServer:
 
         try:  # todo: shrug off PyLance pretending eval/exec 'locals=' doesn't work
 
-            value = eval_strict(py, globals_, locals_)  # in Class TurtlingServer
+            value = eval_strict(py, globals_, locals_)  # in Class TurtlingSketchist
 
         except bdb.BdbQuit:  # from Py Eval  # of the Quit of a Pdb Breakpoint
 
@@ -5681,7 +5681,7 @@ class TurtlingServer:
         if try_exec:
             assert value is None, (value,)
             try:
-                exec_strict(py, globals_, locals_)  # in Class TurtlingServer
+                exec_strict(py, globals_, locals_)  # in Class TurtlingSketchist
             except bdb.BdbQuit:  # from Py Exec  # of the Quit of a Pdb Breakpoint
                 raise
             except Exception:
@@ -5733,8 +5733,8 @@ class TurtlingServer:
                     notes.append(note)
 
 
-turtling_servers: list[TurtlingServer]
-turtling_servers = list()
+turtling_sketchists: list[TurtlingSketchist]
+turtling_sketchists = list()
 
 
 #
@@ -5742,7 +5742,7 @@ turtling_servers = list()
 #
 
 
-def turtling_chat_run(text) -> None:
+def turtling_run_as_chat_client(text) -> None:
     "Run as a Client chatting with Logo Turtles and return True, else return False"
 
     tc1 = TurtleClient()
@@ -5753,11 +5753,11 @@ def turtling_chat_run(text) -> None:
 
 
 class TurtleClient:
-    """Chat with the Logo Turtles of 1 Turtling Server"""
+    """Chat with the Logo Turtles of 1 Turtling Sketchist"""
 
     ps = PythonSpeaker()
 
-    pycodes: list[str]  # Python Calls to send to the Server later
+    pycodes: list[str]  # Python Calls to send to the Sketchist later
     pycodes = list()
 
     def breakpoint(self) -> None:
@@ -5821,7 +5821,7 @@ class TurtleClient:
                     started = True
 
                 # Auto-correct till it's Python
-                # Send each Python Call to the Server, trace its Reply
+                # Send each Python Call to the Sketchist, trace its Reply
 
                 more_pycodes = ps.text_to_pycodes(iline, cls=Turtle)
                 enough_pycodes = pycodes + more_pycodes
@@ -5920,7 +5920,7 @@ class TurtleClient:
         return ilines
 
     def text_has_pyweight(self, text) -> bool:
-        """Say forward to Server if more than Blanks and Comments found"""
+        """Say forward to Sketchist if more than Blanks and Comments found"""
 
         for line in text.splitlines():
             py = line.partition("#")[0].strip()
@@ -5930,10 +5930,10 @@ class TurtleClient:
         return False
 
     def py_trade_else(self, py) -> tuple[str | None, object | None]:
-        """Send Python to the Server, trace its Reply"""
+        """Send Python to the Sketchist, trace its Reply"""
 
-        # Trade with the Server
-        # But say EOFError if the Server Quit our Conversation
+        # Trade with the Sketchist
+        # But say EOFError if the Sketchist Quit our Conversation
 
         wtext = py
         rtext_else = self.trade_text_else(wtext)
@@ -5977,7 +5977,7 @@ class TurtleClient:
                 del clone["notes"]
 
                 for note in notes:
-                    self.server_note_client_eval(note)
+                    self.sketchist_note_eval_as_client(note)
 
                 if not clone:  # lets a Dict carry Notes on behalf of None
                     return (None, None)
@@ -5990,15 +5990,15 @@ class TurtleClient:
         ptext = rtext
         return (ptext, value)
 
-    def server_note_client_eval(self, note) -> None:
-        """Print 1 Server Note, or otherwise consume it"""
+    def sketchist_note_eval_as_client(self, note) -> None:
+        """Print 1 Sketchist Note, or otherwise consume it"""
 
         ps = self.ps
         if not ps.note_snoop(note):
             eprint("Note:", note)
 
     def trade_text_else(self, wtext) -> str | None:
-        """Write a Text to the Turtling Server, and read back a Text or None"""
+        """Write a Text to the Turtling Sketchist, and read back a Text or None"""
 
         writer = TurtlingWriter
         reader = TurtlingReader
@@ -6008,7 +6008,7 @@ class TurtleClient:
 
         return rtext_else
 
-        # trades with TurtlingServer.reader_writer_serve
+        # trades with TurtlingSketchist.reader_writer_serve
 
 
 #
@@ -6042,7 +6042,7 @@ class TurtleClient:
 #
 #
 # todo: 🐢 SetXY slows to a crawl when given X Y much larger than Screen
-# todo: ⌃C interrupt of first Client, but then still attach another, without crashing the Server
+# todo: ⌃C interrupt of first Client, but then still attach another, without crashing the Sketchist
 #
 #
 # todo: more limit "setpch" to what presently works
@@ -6054,9 +6054,9 @@ class TurtleClient:
 # todo: when to default to cyclic choices, such as inc color, or spiral fd
 #
 #
-# todo: poll the Server while waiting for next Client Input
-# todo: like quick Client reply to Server Mouse/ Arrow
-# todo: but sum up the Server Arrow, don't only react to each individually
+# todo: poll the Sketchist while waiting for next Client Input
+# todo: like quick Client reply to Sketchist Mouse/ Arrow
+# todo: but sum up the Sketchist Arrow, don't only react to each individually
 #
 #
 
@@ -6174,7 +6174,7 @@ class TurtleClient:
 # todo: debug the loose gear surfaced by Tina's Giraffe
 # todo: take gShell TERM=screen as reason enough to say '🐢 ?' in place of '🐢?'
 # todo: take '>>> ' as request to take the rest of the line as Python without correction
-# todo: automagically discover Server Quit, don't wait for BrokenPipeError at next Send
+# todo: automagically discover Sketchist Quit, don't wait for BrokenPipeError at next Send
 # todo: harness two Turtles in parallel, such as a Darkmode & Lightmode at macOS
 #
 #
@@ -6185,8 +6185,8 @@ class TurtleClient:
 #
 #
 # todo: Put the Client Breakpoint somewhere (we've taken it away from ⌃C)
-# todo: Take ⌃D at either side to quit the Client and Server - or not
-# todo: Take ⌃C at the Server to quit the Client and Server - or not
+# todo: Take ⌃D at either side to quit the Client and Sketchist - or not
+# todo: Take ⌃C at the Sketchist to quit the Client and Sketchist - or not
 #
 #
 # todo: 🐢 Poly(*coefficients) to plot it
@@ -6274,13 +6274,13 @@ class TurtleClient:
 # todo: correct the self-mentions in .Logo Files too, not just in .Py Files
 #
 #
-# todo: stronger detection of old Server/ Client need 'pkill' or 'kill -9'
+# todo: stronger detection of old Sketchist/ Client need 'pkill' or 'kill -9'
 #
 #
 # todo: more solve TurtleClient at:  python3 -i -c ''
 #   import turtling; turtling.mode("Logo"); t = turtling.Turtle(); t.forward(100)
 #
-# todo: Alt Screen for Server t.breakpoint()
+# todo: Alt Screen for Sketchist t.breakpoint()
 #
 # todo: declare datatypes of class Turtle args
 # todo: subclass Bytes into WholeCSIBytes, CSIBytes, SomeStrBytes, SomeBytes

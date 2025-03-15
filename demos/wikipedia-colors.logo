@@ -58,7 +58,7 @@ label '\e[38;5;240m240 \e[38;5;241m241 \e[38;5;242m242 \e[38;5;243m243 \e[38;5;2
 label '\e[38;5;248m248 \e[38;5;249m249 \e[38;5;250m250 \e[38;5;251m251 \e[38;5;252m252 \e[38;5;253m253 \e[38;5;254m254 \e[38;5;255m255 \e[m'
 
 
-# restart tada  # nope
+restart tada  # nope
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/wikipedia-colors.logo
