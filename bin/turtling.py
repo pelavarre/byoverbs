@@ -271,7 +271,7 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 #       ⎋[⇧M rows-delete  ⎋[⇧L rows-insert  ⎋[⇧P chars-delete  ⎋[⇧@ chars-insert
 #       ⎋[⇧J after-erase  ⎋[1⇧J before-erase  ⎋[2⇧J screen-erase  ⎋[3⇧J scrollback-erase
 #       ⎋[⇧K row-tail-erase  ⎋[1⇧K row-head-erase  ⎋[2⇧K row-erase
-#       ⎋[⇧T scrolls-down  ⎋[S scrolls-up
+#       ⎋[⇧T scrolls-down  ⎋[⇧S scrolls-up
 #
 #       ⎋[4h insert  ⎋[4l replace  ⎋[6 q bar  ⎋[4 q skid  ⎋[ q unstyled
 #
@@ -281,7 +281,7 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 #
 #       ⎋[6n call for reply ⎋[{y};{x}R  ⎋[18t call for reply⎋[{rows};{columns}t
 #
-#       ⎋[⇧E \r\n
+#       ⎋[⇧E \r\n but never implies ⎋[⇧S
 #
 #   Our VT420 Terminal Emulation includes
 #
@@ -328,13 +328,13 @@ CSI_EXTRAS = "".join(chr(_) for _ in range(0x20, 0x40))  # !"#$%&'()*+,-./012345
 
 
 CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-CUD_Y = "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down  # "\n" is Pn 1 except from last Row
+CUD_Y = "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down  # \n is Pn 1 except from last Row
 CUF_X = "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
-CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left  # "\b" is Pn 1
+CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left  # \b is Pn 1
 
-# CNL_Y = "\x1B" "[" "{}E"  # CSI 04/05 Cursor Next Line (CNL)  # a la "\r\n" replace, not insert
+CNL_Y = "\x1B" "[" "{}E"  # CSI 04/05 Cursor Next Line (CNL)  # \r\n but never implies ⎋[⇧S
 
-CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # "\r" is Pn 1
+CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # \r is Pn 1
 VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
 # CUP_1_1 = "\x1B" "[" "H"  # CSI 04/08 Cursor Position
@@ -342,10 +342,11 @@ VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 # CUP_1_X = "\x1B" "[" ";{}H"  # CSI 04/08 Cursor Position
 CUP_Y_X = "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
 
-ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
-
-CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation  # "\t" is Pn 1
+CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation  # \t is Pn 1
 CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
+
+
+ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
 
 ICH_X = "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
 IL_Y = "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
@@ -967,6 +968,9 @@ class StrTerminal:
     row_y: int  # -1, then Row of Cursor
     column_x: int  # -1, then Column of Cursor
 
+    revert_y: int  # -1, then Row of Cursor at ⎋7 DECSC Save-Cursor
+    revert_x: int  # -1, then Column of Cursor at ⎋7 DECSC Save-Cursor
+
     writelog: dict[int, dict[int, str]]  # todo: row major or column major?  # ScreenLogger
 
     #
@@ -1343,14 +1347,14 @@ class StrTerminal:
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
         (y_count, x_count) = self.y_count_x_count_read(timeout=0)
-        (y_row, x_column) = self.row_y_column_x_read(timeout=0)
+        (row_y, column_x) = self.row_y_column_x_read(timeout=0)
 
         for y in range(1, y_count + 1):
             ctext = "\x1B" "[" f"{y}d"
             ctext += "\x1B" "[" f"{n}P"
             self.schars_write(ctext)  # for .columns_delete_n
 
-        ctext = "\x1B" "[" f"{y_row}d"
+        ctext = "\x1B" "[" f"{row_y}d"
         self.schars_write(ctext)  # for .columns_delete_n
 
     def columns_insert_n(self, n) -> None:  # a la VT420 DECIC ⎋['}
@@ -1360,14 +1364,14 @@ class StrTerminal:
         assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
         (y_count, x_count) = self.y_count_x_count_read(timeout=0)
-        (y_row, x_column) = self.row_y_column_x_read(timeout=0)
+        (row_y, column_x) = self.row_y_column_x_read(timeout=0)
 
         for y in range(1, y_count + 1):
             ctext = "\x1B" "[" f"{y}d"
             ctext += "\x1B" "[" f"{n}@"
             self.schars_write(ctext)  # for .columns_insert_n
 
-        ctext = "\x1B" "[" f"{y_row}d"
+        ctext = "\x1B" "[" f"{row_y}d"
         self.schars_write(ctext)  # for .columns_insert_n
 
     #
@@ -1416,6 +1420,7 @@ class StrTerminal:
                 writelog.clear()
             elif not split.isprintable():
                 bt.sbytes_write(sbytes)
+                self.control_schars_emulate(schars=split)
             else:
                 (row_y, column_x) = self.row_y_column_x_read(timeout=0)
                 bt.sbytes_write(sbytes)
@@ -1431,6 +1436,117 @@ class StrTerminal:
                     column_x += 1
 
                     # todo: .schars_write when out of bounds
+
+                self.column_x = column_x
+
+    def control_schars_emulate(self, schars) -> None:
+        """Write Control Chars into .row_y and .column_x"""
+
+        # Emulate 1 Control Char
+
+        assert BS == "\b"  # 00/08 Backspace ⌃H
+        assert HT == "\t"  # 00/09 Character Tabulation ⌃I
+        assert LF == "\n"  # 00/10 Line Feed ⌃J  # akin to CSI CUD "\x1B" "[" "B"
+        assert CR == "\r"  # 00/13 Carriage Return ⌃M  # akin to CSI CHA "\x1B" "[" "G"
+
+        if len(schars) == 1:
+
+            if schars == "\b":
+                self.column_x -= 1
+            elif schars == "\n":
+                self.row_y += 1
+            elif schars == "\r":
+                self.column_x = 1
+            elif schars == "\t":
+                tab = 1 + 8 * ((self.column_x - 1) // 8)
+                self.column_x = tab + 8
+
+            return
+
+        # Emulate 2 Control Chars
+
+        assert DECSC == "\x1B" "7"  # ESC 03/07 Save Cursor [Checkpoint] (DECSC)
+        assert DECRC == "\x1B" "8"  # ESC 03/08 Restore Cursor [Revert] (DECRC)
+
+        if schars == "\x1B" "7":
+            self.revert_y = self.row_y
+            self.revert_x = self.column_x
+            return
+
+        if schars == "\x1B" "8":
+            self.row_y = self.revert_y
+            self.column_x = self.revert_x
+            return
+
+        # Emulate 1 CSI Control Sequence, into .row_y and .column_x
+
+        self.csi_control_schars_emulate(schars)
+
+    def csi_control_schars_emulate(self, schars) -> None:
+        """Emulate 1 CSI Control Sequence, into .row_y and .column_x"""
+
+        assert CSI_PIF_REGEX == r"(\x1B\[)" r"([0-?]*)" r"([ -/]*)" r"(.)"
+
+        m = re.fullmatch(CSI_PIF_REGEX, string=schars)
+        if not m:
+            return
+
+        csi = m.group(1)
+        p = m.group(2) if m.group(2) else ""
+        # i = m.group(3) if m.group(3) else ""
+        f = m.group(4)
+
+        (py, px) = (p, "")
+        if p.count(";") == 1:
+            (py, px) = p.split(";")
+
+        p = p if p else "1"  # mutates into default 1 for Final in ABCD E GdH IZ
+        py = py if py else "1"
+        px = px if px else "1"
+
+        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+        assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
+        assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
+
+        assert CNL_Y == "\x1B" "[" "{}E"  # CSI 04/05 Cursor Next Line (CNL)
+
+        if csi and (f == "A"):
+            self.row_y -= int(p)
+        elif csi and (f == "B"):
+            self.row_y += int(p)
+        elif csi and (f == "C"):
+            self.column_x += int(p)
+        elif csi and (f == "D"):
+            self.column_x -= int(p)
+
+        elif csi and (f == "E"):
+            self.row_y += int(p)
+            self.column_x = 1
+
+        assert CHA_Y == "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute
+        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+        assert CUP_Y_X == "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
+
+        if csi and (f == "G"):
+            self.column_x = int(p)
+        elif csi and (f == "d"):
+            self.row_y = int(p)
+        elif csi and (f == "H"):
+            self.row_y = int(py)
+            self.column_x = int(px)
+
+        assert CHT_X == "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation
+        assert CBT_X == "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
+
+        if csi and (f == "I"):
+            tab = 1 + 8 * ((self.column_x - 1) // 8)
+            self.column_x = tab + 8 * int(p)
+        elif csi and (f == "Z"):
+            tab = 1 + 8 * ((self.column_x - 1 + 8 - 1) // 8)
+            self.column_x = tab - 8 * int(p)
+
+        # todo: shrug off Exception's in 'int(p)', 'p.split', etc
 
     def schars_split(self, schars) -> list[str]:
         """Split Chars into Text and Controls"""  # todo: should match BytesTerminal.kbytes_read
@@ -1461,49 +1577,49 @@ class StrTerminal:
                 split = sch
                 continue
 
-            # Split out 1 Control Char
+            # Split out 1 Control Char, and start over
 
             if not split.startswith("\x1B"):
                 splits.append(split)  # 1 Control Char  # ['\r', '\n']
                 split = sch
                 continue
 
-            # Split out 1 SS3 Sequence, or begun plus a Byte
+            split_plus = split + sch
 
-            if split == "\x1B":
+            # Split out 1 Esc Pair, and start over
+
+            if len(split) == 1:
                 split += sch
+                if split_plus not in ("\x1B\x1B", "\x1B[", "\x1BO"):  # ESC ESC, CSI, SS3
+                    splits.append(split)  # 1 Esc Pair
+                    split = ""
                 continue
+
+            # Split out 1 SS3 Sequence, or begun plus a Byte
 
             if split == "\x1B\x1B":
                 split += sch
-                if sch == "O":
+                if split_plus in ("\x1B\x1BO", "\x1B\x1B["):  # ESC SS3, ESC CSI
                     continue
 
                 splits.append(split)
                 split = ""
                 continue
 
-            if split in ("\x1BO", "\x1B\x1BO"):
+            if split in ("\x1BO", "\x1B\x1BO"):  # SS3, ESC SS3
                 split += sch
 
                 splits.append(split)
                 split = ""
                 continue
 
-            # Split out 1 Esc Sequence of 1 or 2 Esc plus a Byte
+            assert split.startswith("\x1B[") or split.startswith("\x1B\x1B["), (split,)  # CSI
+
+            # Split out 1 CSI Sequence, or begun plus a Byte
 
             prefix = "\x1B"
             if split.startswith("\x1B\x1B"):
                 prefix = "\x1B\x1B"
-
-            if not split.startswith(prefix + "["):
-                split += sch
-
-                splits.append(split)
-                split = ""
-                continue
-
-            # Split out 1 CSI Sequence, or begun plus a Byte
 
             csi_tail = split.removeprefix(prefix + "[")
             csi = "\x1B[" + csi_tail + sch
@@ -1527,6 +1643,9 @@ class StrTerminal:
         if split:
             splits.append(split)
             split = ""  # unneeded
+
+        join = "".join(splits)
+        assert join == schars, (join, splits, schars)
 
         return splits
 
@@ -1649,8 +1768,8 @@ class GlassTeletype:
 
     def os_terminal_y_row_x_column(self) -> tuple[int, int]:
         st = self.str_terminal
-        (y_row, x_column) = st.row_y_column_x_read(timeout=0)
-        return (y_row, x_column)
+        (row_y, column_x) = st.row_y_column_x_read(timeout=0)
+        return (row_y, column_x)
 
     def os_terminal_y_count_x_count(self) -> tuple[int, int]:
         st = self.str_terminal
@@ -2307,10 +2426,10 @@ class Turtle:
             # todo: Printing Labels for -90° West and 0° North
             # todo: Printing Labels for Headings other than 90° East and 180° South
 
-        (y_row, x_column) = gt.os_terminal_y_row_x_column()
+        (row_y, column_x) = gt.os_terminal_y_row_x_column()
 
         text = " ".join(str(_) for _ in args)
-        ctext = f"\x1B[{y_row};{x_column}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
+        ctext = f"\x1B[{row_y};{column_x}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
         ctext += "\n"  # just Line-Feed \n without Carriage-Return \r
 
         self._schars_write_(text)  # for .label
@@ -3024,7 +3143,27 @@ class Turtle:
     def write(self, s) -> None:
         """Write one Str to the Screen"""
 
+        gt = self.glass_teletype
+        st = gt.str_terminal
+
         self._schars_write_(s)  # for .write  # arbitrary mix of Controls and Text
+
+        # Secretly silently snap our Turtle to the emulated Cursor Row-Column
+
+        (row_y, column_x) = (st.row_y, st.column_x)
+        (y_count, x_count) = gt.os_terminal_y_count_x_count()
+
+        center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
+        center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
+
+        x1 = (column_x - center_x) / 2  # doublewide X
+        y1 = -(row_y - center_y)
+
+        xfloat_ = float(x1)  # 'explicit is better than implicit'
+        yfloat_ = float(y1)
+
+        self.xfloat = xfloat_
+        self.yfloat = yfloat_
 
         # PyTurtle Write
 
@@ -3391,7 +3530,7 @@ class Turtle:
         # on a Plane of Y is Down and X is Right,
         # counted from an Upper Left (1, 1)
 
-        (y_row, x_column) = gt.os_terminal_y_row_x_column()
+        (row_y, column_x) = gt.os_terminal_y_row_x_column()
         (y_count, x_count) = gt.os_terminal_y_count_x_count()
 
         center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
@@ -3401,8 +3540,8 @@ class Turtle:
         # on a plane of Y is Up and X is Right,
         # counted from a (0, 0) in the Middle
 
-        x1 = (x_column - center_x) / 2  # doublewide X
-        y1 = -(y_row - center_y)
+        x1 = (column_x - center_x) / 2  # doublewide X
+        y1 = -(row_y - center_y)
 
         # Snap the Shadow to the Cursor Row-Column, if the Cursor moved
 
@@ -5378,8 +5517,8 @@ class TurtlingServer:
 
         gt = self.glass_teletype
 
-        (y_row, x_column) = gt.os_terminal_y_row_x_column()
-        if x_column != 1:
+        (row_y, column_x) = gt.os_terminal_y_row_x_column()
+        if column_x != 1:
             gt.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
         else:
             gt.schars_write("\x1B[L")  # CSI 04/12 Insert Line
@@ -5391,8 +5530,8 @@ class TurtlingServer:
 
         gt = self.glass_teletype
 
-        (y_row, x_column) = gt.os_terminal_y_row_x_column()
-        if x_column != 1:
+        (row_y, column_x) = gt.os_terminal_y_row_x_column()
+        if column_x != 1:
             gt.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
         else:
             gt.schars_write("\x1B[L")  # CSI 04/12 Insert Line
@@ -5408,8 +5547,8 @@ class TurtlingServer:
 
         gt.schars_write("\x1B[K")  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
 
-        (y_row, x_column) = gt.os_terminal_y_row_x_column()
-        if x_column == 1:
+        (row_y, column_x) = gt.os_terminal_y_row_x_column()
+        if column_x == 1:
             kstrs = list(_[-1] for _ in kchords[-2:])
             if kstrs == ["⌃K", "⌃K"]:
                 gt.schars_write("\x1B[M")  # CSI 04/13 Delete Line
