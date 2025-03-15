@@ -849,8 +849,8 @@ Try running our Color Test
     Restart  Right 210  SetPenColor 16 4.6  Forward
 
     Restart  Right 90
-    SetPenColor 24 4.6  Arc 45  SetPenColor "802B00" 8  Arc  45
-    SetPenColor 24 4.6  Arc 45  SetPenColor "802B00" 8  Arc  45
+    SetPenColor 24 4.6  Arc 45  SetPenColor "802B00" 8  Arc  45  # once
+    SetPenColor 24 4.6  Arc 45  SetPenColor "802B00" 8  Arc  45  # twice
 
     Restart Tada
 

@@ -63,7 +63,7 @@ import warnings
 # todo: add 'import mscvrt' at Windows
 
 
-__version__ = "2025.3.12"  # Wednesday
+__version__ = "2025.3.15"  # Saturday
 
 _ = dict[str, int] | None  # new since Oct/2021 Python 3.10
 
@@ -3123,8 +3123,7 @@ class Turtle:
 
         time.sleep(second_float)  # may raise ValueError or TypeError
 
-        d = dict(seconds=second_float, s="sleep")  # not the sticky .rest
-        return d
+        return dict()  # not the sticky .rest, and not this transient .seconds either
 
         # todo: give credit for delay in work before t.sleep
 
@@ -5858,7 +5857,7 @@ class TurtleClient:
 
             # Prompt & Echo Lines from the Keyboard
 
-            ilines = self.read_some_ilines(ps1, postedit=postedit)  # replace
+            ilines = self.read_some_ilines(ps1)  # replace
             if not ilines:
                 break
 
@@ -5871,53 +5870,94 @@ class TurtleClient:
 
                     ilines[0:0] = ["import turtling", "t = turtling.Turtle()"]
 
-    def read_some_ilines(self, ps1, postedit) -> list[str]:
+    def read_some_ilines(self, ps1) -> list[str]:
         """Prompt & Echo Lines from the Keyboard"""
+
+        # Send the Prompt once
 
         sys.stdout.flush()
         eprint(ps1, end="")
         sys.stderr.flush()
+
+        # Block to read 1 or more Input Lines
 
         ilines: list[str]
         ilines = list()
 
         while True:
             itext = ""
+
+            # Poll for Notes from the Sketchist, while no Input available
+
+            while True:
+                timeout = 0.100
+                if select.select([sys.stdin], [], [], timeout)[0]:
+                    break
+
+                # Try taking the Text as a Python Repr
+
+                rtext_else = self.trade_text_else("t.sleep(0)")
+                if rtext_else is not None:
+                    rtext = rtext_else
+
+                    try:
+                        value = ast_literal_eval_strict(rtext)
+                    except Exception:
+                        continue
+
+                    if isinstance(value, dict):
+                        if "notes" in value.keys():
+                            notes = value["notes"]
+                            if notes:
+
+                                eprint("\r" "\x1B[K", end="")
+                                sys.stderr.flush()
+
+                                for note in notes:
+                                    self.sketchist_note_eval_as_client(note)
+
+                                sys.stdout.flush()
+                                eprint(ps1, end="")
+                                sys.stderr.flush()
+
+            # Block to read 1 or more Input Lines
+
             try:
 
                 itext += sys.stdin.readline()
-                while select.select([sys.stdin], [], [], 0.000)[0]:
+                timeout = 0.000
+                while select.select([sys.stdin], [], [], timeout)[0]:
                     itext += sys.stdin.readline()
 
             except KeyboardInterrupt:  # ⌃C SigInt
+
                 if ilines:
                     eprint("\x1B[" f"{len(ilines)}A")
                 eprint("\r" "\x1B[" "J", end="")
+
                 eprint(ps1, end="\r\n")
                 eprint("KeyboardInterrupt")
                 eprint(ps1, end="")
                 sys.stderr.flush()
+
                 ilines.clear()
 
                 continue
 
+            assert itext, (itext,)  # todo: cope with Input cut short
             ilines.extend(itext.splitlines())
-
-            if not itext:
-                eprint("")  # duck Incomplete ⌘K Clear of Screen
-                return ilines
-
-            with BytesTerminal() as bt:
-                kbhit = bt.kbhit(timeout=0.000)
-
-            if kbhit:  # when last Line started but not ended
-                eprint("", end="\r")  # duck Doubled Echo of Line
 
             break
 
+        # Clear Auto-Echo of Input, to make room to echo it when taken
+
         eprint("\x1B[" f"{len(ilines)}A" "\x1B[" "J", end="")
 
+        # Succeed
+
         return ilines
+
+        # todo: why doesn't '.kbhit' of Chars work as well as '.select' of Lines here?
 
     def text_has_pyweight(self, text) -> bool:
         """Say forward to Sketchist if more than Blanks and Comments found"""
