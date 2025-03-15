@@ -586,7 +586,7 @@ class BytesTerminal:
 
         return kbytes
 
-    def kbytes_read(self, timeout) -> bytes:
+    def kbytes_read(self, timeout) -> bytes:  # todo: should match StrTerminal.schars_split
         """Read the 1 or more Bytes of 1 Key Chord, but let it stop short"""
 
         assert ESC == "\x1B"
@@ -601,34 +601,36 @@ class BytesTerminal:
         if kbytes1 != b"\x1B":
             return taken_kbytes
 
-        # Accept 1 or more Esc Bytes, such as x 1B 1B in ⌥⌃FnDelete
-        # And take the next Byte too
+        # Accept 1 or 2 Esc Bytes, such as x 1B 1B 5B in ⌥⌃FnDelete
+        # And take the next Byte after these Esc too, even if it is also an Esc Byte
 
-        while True:
+        if not self.kbhit(timeout=timeout):
+            return taken_kbytes
+
+        kbytes2 = self.kchar_bytes_read()  # for .kbytes_read
+        taken_kbytes += kbytes2
+
+        kbytes3 = kbytes2  # fuzz over started by 1 or 2 Esc Bytes
+        if kbytes2 == b"\x1B":
             if not self.kbhit(timeout=timeout):
                 return taken_kbytes
 
-                # 1st loop:  ⎋ Esc that isn't ⎋⎋ Meta Esc
-                # 2nd loop:  ⎋⎋ Meta Esc that doesn't come with more Bytes
+            kbytes3 = self.kchar_bytes_read()  # for .kbytes_read
+            taken_kbytes += kbytes3
 
-            kbytes2 = self.kchar_bytes_read()  # for .kbytes_read
-            taken_kbytes += kbytes2
-            if kbytes2 != b"\x1B":
-                break
-
-        if kbytes2 == b"O":  # 01/11 04/15 SS3
+        if kbytes3 == b"O":  # 01/11 04/15 SS3
             if not self.kbhit(timeout=timeout):
                 return taken_kbytes  # ⎋ Esc and then ⇧O but no more Bytes
 
-            kbytes3 = self.kchar_bytes_read()  # for .kbytes_read
-            taken_kbytes += kbytes3  # todo: rarely in range(0x20, 0x40) CSI_EXTRAS
+            kbytes4 = self.kchar_bytes_read()  # for .kbytes_read
+            taken_kbytes += kbytes4  # todo: rarely in range(0x20, 0x40) CSI_EXTRAS
             return taken_kbytes
 
             # ⎋⇧O⇧P for F1, etc
 
         # Accept ⎋[ Meta [ cut short by itself, or longer CSI Escape Sequences
 
-        if kbytes2 == b"[":  # 01/11 ... 05/11 CSI
+        if kbytes3 == b"[":  # 01/11 ... 05/11 CSI
             assert taken_kbytes.endswith(b"\x1B\x5B"), (taken_kbytes,)
             if not self.kbhit(timeout=timeout):
                 return taken_kbytes
@@ -804,7 +806,7 @@ KCAP_BY_KCHARS = {
     "\x1B" "\x1B" "[" "A": "⎋↑",  # CSI 04/01 Cursor Up (CUU)  # not ⌥↑
     "\x1B" "\x1B" "[" "B": "⎋↓",  # CSI 04/02 Cursor Down (CUD)  # not ⌥↓
     "\x1B" "\x1B" "[" "Z": "⎋⇧Tab",  # ⇤  # CSI 05/10 CBT  # not ⌥⇧Tab
-    "\x1B" "\x28": "⎋FnDelete",  # not ⌥⎋FnDelete
+    "\x1B" "\x28": "⎋FnDelete",  # not ⌥FnDelete
     "\x1B" "OP": "F1",  # ESC 04/15 Single-Shift Three (SS3)  # SS3 ⇧P
     "\x1B" "OQ": "F2",  # SS3 ⇧Q
     "\x1B" "OR": "F3",  # SS3 ⇧R
@@ -1406,27 +1408,127 @@ class StrTerminal:
 
         assert ED_P == "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 2 Rows, etc
 
-        sbytes = schars.encode()
-        if schars == "\x1B" "[2J":
-            bt.sbytes_write(sbytes)
-            writelog.clear()
-        elif not schars.isprintable():
-            bt.sbytes_write(sbytes)
-        else:
-            (row_y, column_x) = self.row_y_column_x_read(timeout=0)
-            bt.sbytes_write(sbytes)
+        for split in self.schars_split(schars):
+            sbytes = split.encode()
 
-            for sch in schars:
+            if split == "\x1B" "[2J":
+                bt.sbytes_write(sbytes)
+                writelog.clear()
+            elif not split.isprintable():
+                bt.sbytes_write(sbytes)
+            else:
+                (row_y, column_x) = self.row_y_column_x_read(timeout=0)
+                bt.sbytes_write(sbytes)
 
-                if column_x not in writelog.keys():
-                    writelog[column_x] = dict()
+                for sch in split:
 
-                writelog_x = writelog[column_x]
-                writelog_x[row_y] = sch
+                    if column_x not in writelog.keys():
+                        writelog[column_x] = dict()
 
-                column_x += 1
+                    writelog_x = writelog[column_x]
+                    writelog_x[row_y] = sch
 
-                # todo: .schars_write when out of bounds
+                    column_x += 1
+
+                    # todo: .schars_write when out of bounds
+
+    def schars_split(self, schars) -> list[str]:
+        """Split Chars into Text and Controls"""  # todo: should match BytesTerminal.kbytes_read
+
+        assert ESC == "\x1B"
+        assert CSI == "\x1B" "["
+        assert SS3 == "\x1B" "O"
+
+        splits = list()
+
+        assert CSI_PIF_REGEX == r"(\x1B\[)" r"([0-?]*)" r"([ -/]*)" r"(.)"
+
+        split = ""
+        for sch in schars:
+
+            # Split out 1 And More Text Chars
+
+            if not split:
+                split = sch
+                continue
+
+            if split.isprintable():
+                if sch.isprintable():
+                    split += sch
+                    continue
+
+                splits.append(split)  # 1 And More Text Chars
+                split = sch
+                continue
+
+            # Split out 1 Control Char
+
+            if not split.startswith("\x1B"):
+                splits.append(split)  # 1 Control Char  # ['\r', '\n']
+                split = sch
+                continue
+
+            # Split out 1 SS3 Sequence, or begun plus a Byte
+
+            if split == "\x1B":
+                split += sch
+                continue
+
+            if split == "\x1B\x1B":
+                split += sch
+                if sch == "O":
+                    continue
+
+                splits.append(split)
+                split = ""
+                continue
+
+            if split in ("\x1BO", "\x1B\x1BO"):
+                split += sch
+
+                splits.append(split)
+                split = ""
+                continue
+
+            # Split out 1 Esc Sequence of 1 or 2 Esc plus a Byte
+
+            prefix = "\x1B"
+            if split.startswith("\x1B\x1B"):
+                prefix = "\x1B\x1B"
+
+            if not split.startswith(prefix + "["):
+                split += sch
+
+                splits.append(split)
+                split = ""
+                continue
+
+            # Split out 1 CSI Sequence, or begun plus a Byte
+
+            csi_tail = split.removeprefix(prefix + "[")
+            csi = "\x1B[" + csi_tail + sch
+            csi_plus = csi + "."
+
+            m0 = re.fullmatch(CSI_PIF_REGEX, string=csi_plus)
+            if m0:
+                split += sch
+                continue
+
+            m1 = re.fullmatch(CSI_PIF_REGEX, string=csi)
+            if m1:
+                split += sch
+
+                splits.append(split)
+                split = ""
+                continue
+
+            assert False, (split, sch)
+
+        if split:
+            splits.append(split)
+            split = ""  # unneeded
+
+        return splits
 
     def schar_read_if(self, row_y, column_x, default) -> str:
         """Read 1 Char from the Screen, if logged before now"""
@@ -1814,8 +1916,8 @@ class Turtle:
         """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
 
         gt = self.glass_teletype
-        gt.schars_write("\r\n")
 
+        self._schars_write_("\r\n")
         gt.breakpoint()
 
     def bye(self) -> None:
@@ -1838,8 +1940,7 @@ class Turtle:
         """Write Spaces over every Character of every Screen Row and Column (CLS or CLEAR or CS for short)"""
 
         ctext = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
-        gt = self.glass_teletype
-        gt.schars_write(ctext)
+        self._schars_write_(ctext)
 
         (x_min, x_max, y_min, y_max) = self.xy_min_max()
 
@@ -2056,8 +2157,7 @@ class Turtle:
         """Ring the Terminal Alarm Bell once, remotely inside the Turtle (B for short)"""
 
         ctext = "\a"  # Alarm Bell
-        gt = self.glass_teletype
-        gt.schars_write(ctext)
+        self._schars_write_(ctext)
 
         # time.sleep(2 / 3)  # todo: guess more accurately when the Terminal Bell falls silent
 
@@ -2112,10 +2212,8 @@ class Turtle:
     def hideturtle(self) -> dict:
         """Stop showing where the Turtle is (HT for short)"""
 
-        gt = self.glass_teletype
-
         ctext = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
-        gt.schars_write(ctext)
+        self._schars_write_(ctext)
 
         self.hiding = True
 
@@ -2215,8 +2313,8 @@ class Turtle:
         ctext = f"\x1B[{y_row};{x_column}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
         ctext += "\n"  # just Line-Feed \n without Carriage-Return \r
 
-        gt.schars_write(text)  # for .label
-        gt.schars_write(ctext)
+        self._schars_write_(text)  # for .label
+        self._schars_write_(ctext)
         self.yfloat -= 1
 
         hiding = self.hiding
@@ -2458,7 +2556,6 @@ class Turtle:
         assert COLOR_ACCENTS == (None, 3, 4, 4.6, 8, 24)
         assert accent in (None, 3, 4, 4.6, 8, 24), (accent,)
 
-        gt = self.glass_teletype
         backscapes = self.backscapes
         penscapes = self.penscapes
 
@@ -2486,7 +2583,7 @@ class Turtle:
         # Accept the change, and catch up the Terminal
 
         backscapes[::] = backscapes_
-        gt.schars_write("".join([Plain] + backscapes + penscapes))
+        self._schars_write_("".join([Plain] + backscapes + penscapes))
 
         d = dict(backscapes=backscapes_, setph="setpenhighlight")
         return d
@@ -2497,7 +2594,6 @@ class Turtle:
         assert COLOR_ACCENTS == (None, 3, 4, 4.6, 8, 24)
         assert accent in (None, 3, 4, 4.6, 8, 24), (accent,)
 
-        gt = self.glass_teletype
         backscapes = self.backscapes
         penscapes = self.penscapes
 
@@ -2524,7 +2620,7 @@ class Turtle:
         # Accept the change, and catch up the Terminal
 
         penscapes[::] = penscapes_
-        gt.schars_write("".join([Plain] + backscapes + penscapes))
+        self._schars_write_("".join([Plain] + backscapes + penscapes))
 
         d = self._penscapes_disassemble_(penscapes_)
         assert "penscapes" not in d.keys()
@@ -2890,10 +2986,8 @@ class Turtle:
     def showturtle(self) -> dict:
         """Start showing where the Turtle is (ST for short)"""
 
-        gt = self.glass_teletype
-
         ctext = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
-        gt.schars_write(ctext)
+        self._schars_write_(ctext)
 
         self.hiding = False
 
@@ -2930,10 +3024,15 @@ class Turtle:
     def write(self, s) -> None:
         """Write one Str to the Screen"""
 
-        gt = self.glass_teletype
-        gt.schars_write(s)  # for .write
+        self._schars_write_(s)  # for .write  # arbitrary mix of Controls and Text
 
         # PyTurtle Write
+
+    def _schars_write_(self, s) -> None:
+        """Write one Str to the Screen"""
+
+        gt = self.glass_teletype
+        gt.schars_write(s)  # for ._schars_write_
 
     #
     # Move the Turtle along the Line of its Heading, leaving a Trail if Pen Down
@@ -3119,11 +3218,11 @@ class Turtle:
         if e_left < e_still:
             assert e_right >= e_still, (e_still, e_left, e_right, x, x2)
             if xys is None:
-                gt.schars_write("\x1B[D")
+                self._schars_write_("\x1B[D")
         elif e_right < e_still:
             assert e_left >= e_still, (e_still, e_left, e_right, x, x2)
             if xys is None:
-                gt.schars_write("\x1B[C")
+                self._schars_write_("\x1B[C")
 
         # Pass back the look ahead, on request
 
@@ -3151,8 +3250,6 @@ class Turtle:
 
     def _jump_if_(self, wx, wy, x, y) -> None:
         """Slip into next Column or next Row, or don't"""
-
-        gt = self.glass_teletype
 
         # Plan the Jump  # todo: .int or .round ?
 
@@ -3188,12 +3285,10 @@ class Turtle:
             if platform.system() == "Darwin":
                 ctext = f"\x1B[A\x1B[B{ctext}"  # else macOS leaves thin 1-pixel base lines
 
-        gt.schars_write(ctext)
+        self._schars_write_(ctext)
 
     def _punch_or_erase_if_(self) -> None:
         """Punch or Erase, except don't while 🐢 PenUp"""
-
-        gt = self.glass_teletype
 
         warping = self.warping
         erasing = self.erasing
@@ -3214,8 +3309,8 @@ class Turtle:
         # Do the Punch or Erase, except don't while 🐢 PenUp
 
         if not warping:  # todo: .writelog when Controls mixed into Text
-            gt.schars_write(punch)  # for ._jump_punch_rest_if_
-            gt.schars_write(backspaces)
+            self._schars_write_(punch)  # for ._jump_punch_rest_if_
+            self._schars_write_(backspaces)
 
     def _rest_if_(self) -> None:
         """Do rest awhile, except don't while 🐢 HideTurtle"""
@@ -3428,14 +3523,14 @@ class Turtle:
             for ch in writable:
                 color = Melon if (ch in "()@") else Blue
                 self.setpencolor(color, accent=8)
-                gt.schars_write(ch)
+                self._schars_write_(ch)
 
-            gt.schars_write(len(writable) * "\b")
-            gt.schars_write("\n")
+            self._schars_write_(len(writable) * "\b")
+            self._schars_write_("\n")
 
         self.setpencolor(Yellow, accent=8)
 
-        self.xfloat = xa  # todo: teach 'gt.schars_write' to stop snap'ping over text
+        self.xfloat = xa
         self.yfloat = -ya - 1
 
         (xb, yb) = self._x_y_position_()  # may change .xfloat .yfloat
