@@ -587,7 +587,7 @@ class BytesTerminal:
 
         return kbytes
 
-    def kbytes_read(self, timeout) -> bytes:  # todo: should match StrTerminal.schars_split
+    def kbytes_read(self, timeout) -> bytes:
         """Read the 1 or more Bytes of 1 Key Chord, but let it stop short"""
 
         assert ESC == "\x1B"
@@ -650,6 +650,8 @@ class BytesTerminal:
         # may be cut short by end-of-input, or by undecodable Bytes
         # may take one too many Bytes if begun by ⎋⇧O and not ended normally
         # may take one too many Bytes if begun by ⎋[ and not ended normally
+
+        # todo: tight coupling across StrTerminal.schars_split & BytesTerminal.kbytes_read
 
     def csi_kchord_bytes_read_if(self, kbytes, timeout) -> bytes:
         """Read the 1 or more Bytes of 1 CSI Escape Sequence, but let it stop short"""
@@ -988,6 +990,8 @@ class StrTerminal:
         self.x_count = -1
         self.row_y = -1
         self.column_x = -1
+        self.revert_y = -1
+        self.revert_x = -1
 
         self.writelog = dict()
 
@@ -1027,6 +1031,8 @@ class StrTerminal:
         for kcap in kcaps:
             kchord = (b"", kcap)
             kchords.append(kchord)
+
+        # todo: tight coupling across Turtle Press & StrTerminal KCaps_Append
 
     def kchord_pull(self, timeout) -> tuple[bytes, str]:
         """Read 1 Key Chord, and snoop the Cursor Position out of it, if present"""
@@ -1472,8 +1478,8 @@ class StrTerminal:
             return
 
         if schars == "\x1B" "8":
-            self.row_y = self.revert_y
-            self.column_x = self.revert_x
+            self.row_y = self.revert_y if (self.revert_y >= 1) else 1
+            self.column_x = self.revert_x if (self.revert_x >= 1) else 1
             return
 
         # Emulate 1 CSI Control Sequence, into .row_y and .column_x
@@ -1647,6 +1653,8 @@ class StrTerminal:
 
         return splits
 
+        # todo: tight coupling across BytesTerminal.kbytes_read & StrTerminal.schars_split
+
     def schar_read_if(self, row_y, column_x, default) -> str:
         """Read 1 Char from the Screen, if logged before now"""
 
@@ -1685,25 +1693,51 @@ class StrTerminal:
     # Imagine the Bytes pulled from the Keyboard as an Encoding of the Key Caps Chord
     #
 
-    def kstr_to_kbytes(self, kstr) -> bytes:
+    def kstr_to_kbytes(self, kstr) -> bytes:  # noqa C901 too complex(17
         """Imagine the Bytes pulled from the Keyboard as an Encoding of the Key Caps Chord"""
 
-        if len(kstr) == 1:
-            if kstr.isprintable():
+        assert CSI_PIF_REGEX == r"(\x1B\[)" r"([0-?]*)" r"([ -/]*)" r"(.)"
+
+        if not kstr:
+            raise NotImplementedError(kstr)
+
+        if kstr.isprintable():
+            if len(kstr) == 1:  # 'A'  # '9'  # '█'
                 kbytes = kstr.encode()
-                # print(repr(kstr), repr(kbytes), end="\r\n")
                 return kbytes
 
-        if len(kstr) == 2:
-            if kstr[0] == "⎋":
-                if kstr[-1].isprintable():
-                    kbytes = b"\x1B" + kstr[-1].encode()
-                    # print(repr(kstr), repr(kbytes), end="\r\n")
+        if kstr[:1] == "⌃":
+            if len(kstr) == 2:
+                kcode_n = ord(kstr[-1])
+                if kcode_n in range(0x40, 0x60):
+                    kbytes = bytes([kcode_n ^ 0x40])
                     return kbytes
+
+        if kstr[:1] == "⎋":
+            if len(kstr) == 2:
+                if kstr[-1].isprintable():
+                    kbytes = b"\x1B" + kstr[-1].encode()  # ⎋7  # ⎋8
+                    return kbytes
+
+        if kstr.startswith("⎋O"):
+            if len(kstr) == 3:
+                if kstr[-1].isprintable():
+                    kbytes = b"\x1B" + b"O" + kstr[-1].encode()  # ⎋OQ  # ⎋OR
+                    return kbytes
+
+        if kstr.startswith("⎋⎋O"):
+            if len(kstr) == 4:
+                if kstr[-1].isprintable():
+                    kbytes = b"\x1B\x1B" + b"O" + kstr[-1].encode()  # ⎋⎋OQ  # ⎋⎋OR
+                    return kbytes
+
+        if re.fullmatch(r"(⎋\[)" r"([0-?]*)" r"([ -/]*)" r"(.)", string=kstr):
+            kbytes = b"\x1B" + kstr[1:].encode()
+            return kbytes
 
         raise NotImplementedError(kstr)
 
-        # todo: Code up the rest of StrTerminal.kstr_to_kbytes
+        # todo: tight coupling across BytesTerminal.kbytes_read & StrTerminal.kstr_to_kbytes
 
 
 class GlassTeletype:
@@ -1782,6 +1816,50 @@ class GlassTeletype:
     # Loop Keyboard Bytes back onto the Screen
     #
 
+    def keyboard_serve_one_kchord(self, kchord) -> None:
+        """Reply to 1 Keyboard Chord"""
+
+        if self.kchord_edit_like_macos(kchord):
+            return
+
+        (kbytes, kstr) = kchord
+        if kstr == "Return":
+            self.schars_write("\r\n")
+            return
+
+            # todo: trust .kchord_edit_like_macos. to help paste Text Lines
+
+        self.kchord_write_kbytes_else_print_kstr(kchord)
+
+    def kchord_edit_like_macos(self, kchord) -> bool:
+        """Reply to 1 Keyboard Chord that edits the Terminal"""
+        """Return True if served, else return False"""
+
+        (kbytes, kstr) = kchord
+
+        func_by_kstr = {
+            "⌃A": self.do_column_go_leftmost,
+            "⌃B": self.do_column_go_left,
+            # "⌃D": self.do_char_delete_right,
+            "⌃F": self.do_column_go_right,
+            "⌃G": self.do_alarm_ring,
+            # "⌃H": self.do_char_delete_left,
+            # "⌃K": self.do_row_tail_delete,
+            # "Return": self.do_row_insert_go_below,
+            "⌃N": self.do_row_go_down,
+            # "⌃O": self.do_row_insert_below,
+            "⌃P": self.do_row_go_up,
+            # "Delete": self.do_char_delete_left,
+        }
+
+        if kstr not in func_by_kstr.keys():
+            return False
+
+        func = func_by_kstr[kstr]
+        func(kchord)
+
+        return True
+
     def kchord_write_kbytes_else_print_kstr(self, kchord) -> None:
         """Write 1 Key Chord, else print its Key Caps"""
 
@@ -1817,6 +1895,100 @@ class GlassTeletype:
                         return
 
             st.schars_write(schars)
+
+    #
+    # FIXME
+    #
+
+    def do_alarm_ring(self, kchord) -> None:  # ⌃G
+        """Ring the Terminal Bell"""
+
+        self.schars_write("\a")  # Alarm Bell
+
+    def do_char_delete_left(self, kchord) -> None:  # ⌃H  # Delete
+        """Delete 1 Character at the Left of the Turtle"""
+
+        self.schars_write("\b\x1B[P")  # CSI 05/00 Delete Character
+
+        # todo: join lines from left edge
+
+    def do_char_delete_right(self, kchord) -> None:  # ⌃D
+        """Delete 1 Character at Right (like a Windows Delete)"""
+
+        self.schars_write("\x1B[P")  # CSI 05/00 Delete Character
+
+        # todo: join lines from right edge
+
+    def do_column_go_left(self, kchord) -> None:  # ⌃B
+        """Go to the Character at Left of the Turtle"""
+
+        self.schars_write("\x1B[D")  # CSI 04/04 Cursor [Backward] Left  # could be "\b"
+
+        # todo: wrap back across left edge
+
+    def do_column_go_leftmost(self, kchord) -> None:  # ⌃A
+        """Go to first Character of Row"""
+
+        self.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
+
+    def do_column_go_right(self, kchord) -> None:  # ⌃F
+        """Go to the next Character of Row"""
+
+        self.schars_write("\x1B[C")  # CSI 04/03 Cursor [Forward] Right
+
+        # todo: wrap forward across right edge
+
+    def do_row_go_down(self, kchord) -> None:  # ⌃N
+        """Move as if you pressed the ↓ Down Arrow"""
+
+        self.schars_write("\x1B[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
+
+    def do_row_go_up(self, kchord) -> None:  # ⌃P
+        """Move as if you pressed the ↑ Up Arrow"""
+
+        self.schars_write("\x1B[A")  # CSI 04/01 Cursor [Up] Previous
+
+    def do_row_insert_below(self, kchord) -> None:  # ⌃O
+        """Insert a Row below this Row"""
+
+        (row_y, column_x) = self.os_terminal_y_row_x_column()
+        if column_x != 1:
+            self.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
+        else:
+            self.schars_write("\x1B[L")  # CSI 04/12 Insert Line
+
+        # todo: split differently at left edge, at right edge, at middle
+
+    def do_row_insert_go_below(self, kchord) -> None:  # Return
+        """Insert a Row below this Row and move into it"""
+
+        (row_y, column_x) = self.os_terminal_y_row_x_column()
+        if column_x != 1:
+            self.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
+        else:
+            self.schars_write("\x1B[L")  # CSI 04/12 Insert Line
+            self.schars_write("\x1B[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
+
+        # todo: split differently at left edge, at right edge, at middle
+
+    def do_row_tail_delete(self, kchord) -> None:  # ⌃K
+        """Delete all the Characters at or to the Right of the Turtle"""
+
+        st = self.str_terminal
+        kchords = st.kchords
+
+        self.schars_write("\x1B[K")  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
+
+        (row_y, column_x) = self.os_terminal_y_row_x_column()
+        if column_x == 1:
+            kstrs = list(_[-1] for _ in kchords[-2:])
+            if kstrs == ["⌃K", "⌃K"]:
+                self.schars_write("\x1B[M")  # CSI 04/13 Delete Line
+
+                kchord = (b"", "")  # takes ⌃K ⌃K ⌃K as ⌃K ⌃K and ⌃K
+                kchords.append(kchord)
+
+        # todo: join when run from right edge
 
 
 glass_teletypes: list[GlassTeletype]
@@ -2538,10 +2710,12 @@ class Turtle:
 
         gt = self.glass_teletype
 
-        kchord = (b"", kstr)  # todo: strong coupling with StrTerminal KChord in GlassTeletype
-        gt.kchord_write_kbytes_else_print_kstr(kchord)
+        kchord = (b"", kstr)
+        gt.keyboard_serve_one_kchord(kchord)
 
         return dict()
+
+        # todo: tight coupling across StrTerminal KCaps_Append & Turtle Press
 
         # todo: 🐢 Press with multiple Arguments
 
@@ -4324,7 +4498,7 @@ class PythonSpeaker:
         call_pysplits: list[str]
         call_pysplits = list()
 
-        text_pysplits = self.splitpy(text) + [""]
+        text_pysplits = self.py_split(text) + [""]
         trailing_pysplits = list()
         for pysplit in text_pysplits:
             if pysplit.lstrip().startswith("#"):
@@ -4404,7 +4578,7 @@ class PythonSpeaker:
 
         return pycodes
 
-    def splitpy(self, text) -> list[str]:
+    def py_split(self, text) -> list[str]:
         """Split 1 Text into its widest parseable Py Expressions from the Left"""
 
         lines = text.splitlines()
@@ -4500,7 +4674,7 @@ class PythonSpeaker:
 
         try:
 
-            ast_literal_eval_strict(strip)  # take from 'splitpy'
+            ast_literal_eval_strict(strip)  # take from 'py_split'
 
         except ValueError:
 
@@ -5394,7 +5568,7 @@ class TurtlingSketchist:
                         st.schars_print("⎋\\", end="\r\n")
                     break
 
-                self.keyboard_serve_one_kchord(kchord)
+                gt.keyboard_serve_one_kchord(kchord)
 
             # Reply to 1 Client Text
 
@@ -5408,156 +5582,6 @@ class TurtlingSketchist:
                 if reader.find_mkfifo_once_if(pid):  # 0..10 ms
                     reader_fd = reader.fd_open_read_once()
                     assert reader_fd == reader.fileno, (reader_fd, reader.fileno)
-
-    def keyboard_serve_one_kchord(self, kchord) -> None:
-        """Reply to 1 Keyboard Chord"""
-
-        gt = self.glass_teletype
-
-        if self.kchord_edit_like_macos(kchord):
-            return kchord
-
-        # gt.notes.append(repr(kchord))
-
-        (kbytes, kstr) = kchord
-        if kstr == "Return":
-            gt.schars_write("\r\n")
-            return kchord
-
-            # todo: trust .kchord_edit_like_macos. to help paste Text Lines
-
-        gt.kchord_write_kbytes_else_print_kstr(kchord)
-
-    def kchord_edit_like_macos(self, kchord) -> bool:
-        """Reply to 1 Keyboard Chord that edits the Terminal"""
-        """Return True if served, else return False"""
-
-        (kbytes, kstr) = kchord
-
-        func_by_kstr = {
-            "⌃A": self.do_column_go_leftmost,
-            "⌃B": self.do_column_go_left,
-            # "⌃D": self.do_char_delete_right,
-            "⌃F": self.do_column_go_right,
-            "⌃G": self.do_alarm_ring,
-            # "⌃H": self.do_char_delete_left,
-            # "⌃K": self.do_row_tail_delete,
-            # "Return": self.do_row_insert_go_below,
-            "⌃N": self.do_row_go_down,
-            # "⌃O": self.do_row_insert_below,
-            "⌃P": self.do_row_go_up,
-            # "Delete": self.do_char_delete_left,
-        }
-
-        if kstr not in func_by_kstr.keys():
-            return False
-
-        func = func_by_kstr[kstr]
-        func(kchord)
-
-        return True
-
-    def do_alarm_ring(self, kchord) -> None:  # ⌃G
-        """Ring the Terminal Bell"""
-
-        gt = self.glass_teletype
-        gt.schars_write("\a")  # Alarm Bell
-
-    def do_char_delete_left(self, kchord) -> None:  # ⌃H  # Delete
-        """Delete 1 Character at the Left of the Turtle"""
-
-        gt = self.glass_teletype
-        gt.schars_write("\b\x1B[P")  # CSI 05/00 Delete Character
-
-        # todo: join lines from left edge
-
-    def do_char_delete_right(self, kchord) -> None:  # ⌃D
-        """Delete 1 Character at Right (like a Windows Delete)"""
-
-        gt = self.glass_teletype
-        gt.schars_write("\x1B[P")  # CSI 05/00 Delete Character
-
-        # todo: join lines from right edge
-
-    def do_column_go_left(self, kchord) -> None:  # ⌃B
-        """Go to the Character at Left of the Turtle"""
-
-        gt = self.glass_teletype
-        gt.schars_write("\x1B[D")  # CSI 04/04 Cursor [Backward] Left  # could be "\b"
-
-        # todo: wrap back across left edge
-
-    def do_column_go_leftmost(self, kchord) -> None:  # ⌃A
-        """Go to first Character of Row"""
-
-        gt = self.glass_teletype
-        gt.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
-
-    def do_column_go_right(self, kchord) -> None:  # ⌃F
-        """Go to the next Character of Row"""
-
-        gt = self.glass_teletype
-        gt.schars_write("\x1B[C")  # CSI 04/03 Cursor [Forward] Right
-
-        # todo: wrap forward across right edge
-
-    def do_row_go_down(self, kchord) -> None:  # ⌃N
-        """Move as if you pressed the ↓ Down Arrow"""
-
-        gt = self.glass_teletype
-        gt.schars_write("\x1B[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
-
-    def do_row_go_up(self, kchord) -> None:  # ⌃P
-        """Move as if you pressed the ↑ Up Arrow"""
-
-        gt = self.glass_teletype
-        gt.schars_write("\x1B[A")  # CSI 04/01 Cursor [Up] Previous
-
-    def do_row_insert_below(self, kchord) -> None:  # ⌃O
-        """Insert a Row below this Row"""
-
-        gt = self.glass_teletype
-
-        (row_y, column_x) = gt.os_terminal_y_row_x_column()
-        if column_x != 1:
-            gt.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
-        else:
-            gt.schars_write("\x1B[L")  # CSI 04/12 Insert Line
-
-        # todo: split differently at left edge, at right edge, at middle
-
-    def do_row_insert_go_below(self, kchord) -> None:  # Return
-        """Insert a Row below this Row and move into it"""
-
-        gt = self.glass_teletype
-
-        (row_y, column_x) = gt.os_terminal_y_row_x_column()
-        if column_x != 1:
-            gt.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
-        else:
-            gt.schars_write("\x1B[L")  # CSI 04/12 Insert Line
-            gt.schars_write("\x1B[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
-
-        # todo: split differently at left edge, at right edge, at middle
-
-    def do_row_tail_delete(self, kchord) -> None:  # ⌃K
-        """Delete all the Characters at or to the Right of the Turtle"""
-
-        gt = self.glass_teletype
-        kchords = self.kchords
-
-        gt.schars_write("\x1B[K")  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
-
-        (row_y, column_x) = gt.os_terminal_y_row_x_column()
-        if column_x == 1:
-            kstrs = list(_[-1] for _ in kchords[-2:])
-            if kstrs == ["⌃K", "⌃K"]:
-                gt.schars_write("\x1B[M")  # CSI 04/13 Delete Line
-
-                kchord = (b"", "")  # takes ⌃K ⌃K ⌃K as ⌃K ⌃K and ⌃K
-                kchords.append(kchord)
-
-        # todo: join when run from right edge
 
     def reader_writer_serve(self, reader, writer) -> None:
         """Read a Python Text in, write back out the Repr of its Eval"""
@@ -5870,7 +5894,7 @@ class TurtleClient:
 
                     ilines[0:0] = ["import turtling", "t = turtling.Turtle()"]
 
-    def read_some_ilines(self, ps1) -> list[str]:
+    def read_some_ilines(self, ps1) -> list[str]:  # noqa C901 too complex (17
         """Prompt & Echo Lines from the Keyboard"""
 
         # Send the Prompt once
@@ -5944,14 +5968,17 @@ class TurtleClient:
 
                 continue
 
-            assert itext, (itext,)  # todo: cope with Input cut short
+            if not itext:  # if ⌃D TTY EOF
+                eprint("")  # completes the Line that TTY EOF echo doesn't complete
+
             ilines.extend(itext.splitlines())
 
             break
 
         # Clear Auto-Echo of Input, to make room to echo it when taken
 
-        eprint("\x1B[" f"{len(ilines)}A" "\x1B[" "J", end="")
+        if ilines:
+            eprint("\x1B[" f"{len(ilines)}A" "\x1B[" "J", end="")
 
         # Succeed
 
