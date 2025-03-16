@@ -69,6 +69,12 @@ __version__ = "2025.3.15"  # Saturday
 _ = dict[str, int] | None  # new since Oct/2021 Python 3.10
 
 
+if "turtle" not in globals():
+    globals()["turtle"] = sys.modules[__name__]
+if "turtling" not in globals():
+    globals()["turtling"] = sys.modules[__name__]
+
+
 DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
 Turtle_ = unicodedata.lookup("Turtle")  # 🐢 U+01F422
@@ -2153,13 +2159,13 @@ TurtlingDefaults = _turtling_defaults_choose_()
 #
 
 
-Logo = "Logo".casefold()
-Trig = "Trig".casefold()  # todo: NotImplementedError vs Trig
-Trigonometry = "Trigonometry".casefold()  # todo: NotImplementedError vs Trigonometry
-TunnelVision = "TunnelVision".casefold()  # todo: TunnelVision relevant only to Puck?
+Logo = "Logo"
+Trigonometry = "Trigonometry"  # todo: NotImplementedError vs Trigonometry
+TunnelVision = "TunnelVision"  # todo: TunnelVision relevant only to Puck?
 
 turtling_modes: list[str]
 turtling_modes = list()
+turtling_modes.append(Logo)
 
 
 class Turtle:
@@ -2667,25 +2673,29 @@ class Turtle:
     def _mode_(self, hints) -> dict:
         """Choose a dialect of the Logo Turtle Language"""
 
+        defined_modes = (Logo, Trigonometry, TunnelVision)
+
         if hints is None:
             return dict()
 
         for hint in hints.split():
-            cfold = hint.casefold()
+            hint_modes = list(_ for _ in defined_modes if _.casefold().startswith(hint.casefold()))
+            if (len(hint_modes) != 1) or (len(hint) < 4):
+                raise ValueError(f"Choose Mode from {defined_modes}, not {hint!r}")
 
-            if cfold.startswith(Logo):
-                pass  # emulating full Python installs of:  import turtle; turtle.mode("Logo")
+                # todo: limit land grab of first 4 Characters of Turtle Mode?
 
-            elif cfold.startswith(Trig) and Trigonometry.startswith(cfold):
-                raise NotImplementedError("🐢 Mode Trigonometry")
+            hint_mode = hint_modes[-1]
+            if hint_mode not in turtling_modes:
 
-            elif cfold.startswith(TunnelVision):
-                if TunnelVision not in turtling_modes:
-                    turtling_modes.append(TunnelVision)
-                    # todo: how to undo TunnelVision, short of a full 🐢 Relaunch?
+                if hint_mode == Trigonometry:
+                    raise NotImplementedError("🐢 mode Trigonometry")
 
-            else:
-                raise ValueError(f"Choose Mode from ['Logo', 'Trigonometry'], not {hint!r}")
+                turtling_modes.append(hint_mode)
+                turtling_modes.sort()
+
+                # todo: implement Trigonometry in Headings and Initial Zero Heading
+                # todo: how to undo TunnelVision, short of a full 🐢 Relaunch?
 
         modes = list(turtling_modes)  # 'copied is better than aliased'
         return dict(modes=modes)
