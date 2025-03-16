@@ -49,6 +49,7 @@ import select  # Windows sad at 'select.select' of Named Pipes
 import shlex
 import shutil
 import signal
+import string
 import subprocess
 import sys
 import termios  # Windows sad
@@ -301,10 +302,12 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 #       ⌃P ↑
 #       Delete char-delete-right  # FIXME: make it so
 #
-#   Our Emulation of macOS ⌘K erasing the Window Tab Pane and Scrollback includes
+#   Our Emulation of default Vim/ Emacs includes
 #
-#       ⌃L scrollback-and-screen-erase  # todo: make it so, only after we implement undo?
+#       ⌃L scrollback-and-screen-erase  # FIXME: make it so
 #           note: ⌘K ⌘K is already plenty destructive at macOS now
+#
+#       Also Turtle Press "⌘K ⌘K" works  # FIXME: make it so
 #
 
 
@@ -1704,7 +1707,18 @@ class StrTerminal:
 
         if kstr.isprintable():
             if len(kstr) == 1:  # 'A'  # '9'  # '█'
+                if kstr in string.ascii_uppercase:
+                    kbytes = kstr.casefold().encode()
+                    return kbytes
+                if kstr in string.ascii_lowercase:
+                    upper = kstr.upper()
+                    raise NotImplementedError(f"Did you mean '⇧{upper}' or '{upper}'?")
                 kbytes = kstr.encode()
+                return kbytes
+
+        if kstr[:1] == "⇧":
+            if kstr[-1] in string.ascii_uppercase:
+                kbytes = kstr[-1].encode()
                 return kbytes
 
         if kstr[:1] == "⌃":
@@ -1824,17 +1838,31 @@ class GlassTeletype:
             return
 
         (kbytes, kstr) = kchord
+
         if kstr == "Return":
             self.schars_write("\r\n")
-            return
+        elif kstr == "Tab":
+            self.schars_write("\t")
+        elif kstr == "Spacebar":
+            self.schars_write(" ")
 
-            # todo: trust .kchord_edit_like_macos. to help paste Text Lines
+        elif kstr == "⇧Tab":
+            self.schars_write("\x1B[Z")  # CSI 05/10 Cursor Backward Tabulation (CBT)
+        elif kstr == "←":
+            self.schars_write("\x1B[D")  # CSI 04/04 Cursor [Backward] Left
+        elif kstr == "↑":
+            self.schars_write("\x1B[A")  # CSI 04/01 Cursor [Up] Previous
+        elif kstr == "→":
+            self.schars_write("\x1B[C")  # CSI 04/03 Cursor [Forward] Right
+        elif kstr == "↓":
+            self.schars_write("\x1B[B")  # CSI 04/02 Cursor [Down] Next
 
-        self.kchord_write_kbytes_else_print_kstr(kchord)
+        else:
+            self.kchord_write_kbytes_else_print_kstr(kchord)
 
     def kchord_edit_like_macos(self, kchord) -> bool:
         """Reply to 1 Keyboard Chord that edits the Terminal"""
-        """Return True if served, else return False"""
+        # Return True if served, else return False
 
         (kbytes, kstr) = kchord
 
@@ -1898,7 +1926,7 @@ class GlassTeletype:
             st.schars_write(schars)
 
     #
-    # FIXME
+    # Edit the Screen lots like macOS edit a Text Buffer
     #
 
     def do_alarm_ring(self, kchord) -> None:  # ⌃G

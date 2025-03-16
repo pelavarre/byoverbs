@@ -8,15 +8,15 @@ Contents
     - [Windows](#windows)
     - [macOS](#macos)
     - [Linux](#linux)
-      - [gCloud Browser Linux, or Sh TMux](#gcloud-browser-linux-or-sh-tmux)
-      - [replIt Browser Linux](#replit-browser-linux)
+      - [gCloud Browser Linux Shell](#gcloud-browser-linux-shell)
+      - [replIt Browser Linux Shell](#replit-browser-linux-shell)
       - [Sh Screen](#sh-screen)
   - [Step 2: You download \& run the Source Code](#step-2-you-download--run-the-source-code)
   - [Step 3: You open one Terminal Window Tab Pane for Drawing](#step-3-you-open-one-terminal-window-tab-pane-for-drawing)
   - [Step 4: You open another Terminal Window Tab Pane for Chat](#step-4-you-open-another-terminal-window-tab-pane-for-chat)
   - [You can start over expertly](#you-can-start-over-expertly)
   - [You can quit for now and start back up again later](#you-can-quit-for-now-and-start-back-up-again-later)
-  - [Please believe we've gone wrong](#please-believe-weve-gone-wrong)
+  - [Please believe we've gone wrong on you](#please-believe-weve-gone-wrong-on-you)
 - [You can just try things](#you-can-just-try-things)
   - [Move the Turtle](#move-the-turtle)
   - [Draw a Triangle](#draw-a-triangle)
@@ -35,11 +35,13 @@ Contents
   - [Color by Number or Color by Words](#color-by-number-or-color-by-words)
     - [Hello Color World](#hello-color-world)
     - [Color Test](#color-test)
+  - [Color Test Results](#color-test-results)
     - [Terminal Shell Colors at gCloud Terminal Shell](#terminal-shell-colors-at-gcloud-terminal-shell)
     - [Terminal Shell Colors at replIt](#terminal-shell-colors-at-replit)
     - [Terminal Shell Colors at macOS](#terminal-shell-colors-at-macos)
   - [Edit your Drawings](#edit-your-drawings)
 - [We can just try things together](#we-can-just-try-things-together)
+  - [Asking for help can hurt you](#asking-for-help-can-hurt-you)
   - [Glance through the Help Texts](#glance-through-the-help-texts)
   - [Blame me, not you, when this English is difficult to read](#blame-me-not-you-when-this-english-is-difficult-to-read)
   - [Choose your own Defaults, when you dislike ours](#choose-your-own-defaults-when-you-dislike-ours)
@@ -48,7 +50,7 @@ Contents
   - [Play around](#play-around)
   - [Help sort our Wish List](#help-sort-our-wish-list)
 - [Dig in technically, deep into the Python](#dig-in-technically-deep-into-the-python)
-  - [25 Cross-Platform Python Imports](#25-cross-platform-python-imports)
+  - [26 Cross-Platform Python Imports](#26-cross-platform-python-imports)
   - [3 Linux/ macOS Imports](#3-linux-macos-imports)
   - [0 Windows Imports](#0-windows-imports)
   - [Breakpoints](#breakpoints)
@@ -65,12 +67,13 @@ Contents
     - [macOS Thin Flat Lines](#macos-thin-flat-lines)
     - [Isosceles found, where Equilateral expected](#isosceles-found-where-equilateral-expected)
     - [11x11 found where 10x10 Pixels expected](#11x11-found-where-10x10-pixels-expected)
+    - [Pixel by pixel, in color](#pixel-by-pixel-in-color)
     - [Auto-correct 24-Bit Html Colors](#auto-correct-24-bit-html-colors)
     - [More than Two Processes](#more-than-two-processes)
     - [Undo Destruction](#undo-destruction)
   - [Easy Bugs](#easy-bugs)
     - [8-bit Color Welcome should settle for always only Html Triple Hex else Octal](#8-bit-color-welcome-should-settle-for-always-only-html-triple-hex-else-octal)
-    - [Press begun, but nothing like finished](#press-begun-but-nothing-like-finished)
+    - [Turtle Press begun](#turtle-press-begun)
     - [Write guesses wrong where the Turtle will land](#write-guesses-wrong-where-the-turtle-will-land)
     - [Pathnames have an obvious meaning](#pathnames-have-an-obvious-meaning)
     - [Random, and not repeatable](#random-and-not-repeatable)
@@ -81,6 +84,7 @@ Contents
     - [Does their Turtle Logo work at your desk?](#does-their-turtle-logo-work-at-your-desk)
     - [What kind of drawings does their Turtle Logo make?](#what-kind-of-drawings-does-their-turtle-logo-make)
 - [Help us please](#help-us-please)
+
 
 <!-- I wish VsCode ToC would number its headings -->
 
@@ -1643,7 +1647,7 @@ its own kind of a tour of the Standard Python Library.
 
 It mixes together like 28 Python Imports
 
-### 25 Cross-Platform Python Imports
+### 26 Cross-Platform Python Imports
 
 > import \_\_main\_\_<br>
 > import argparse<br>
@@ -1982,7 +1986,7 @@ as a way of getting FD RT FD RT FD RT FD RT
 to mean a Square of 10 Pixels per Side
 
 
-# Pixel by pixel, in color
+#### Pixel by pixel, in color
 
 We're up playing with a new idea in Auto-Completion, a kind of Rainbow Ink
 
@@ -2083,29 +2087,25 @@ encoding 8-bit Terminal Shell Color as only Html Triple Hex else Octal.
 Still a mess, but something less of a mess
 
 
-#### Turtle Press begun, but nothing like finished
+#### Turtle Press begun
 
 Presently ...
 
 You can speak Logo to tell the Chat to press Keyboard Chord Sequences in the Drawing Pane
 
     relaunch
+
     press "⎋8"  # cursor-revert
     rt 90  label '12345678901234567890'
     restart
 
-But you can only send Printable Ascii as itself or preceded by the "⎋" Esc Key.
-Lots of Keyboard Chord Sequences don't work
+    press "⇧H E L L O , Spacebar ⇧W O R L D !"
+    press "⌃A Tab Tab Tab ⇧Tab"
 
-    press "Tab"
-    press "⇧Tab"
-    press "←"
+This is an unambiguous place to call out missing Definitions for Keyboard Chord Sequences.
+It's
 
-You have to fall back to encoding the Bytes yourself
-
-    write "\t"  # Tab
-    write "\e[Z"  # ⇧Tab
-    write "\e[D"  # ←
+    press "⌘K ⌘K"
 
 
 #### Write guesses wrong where the Turtle will land
