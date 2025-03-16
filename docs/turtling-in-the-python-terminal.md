@@ -1216,6 +1216,14 @@ We need to write down for us how much works where.
 Here we tell you what we've seen work somewhere,
 but we've lost track of was it working in macOS or gCloud or replIt or what
 
+⌃D char-delete-right  # FIXME: make it so
+⌃H char-delete-left  # FIXME: make it so
+⌃K row-tail-erase  # FIXME: make it so
+⌃O row-insert  # FIXME: make it so
+Delete char-delete-right  # FIXME: make it so
+
+todo: talk up ⌃L and ⌘K ⌘K vs scrollback-and-screen-erase
+
 -->
 
 

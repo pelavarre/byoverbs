@@ -287,23 +287,24 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 #
 #       ⎋['⇧} cols-insert  ⎋['⇧~ cols-delete
 #
-#   Our macOS App Emulation includes  # FIXME: make it so
+#   Our macOS App Emulation includes
 #
 #       ⌃A column-go-leftmost
 #       ⌃B column-go-left
-#       ⌃D char-delete-right
+#       ⌃D char-delete-right  # FIXME: make it so
 #       ⌃F column-go-right
 #       ⌃G alarm-ring
-#       ⌃H char-delete-left
-#       ⌃K row-tail-erase
+#       ⌃H char-delete-left  # FIXME: make it so
+#       ⌃K row-tail-erase  # FIXME: make it so
 #       ⌃N ↓
-#       ⌃O row-insert
+#       ⌃O row-insert  # FIXME: make it so
 #       ⌃P ↑
-#       Delete char-delete-left
+#       Delete char-delete-right  # FIXME: make it so
 #
 #   Our Emulation of macOS ⌘K erasing the Window Tab Pane and Scrollback includes
 #
-#       ⌃L scrollback-and-screen-erase  # FIXME: make it so
+#       ⌃L scrollback-and-screen-erase  # todo: make it so, only after we implement undo?
+#           note: ⌘K ⌘K is already plenty destructive at macOS now
 #
 
 
@@ -2705,15 +2706,22 @@ class Turtle:
 
         # Scratch Pen-Up
 
-    def press(self, kstr) -> dict:
+    def press(self, kline) -> dict:
         """Take a Keyboard Chord Sequence from the Chat Pane, as if pressed in the Drawing Pane"""
 
         gt = self.glass_teletype
+        st = gt.str_terminal
 
-        kchord = (b"", kstr)
-        gt.keyboard_serve_one_kchord(kchord)
+        assert KCAP_SEP == " "
 
-        return dict()
+        for kstr in kline.split():
+            kchord = (b"", kstr)
+            gt.keyboard_serve_one_kchord(kchord)
+
+        (row_y, column_x) = (st.row_y, st.column_x)
+        self._snap_to_column_x_row_y_(column_x, row_y=row_y)
+
+        return dict(row_y=row_y, column_x=column_x)
 
         # todo: tight coupling across StrTerminal KCaps_Append & Turtle Press
 
