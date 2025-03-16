@@ -1716,37 +1716,37 @@ class StrTerminal:
                 kbytes = kstr.encode()
                 return kbytes
 
-        if kstr[:1] == "⇧":
+        if kstr[:1] == "⇧":  # '⇧A'
             if kstr[-1] in string.ascii_uppercase:
                 kbytes = kstr[-1].encode()
                 return kbytes
 
-        if kstr[:1] == "⌃":
+        if kstr[:1] == "⌃":  # '⌃A'
             if len(kstr) == 2:
                 kcode_n = ord(kstr[-1])
                 if kcode_n in range(0x40, 0x60):
                     kbytes = bytes([kcode_n ^ 0x40])
                     return kbytes
 
-        if kstr[:1] == "⎋":
+        if kstr[:1] == "⎋":  # '⎋7'  # '⎋8'
             if len(kstr) == 2:
                 if kstr[-1].isprintable():
-                    kbytes = b"\x1B" + kstr[-1].encode()  # ⎋7  # ⎋8
+                    kbytes = b"\x1B" + kstr[-1].encode()
                     return kbytes
 
-        if kstr.startswith("⎋O"):
+        if kstr.startswith("⎋O"):  # '⎋OQ'  # '⎋OR'
             if len(kstr) == 3:
                 if kstr[-1].isprintable():
-                    kbytes = b"\x1B" + b"O" + kstr[-1].encode()  # ⎋OQ  # ⎋OR
+                    kbytes = b"\x1B" + b"O" + kstr[-1].encode()
                     return kbytes
 
-        if kstr.startswith("⎋⎋O"):
+        if kstr.startswith("⎋⎋O"):  # '⎋⎋OQ'  # '⎋⎋OR'
             if len(kstr) == 4:
                 if kstr[-1].isprintable():
-                    kbytes = b"\x1B\x1B" + b"O" + kstr[-1].encode()  # ⎋⎋OQ  # ⎋⎋OR
+                    kbytes = b"\x1B\x1B" + b"O" + kstr[-1].encode()
                     return kbytes
 
-        if re.fullmatch(r"(⎋\[)" r"([0-?]*)" r"([ -/]*)" r"(.)", string=kstr):
+        if re.fullmatch(r"(⎋\[)" r"([0-?]*)" r"([ -/]*)" r"(.)", string=kstr):  # '⎋[2;2H'
             kbytes = b"\x1B" + kstr[1:].encode()
             return kbytes
 

@@ -2211,6 +2211,7 @@ In particular, adding Python into macOS lets you try
 
     t.forward(100)
     t.right(45)
+    t.forward(100)
 
 This Import Turtle demo runs just as well for me in Window Tab Panes of ReplIt,
 but they force those Terminals to run stunningly slow,
@@ -2219,7 +2220,7 @@ unless you pay money
 
 You could go ask Python·Org people
 to learn to auto-complete your Turtle Logo Input as strongly as we do.
-They already run with some understanding of abbreviations.
+They already run with some understanding of a few abbreviations.
 For example, they do understand
 
     t.fd(100)
@@ -2230,6 +2231,27 @@ is a "Domain-Specific Language (DSL)".
 Our DSL here is "ad hoc, informally-specified, bug-ridden, and slow".
 I feel it works well, so I like it, I like it lots.
 I can only hope we'll scrub more bugs out of it, and even make it as fast as Python
+
+Our Turtle Logo language accepts many parts of Python's Turtle Logo language, presently.
+More soon, if you speak up.
+Like you could come test:
+
+    import turtle
+    turtle.mode("Logo")  # FIXME
+
+    t = turtle.Turtle()
+
+    t.screen.turtles()  # FIXME - they & we should begin with only 1 here
+    t.screen.reset()  # FIXME
+    t.screen.clear()  # FIXME
+    t.screen.bgcolor("Orange")  # only until next .clear  # FIXME
+    t.screen.bgcolor("#804020")  # FIXME
+    t.screen.bgcolor(0.125, 0.25, 0.5)  # FIXME
+
+    turtle.Screen()  # FIXME - us too, and also 'screen.'
+
+    pass  # FIXME: their 't' lives on, without knowing it's lost its .screen
+
 
 **Links**
 
