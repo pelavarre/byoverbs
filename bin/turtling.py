@@ -1678,7 +1678,7 @@ class StrTerminal:
 
         return default
 
-    def writelog_repaint(self) -> None:
+    def writelog_bleach(self) -> None:
         """Write the Logged Screen back into place, but with present Highlight/ Color/ Style"""
 
         bt = self.bytes_terminal
@@ -1811,10 +1811,6 @@ class GlassTeletype:
     # Delegate work to the Str Terminal
     #
 
-    def writelog_repaint(self) -> None:
-        st = self.str_terminal
-        st.writelog_repaint()
-
     def schars_write(self, schars) -> None:
         st = self.str_terminal
         st.schars_write(schars)
@@ -1828,6 +1824,10 @@ class GlassTeletype:
         st = self.str_terminal
         (y_count, x_count) = st.y_count_x_count_read(timeout=0)
         return (y_count, x_count)
+
+    def writelog_bleach(self) -> None:
+        st = self.str_terminal
+        st.writelog_bleach()
 
     def write_row_y_column_x(self, row_y, column_x) -> None:
         st = self.str_terminal
@@ -2035,15 +2035,15 @@ glass_teletypes = list()
 #
 
 
-CompassesByHeading = {
-    45: ["NE", "Northeast"],
-    90: ["E", "East"],
-    135: ["SE", "Southeast"],
-    180: ["S", "South"],
-    225: ["SW", "Southwest"],
-    270: ["W", "West"],
-    315: ["NW", "Northwest"],
-    360: ["N", "North"],
+CompassesByBearing = {
+    45: ("NE", "Northeast"),
+    90: ("E", "East"),
+    135: ("SE", "Southeast"),
+    180: ("S", "South"),
+    225: ("SW", "Southwest"),
+    270: ("W", "West"),
+    315: ("NW", "Northwest"),
+    360: ("N", "North"),
 }
 """Names for Exact Compass Heading Floats"""
 
@@ -2179,7 +2179,7 @@ class Turtle:
     xscale: float  # multiply Literal X Int/ Float by Scale
     yscale: float  # multiply Literal Y Int/ Float by Scale
 
-    heading: float  # stride direction
+    bearing: float  # stride direction
 
     backscapes: list[str]  # configuration of penpunch backdrop
     penscapes: list[str]  # configuration of penpunch ink
@@ -2210,7 +2210,7 @@ class Turtle:
 
         self._reinit_()
 
-        turtles.append(self)
+        _turtles_list_.append(self)
 
     def _reinit_(self) -> None:
         """Clear the Turtle's Settings, but without writing the Screen"""
@@ -2222,7 +2222,7 @@ class Turtle:
         self.xscale = 100e-3
         self.yscale = 100e-3
 
-        self.heading = 360e0  # 360° of North Up Clockwise
+        self.bearing = 360e0  # 360° of North Up Clockwise
 
         self.backscapes.clear()
         self.penscapes.clear()
@@ -2235,6 +2235,14 @@ class Turtle:
         self.rest = 1 / 1e3
 
         # macOS Terminal Sh Launch/ Quit doesn't clear the Graphic Rendition, Cursor Style, etc
+
+    def bleach(self) -> dict:
+        """Write the Logged Screen back into place, but with present Highlight/ Color/ Style"""
+
+        gt = self.glass_teletype
+        gt.writelog_bleach()
+
+        return dict()
 
     def _breakpoint_(self) -> None:
         """Chat through a Python Breakpoint, but without redefining ⌃C SigInt"""
@@ -2266,7 +2274,7 @@ class Turtle:
         ctext = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
         self._schars_write_(ctext)
 
-        (x_min, x_max, y_min, y_max) = self.xy_min_max()
+        (x_min, x_max, y_min, y_max) = self._xy_min_max_()
 
         d = dict(
             x_min=x_min,
@@ -2285,8 +2293,8 @@ class Turtle:
 
         # todo: undo/ clear Turtle Trails separately
 
-    def xy_min_max(self) -> tuple[float, float, float, float]:
-        """Say the Extent of the Screen, in X Y Coordinates"""
+    def _xy_min_max_(self) -> tuple[float, float, float, float]:
+        """Say the Extent of the Screen, in SetXY Coordinates"""
 
         gt = self.glass_teletype
 
@@ -2306,6 +2314,9 @@ class Turtle:
 
         return (x_min, x_max, y_min, y_max)
 
+        # todo: PyTurtle t.screen.screensize() returns just (x_max, y_max)
+        # todo: PyTurtle t.screen.screensize() with Args does resize the Screen
+
     def relaunch(self) -> dict:
         """Warp the Turtle to Home, and clear its Settings, and clear the Screen"""
 
@@ -2324,16 +2335,6 @@ class Turtle:
         # PyTurtle Clear deletes 1 Turtle's Trail, without clearing its Settings
 
         # todo: more often test the corner of:  Relaunch  Relaunch
-
-    def repaint(self) -> dict:
-        """Write the Logged Screen back into place, but with present Highlight/ Color/ Style"""
-
-        gt = self.glass_teletype
-        gt.writelog_repaint()
-
-        return dict()
-
-        # todo: def 🐢 .monochrome to repaint without color? or Repaint with Args?
 
     def restart(self) -> dict:
         """Warp the Turtle to Home, and clear its Settings, but do Not clear the Screen (RESET for short)"""
@@ -2365,7 +2366,7 @@ class Turtle:
         d = {
             "xfloat": self.xfloat,
             "yfloat": self.yfloat,
-            "heading": self.heading,
+            "bearing": self.bearing,
             "penscapes": self.penscapes,
             "penmark": self.penmark,
             "warping": self.warping,
@@ -2395,11 +2396,11 @@ class Turtle:
 
         radius = diameter_float / 2
 
-        heading = self.heading
+        bearing = self.bearing
         xscale = self.xscale
         yscale = self.yscale
 
-        a1 = (90e0 - heading) % 360e0  # converts to 0° East Anticlockwise
+        a1 = (90e0 - bearing) % 360e0  # converts to 0° East Anticlockwise
         (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
 
         a0 = (a1 - 90e0) % 360e0
@@ -2432,7 +2433,7 @@ class Turtle:
         self.right(angle_float)
 
         d = dict(
-            xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading, a="angle", d="diameter"
+            xfloat=self.xfloat, yfloat=self.yfloat, bearing=self.bearing, a="angle", d="diameter"
         )
         self._dict_insert_compass_if_(d)
         return d
@@ -2444,18 +2445,18 @@ class Turtle:
     def _dict_insert_compass_if_(self, d) -> None:
         """Insert Compass Direction, if Heading is exact"""
 
-        compasses_by_heading = CompassesByHeading
+        compasses_by_bearing = CompassesByBearing
 
         items = list()
         for item in d.items():
             items.append(item)
 
             (k, v) = item
-            if k == "heading":
-                heading = v
-                if heading in compasses_by_heading.keys():
-                    compasses = compasses_by_heading[heading]
-                    compass = compasses[-1]
+            if k == "bearing":
+                bearing = v
+                if bearing in compasses_by_bearing.keys():
+                    compasses = compasses_by_bearing[bearing]  # ('NW', 'Northwest')
+                    compass = compasses[-1]  # 'Northwest
 
                     item = ("compass", compass)
                     items.append(item)
@@ -2487,7 +2488,7 @@ class Turtle:
 
         return dict(b="beep")
 
-        # 'def beep' not found in PyTurtle
+        # PyTurtle's work in silence, unless you add sound on the side
 
     def _exec_(self, text) -> None:
         """Exec a Logo Turtle Text"""
@@ -2548,9 +2549,9 @@ class Turtle:
         """Move the Turtle to its Home and turn it North, leaving a Trail if Pen Down"""
 
         self.setxy(x=0e0, y=0e0)  # todo: different Homes for different Turtles
-        self._setheading_(360e0)
+        self._setbearing_(360e0)
 
-        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, bearing=self.bearing)
         self._dict_insert_compass_if_(d)
         return d
 
@@ -2622,9 +2623,9 @@ class Turtle:
         """Write the Str's of 0 or more Args, separated by Spaces"""
 
         gt = self.glass_teletype
-        heading = self.heading
+        bearing = self.bearing
 
-        if round(heading) != 90:  # 90° East
+        if round(bearing) != 90:  # 90° East
             raise NotImplementedError("Printing Labels for Headings other than 90° East")
 
             # todo: Printing Labels for 180° South Heading
@@ -2661,10 +2662,10 @@ class Turtle:
 
         angle_float = float(45 if (angle is None) else angle)
 
-        heading = self.heading
-        self._setheading_(heading - angle_float)
+        bearing = self.bearing
+        self._setbearing_(bearing - angle_float)
 
-        d = dict(heading=self.heading, lt="left", a="angle")
+        d = dict(bearing=self.bearing, lt="left", a="angle")
         self._dict_insert_compass_if_(d)
         return d
 
@@ -2788,7 +2789,7 @@ class Turtle:
         d = dict(
             xfloat=self.xfloat,
             yfloat=self.yfloat,
-            heading=self.heading,
+            bearing=self.bearing,
             rep="repeat",
             n="count",
             a="angle",
@@ -2805,10 +2806,10 @@ class Turtle:
 
         angle_float = float(90 if (angle is None) else angle)
 
-        heading = self.heading  # turning clockwise
-        self._setheading_(heading + angle_float)
+        bearing = self.bearing  # turning clockwise
+        self._setbearing_(bearing + angle_float)
 
-        d = dict(heading=self.heading, rt="right", a="angle")
+        d = dict(bearing=self.bearing, rt="right", a="angle")
         self._dict_insert_compass_if_(d)
         return d
 
@@ -2819,53 +2820,55 @@ class Turtle:
     def setheading(self, angle) -> dict:
         """Turn the Turtle to move 0° North, or to some other Heading (SETH A for short)"""
 
-        h = self._heading_to_float_(angle)
-        self._setheading_(h)
+        b = self._bearing_to_float_(angle)
+        self._setbearing_(b)
 
-        d = dict(heading=self.heading, seth="setheading", a="angle")
+        d = dict(bearing=self.bearing, seth="setheading", a="angle")
         self._dict_insert_compass_if_(d)
 
         return d
 
-    def _heading_to_float_(self, heading) -> float | object:
+    def _bearing_to_float_(self, bearing) -> float:
         """Take Str Heading as Name of Float, else return Heading unchanged"""
 
-        compasses_by_heading = CompassesByHeading
+        compasses_by_bearing = CompassesByBearing
 
         # Tabulate Heading Float by Compass Heading Name
 
-        heading_by_compass: dict[str, float | None]
-        heading_by_compass = dict()
+        bearing_by_casefold: dict[str, float]
+        bearing_by_casefold = dict()
 
-        for h, cc in compasses_by_heading.items():
+        for b, cc in compasses_by_bearing.items():
             for c in cc:
                 s = c.casefold()
-                if s not in heading_by_compass.keys():
-                    heading_by_compass[s] = h
+                if s not in bearing_by_casefold.keys():
+                    bearing_by_casefold[s] = b  # inits
                 else:
-                    heading_by_compass[s] = None  # replaces
+                    # bearing_by_casefold[s] = None  # replaces
+                    assert False, (s, bearing_by_casefold[s], b)
 
-        # Return Angle unchanged, when not Str
+        # Return Angle cloned, essentially unchanged, when not Str
 
-        if not isinstance(heading, str):
-            return heading
-
-        str_heading = heading.casefold()
+        if not isinstance(bearing, str):
+            float_bearing = float(bearing)
+            return float_bearing
 
         # Convert Compass Heading Str to Float
 
-        float_heading = heading_by_compass[str_heading]  # raises ValueError when undefined
-        return float_heading
+        casefold = bearing.casefold()
+        float_bearing = bearing_by_casefold[casefold]  # raises ValueError when undefined
 
-    def _setheading_(self, angle) -> None:
+        return float_bearing
+
+    def _setbearing_(self, angle) -> None:
         """Turn the Turtle to move 0° North, or to some other Heading (SETH A for short)"""
 
         angle_float = float(0 if (angle is None) else angle)
 
-        heading1 = angle_float % 360e0  # 360° Circle
-        heading2 = 360e0 if not heading1 else heading1
+        bearing1 = angle_float % 360e0  # 360° Circle
+        bearing2 = 360e0 if not bearing1 else bearing1
 
-        self.heading = heading2
+        self.bearing = bearing2
 
     assert TurtlingDefaults["sethertz_hertz"] == 1e3, (TurtlingDefaults,)
 
@@ -2886,6 +2889,7 @@ class Turtle:
         return d
 
         # PyTurtle Speed chooses 1..10 for faster animation, reserving 0 for no animation
+        # PyTurtle Screen Delay Milliseconds runs like an inverse of our SetHertz
 
     def setpenhighlight(self, color, accent) -> dict:  # as if gDoc Highlight Color
         """Take a number, two numbers, or some words as the Highlight to draw on (SETPH for short)"""
@@ -3290,7 +3294,7 @@ class Turtle:
         # todo: Share most of .setxy with ._punch_bresenham_stride_ of .forward/ .backward
 
         # FMSLogo SetXY & UBrown SetXY & UCBLogo SetXY alias SetPos
-        # PyTurtle Goto aliases SetPos, PyTurtle Teleport is With PenUp SetPos
+        # PyTurtle Goto aliases SetPos, PyTurtle Teleport is a With PenUp SetPos
         # Scratch Point-In-Direction-90
         # Scratch Go-To-X-Y
         # UCBLogo Goto is a Control Flow Goto
@@ -3395,6 +3399,22 @@ class Turtle:
         gt = self.glass_teletype
         gt.schars_write(s)  # for ._schars_write_
 
+    def xcor(self) -> float:
+        """Say the Turtle's X Position"""
+
+        xfloat = self.xfloat / self.xscale
+        return xfloat
+
+        # FMSLogo XCor, PyTurtle XCor, UCBLogo XCor
+
+    def ycor(self) -> float:
+        """Say the Turtle's Y Position"""
+
+        yfloat = self.yfloat / self.yscale
+        return yfloat
+
+        # FMSLogo YCor, PyTurtle YCor, UCBLogo YCor
+
     #
     # Move the Turtle along the Line of its Heading, leaving a Trail if Pen Down
     #
@@ -3408,11 +3428,11 @@ class Turtle:
         xstride_ = float(stride) * self.xscale
         ystride_ = float(stride) * self.yscale
 
-        heading = self.heading  # 0° North Up Clockwise
+        bearing = self.bearing  # 0° North Up Clockwise
 
         # Limit travel
 
-        (x_min, x_max, y_min, y_max) = self.xy_min_max()
+        (x_min, x_max, y_min, y_max) = self._xy_min_max_()
 
         # Choose the Starting Point
 
@@ -3429,7 +3449,7 @@ class Turtle:
 
         # Choose the Ending Point
 
-        angle = (90e0 - heading) % 360e0  # converts to 0° East Anticlockwise
+        angle = (90e0 - bearing) % 360e0  # converts to 0° East Anticlockwise
 
         xfloat_ = xfloat + (xstride_ * math.cos(math.radians(angle)))
         yfloat_ = yfloat + (ystride_ * math.sin(math.radians(angle)))
@@ -3454,7 +3474,7 @@ class Turtle:
 
             # got:  cs  pu home reset pd  rt rt fd  rt fd 400
             # wanted:  cs  reset pd  setpch '.'  pu setxy ~400 ~100  pd rt fd 400 lt fd
-            # surfaced by:  demos/headings.logo
+            # surfaced by:  demos/bearings.logo
 
         # Draw the Line Segment to X2 Y2 from X1 Y1
 
@@ -3485,8 +3505,10 @@ class Turtle:
     def _punch_bresenham_segment_(self, x1, y1, x2, y2, xys) -> None:  # noqa C901 complex
         """Step forwards, or backwards, through (Row, Column) choices"""
 
-        assert isinstance(y1, int), (type(y1), y1)
-        assert isinstance(y2, int), (type(y2), y2)
+        assert int(x1 * 2) == (x1 * 2), (x1,)
+        assert int(y1) == y1, (y1,)
+        assert int(x2 * 2) == (x2 * 2), (x2,)
+        assert int(y2) == y2, (y2,)
 
         gt = self.glass_teletype
 
@@ -3764,6 +3786,9 @@ class Turtle:
         x1 = (column_x - center_x) / 2  # doublewide X
         y1 = -(row_y - center_y)
 
+        xfloat_ = float(x1)
+        yfloat_ = float(y1)
+
         # Snap the Shadow to the Cursor Row-Column, if the Cursor moved
 
         xf = round(2 * xfloat) / 2  # doublewide X
@@ -3771,11 +3796,10 @@ class Turtle:
         # gt.notes.append(f"{x1=} {y1=} {xf=} {yf=}")
 
         if (x1 != xf) or (y1 != yf):
-            xfloat_ = float(x1)  # 'explicit is better than implicit'
-            yfloat_ = float(y1)
 
             floats = (xfloat_, yfloat_, xfloat, yfloat)
             (ix_, iy_, ix, iy) = (int(xfloat_), int(yfloat_), int(xfloat), int(yfloat))
+
             if floats == (ix_, iy_, ix, iy):
                 note = f"Snap to X Y {ix_} {iy_} from {ix} {iy} for Y X {row_y} {column_x}"
             else:
@@ -3790,10 +3814,10 @@ class Turtle:
 
         # Succeed
 
-        return (x1, y1)
+        return (xfloat_, yfloat_)
 
         # a la PyTurtle Position, XCor, YCor
-        # a la FMSLogo Pos
+        # a la FMSLogo Pos, XCor, YCor
         # a la UCBLogo Pos, XCor, YCor
 
     #
@@ -3966,7 +3990,7 @@ class Turtle:
             for _ in range(count_):
                 self._puck_step_(kind="Breakout")
 
-        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, bearing=self.bearing)
         self._dict_insert_compass_if_(d)
         return d
 
@@ -3982,7 +4006,7 @@ class Turtle:
             for _ in range(count_):
                 self._puck_step_(kind="Pong")
 
-        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, bearing=self.bearing)
         self._dict_insert_compass_if_(d)
         return d
 
@@ -4006,7 +4030,7 @@ class Turtle:
                     n += len(notes) - 25
                     notes[::] = notes[:8] + [f"... 😰 Too many notes, dropping {n} ..."]
 
-        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, heading=self.heading)
+        d = dict(xfloat=self.xfloat, yfloat=self.yfloat, bearing=self.bearing)
         self._dict_insert_compass_if_(d)
         return d
 
@@ -4044,14 +4068,14 @@ class Turtle:
 
             # todo: option to Chase Food more randomly
 
-        heading = self.heading  # sampled only after ._puck_chase_
+        bearing = self.bearing  # sampled only after ._puck_chase_
 
         # Look ahead down the Bresenham Line
 
         xys: list[tuple[float, float]]
         xys = list()
 
-        distance_float = 1e5  # todo: calculate how far from .heading
+        distance_float = 1e5  # todo: calculate how far from .bearing
         self._punch_bresenham_stride_(distance_float, xys=xys)  # for ._puck_step_
 
         assert len(xys) in (1, 2), (len(xys), xys, gt.notes)  # 1 at Bounds of Screen
@@ -4109,7 +4133,7 @@ class Turtle:
             self.yfloat = y2
 
             if collision:
-                self._setheading_(heading + 180e0)
+                self._setbearing_(bearing + 180e0)
 
         else:
             assert collision, (collision,)
@@ -4119,7 +4143,7 @@ class Turtle:
             xys2 = list()
 
             if kind == "Pong":
-                self._setheading_(heading + 180e0)
+                self._setbearing_(bearing + 180e0)
             else:
                 assert kind == "Puck", (kind,)
                 self._puck_bounce_(column_x1, row_y1=row_y1)
@@ -4144,14 +4168,14 @@ class Turtle:
     def _puck_chase_(self, column_x1, row_y1) -> None:
         """Turn aside if Food on the side, while Nne ahead and None behind"""
 
-        heading = self.heading
+        bearing = self.bearing
 
         gt = self.glass_teletype
         st = gt.str_terminal
 
         # Do nothing if not moving along a Puckland Heading
 
-        if heading not in (90, 180, 270, 360):
+        if bearing not in (90, 180, 270, 360):
             return
 
         # Look around
@@ -4177,47 +4201,47 @@ class Turtle:
 
         # Look for Food on the side, while None ahead and None behind
 
-        food_headings = list()
+        food_bearings = list()
 
-        if heading in (180, 360):  # Down, Up
+        if bearing in (180, 360):  # Down, Up
             if sa == sb == "  ":
                 if sc in ("()", "@@"):
-                    food_headings.append(90)
+                    food_bearings.append(90)
                 if sd in ("()", "@@"):
-                    food_headings.append(270)
+                    food_bearings.append(270)
         else:
-            assert heading in (90, 270), (heading,)  # Right, Left
+            assert bearing in (90, 270), (bearing,)  # Right, Left
             if sc == sd == "  ":
                 if sa in ("()", "@@"):
-                    food_headings.append(360)
+                    food_bearings.append(360)
                 if sb in ("()", "@@"):
-                    food_headings.append(180)
+                    food_bearings.append(180)
 
         # Turn aside if found
 
-        if food_headings:
-            h = random.choice(food_headings)
-            self._setheading_(h)
+        if food_bearings:
+            b = random.choice(food_bearings)
+            self._setbearing_(b)
 
     def _puck_bounce_(self, column_x1, row_y1) -> None:
         """Choose a Heading to bounce off of a Collision"""
 
-        heading = self.heading
+        bearing = self.bearing
 
         gt = self.glass_teletype
         st = gt.str_terminal
 
-        sibs = [  # Look right/ down/ left/ up in a Y X Plane of Y Down Double-X Right
+        siblings = [  # Look right/ down/ left/ up in a Y X Plane of Y Down Double-X Right
             (2, 0, 90),
             (0, 1, 180),
             (-2, 0, 270),
             (0, -1, 360),
         ]
 
-        headings = list()
-        food_headings = list()
-        for sib in sibs:  # todo: wider awareness
-            (dx, dy, h) = sib
+        bearings = list()
+        food_bearings = list()
+        for sibling in siblings:  # todo: Look outside of the 4 Close Siblings
+            (dx, dy, b) = sibling
 
             x = column_x1 + dx
             x_plus = x + 1
@@ -4231,25 +4255,66 @@ class Turtle:
 
             schars = schar_xya_if + schar_xyb_if
             if schars in ("  ", "()", "@@"):
-                headings.append(h)
+                bearings.append(b)
                 if schars in ("()", "@@"):
-                    food_headings.append(h)
+                    food_bearings.append(b)
 
-        if not headings:
+        if not bearings:
             raise NotImplementedError("Puck boxed in")
 
-        assert heading not in headings, (heading, headings, column_x1, row_y1)
+        assert bearing not in bearings, (bearing, bearings, column_x1, row_y1)
 
-        if food_headings:
-            h = random.choice(food_headings)
+        if food_bearings:
+            b = random.choice(food_bearings)
         else:
-            h = random.choice(headings)
+            b = random.choice(bearings)
 
-        self._setheading_(h)
+        self._setbearing_(b)
+
+    #
+    # Define the same small set of abbreviated Method Names as "import turtle",
+    # but without DocString's per Def
+    #
+
+    def back(self, distance) -> dict:  # PyTurtle t.back
+        return self.backward(distance)
+
+    def bk(self, distance) -> dict:
+        return self.backward(distance)
+
+    def down(self) -> dict:
+        raise NotImplementedError("Did you mean PenDown?")
+
+    def fd(self, distance) -> dict:
+        return self.forward(distance)
+
+    def goto(self, x, y) -> dict:
+        return self.goto(x, y)
+
+    def ht(self) -> dict:
+        return self.hideturtle()
+
+    def lt(self, angle) -> dict:
+        return self.left(angle)
+
+    def rt(self, angle) -> dict:
+        return self.right(angle)
+
+    def seth(self, angle) -> dict:
+        return self.setheading(angle)
+
+    def setpos(self, x, y) -> dict:
+        return self.setxy(x, y)
+
+    def st(self) -> dict:
+        return self.showturtle()
+
+    def up(self) -> dict:
+        raise NotImplementedError("Did you mean PenUp?")
 
 
-turtles: list[Turtle]
-turtles = list()
+_turtles_list_: list[Turtle]
+_turtles_list_ = list()
 
 
 #
@@ -4261,7 +4326,7 @@ turtles = list()
 #
 
 
-def turtle_demand() -> Turtle:
+def getturtle() -> Turtle:
     """Find or form a Turtle to work with"""
 
     if not glass_teletypes:
@@ -4269,180 +4334,230 @@ def turtle_demand() -> Turtle:
             turtling_run_as_sketchist()
             sys.exit()
 
-    if not turtles:
+    if not _turtles_list_:
         Turtle()
 
-    turtle = turtles[-1]
+    turtle = _turtles_list_[-1]
 
     return turtle
 
+    # PyTurtle GetTurtle
+
 
 def arc(angle, diameter) -> dict:
-    return turtle_demand().arc(angle, diameter=diameter)
+    return getturtle().arc(angle, diameter=diameter)
 
 
-def bye() -> None:
-    return turtle_demand().bye()
-
-
-def clearscreen() -> dict:
-    return turtle_demand().clearscreen()
-
-
-def relaunch() -> dict:
-    return turtle_demand().relaunch()
-
-
-def restart() -> dict:
-    return turtle_demand().restart()
+def back(distance) -> dict:
+    return getturtle().backward(distance)
 
 
 def backward(distance) -> dict:
-    return turtle_demand().backward(distance)
+    return getturtle().backward(distance)
 
 
 def beep() -> dict:
-    return turtle_demand().beep()
+    return getturtle().beep()
+
+
+def bk(distance) -> dict:
+    return getturtle().backward(distance)
+
+
+def bleach() -> dict:
+    return getturtle().bleach()
 
 
 def breakout(count) -> dict:
-    return turtle_demand().pong(count)
+    return getturtle().pong(count)
+
+
+def bye() -> None:
+    return getturtle().bye()
+
+
+def clearscreen() -> dict:
+    return getturtle().clearscreen()
+
+
+def down() -> dict:  # NotImplementedError("Did you mean PenDown?")
+    return getturtle().down()
+
+
+def fd(distance) -> dict:
+    return getturtle().forward(distance)
 
 
 def forward(distance) -> dict:
-    return turtle_demand().forward(distance)
+    return getturtle().forward(distance)
+
+
+def goto(x, y) -> dict:
+    return getturtle().setxy(x, y)
 
 
 def hideturtle() -> dict:
-    return turtle_demand().hideturtle()
+    return getturtle().hideturtle()
 
 
 def home() -> dict:
-    return turtle_demand().home()
+    return getturtle().home()
+
+
+def ht() -> dict:
+    return getturtle().hideturtle()
 
 
 def incx(distance) -> dict:
-    return turtle_demand().incx(distance)
+    return getturtle().incx(distance)
 
 
 def incy(distance) -> dict:
-    return turtle_demand().incy(distance)
+    return getturtle().incy(distance)
 
 
 def isdown() -> bool:
-    return turtle_demand().isdown()
+    return getturtle().isdown()
 
 
 def iserasing() -> bool:
-    return turtle_demand().iserasing()
+    return getturtle().iserasing()
 
 
 def isvisible() -> bool:
-    return turtle_demand().isvisible()
+    return getturtle().isvisible()
 
 
 def label(*args) -> dict:
-    return turtle_demand().label(*args)
+    return getturtle().label(*args)
 
 
 def left(angle) -> dict:
-    return turtle_demand().left(angle)
+    return getturtle().left(angle)
 
 
 def mode(hints) -> dict:
-    return turtle_demand()._mode_(hints)
+    return getturtle()._mode_(hints)
 
 
 def pendown() -> dict:
-    return turtle_demand().pendown()
+    return getturtle().pendown()
 
 
-def pe(self) -> dict:
-    return turtle_demand().pe()
+def pe() -> dict:  # NotImplementedError("Did you mean PenErase?")
+    return getturtle().pe()
 
 
 def penerase() -> dict:
-    return turtle_demand().penerase()
+    return getturtle().penerase()
 
 
 def penup() -> dict:
-    return turtle_demand().penup()
+    return getturtle().penup()
 
 
 def pong(count) -> dict:
-    return turtle_demand().pong(count)
+    return getturtle().pong(count)
 
 
 def press(kstr) -> dict:
-    return turtle_demand().press(kstr)
+    return getturtle().press(kstr)
 
 
-def puckland(self) -> dict:
-    return turtle_demand().puckland()
+def puckland() -> dict:
+    return getturtle().puckland()
 
 
-def repaint() -> dict:
-    return turtle_demand().repaint()
+def relaunch() -> dict:
+    return getturtle().relaunch()
+
+
+def restart() -> dict:
+    return getturtle().restart()
 
 
 def repeat(count, angle, distance) -> dict:
-    return turtle_demand().repeat(count, angle=angle, distance=distance)
+    return getturtle().repeat(count, angle=angle, distance=distance)
 
 
 def right(angle) -> dict:
-    return turtle_demand().right(angle)
+    return getturtle().right(angle)
+
+
+def seth(angle) -> dict:
+    return getturtle().setheading(angle)
 
 
 def setheading(angle) -> dict:
-    return turtle_demand().setheading(angle)
+    return getturtle().setheading(angle)
 
 
 def sethertz(hertz) -> dict:
-    return turtle_demand().sethertz(hertz)
+    return getturtle().sethertz(hertz)
 
 
 def setpencolor(color, accent) -> dict:
-    return turtle_demand().setpencolor(color, accent)
+    return getturtle().setpencolor(color, accent)
 
 
 def setpenpunch(ch) -> dict:
-    return turtle_demand().setpenpunch(ch)
+    return getturtle().setpenpunch(ch)
+
+
+def setpos(x, y) -> dict:
+    return getturtle().setxy(x, y=y)
 
 
 def setx(x) -> dict:
-    return turtle_demand().setx(x)
+    return getturtle().setx(x)
 
 
 def setxy(x, y) -> dict:
-    return turtle_demand().setxy(x, y=y)
+    return getturtle().setxy(x, y=y)
 
 
 def setxyzoom(xscale, yscale) -> dict:
-    return turtle_demand().setxyzoom(xscale, yscale=yscale)
+    return getturtle().setxyzoom(xscale, yscale=yscale)
 
 
 def sety(y) -> dict:
-    return turtle_demand().sety(y)
+    return getturtle().sety(y)
 
 
 def showturtle() -> dict:
-    return turtle_demand().showturtle()
-
-
-def sleep(seconds) -> dict:
-    return turtle_demand().sleep(seconds)
-
-
-def tada() -> dict:
-    return turtle_demand().tada()
-
-
-def write(s) -> None:
-    return turtle_demand().write(s)
+    return getturtle().showturtle()
 
 
 def sierpiński(distance, divisor) -> dict:
-    return turtle_demand().sierpiński(distance, divisor=divisor)
+    return getturtle().sierpiński(distance, divisor=divisor)
+
+
+def sleep(seconds) -> dict:
+    return getturtle().sleep(seconds)
+
+
+def st() -> dict:
+    return getturtle().showturtle()
+
+
+def tada() -> dict:
+    return getturtle().tada()
+
+
+def up() -> dict:
+    return getturtle().up()  # NotImplementedError("Did you mean PenUp?")
+
+
+def write(s) -> None:
+    return getturtle().write(s)
+
+
+def xcor() -> float:
+    return getturtle().xcor()
+
+
+def ycor() -> float:
+    return getturtle().ycor()
 
 
 #
@@ -4916,7 +5031,7 @@ class PythonSpeaker:
         "setph": "setpenhighlight",  # background vs foreground "setpencolor"
         "setpch": "setpenpunch",
         "s": "sleep",
-        # "t": "tada",  # todo: 't()' collides too close to '(t)' and 't.' ?
+        # "t": "tada",  # 't()' collides too close to '(t)' and 't.'
         # "w": "write",
     }
 
@@ -5654,7 +5769,7 @@ class TurtlingSketchist:
         if py:
 
             if "t" not in namespace.keys():
-                t0 = Turtle()
+                t0 = getturtle()
                 namespace["t"] = t0
 
             before = dict(self.namespace)  # sample before
@@ -5662,7 +5777,7 @@ class TurtlingSketchist:
             wvalue = self.py_exec_eval(py)
 
             if "t" not in namespace.keys():
-                t1 = Turtle()
+                t1 = getturtle()
                 namespace["t"] = t1
 
             t = namespace["t"]
@@ -5861,7 +5976,7 @@ class TurtleClient:
             (trade_else, value_else) = self.py_trade_else("t.relaunch(); pass")
             if trade_else is not None:
                 eprint(trade_else)
-                assert False
+                assert False, (trade_else, value_else)
 
             ilines = list()  # replace
 
@@ -6205,7 +6320,7 @@ class TurtleClient:
 #
 # todo: abs square:  reset cs pd  setxy 0 100  setxy 100 100  setxy 100 0  setxy 0 0
 # todo: blink xy:  sethertz 5  st s ht s  st s ht s  st s ht s  st
-# todo: blink heading:  sethertz 5  pu  st s ht s  bk 10 st s ht s  fd 20 st s ht s  bk 10 st s ht s  st
+# todo: blink bearing:  sethertz 5  pu  st s ht s  bk 10 st s ht s  fd 20 st s ht s  bk 10 st s ht s  st
 # todo: a basic smoke test of call the Grunts & Verbs as cited by Hselp
 #
 
@@ -6322,7 +6437,7 @@ class TurtleClient:
 # todo: rep 5 360 (round  100 * math.sqrt(2) / 2  1)
 # todo: rep 5 [fd (round  100 * math.sqrt(2) / 2  1)  rt (360 / 5)]
 # todo: rep 5 [fd (_ * 10)  rt 45]
-# todo: seth (t.heading + 90)
+# todo: seth (t.bearing + 90)
 #
 # todo: 🐢 With to bounce back after a block, such as:  with d [ d=125 fd fd ]
 #
@@ -6419,7 +6534,7 @@ class TurtleClient:
 #
 #   Python Import Turtle (PyTurtle)
 #   https://docs.python.org/3/library/turtle.html
-#   (distinct from Pip Install PyTurtle)
+#   (distinct from the unrelated PyPi·Org Pip Install PyTurtle)
 #
 #   Scratch
 #   https://scratch.mit.edu

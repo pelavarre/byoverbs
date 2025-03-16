@@ -1326,23 +1326,36 @@ Press Spacebar before Q if you want to see more Screenfuls of the Help
 
 You'll see our Help suggests you play around
 
-It suggest you try speaking the Command Verbs it knows:
-Arc, Backward, Beep, Breakout, Bye,
-ClearScreen, Defaults,
-Forward,
-H, HideTurtle, Home,
-IncX, IncY, IsDown, IsVisible,
-Label, Left,
-PenDown, PenErase, PenUp, Pong, Press, Puckland, Puck,
-Relaunch, Repaint, Repeat, Restart, Right,
-SetHeading, SetHertz, SetPenColor, SetPenPunch, SetX, SetXY, SetXYZoom, SetY,
-ShowTurtle, Sierpiński, Sleep,
+It suggests you try speaking the Command Verbs it knows
+
+> Arc, Back, Backward, Beep, Bk, Bleach, Breakout, Bye, ClearScreen, Defaults,
+Fd, Forward, Goto
+H, HideTurtle, Home, Ht,
+IncX, IncY, IsDown, IsErasing, IsVisible,
+Label, Left, Lt,
+PenDown, PenErase, PenUp, Pong, Press, Puck, Puckland,
+Relaunch, Repeat, Restart, Right, Rt,
+SetH, SetHeading, SetHertz,
+SetPenColor, SetPenPunch, SetPos, SetX, SetXY, SetXYZoom, SetY,
+ShowTurtle, Sierpiński, Sleep, St
 Tada,
 and Write
 
-It suggest you try speaking the Nouns it knows:
-glass_teletype, heading, hiding,
-namespace, penmark, penscapes, rest, warping, xfloat, xscale, yfloat, yscale.
+<!-- Omitting Down, Pe, Up on purpose, for we not-implement those on purpose -->
+
+It also suggests you try speaking the Getter Verbs it knows
+
+> IsDown, IsErasing, IsVisible, XCor, YCor
+
+It's some kind of sad that we give you no clue
+of which Logo Verbs are Command Verbs and which are Getter Verbs.
+But many of these Verbs come down to us as a tradition of Logo people before us
+
+It also suggests you try speaking the Nouns it knows:
+
+> glass_teletype, bearing, hiding,
+namespace, penmark, penscapes, rest, warping, xfloat, xscale, yfloat, yscale
+
 These Nouns kind of do work if you mark them up with a 't.' in front
 
     t.xfloat, t.yfloat
@@ -2213,6 +2226,12 @@ In particular, adding Python into macOS lets you try
     t.right(45)
     t.forward(100)
 
+gCloud Shell doesn't give us an Import Turtle demo.
+We've found it only inside macOS Terminal Shell and inside ReplIt Shell
+
+
+
+
 This Import Turtle demo runs just as well for me in Window Tab Panes of ReplIt,
 but they force those Terminals to run stunningly slow,
 and even turn them off for a month,
@@ -2234,12 +2253,15 @@ I can only hope we'll scrub more bugs out of it, and even make it as fast as Pyt
 
 Our Turtle Logo language accepts many parts of Python's Turtle Logo language, presently.
 More soon, if you speak up.
-Like you could come test:
+You can't say "import turtle".
+If you say that part, we do that part, and then you end up testing their Code.
+But you can come test their Scripts running with our Code
 
-    import turtle
-    turtle.mode("Logo")  # FIXME
+    turtle.mode("Logo")
 
     t = turtle.Turtle()
+
+    t.isdown(), t.isvisible(), t.xcor(), t.ycor()  # they don't have:  t.iserasing()
 
     t.screen.turtles()  # FIXME - they & we should begin with only 1 here
     t.screen.reset()  # FIXME
@@ -2266,16 +2288,34 @@ Wikipedia > [Greenspun's tenth rule](https://en.wikipedia.org/wiki/Greenspun%27s
 #### Does their Turtle Logo work at your desk?
 
 Our Turtle Logo runs inside more Terminals
-> gMail gCloud Shell @ https://shell.cloud.google.com/?show=terminal<br>
-> macOS Terminal Shell<br>
-> replIt Shell @ https://replit.com<br>
+> 1. gMail gCloud Shell @ https://shell.cloud.google.com/?show=terminal<br>
+> 2. macOS Terminal Shell<br>
+> 3. replIt Shell @ https://replit.com<br>
 
-Their Turtle Logo runs inside a macOS Terminal, and inside a ReplIt Shell
+Your results will vary, as you try the different kinds of Turtle Logo
 
+Some work as separate Apps,
+some work partly inside a Terminal App and launch another App on the side.
+If you can find a Turtle Logo more available than ours,
+we'd be curious to hear it.
+Our Turtle Logo works well inside all the Terminal Apps, so far as we know to date
+
+The Python·Org "import turtle" kind of Turtle Logo
+runs inside a macOS Terminal, and inside a ReplIt Shell
 In other places, such as gCloud Shell, our Turtle Logo still works,
-whereas their Turtle Logo gives you problems to solve, like
+but their Turtle Logo gives you problems in your graphics stack of software to solve, like
+
 > ModuleNotFoundError: No module named 'tkinter'<br>
+
+or
+
 > _tkinter.TclError: no display name and no $DISPLAY environment variable<br>
+
+They say some problems don't need solving.
+They just spit noise at you, as if noise were a cost-free discourtesy
+
+> 2025-03-16 16:44:29.592 Python[43841:7691786] +[IMKClient subclass]: chose IMKClient_Modern
+> 2025-03-16 16:44:29.592 Python[43841:7691786] +[IMKInputSession subclass]: chose IMKInputSession_Modern
 
 
 #### What kind of drawings does their Turtle Logo make?
@@ -2295,7 +2335,7 @@ I've not yet found a Font that always says Full-Block should paint the full vert
 
 Copying from a Landscape Terminal into gDoc
 works better if you choose gDoc > File > Page Setup > Orientation = Landscape,
-to replace their default choice of Portrait Orientation
+to replace the gDoc default choice of Portrait Orientation
 
 Copying Foreground and Background Color
 into gDoc from macOS Terminal mostly works.
@@ -2307,11 +2347,14 @@ you can record and replay our Drawings
 with the Shell 'screen' command.
 But that kind of recording loses variations in Speed,
 it redraws the Drawings at near infinite speed,
-so you lose the animation effects
+so you lose your animation effects
 
 Our pixels look large and square by default,
-but you can mess with that,
-by changing the size of your Terminal Window Pane and its Font
+but you can mess with how large they look,
+by changing the size of your Terminal Window Pane and its Font.
+Messing with square is more difficult,
+but tell us you're trying and we'll look into it some more.
+SetPenPunch is where you start
 
 
 ## Help us please
@@ -2325,7 +2368,7 @@ To us, if possible
 
 Please also thank our people for their efforts, if you catch the chance
 
-**Thank-you's from us, in January, 2025**
+**Thank-you's of January, 2025**
 
 Georgiana of Bucharest!
 She put the Terminal Window Tab Panes of gCloud Shell

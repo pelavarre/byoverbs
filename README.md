@@ -291,6 +291,7 @@ which Koans we've left out of the Zen of Python so far
 
 + 'included is better than homemade'
 + 'copied is better than aliased'
++ 'immutable is better than mutable'
 + 'ordered is better than muddled'
 + 'python3' is better than 'python3 -O'
 
