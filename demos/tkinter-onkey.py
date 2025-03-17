@@ -44,7 +44,7 @@ def main() -> None:
 
         hcolor = f"#{digest[0]:02X}{digest[1]:02X}{digest[2]:02X}"
 
-        def func(_ch=ch, _code=code, _hcolor=hcolor) -> None:
+        def func(_code=code, _ch=ch, _hcolor=hcolor) -> None:
             print(_code, repr(_ch), _hcolor, end="\r\n")
             ts.bgcolor(_hcolor)
 
