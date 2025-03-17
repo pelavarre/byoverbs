@@ -1328,7 +1328,7 @@ You'll see our Help suggests you play around
 
 It suggests you try speaking the Command Verbs it knows
 
-> Arc, Back, Backward, Beep, Bk, Bleach, Breakout, Bye, ClearScreen, Defaults,
+> Arc, Back, Backward, Beep, Bk, Bleach, Breakout, Bye, Circle, ClearScreen, Defaults,
 Fd, Forward, Goto
 H, HideTurtle, Home, Ht,
 IncX, IncY, IsDown, IsErasing, IsVisible,
@@ -1340,6 +1340,10 @@ SetPenColor, SetPenPunch, SetPos, SetX, SetXY, SetXYZoom, SetY,
 ShowTurtle, Sierpiński, Sleep, St
 Tada,
 and Write
+
+Our Circle Command Verb is part of the Import Turtle tradition in Python.
+I'd guess you'll find our Arc & Repeat Command Verbs simpler to work with.
+Presently, I know our Code for the Circle Command doesn't produce correct output
 
 <!-- Omitting Down, Pe, Up on purpose, for we not-implement those on purpose -->
 
@@ -2296,6 +2300,9 @@ Your results will vary, as you try the different kinds of Turtle Logo
 
 Some work as separate Apps,
 some work partly inside a Terminal App and launch another App on the side.
+The Window for the App on the side
+can easily randomly end up buried beneath other Windows,
+look out for that failure mode.
 If you can find a Turtle Logo more available than ours,
 we'd be curious to hear it.
 Our Turtle Logo works well inside all the Terminal Apps, so far as we know to date
@@ -2312,10 +2319,13 @@ or
 > _tkinter.TclError: no display name and no $DISPLAY environment variable<br>
 
 They say some problems don't need solving.
-They just spit noise at you, as if noise were a cost-free discourtesy
+They just spit noise at you, as if noise were a cost-free discourtesy.
+When you first give Mouse Focus to the App on the side, you're likely to see
 
 > 2025-03-16 16:44:29.592 Python[43841:7691786] +[IMKClient subclass]: chose IMKClient_Modern
 > 2025-03-16 16:44:29.592 Python[43841:7691786] +[IMKInputSession subclass]: chose IMKInputSession_Modern
+
+If you see this, don't worry. I'm ignoring it, and it hasn't hurt me yet
 
 
 #### What kind of drawings does their Turtle Logo make?

@@ -2051,7 +2051,6 @@ CompassesByBearing = {
 KwByGrunt = {
     "a": "angle",
     "d": "distance",
-    "dv": "divisor",
     "hz": "hertz",
     "n": "count",
     "x": "x",
@@ -2065,9 +2064,7 @@ def _turtling_defaults_choose_() -> dict:
 
     angle = 0
     count = 1
-    diameter = 100
     distance = 100
-    divisor = 2
     hertz = 1e3
     mark = 2 * FullBlock  # '██'
     seconds = 1e-3
@@ -2076,7 +2073,7 @@ def _turtling_defaults_choose_() -> dict:
     y = 0
     yscale = 1
 
-    _ = count, diameter
+    _ = count
 
     d = dict(
         #
@@ -2085,6 +2082,7 @@ def _turtling_defaults_choose_() -> dict:
         #
         angle=0,
         arc_angle=90,
+        circle_angle=360,
         left_angle=45,
         repeat_angle=360,
         right_angle=90,
@@ -2096,24 +2094,21 @@ def _turtling_defaults_choose_() -> dict:
         #
         count=1,
         breakout_count=100,
+        circle_count=-1,
         pong_count=100,
         puck_count=100,
         repeat_count=3,
-        #
-        diameter=100,
-        arc_diameter=100,
-        repeat_diameter=100,
+        sierpiński_count=2,
         #
         distance=100,
+        arc_distance=100,  # diameter
         backward_distance=200,
+        circle_distance=50,  # radius
         forward_distance=distance,
         incx_distance=10,
         incy_distance=10,
         repeat_distance=100,
         sierpiński_distance=200,
-        #
-        divisor=2,
-        sierpiński_divisor=divisor,
         #
         hertz=1e3,  # todo: =1e3 or =1000 for hertz= ?
         sethertz_hertz=hertz,
@@ -2386,15 +2381,16 @@ class Turtle:
     #
 
     assert TurtlingDefaults["arc_angle"] == 90, (TurtlingDefaults,)
-    assert TurtlingDefaults["arc_diameter"] == 100, (TurtlingDefaults,)
+    assert TurtlingDefaults["arc_distance"] == 100, (TurtlingDefaults,)
 
-    def arc(self, angle, diameter) -> dict:
+    def arc(self, angle, distance) -> dict:
         """Draw a Part or All of a Circle, centered at Right Forward"""
 
         angle_float = float(90 if (angle is None) else angle)
-        diameter_float = float(100 if (diameter is None) else diameter)
+        distance_float = float(100 if (distance is None) else distance)
 
-        radius = diameter_float / 2
+        diameter = distance_float
+        radius = diameter / 2
 
         bearing = self.bearing
         xscale = self.xscale
@@ -2430,17 +2426,26 @@ class Turtle:
 
             # todo: pick the Angle Step less simply, not always abs(step) == 1
 
+            # todo: Mode Trigonometry to Arc Anticlockwise
+            # todo: Negative Arc Diameter to flip Anticlockwise/ Clockwise
+            # todo: more similar output between PyTurtle Circle and our Circle via Arc
+
         self.right(angle_float)
 
         d = dict(
-            xfloat=self.xfloat, yfloat=self.yfloat, bearing=self.bearing, a="angle", d="diameter"
+            xfloat=self.xfloat, yfloat=self.yfloat, bearing=self.bearing, a="angle", d="distance"
         )
         self._dict_insert_compass_if_(d)
         return d
 
         # todo: Turn the Turtle Heading WHILE we draw the Arc - Unneeded till we have Sprites
 
-        # ugh: UCB Logo centers the Circle on the Turtle and keeps the turtle Still
+        # we have 🐢 Arc $Angle $Diameter, drawn by the Turtle, matched to Forward $Diameter
+        # compare: PyTurtle Circle +/-$Radius $Angle
+
+        # ugh: PyTurtle Circle $Radius $Angle $Count is near our 🐢 Repeat $Count $Angle $Distance
+        # ugh: PyTurtle Circle anticlockwise for positive Radius despite Mode Logo with Clockwise Headings
+        # ugh: UCBLogo Arc $Angle $Radius centers the Circle on the Turtle & keeps the turtle still
 
     def _dict_insert_compass_if_(self, d) -> None:
         """Insert Compass Direction, if Heading is exact"""
@@ -2489,6 +2494,43 @@ class Turtle:
         return dict(b="beep")
 
         # PyTurtle's work in silence, unless you add sound on the side
+
+    def circle(self, distance, angle, count) -> dict:
+        """Draw some or all of a Polygon or Circle, in the style of Python 'import turtle'"""
+
+        angle_float = float(angle)
+        angle_float = angle_float % 360e0  # 360° Circle
+        angle_float = 360e0 if not angle_float else angle_float
+
+        radius = distance
+        if count < 0:
+            diameter = 2 * radius
+            self.arc(angle, distance=diameter)
+        elif count != 1:
+            raise NotImplementedError(f"PyTurtle t.circle count {count} != 1")
+        else:
+            polygon_count = round(360e0 / angle_float)  # todo: int, or round?
+            step_distance = (math.tau * radius) / polygon_count
+            self.right(angle)
+            self.repeat(count=count, angle=angle, distance=step_distance)
+            self.left(angle)
+
+            # todo: Mode Trigonometry to Circle Anticlockwise
+            # todo: Negative Circle Radius to flip Anticlockwise/ Clockwise
+            # todo: more similar output between PyTurtle Circle and our Circle via Arc
+
+        d = dict(
+            xfloat=self.xfloat,
+            yfloat=self.yfloat,
+            bearing=self.bearing,
+            d="distance",
+            a="angle",
+            n="count",
+        )
+        self._dict_insert_compass_if_(d)
+        return d
+
+        # PyTurtle Circle
 
     def _exec_(self, text) -> None:
         """Exec a Logo Turtle Text"""
@@ -2768,19 +2810,19 @@ class Turtle:
 
     assert TurtlingDefaults["repeat_count"] == 3, (TurtlingDefaults,)
     assert TurtlingDefaults["repeat_angle"] == 360, (TurtlingDefaults,)
-    assert TurtlingDefaults["repeat_diameter"] == 100, (TurtlingDefaults,)
+    assert TurtlingDefaults["repeat_distance"] == 100, (TurtlingDefaults,)
 
     def repeat(self, count, angle, distance) -> dict:
         """Run some instructions a chosen number of times, often less or more than once (REP N A D for short)"""
+
+        # self.glass_teletype.notes.append(f"repeat {count=} {angle=} {distance=}")
 
         int_count = int(90 if (count is None) else count)
         angle_float = float(90 if (angle is None) else angle)
         distance_float = float(100 if (distance is None) else distance)
 
-        assert int_count >= 3, (int_count,)  # todo: what is a Rep 0, Rep 1, or Rep 2 Polygon?
-
         a = angle_float / int_count
-        for _ in range(int_count):
+        for _ in range(int_count):  # such as (int_count == 1) at:  circle 50 45 8
             self.forward(distance_float)
             self.right(a)
 
@@ -2798,6 +2840,8 @@ class Turtle:
         self._dict_insert_compass_if_(d)
 
         return d
+
+        # ugh: PyTurtle Circle $Radius $Angle $Count is near our 🐢 Repeat $Count $Angle $Distance
 
     assert TurtlingDefaults["right_angle"] == 90, (TurtlingDefaults,)
 
@@ -3360,6 +3404,13 @@ class Turtle:
 
         d = dict(next_python_codes=["t.showturtle()"])
         return d
+
+    def teleport(self, x, y) -> dict:
+        """Move the Turtle to an X Y Point, without leaving a Trail"""
+
+        raise NotImplementedError("Did you mean PenUp Home PenDown?")
+
+        # PyTurtle Teleport = pu home pd, but can't say: pu home seth fd pd
 
     def write(self, s) -> None:
         """Write one Str to the Screen"""
@@ -3943,11 +3994,11 @@ class Turtle:
 
         # see also 'def puck'
 
-    def sierpiński(self, distance, divisor) -> dict:  # aka Sierpinski
+    def sierpiński(self, distance, count) -> dict:  # aka Sierpinski
         """Draw Triangles inside Triangles, in the way of Sierpiński 1882..1969 (also known as Sierpinksi)"""
 
         assert distance >= 0, (distance,)
-        assert divisor > 0, (divisor,)
+        assert count > 0, (count,)
 
         t = self
 
@@ -3956,13 +4007,13 @@ class Turtle:
         else:
             for _ in range(3):
 
-                fewer = distance / divisor
-                t.sierpiński(fewer, divisor=divisor)
+                fewer = distance / count
+                t.sierpiński(fewer, count=count)
 
                 t.forward(distance)
                 t.right(120)
 
-        return dict(sierpinski="sierpiński", d="distance", dv="divisor")
+        return dict(sierpinski="sierpiński", d="distance", n="count")
 
         # todo: cyclic colors for Sierpiński's Triangle/ Sieve/ Gasket
 
@@ -4344,8 +4395,8 @@ def getturtle() -> Turtle:
     # PyTurtle GetTurtle
 
 
-def arc(angle, diameter) -> dict:
-    return getturtle().arc(angle, diameter=diameter)
+def arc(angle, distance) -> dict:
+    return getturtle().arc(angle, distance=distance)
 
 
 def back(distance) -> dict:
@@ -4374,6 +4425,10 @@ def breakout(count) -> dict:
 
 def bye() -> None:
     return getturtle().bye()
+
+
+def circle(distance, angle, count) -> dict:
+    return getturtle().circle(distance, angle=angle, count=count)
 
 
 def clearscreen() -> dict:
@@ -4528,8 +4583,8 @@ def showturtle() -> dict:
     return getturtle().showturtle()
 
 
-def sierpiński(distance, divisor) -> dict:
-    return getturtle().sierpiński(distance, divisor=divisor)
+def sierpiński(distance, count) -> dict:
+    return getturtle().sierpiński(distance, count=count)
 
 
 def sleep(seconds) -> dict:
@@ -4542,6 +4597,10 @@ def st() -> dict:
 
 def tada() -> dict:
     return getturtle().tada()
+
+
+def teleport(x, y) -> dict:
+    return getturtle().teleport(x, y=y)  # NotImplementedError - PenUp Home PenDown
 
 
 def up() -> dict:
@@ -5056,7 +5115,7 @@ class PythonSpeaker:
         # "up": "penup",  # ugh: PyTurtle land-grab's Up to mean Pen Up
     }
 
-    ucb_verb_by_grunt = {  # for the UCB Logo people
+    ucb_verb_by_grunt = {  # for the UCBLogo people
         "cs": "clearscreen",
         "setpc": "setpencolor",  # foreground vs background "setpenhighlight"
     }
@@ -6471,9 +6530,9 @@ class TurtleClient:
 #
 # todo: reconcile more with Python "import turtle" Graphics on TkInter
 # todo: reconcile with other Logo's
-# todo: FMS Logo Arcs with more args at https://fmslogo.sourceforge.io/manual/command-ellipsearc.html
-# todo: UCB Logo cleartext (ct) mention ⌘K
-# todo: UCB Logo setcursor [x y], cursor
+# todo: FMSLogo EllipseArc with more args at https://fmslogo.sourceforge.io/manual/command-ellipsearc.html
+# todo: UCBLogo cleartext (ct) mention ⌘K
+# todo: UCBLogo setcursor [x y], cursor
 # todo: .rest vs Python Turtle screen.delay
 # todo: .stride vs Logo SetStepSize
 # todo: .rest vs Logo SetSpeed, SetVelocity, Wait
