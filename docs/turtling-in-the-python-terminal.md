@@ -191,6 +191,10 @@ Every so often Google pops up and yammers at you
 I have no idea what this means, nor do I know when and why it comes at you
 
 I shrug, I click through, I move on.
+I experimented with clicking Reject.
+That also works, but it rudely keeps on hassling you, every now and then.
+My Code does NOT need you to click Accept. You can click Reject and still run my Code
+
 I do also remember the Infinite Scroll of Apple iTunes Terms-and-Conditions.
 I do hope such casual ignorant click-through choices never do come to hurt you or me
 
