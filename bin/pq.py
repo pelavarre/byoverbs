@@ -5202,11 +5202,19 @@ def unicodedata_name_anyhow(char) -> str:
             assert name == "EM", (name, sys.version_info)
             continue
 
+            # Tracebacks till some later Python did say:  KeyError: "undefined character name 'EM'"
+            # "EM" seen working at Dec/2024 Python 3.13.1 of Oct/2024 Python 3.13
+            # "EM" seen broken at Jun/2023 Python 3.10.12 of Oct/2021 Python 3.10
+
+            # unicodedata.lookup("End of Medium") began working before .lookup("EM")
+
         assert unicodedata.lookup(name) == char, (name, hex(ord(char)), ascii(char))
 
     name_0 = names[0]
 
     return name_0
+
+    # pq emojis unicodedata >~/e
 
 
 UNICODEDATA_NAMES_ANYHOW_BY_CHAR = {  # omitting x 80 81 99 and x A0 AD
