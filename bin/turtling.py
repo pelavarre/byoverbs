@@ -3014,6 +3014,8 @@ class Turtle:
 
         return d
 
+        # todo: don't write through to Terminal when no change to Backscapes/ Penscapes
+
         # todo: Scratch Change-Pen-Color-By-10
 
     def _penscapes_disassemble_(self, penscapes) -> dict:
@@ -3716,7 +3718,7 @@ class Turtle:
         ctext = f"{y_ctext}{x_ctext}"
         if ctext:
             if platform.system() == "Darwin":
-                ctext = f"\x1B[A\x1B[B{ctext}"  # else macOS leaves thin 1-pixel base lines
+                ctext = "\x1B[A" + "\x1B[B" + ctext  # else macOS leaves thin 1-pixel base lines
 
         self._schars_write_(ctext)
 
@@ -3951,6 +3953,9 @@ class Turtle:
         self.setpencolor(Blue, accent=8)
 
         for line in lines:
+
+            # Write the Line of Colored Chars
+
             assert len(line) <= 56, (len(line), line)
             writable = (line + (56 * " "))[:56]
             writable = (4 * " ") + writable + (4 * " ")
@@ -3962,6 +3967,15 @@ class Turtle:
 
             self._schars_write_(len(writable) * "\b")
             self._schars_write_("\n")
+
+            # Slow down on demand
+
+            assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+            assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+
+            self._rest_if_()
+            if platform.system() == "Darwin":
+                self._schars_write_("\x1B[A" "\x1B[B")  # else macOS leaves thin 1-pixel base lines
 
         self.setpencolor(Yellow, accent=8)
 
@@ -5775,6 +5789,8 @@ class TurtlingSketchist:
 
             # Reply to 1 Keyboard Chord
 
+            assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+
             if bt_fd in select_:
                 kchord = st.kchord_pull(timeout=1.000)
                 kchords.append(kchord)
@@ -6174,6 +6190,9 @@ class TurtleClient:
                     itext += sys.stdin.readline()
 
             except KeyboardInterrupt:  # ⌃C SigInt
+
+                assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+                assert ED_P == "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 2 Rows, etc
 
                 if ilines:
                     eprint("\x1B[" f"{len(ilines)}A")
