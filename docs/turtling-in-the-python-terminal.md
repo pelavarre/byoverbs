@@ -524,7 +524,10 @@ to draw Light Pixels on a Darkmode Canvas.
 In particular, the 2024 Python Import Turtle forces Lightmode,
 even when clashing with the Darkmode's of replIt or macOS.
 And the 2024 Python Import Turtle
-runs at macOS Shell or replIt Shell, but often declines to run at gCloud Shell
+runs at macOS Shell, but often declines to run at gCloud Shell
+
+I remember I did see the Python Import Turtle run happy at replIt Shell.
+But it chokes now, seemingly over its TkInter add-on, as of April/2025.
 
 Me, lately I mostly test Screens of
 101 Columns and 42 Rows of Andale Mono 18
@@ -1805,6 +1808,13 @@ You can run variations
 
 A thousands Steps is often enough to eat all the Dot & Pellet Food,
 but not always enough
+
+You can run it slower too
+
+    cs  sethz 10  st  puckland
+
+Running it slowly more sets you up to experiment
+with what happens when you press ⌃C over in the Drawing Pane
 
 Presently . . .
 

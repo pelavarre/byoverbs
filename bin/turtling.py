@@ -3881,6 +3881,10 @@ class Turtle:
         """Draw something like a Pac-Man™ Game Board"""
 
         gt = self.glass_teletype
+        bt = gt.bytes_terminal
+
+        hiding = self.hiding
+        rest = self.rest
         warping = self.warping
         xscale = self.xscale
         yscale = self.yscale
@@ -3938,11 +3942,11 @@ class Turtle:
 
         x1 = -(((2 * 4) + 56) / 2 / 2) / xscale
         y1 = 18 / yscale  # because (2 + 15 + 1 + 17 + 2) == 37
-        self.setxy(x=x1, y=y1)
+        self.setxy(x=x1, y=y1)  # todo: ⌃C of .setxy while not .warping
         (xa, ya) = self._x_y_position_()  # may change .xfloat .yfloat
 
         if not warping:
-            self.pendown()
+            self.pendown()  # todo: stop calling .penup .pendown .penup sometimes
 
         # Draw this Game Board
 
@@ -3950,9 +3954,8 @@ class Turtle:
         Yellow = "CCCC00"
         Melon = "CC9999"
 
-        self.setpencolor(Blue, accent=8)
-
-        for line in lines:
+        broke = False
+        for index, line in enumerate(lines):
 
             # Write the Line of Colored Chars
 
@@ -3960,24 +3963,49 @@ class Turtle:
             writable = (line + (56 * " "))[:56]
             writable = (4 * " ") + writable + (4 * " ")
 
+            # color = ""
             for ch in writable:
-                color = Melon if (ch in "()@") else Blue
-                self.setpencolor(color, accent=8)
+
+                # Quit on demand
+
+                rindex = index - len(lines)
+                if rindex < -1:
+                    if bt.kbhit(timeout=0.000):
+                        broke = True
+                        break
+
+                # Write the Colored Char, or an Uncolored Space
+
+                if ch != " ":
+                    color = Melon if (ch in "()@") else Blue
+                    self.setpencolor(color, accent=8)
+
                 self._schars_write_(ch)
+
+            if broke:
+                break
 
             self._schars_write_(len(writable) * "\b")
             self._schars_write_("\n")
+
+            # if color == Melon:
+            #     if not hiding:
+            #         time.sleep(rest)
+            #         time.sleep(rest)
+            #         time.sleep(rest)
 
             # Slow down on demand
 
             assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
             assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
 
-            self._rest_if_()
-            if platform.system() == "Darwin":
-                self._schars_write_("\x1B[A" "\x1B[B")  # else macOS leaves thin 1-pixel base lines
+            if not hiding:
+                time.sleep(rest)  # todo: a la ._rest_if_  # todo: break Sleep with KB Hit
+                if platform.system() == "Darwin":
+                    self._schars_write_("\x1B[A" "\x1B[B")  # else thin 1-pixel base lines
 
-        self.setpencolor(Yellow, accent=8)
+        if not broke:
+            self.setpencolor(Yellow, accent=8)
 
         self.xfloat = xa
         self.yfloat = -ya - 1
@@ -3986,24 +4014,27 @@ class Turtle:
 
         # End over the left Dot beneath Home
 
-        if not warping:
-            self.penup()
+        (xc, yc) = (xb, yb)
+        if not broke:
 
-        self.setxy(-1 / xscale, -8 / yscale)  # (-1, -8), because I measured it : -)
-        (xc, yc) = self._x_y_position_()  # may change .xfloat .yfloat
+            if not warping:
+                self.penup()
 
-        if not warping:
-            self.pendown()
+            self.setxy(-1 / xscale, -8 / yscale)  # (-1, -8), because I measured it : -)
+            (xc, yc) = self._x_y_position_()  # may change .xfloat .yfloat
 
-        # Show the Puck
+            if not warping:
+                self.pendown()
 
-        self.puck(0)
+            # Show the Puck
 
-        # Succeed
+            self.puck(0)
+            gt.notes.append("Next try:  puck 1")
 
-        gt.notes.append("Next try:  puck 1")
+        # Succeed, or fall short
 
-        d = dict(xa=xa, ya=ya, xb=xb, yb=yb, xc=xc, yc=yc)
+        d = dict(xa=xa, ya=ya, xb=xb, yb=yb, xc=xc, yc=yc, broke=broke)
+
         return d
 
         # see also 'def puck'
