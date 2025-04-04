@@ -664,7 +664,10 @@ pq.py: No Py Grafs found by ['supercalifragilistic']
 + set -xe
 + bin/pq.py -q --py em
 
-olines = pq.ex_macros(ilines)  # em em  # ema  # emac  # emacs
+# emo  # emoji  # emojis
+sys.stderr.write("did you mean the huge:  pq emojis u" "nicodedata\n")
+sys.exit(2)  # todo: solve this more elegantly
+oobject = "did you mean the huge:  pq emojis u" "nicodedata"
 
 + func head
 + set -xe
@@ -746,7 +749,15 @@ olines = sorted(os.listdir())  # still no [os.curdir, os.pardir]
 + set -xe
 + bin/pq.py -q --py st
 
-otext = pq.shadow_terminal_yolo(itext)  # st  # st yolo  # styolo
+# ts  # |ts
+while True:
+    readline = stdin.readline()
+    if not readline:
+        break
+    iline = readline.splitlines()[0]
+    ts = dt.datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S.%f %z")
+    print(f"{ts}  {iline}", file=stdout)
+    stdout.flush()
 
 + func tail
 + set -xe
@@ -792,7 +803,11 @@ olines = collections.Counter(ilines).keys()  # unsort  # unsorted  # dedupe
 + set -xe
 + bin/pq.py -q --py vi
 
-olines = pq.visual_ex(ilines)  # vi  # vim  # em vi  # em/vi
+# wviewpage
+iosplits = urllib.parse.urlsplit(iline)
+assert iosplits.path == "/pages/viewpreviousversions.action"
+iosplits = iosplits._replace(path="/pages/viewpage.action")
+oline = iosplits.geturl()
 
 + func wc c
 + set -xe
