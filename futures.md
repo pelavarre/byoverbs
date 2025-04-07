@@ -5,6 +5,10 @@ What works for me is that first, I chat with you a bit, over at README·Md, calm
 But by the day, I stream insights in real-time in here at Futures·Md, as they bubble up out of my brain.
 Solutions I more drop into Scraps·Txt
 
+## Apr/2025
+
+tail -F of all the Lines found so far - no drops, no dupes
+
 ## Mar/2025
 
 turtling: Draw the text on highlights of the Comaford Emotion Wheel

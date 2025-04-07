@@ -462,6 +462,176 @@ MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlm"
 #
 
 
+def yolo() -> None:
+
+    fd = sys.stderr.fileno()
+    tcgetattr = termios.tcgetattr(fd)
+    when = termios.TCSADRAIN
+    try:
+        tty.setraw(fd, when)  # Tty SetRaw defaults to TcsaFlush
+
+        yolo_raw(fd)
+
+    finally:
+        termios.tcsetattr(fd, when, tcgetattr)  # .tcsetattr(fd, when, attributes)
+
+
+def yolo_raw(fd) -> None:
+
+    cs = ControlSequence()
+
+    while True:
+
+        byte = os.read(fd, 1)
+
+        byte_if = cs.take_one_if(byte)
+        if not byte_if:
+            if not cs.closed:
+                continue
+            break
+
+        text_bytes = byte_if  # FIXME: take up UTF-8 into TextSequence
+        print(text_bytes)
+        break
+
+    print(cs, end="\r\n")
+
+
+# FIXME: Merge Def Yolo logic into Class BytesTerminal
+
+
+class ControlSequence:
+    """Gather & scatter the Bytes of a Screen-or-Keyboard Terminal Control Sequence"""
+
+    assert ESC == "\x1B"  # ⎋
+    assert CSI == "\x1B" "["  # ⎋[
+    assert SS3 == "\x1B" "O"  # ⎋O
+
+    head: bytearray  # 1 Control Byte, else the 2 Control Bytes of Esc and another Byte
+    neck: bytearray  # CSI Parameter Bytes, in 0x30..0x3F
+    back: bytearray  # CSI Intermediate Bytes, in 0x20..0x2F
+    tail: bytearray  # CSI Final Byte, in 0x40..0x7E
+
+    closed: bool  # closed because completed, or because continuation undefined
+
+    def __init__(self) -> None:
+
+        self.head = bytearray()
+        self.neck = bytearray()
+        self.back = bytearray()
+        self.tail = bytearray()
+
+        self.closed = False
+
+    def __bool__(self) -> bool:
+        """Truthy when not empty, no matter if closed"""
+
+        truthy = bool(self.head or self.neck or self.back or self.tail)
+        return truthy
+
+    def __str__(self) -> str:
+        """Show the Bytes of this Control Sequence"""
+
+        s = str(self.head)
+        if self.neck:
+            s += " " + str(self.neck)
+        if self.back or self.tail:
+            s += " " + str(self.back + self.tail)
+
+        return s
+
+        # b'\x1BO' b'P'
+        # b'\x1B[' b'6' b' q'
+        # b'\x1B[' b'3;5' b'H'
+
+    def take_if(self, bytes_) -> bytes:
+        """Take in Bytes and return 0 Bytes, else return the trailibg Bytes that don't fit"""
+
+        for index, byte in enumerate(bytes_):
+            unfit = self.take_one_if(byte)
+            if unfit:
+                return bytes_[index:]
+
+        return b""  # maybe .closed, maybe not
+
+    def take_one_if(self, byte) -> bytes:
+        """Take in 1 Byte and return 0 Bytes, else return this Byte that doesn't fit"""
+
+        ord_ = ord(byte)  # raises TypeError if not 1 Byte
+
+        head = self.head
+        back = self.back
+        neck = self.neck
+        tail = self.tail
+        closed = self.closed
+
+        if closed:
+            return byte
+
+        if not head:
+            if 0x20 <= ord_ < 0x7F:  # 95 Codes
+                return byte  # 7-bit US Ascii Printable
+
+            head.extend(byte)
+            if byte == b"\x1B":  # ⎋  # goes to:  head == b"\x1B"
+                return b""  # first Byte of Esc Sequence
+
+            self.closed = True
+            return b""  # 7-bit or 8-bit Control Byte
+
+            # declines bytes([0x80 | 0x0B]) in place of b"\x1B\x5B" CSI ⎋[
+            # declines bytes([0x80 | 0x0F]) in place of b"\x1B\x4F" SS3 ⎋O
+
+        assert head.startswith(b"\x1B"), (head,)  # ⎋
+
+        if head == b"\x1B":  # ⎋
+            if ord_ == ord(b"O"):  # ⎋O
+                head.extend(byte)  # goes to:  head == b"\x1BO"
+                return b""  # first two Bytes of Three-Byte SS3 Sequence
+
+            if ord_ == ord(b"["):  # ⎋[
+                head.extend(byte)  # goes to:  head == b"\x1B["
+                return b""  # first two Bytes of CSI Sequence
+
+            if 0x20 <= ord_ < 0x7F:  # 95 Codes
+                tail.extend(byte)
+                self.closed = True
+                return b""  # Two-Byte Esc Sequence
+
+            tail.extend(byte)
+            self.closed = True
+            return b""  # accepts !isprintable after Esc, such as ⌥ Tab
+
+        assert head in (b"\x1BO", b"\x1B["), (head,)  # ⎋O  # ⎋[
+
+        if head == b"\x1BO":  # ⎋O SS3
+
+            if 0x20 <= ord_ < 0x7F:  # 95 Codes
+                tail.extend(byte)
+                self.closed = True
+                return b""  # Three-Byte SS3 Sequence
+
+            return byte  # declines !isprintable after SS3
+
+        assert head == b"\x1B[", (head,)  # ⎋[ CSI
+
+        if not back:
+            if 0x30 <= ord_ < 0x40:  # 16 Codes
+                neck.extend(byte)
+                return b""  # Parameter Bytes
+
+        if 0x20 <= ord_ < 0x30:  # 16 Codes
+            back.extend(byte)
+            return b""  # Intermediate Bytes
+
+        if 0x40 <= ord_ < 0x7F:  # 63 Codes
+            tail.extend(byte)
+            self.closed = True
+            return b""  # CSI Final Byte
+
+        return byte  # declines unconventional CSI Completions
+
+
 class BytesTerminal:
     """Write/ Read Bytes at Screen/ Keyboard of the Terminal"""
 
@@ -537,7 +707,7 @@ class BytesTerminal:
 
             assert after in (termios.TCSADRAIN, termios.TCSAFLUSH), (after,)
             when = after
-            termios.tcsetattr(fileno, when, tcgetattr)
+            termios.tcsetattr(fileno, when, tcgetattr)  # .tcsetattr(fd, when, attributes)
 
         return None
 
