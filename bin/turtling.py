@@ -294,6 +294,8 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 #
 #       ⎋['⇧} cols-insert  ⎋['⇧~ cols-delete
 #
+#   macOS Keyboards encode Fn⇧← as ⎋[⇧H row-column-go
+#
 #   Our macOS App Emulation includes
 #
 #       ⌃A column-go-leftmost
@@ -462,64 +464,220 @@ MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlm"
 #
 
 
-class ControlSequence:
-    """Gather & scatter the Bytes of a Screen-or-Keyboard Terminal Control Sequence"""
+class TerminalBytePacket:
+    """Hold 1 Control Character, else 1 or more Text Characters, else some Bytes"""
 
     assert ESC == "\x1B"  # ⎋
     assert CSI == "\x1B" "["  # ⎋[
     assert SS3 == "\x1B" "O"  # ⎋O
 
-    head: bytearray  # 1 Control Byte, else the 2 Control Bytes of Esc and another Byte
+    text: str  # 0 or more Chars of Printable Text
+
+    head: bytearray  # 1 Control Byte, else ⎋[, or ⎋O, or 3..6 Bytes starting with ⎋[M
     neck: bytearray  # CSI Parameter Bytes, in 0x30..0x3F
     back: bytearray  # CSI Intermediate Bytes, in 0x20..0x2F
     tail: bytearray  # CSI Final Byte, in 0x40..0x7E
 
     closed: bool  # closed because completed, or because continuation undefined
 
-    def __init__(self) -> None:
+    def __init__(self, bytes_=b"") -> None:
 
+        self.text = ""
         self.head = bytearray()
         self.neck = bytearray()
         self.back = bytearray()
         self.tail = bytearray()
-
         self.closed = False
 
+        rejects = self.take_if(bytes_)
+        if rejects:
+            raise ValueError(rejects)
+
+        # closes ControlSequence(bytes([0x80 | 0x0B]))  # doesn't open as b"\x1B\x5B" CSI ⎋[
+        # closes ControlSequence(bytes([0x80 | 0x0F]))  # doesn't open as b"\x1B\x4F" SS3 ⎋O
+
+        # raises ValueError: b'\x80' when asked for ControlSequence(b'\xC0\x80')
+
     def __bool__(self) -> bool:
-        """Truthy when not empty, no matter if closed"""
-
         truthy = bool(self.head or self.neck or self.back or self.tail)
-        return truthy
+        return truthy  # no matter if .closed
 
-    def __str__(self) -> str:
-        """Show the Bytes of this Control Sequence"""
+    def __repr__(self) -> str:
+        cname = self.__class__.__name__
 
-        s = str(self.head)
-        if self.neck:
-            s += " " + str(self.neck)
-        if self.back or self.tail:
-            s += " " + str(self.back + self.tail)
+        text = self.text
+
+        head_ = bytes(self.head)  # reps bytearray(b'') loosely, as b''
+        back_ = bytes(self.back)
+        neck_ = bytes(self.neck)
+        tail_ = bytes(self.tail)
+
+        closed = self.closed
+
+        s = f"text={text!r}, "
+        s += f"head={head_!r}, back={back_!r}, neck={neck_!r}, tail={tail_!r}"
+        s = f"{cname}({s}, {closed=})"
 
         return s
 
-        # b'\x1BO' b'P'
-        # b'\x1B[' b'6' b' q'
-        # b'\x1B[' b'3;5' b'H'
+        # "TerminalBytePacket(head=b'', back=b'', neck=b'', tail=b'', closed=False)"
+
+    def __str__(self) -> str:
+
+        text = self.text
+
+        head_ = bytes(self.head)  # reps bytearray(b'') loosely, as b''
+        back_ = bytes(self.back)
+        neck_ = bytes(self.neck)
+        tail_ = bytes(self.tail)
+
+        if text and not head_:
+            return text
+
+        s = ""
+        if text:
+            s = repr(text) + " "
+
+        s += str(head_)
+        if neck_:  # 'Parameter' Bytes
+            s += " " + str(neck_)
+        if back_ or tail_:  # 'Intermediate' Bytes or Final Byte
+            s += " " + str(back_ + tail_)
+
+        return s
+
+        #
+        # Examples of Text Only
+        #
+        #   'Superb'  # open as first 6 Bytes of Decodable Text
+        #
+
+        # Closed Examples without Text
+        #
+        #   b'\n'  # Head only, of 7-bit Control Byte
+        #   b'\xc0'  # Head only, of 8-bit Control Byte
+        #   b'\xff'  # Head only, of 8-bit Control Byte
+        #   b'\xc2\xad'  # Head only, of 2 Byte UTF-8 Encoding of U+00AD Soft-Hyphen Control
+        #   b'\x1b' b'A'  # Head & Text Tail of a Two-Byte Esc Sequence
+        #   b'\x1b' b'\t'  # Head & Control Tail of a Two-Byte Esc Sequence
+        #   b'\x1bO' b'P'  # Head & Text Tail of a Three-Byte SS3 Sequence
+        #   b'\x1b[' b'6' b' q'  # CSI Head with 1 of 16 Neck, 1 of 16 Back, and 1 of 63 Text Tail
+        #   b'\x1b[' b'3;5' b'H'  # CSI Head with 3 of 16 Neck, no Back, and 1 of 63 Text Tail
+        #   b'\x1b[M\x00\x00\x00'  # Head only, of a 6 Byte complete CSI Mouse Binary Packet
+        #
+
+        #
+        # Open Examples without Text
+        #
+        #   b''  # empty
+        #   b'\x1b'  # open as first Byte of Esc Sequence
+        #   b'\x1bO'  # open as first Two Bytes of Three-Byte SS3 Sequence
+        #   b'\x1b[' b'6' b' '  # open as CSI Head with Neck and Back but no Tail
+        #   b'\xed\x80'  # open as Head of >= 3 Byte UTF-8 Encoding
+        #   b'\xf4\x80\x80'  # open as Head of >= 4 Byte UTF-8 Encoding
+        #   b'\x1bM\x00\x00'  # Head only, of a 5 Byte incomplete CSI Mouse Binary Packet
+        #
 
     def take_if(self, bytes_) -> bytes:
-        """Take in Bytes and return 0 Bytes, else return the trailibg Bytes that don't fit"""
+        """Take in the Bytes and return 0, else return the trailing Bytes that don't fit"""
 
-        for index, byte in enumerate(bytes_):
-            unfit = self.take_one_if(byte)
-            if unfit:
-                return bytes_[index:]
+        for index in range(len(bytes_)):
+            byte = bytes_[index:][:1]
+            after_bytes = bytes_[index:][1:]
+
+            rejects = self.take_one_if(byte)
+            if rejects:
+                return rejects + after_bytes
 
         return b""  # maybe .closed, maybe not
 
     def take_one_if(self, byte) -> bytes:
-        """Take in 1 Byte and return 0 Bytes, else return this Byte that doesn't fit"""
+        """Take in next 1 Byte and return 0 Bytes, else return 1..4 Bytes that don't fit"""
+
+        text = self.text
+        head = self.head
+        closed = self.closed
+
+        if closed:
+            return byte  # declines taking more Bytes after closed
 
         ord_ = ord(byte)  # raises TypeError if not 1 Byte
+
+        if not head:
+
+            if 0x20 <= ord_ < 0x7F:  # 95 Codes
+                decode = byte.decode()
+                assert decode.isprintable(), (decode, byte)
+                self.text += decode  # replaces
+                return b""  # open as Text
+
+            if ord_ <= 0x7F:  # 33 Codes
+                if text:
+                    return byte  # declines a 7-bit Control Byte after Text
+
+                head.extend(byte)
+                if byte == b"\x1B":  # ⎋  # goes to:  head == b"\x1B"
+                    return b""  # open as first Byte of Esc Sequence
+
+                self.closed = True
+                return b""  # closed as Head of 7-bit Control Byte - all Head, no Tail
+
+        if not head.startswith(b"\x1B"):  # not ⎋, maybe empty
+            head_plus = head + byte
+
+            try:
+                decode = head_plus.decode()
+                if decode.isprintable():
+                    head.clear()
+                    self.text += decode  # replaces
+                    return b""  # open as Text
+
+                if text:
+                    return byte  # declines 1 Control Char after Text
+
+                head.extend(byte)
+                self.closed = True
+                return b""  # closed as Multibyte Control Char - all Head, no Tail
+            except UnicodeDecodeError:
+                pass
+
+            head.extend(byte)  # becomes equal to .head_plus
+
+            if self.some_decodable_startswith(head_plus):
+                return b""  # open as Head of possibly Decodable Bytes
+
+            self.closed = True
+            return b""  # closed as >= 1 Undecodable Bytes
+
+            # doesn't take bytes([0x80 | 0x0B]) as meaning b"\x1B\x5B" CSI ⎋[
+            # doesn't take bytes([0x80 | 0x0F]) as meaning b"\x1B\x4F" SS3 ⎋O
+
+        assert head.startswith(b"\x1B"), (head,)  # ⎋
+
+        rejects = self._esc_take_one_if_(byte)
+        return rejects  # maybe empty
+
+    def some_decodable_startswith(self, bytes_) -> bool:
+        """Say if these Bytes start 1 or more UTF-8 Encodings of Chars"""
+
+        suffixes = (b"\x80", b"\xBF", b"\x80\x80", b"\xBF\xBF", b"\x80\x80\x80", b"\xBF\xBF\xBF")
+
+        for suffix in suffixes:
+            suffixed = bytes_ + suffix
+            try:
+                decode = suffixed.decode()
+                assert len(decode) == 1, (decode,)
+                return True
+            except UnicodeDecodeError:
+                continue
+
+        return False
+
+        # b"\xC2\x80", b"\xE0\xA0\x80", b"\xF0\x90\x80\x80" .. b"\xF4\x8F\xBF\xBF"
+        # todo: invent UTF-8'ish Encoding of Unicode Codes >= 0x110000
+
+    def _esc_take_one_if_(self, byte) -> bytes:
+        """Do the work of .take_one_if, in the corner of Head starts with Esc"""
 
         head = self.head
         back = self.back
@@ -527,60 +685,55 @@ class ControlSequence:
         tail = self.tail
         closed = self.closed
 
-        if closed:
-            return byte
+        assert not closed, (closed,)
+        assert head.startswith(b"\x1B"), head  # ⎋
 
-        if not head:
-            if 0x20 <= ord_ < 0x7F:  # 95 Codes
-                return byte  # 7-bit US Ascii Printable
-
-            head.extend(byte)
-            if byte == b"\x1B":  # ⎋  # goes to:  head == b"\x1B"
-                return b""  # first Byte of Esc Sequence
-
-            self.closed = True
-            return b""  # 7-bit or 8-bit Control Byte
-
-            # declines bytes([0x80 | 0x0B]) in place of b"\x1B\x5B" CSI ⎋[
-            # declines bytes([0x80 | 0x0F]) in place of b"\x1B\x4F" SS3 ⎋O
-
-        assert head.startswith(b"\x1B"), (head,)  # ⎋
+        ord_ = ord(byte)
 
         if head == b"\x1B":  # ⎋
             if ord_ == ord(b"O"):  # ⎋O
                 head.extend(byte)  # goes to:  head == b"\x1BO"
-                return b""  # first two Bytes of Three-Byte SS3 Sequence
+                return b""  # open as first two Bytes of Three-Byte SS3 Sequence
 
             if ord_ == ord(b"["):  # ⎋[
                 head.extend(byte)  # goes to:  head == b"\x1B["
-                return b""  # first two Bytes of CSI Sequence
+                return b""  # open as first two Bytes of CSI Sequence
 
             if 0x20 <= ord_ < 0x7F:  # 95 Codes
                 tail.extend(byte)
                 self.closed = True
-                return b""  # Two-Byte Esc Sequence
+                return b""  # closed as Head & Text Tail of a Two-Byte Esc Sequence
 
-            tail.extend(byte)
+            tail.extend(byte)  # !isprintable
             self.closed = True
-            return b""  # accepts !isprintable after Esc, such as ⌥ Tab
+            return b""  # closed as Head & Control Tail of a Two-Byte Esc Sequence
 
-        assert head in (b"\x1BO", b"\x1B["), (head,)  # ⎋O  # ⎋[
+        assert head[:2] in (b"\x1BO", b"\x1B["), (head,)  # ⎋O  # ⎋[
 
         if head == b"\x1BO":  # ⎋O SS3
 
             if 0x20 <= ord_ < 0x7F:  # 95 Codes
                 tail.extend(byte)
                 self.closed = True
-                return b""  # Three-Byte SS3 Sequence
+                return b""  # closed as Head & Text Tail of a Three-Byte SS3 Sequence
 
             return byte  # declines !isprintable after SS3
 
-        assert head == b"\x1B[", (head,)  # ⎋[ CSI
+        assert head[:2] == b"\x1B[", (head,)  # ⎋[ CSI
+        head_plus = head + byte
 
         if not back:
             if 0x30 <= ord_ < 0x40:  # 16 Codes
                 neck.extend(byte)
                 return b""  # Parameter Bytes
+
+            if not neck:
+                if head_plus.startswith(b"\x1B[M"):  # is Mouse Binary Packet
+                    head.extend(byte)
+                    if len(head) <= 5:
+                        return b""  # open as 3..5 Bytes starting with ⎋[M
+                    self.closed = True
+                    return b""  # closed as 6 Bytes starting with ⎋[M
 
         if 0x20 <= ord_ < 0x30:  # 16 Codes
             back.extend(byte)
@@ -589,9 +742,11 @@ class ControlSequence:
         if 0x40 <= ord_ < 0x7F:  # 63 Codes
             tail.extend(byte)
             self.closed = True
-            return b""  # CSI Final Byte
+            return b""  # closed as CSI Head, maybe Neck, maybe Back, & 1 of 63 Text Tails
 
         return byte  # declines unconventional CSI Completions
+
+    # splits '⎋[200~' and '⎋[201~' away from enclosed Bracketed Paste
 
 
 def yolo() -> None:
@@ -610,23 +765,28 @@ def yolo() -> None:
 
 def yolo_raw(fd) -> None:
 
-    cs = ControlSequence()
+    print("Press some Key Chords", end="\r\n")
 
-    while True:
-
+    tbp = TerminalBytePacket()
+    for _ in range(9):
         byte = os.read(fd, 1)
+        loser = tbp.take_if(byte)
 
-        byte_if = cs.take_one_if(byte)
-        if not byte_if:
-            if not cs.closed:
-                continue
-            break
+        if loser:
+            print(end="\r\n")
+            tbp = TerminalBytePacket()
+            twice_losers = tbp.take_if(byte)
+            assert not twice_losers, (twice_losers,)
 
-        text_bytes = byte_if  # FIXME: take up UTF-8 into TextSequence
-        print(text_bytes)
-        break
+        print(repr(tbp), end="\r\n")
+        print(tbp, end="\r\n")
 
-    print(cs, end="\r\n")
+    print(end="\r\n")
+
+    timeout = 0.000
+    while select.select([fd], [], [], timeout)[0]:
+        byte = os.read(fd, 1)
+        print(byte, end="\r\n")
 
 
 # FIXME: Merge Def Yolo logic into Class BytesTerminal
@@ -908,7 +1068,7 @@ class BytesTerminal:
 
             break
 
-            # todo: invent Unicode Code > 0x110000
+            # todo: invent UTF-8'ish Encoding of Unicode Code >= 0x110000
 
         assert taken_kbytes  # todo: test end-of-input
 
