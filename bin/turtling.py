@@ -458,46 +458,8 @@ MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlm"
 
 
 #
-# Amp up Import TermIOs, Tty
+# Draft the new & better way of  # Amp up Import TermIOs, Tty
 #
-
-
-def yolo() -> None:
-
-    fd = sys.stderr.fileno()
-    tcgetattr = termios.tcgetattr(fd)
-    when = termios.TCSADRAIN
-    try:
-        tty.setraw(fd, when)  # Tty SetRaw defaults to TcsaFlush
-
-        yolo_raw(fd)
-
-    finally:
-        termios.tcsetattr(fd, when, tcgetattr)  # .tcsetattr(fd, when, attributes)
-
-
-def yolo_raw(fd) -> None:
-
-    cs = ControlSequence()
-
-    while True:
-
-        byte = os.read(fd, 1)
-
-        byte_if = cs.take_one_if(byte)
-        if not byte_if:
-            if not cs.closed:
-                continue
-            break
-
-        text_bytes = byte_if  # FIXME: take up UTF-8 into TextSequence
-        print(text_bytes)
-        break
-
-    print(cs, end="\r\n")
-
-
-# FIXME: Merge Def Yolo logic into Class BytesTerminal
 
 
 class ControlSequence:
@@ -630,6 +592,49 @@ class ControlSequence:
             return b""  # CSI Final Byte
 
         return byte  # declines unconventional CSI Completions
+
+
+def yolo() -> None:
+
+    fd = sys.stderr.fileno()
+    tcgetattr = termios.tcgetattr(fd)
+    when = termios.TCSADRAIN
+    try:
+        tty.setraw(fd, when)  # Tty SetRaw defaults to TcsaFlush
+
+        yolo_raw(fd)
+
+    finally:
+        termios.tcsetattr(fd, when, tcgetattr)  # .tcsetattr(fd, when, attributes)
+
+
+def yolo_raw(fd) -> None:
+
+    cs = ControlSequence()
+
+    while True:
+
+        byte = os.read(fd, 1)
+
+        byte_if = cs.take_one_if(byte)
+        if not byte_if:
+            if not cs.closed:
+                continue
+            break
+
+        text_bytes = byte_if  # FIXME: take up UTF-8 into TextSequence
+        print(text_bytes)
+        break
+
+    print(cs, end="\r\n")
+
+
+# FIXME: Merge Def Yolo logic into Class BytesTerminal
+
+
+#
+# Amp up Import TermIOs, Tty
+#
 
 
 class BytesTerminal:
