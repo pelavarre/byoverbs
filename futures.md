@@ -7,7 +7,9 @@ Solutions I more drop into Scraps·Txt
 
 ## Apr/2025
 
-tail -F of all the Lines found so far - no drops, no dupes
+Sh solve tail -F of all the Lines written to the File as yet - no drops, no dupes
+
+Turtle solve skidded lines with more .flush calls?
 
 ## Mar/2025
 
