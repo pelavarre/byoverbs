@@ -170,6 +170,8 @@ def main_try(ns) -> None:
 def parse_turtling_py_args_else() -> argparse.Namespace:
     """Take Words in from the Sh Command Line"""
 
+    # Define the Arg Parser
+
     doc = __main__.__doc__
     assert doc, (doc,)
 
@@ -183,11 +185,25 @@ def parse_turtling_py_args_else() -> argparse.Namespace:
 
     parser.add_argument("--version", action="count", help=version_help)
     parser.add_argument("--yolo", action="count", help=yolo_help)
+    parser.add_argument("--yolo1", action="count", help=argparse.SUPPRESS)
+    parser.add_argument("--yolo2", action="count", help=argparse.SUPPRESS)
     parser.add_argument("--stop", action="count", help=stop_help)
     parser.add_argument("-i", action="count", help=i_help)
     parser.add_argument("-c", metavar="COMMAND", help=c_help)
 
+    # Take in the Words, and react to undoc'ed Options
+
     ns = parse_args_else(parser)  # often prints help & exits
+
+    if ns.yolo1:
+        yolo1()
+        sys.exit(0)
+
+    if ns.yolo2:
+        yolo2()
+        sys.exit(0)
+
+    # React to doc'ed Options
 
     if ns.version:
         print(f"BYO Turtling·Py {__version__}")
@@ -203,6 +219,8 @@ def parse_turtling_py_args_else() -> argparse.Namespace:
 
     if (not ns.yolo) and (not ns.i) and (ns.c is None):
         ns.yolo = 1  # replaces  # at ./turtling.py --
+
+    # Succeed
 
     return ns
 
@@ -258,7 +276,7 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 
 
 #
-# Name Control Bytes and Escape Sequences
+# Name Control Bytes and Escape Sequences, like for working with Import Termios, Tty
 #
 
 
@@ -287,14 +305,14 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 #       ⎋[m plain
 #
 #       ⎋[6n call for reply ⎋[{y};{x}R  ⎋[18t call for reply⎋[{rows};{columns}t
-#
 #       ⎋[⇧E \r\n but never implies ⎋[⇧S
 #
 #   Our VT420 Terminal Emulation includes
 #
 #       ⎋['⇧} cols-insert  ⎋['⇧~ cols-delete
 #
-#   macOS Keyboards encode Fn⇧← as ⎋[⇧H row-column-go
+#   macOS Keyboard encodes Fn⇧← as ⎋[⇧H row-column-go
+#   macOS Mouse answers ⎋[?1006;1000h till ⎋[?1006;1000l with ⎋[<{b};{y};{x}M and ⎋[<{b};{y};{x}m
 #
 #   Our macOS App Emulation includes
 #
@@ -375,8 +393,18 @@ EL_P = "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
 SU_Y = "\x1B" "[" "{}S"  # CSI 05/03 Scroll Up   # Insert Bottom Lines
 SD_Y = "\x1B" "[" "{}T"  # CSI 05/04 Scroll Down  # Insert Top Lines
 
-RM_IRM = "\x1B" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
 SM_IRM = "\x1B" "[" "4h"  # CSI 06/08 4 Set Mode Insert/ Replace
+RM_IRM = "\x1B" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
+
+# todo = "\x1B" "[" "1000h"  # CSI 06/08 4 Set Mode  # Mouse Reports
+# todo = "\x1B" "[" "1005h"  # CSI 06/08 4 Set Mode  # UTF-8 vs VT200 Byte Encoding
+# todo = "\x1B" "[" "1006h"  # CSI 06/08 4 Set Mode  # SGR
+# todo = "\x1B" "[" "1015h"  # CSI 06/08 4 Set Mode  # URXVT
+
+# todo = "\x1B" "[" "1000l"  # CSI 06/12 4 Reset Mode  # Mouse Reports
+# todo = "\x1B" "[" "1005l"  # CSI 06/12 4 Reset Mode  # UTF-8 vs VT200 Byte Encoding
+# todo = "\x1B" "[" "1006l"  # CSI 06/12 4 Reset Mode  # SGR
+# todo = "\x1B" "[" "1015l"  # CSI 06/08 4 Set Mode  # URXVT
 
 SGR = "\x1B" "[" "{}m"  # CSI 06/13 Select Graphic Rendition
 
@@ -430,6 +458,7 @@ MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlm"
 #
 #   echo "POSTEDIT='$POSTEDIT'" |hexdump -C && echo "PS1='$PS1'"  # says if Zsh is bolding Input
 #   echo "PS0='$PSO'" && echo "PS1='$PS1'" && trap  # says if Bash is bolding Input
+#   ... |sed 's,\x1B\[m,,g'  # drops the Esc[m's that can come out of Bash ... done >...; cat ...|
 #
 
 
@@ -456,11 +485,6 @@ MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlm"
 #
 #   termios.TCSADRAIN doesn't drop Queued Input, but blocks till Queued Output gone
 #   termios.TCSAFLUSH drops Queued Input, and blocks till Queued Output gone
-#
-
-
-#
-# Draft the new & better way of  # Amp up Import TermIOs, Tty
 #
 
 
@@ -564,7 +588,6 @@ class TerminalBytePacket:
         #   b'\x1bO' b'P'  # Head & Text Tail of a Three-Byte SS3 Sequence
         #   b'\x1b[' b'6' b' q'  # CSI Head with 1 of 16 Neck, 1 of 16 Back, and 1 of 63 Text Tail
         #   b'\x1b[' b'3;5' b'H'  # CSI Head with 3 of 16 Neck, no Back, and 1 of 63 Text Tail
-        #   b'\x1b[M\x00\x00\x00'  # Head only, of a 6 Byte complete CSI Mouse Binary Packet
         #
 
         #
@@ -577,8 +600,11 @@ class TerminalBytePacket:
         #   b'\x1b[' b'6' b' '  # open as CSI Head with Neck and Back but no Tail
         #   b'\xed\x80'  # open as Head of >= 3 Byte UTF-8 Encoding
         #   b'\xf4\x80\x80'  # open as Head of >= 4 Byte UTF-8 Encoding
-        #   b'\x1bM\x00\x00'  # Head only, of a 5 Byte incomplete CSI Mouse Binary Packet
+        #   b'\x1bM#\xff'  # Head only, of a 4 Byte incomplete CSI Mouse Report
+        #   b'\x1b[M \xc4\x8a'  # Head only, of a 6 Byte incomplete CSI Mouse Report
         #
+
+        # todo: think more into never marking Mouse Report Packets as complete
 
     def to_bytes(self) -> bytes:
         b = self.text.encode()
@@ -751,17 +777,18 @@ class TerminalBytePacket:
         ord_ = ord(byte)
 
         if not back:
+            if not neck:
+                if head_plus.startswith(b"\x1B[M"):  # is Mouse Report
+                    head.extend(byte)
+                    return b""  # closed as >= 4 Bytes starting with ⎋[M
+
+                    # b'\x1B[M \xc4\x8a' is 6 Bytes VT220 Complete is 5 Chars UTF-8 Incomplete
+
+                    # todo: limit the length of a CSI Escape Sequence Mouse Report
+
             if 0x30 <= ord_ < 0x40:  # 16 Codes
                 neck.extend(byte)
                 return b""  # Parameter Bytes
-
-            if not neck:
-                if head_plus.startswith(b"\x1B[M"):  # is Mouse Binary Packet
-                    head.extend(byte)
-                    if len(head) <= 5:
-                        return b""  # open as 3..5 Bytes starting with ⎋[M
-                    self.closed = True
-                    return b""  # closed as 6 Bytes starting with ⎋[M
 
         if 0x20 <= ord_ < 0x30:  # 16 Codes
             back.extend(byte)
@@ -782,6 +809,87 @@ class TerminalBytePacket:
 #
 # Amp up Import TermIOs, Tty
 #
+
+
+def yolo1() -> None:
+    """Trace Keyboard"""
+
+    assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
+
+    with BytesTerminal() as bt:
+        print("Tracing Keyboard ...", end="\r\n")
+        print(r"To quit, press ⌃\ or close this Terminal Window Pane", end="\r\n")
+
+        while True:
+            (tbp, leaders) = yolo_read_tbp_leaders(bt)
+            bytes_ = tbp.to_bytes() + leaders
+
+            print(tbp.to_bytes(), tbp, repr(tbp), end="\r\n")
+            if leaders:
+                print(leaders, end="\r\n")
+
+            if bytes_ == b"\x1C":  # ⌃\
+                return
+
+
+def yolo2() -> None:
+    """Loop Keyboard back to Screen"""
+
+    assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
+
+    with BytesTerminal() as bt:
+        print("Loop Keyboard back to Screen", end="\r\n")
+        print(r"To quit, press ⌃\ or close this Terminal Window Pane", end="\r\n")
+
+        while True:
+            (tbp, leaders) = yolo_read_tbp_leaders(bt)
+            bytes_ = tbp.to_bytes() + leaders
+
+            fd = bt.fileno
+            data = bytes_
+            os.write(fd, data)
+
+            if bytes_ == b"\x1C":  # ⌃\
+                return
+
+
+def yolo_read_tbp_leaders(bt) -> tuple[TerminalBytePacket, bytes]:
+
+    while True:
+        tbp = TerminalBytePacket()
+        while True:
+            kbyte = bt.kbyte_read()
+            leaders = tbp.take_if(kbyte)
+            bytes_ = tbp.to_bytes() + leaders
+
+            if tbp.text or tbp.closed or leaders or bytes_.startswith(b"\x1B[M"):
+                while bt.kbhit(timeout=0.000):
+                    kbyte = bt.kbyte_read()
+                    if not leaders:
+                        leaders = tbp.take_if(kbyte)
+                    else:
+                        leaders += kbyte
+
+                    bytes_ = tbp.to_bytes() + leaders
+                    if bytes_.startswith(b"\x1B[M"):
+                        try:
+                            decode = bytes_.decode()
+                            if len(decode) == 6:
+                                break
+                        except UnicodeDecodeError:
+                            if len(bytes_) == 6:
+                                break
+
+                        # todo: Some 6 Byte Reports decode as fewer Chars
+
+                break
+
+            if not bt.kbhit(timeout=1.000):
+                break
+
+        return (tbp, leaders)
+
+        # todo: return two Packets when the Leaders are a new Packet
 
 
 class BytesTerminal:
