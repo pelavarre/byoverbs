@@ -489,9 +489,9 @@ class TerminalBytePacket:
         self.tail = bytearray()
         self.closed = False
 
-        rejects = self.take_if(bytes_)
-        if rejects:
-            raise ValueError(rejects)
+        leaders = self.take_if(bytes_)
+        if leaders:
+            raise ValueError(leaders)
 
         # closes ControlSequence(bytes([0x80 | 0x0B]))  # doesn't open as b"\x1B\x5B" CSI ⎋[
         # closes ControlSequence(bytes([0x80 | 0x0F]))  # doesn't open as b"\x1B\x4F" SS3 ⎋O
@@ -555,6 +555,7 @@ class TerminalBytePacket:
         # Closed Examples without Text
         #
         #   b'\n'  # Head only, of 7-bit Control Byte
+        #   b'\x1b\x1b' b'[3;5' b'~'  # CSI Esc Head with Neck, no Back, and 1 of 63 Text Tail
         #   b'\xc0'  # Head only, of 8-bit Control Byte
         #   b'\xff'  # Head only, of 8-bit Control Byte
         #   b'\xc2\xad'  # Head only, of 2 Byte UTF-8 Encoding of U+00AD Soft-Hyphen Control
@@ -571,12 +572,18 @@ class TerminalBytePacket:
         #
         #   b''  # empty
         #   b'\x1b'  # open as first Byte of Esc Sequence
+        #   b'\x1b\x1b'  # open as first Two Bytes of Esc-Esc Sequence
         #   b'\x1bO'  # open as first Two Bytes of Three-Byte SS3 Sequence
         #   b'\x1b[' b'6' b' '  # open as CSI Head with Neck and Back but no Tail
         #   b'\xed\x80'  # open as Head of >= 3 Byte UTF-8 Encoding
         #   b'\xf4\x80\x80'  # open as Head of >= 4 Byte UTF-8 Encoding
         #   b'\x1bM\x00\x00'  # Head only, of a 5 Byte incomplete CSI Mouse Binary Packet
         #
+
+    def to_bytes(self) -> bytes:
+        b = self.text.encode()
+        b += self.head + self.back + self.neck + self.tail
+        return b
 
     def take_if(self, bytes_) -> bytes:
         """Take in the Bytes and return 0, else return the trailing Bytes that don't fit"""
@@ -585,9 +592,9 @@ class TerminalBytePacket:
             byte = bytes_[index:][:1]
             after_bytes = bytes_[index:][1:]
 
-            rejects = self.take_one_if(byte)
-            if rejects:
-                return rejects + after_bytes
+            leaders = self.take_one_if(byte)
+            if leaders:
+                return leaders + after_bytes
 
         return b""  # maybe .closed, maybe not
 
@@ -654,8 +661,8 @@ class TerminalBytePacket:
 
         assert head.startswith(b"\x1B"), (head,)  # ⎋
 
-        rejects = self._esc_take_one_if_(byte)
-        return rejects  # maybe empty
+        leaders = self._esc_take_one_if_(byte)
+        return leaders  # maybe empty
 
     def some_decodable_startswith(self, bytes_) -> bool:
         """Say if these Bytes start 1 or more UTF-8 Encodings of Chars"""
@@ -680,8 +687,6 @@ class TerminalBytePacket:
         """Do the work of .take_one_if, in the corner of Head starts with Esc"""
 
         head = self.head
-        back = self.back
-        neck = self.neck
         tail = self.tail
         closed = self.closed
 
@@ -691,11 +696,15 @@ class TerminalBytePacket:
         ord_ = ord(byte)
 
         if head == b"\x1B":  # ⎋
-            if ord_ == ord(b"O"):  # ⎋O
+            if byte == b"x1B":  # ⎋⎋
+                head.extend(byte)  # goes to:  head == b"\x1B\x1B"
+                return b""  # open as first two Bytes of Esc-Esc Sequence
+
+            if byte == b"O":  # ⎋O
                 head.extend(byte)  # goes to:  head == b"\x1BO"
                 return b""  # open as first two Bytes of Three-Byte SS3 Sequence
 
-            if ord_ == ord(b"["):  # ⎋[
+            if byte == b"[":  # ⎋[
                 head.extend(byte)  # goes to:  head == b"\x1B["
                 return b""  # open as first two Bytes of CSI Sequence
 
@@ -708,7 +717,7 @@ class TerminalBytePacket:
             self.closed = True
             return b""  # closed as Head & Control Tail of a Two-Byte Esc Sequence
 
-        assert head[:2] in (b"\x1BO", b"\x1B["), (head,)  # ⎋O  # ⎋[
+        assert head[:2] in (b"\x1B\x1B", b"\x1BO", b"\x1B["), (head,)  # ⎋⎋  # ⎋O  # ⎋[
 
         if head == b"\x1BO":  # ⎋O SS3
 
@@ -719,8 +728,27 @@ class TerminalBytePacket:
 
             return byte  # declines !isprintable after SS3
 
-        assert head[:2] == b"\x1B[", (head,)  # ⎋[ CSI
+        if not head.startswith(b"\x1B\x1B["):  # ⎋⎋[ Esc CSI
+            assert head.startswith(b"\x1B["), (head,)  # ⎋[ CSI
+
+        leaders = self._esc_csi_take_one_if_(byte)
+        return leaders  # maybe empty
+
+    def _esc_csi_take_one_if_(self, byte) -> bytes:
+        """Do the work of .take_one_if, in the corner of Head starts with Esc"""
+
+        head = self.head
+        back = self.back
+        neck = self.neck
+        tail = self.tail
+        closed = self.closed
+
+        assert not closed, (closed,)
+        if not head.startswith(b"\x1B\x1B["):  # ⎋⎋[ Esc CSI
+            assert head.startswith(b"\x1B["), (head,)  # ⎋[ CSI
+
         head_plus = head + byte
+        ord_ = ord(byte)
 
         if not back:
             if 0x30 <= ord_ < 0x40:  # 16 Codes
@@ -746,50 +774,9 @@ class TerminalBytePacket:
 
         return byte  # declines unconventional CSI Completions
 
+        # todo: limit the length of a CSI Escape Sequence
+
     # splits '⎋[200~' and '⎋[201~' away from enclosed Bracketed Paste
-
-
-def yolo() -> None:
-
-    fd = sys.stderr.fileno()
-    tcgetattr = termios.tcgetattr(fd)
-    when = termios.TCSADRAIN
-    try:
-        tty.setraw(fd, when)  # Tty SetRaw defaults to TcsaFlush
-
-        yolo_raw(fd)
-
-    finally:
-        termios.tcsetattr(fd, when, tcgetattr)  # .tcsetattr(fd, when, attributes)
-
-
-def yolo_raw(fd) -> None:
-
-    print("Press some Key Chords", end="\r\n")
-
-    tbp = TerminalBytePacket()
-    for _ in range(9):
-        byte = os.read(fd, 1)
-        loser = tbp.take_if(byte)
-
-        if loser:
-            print(end="\r\n")
-            tbp = TerminalBytePacket()
-            twice_losers = tbp.take_if(byte)
-            assert not twice_losers, (twice_losers,)
-
-        print(repr(tbp), end="\r\n")
-        print(tbp, end="\r\n")
-
-    print(end="\r\n")
-
-    timeout = 0.000
-    while select.select([fd], [], [], timeout)[0]:
-        byte = os.read(fd, 1)
-        print(byte, end="\r\n")
-
-
-# FIXME: Merge Def Yolo logic into Class BytesTerminal
 
 
 #
@@ -935,150 +922,23 @@ class BytesTerminal:
     def kbytes_read(self, timeout) -> bytes:
         """Read the 1 or more Bytes of 1 Key Chord, but let it stop short"""
 
-        assert ESC == "\x1B"
-        assert CSI == "\x1B" "["
-        assert SS3 == "\x1B" "O"
-
-        # Block to fetch at least 1 Byte
-
-        kbytes1 = self.kchar_bytes_read()  # for .kbytes_read
-
-        taken_kbytes = kbytes1
-        if kbytes1 != b"\x1B":
-            return taken_kbytes
-
-        # Accept 1 or 2 Esc Bytes, such as x 1B 1B 5B in ⌥⌃FnDelete
-        # And take the next Byte after these Esc too, even if it is also an Esc Byte
-
-        if not self.kbhit(timeout=timeout):
-            return taken_kbytes
-
-        kbytes2 = self.kchar_bytes_read()  # for .kbytes_read
-        taken_kbytes += kbytes2
-
-        kbytes3 = kbytes2  # fuzz over started by 1 or 2 Esc Bytes
-        if kbytes2 == b"\x1B":
-            if not self.kbhit(timeout=timeout):
-                return taken_kbytes
-
-            kbytes3 = self.kchar_bytes_read()  # for .kbytes_read
-            taken_kbytes += kbytes3
-
-        if kbytes3 == b"O":  # 01/11 04/15 SS3
-            if not self.kbhit(timeout=timeout):
-                return taken_kbytes  # ⎋ Esc and then ⇧O but no more Bytes
-
-            kbytes4 = self.kchar_bytes_read()  # for .kbytes_read
-            taken_kbytes += kbytes4  # todo: rarely in range(0x20, 0x40) CSI_EXTRAS
-            return taken_kbytes
-
-            # ⎋⇧O⇧P for F1, etc
-
-        # Accept ⎋[ Meta [ cut short by itself, or longer CSI Escape Sequences
-
-        if kbytes3 == b"[":  # 01/11 ... 05/11 CSI
-            assert taken_kbytes.endswith(b"\x1B\x5B"), (taken_kbytes,)
-            if not self.kbhit(timeout=timeout):
-                return taken_kbytes
-
-                # ⎋[ Meta Esc that doesn't come with more Bytes
-
-            taken_kbytes = self.csi_kchord_bytes_read_if(taken_kbytes, timeout=timeout)
-
-        # Succeed
-
-        return taken_kbytes
-
-        # often returns the Bytes of a complete Key Chord
-        # doesn't raise UnicodeDecodeError
-
-        # may be cut short by end-of-input, or by undecodable Bytes
-        # may take one too many Bytes if begun by ⎋⇧O and not ended normally
-        # may take one too many Bytes if begun by ⎋[ and not ended normally
-
-        # todo: tight coupling across StrTerminal.schars_split & BytesTerminal.kbytes_read
-
-    def csi_kchord_bytes_read_if(self, kbytes, timeout) -> bytes:
-        """Read the 1 or more Bytes of 1 CSI Escape Sequence, but let it stop short"""
-
-        assert CSI_EXTRAS == "".join(chr(_) for _ in range(0x20, 0x40))
-
-        taken_kbytes = kbytes
-        intermediate_bytes = b""
-        while True:
-            if not self.kbhit(timeout=timeout):
-                return taken_kbytes
-
-            more_kbytes = self.kchar_bytes_read()  # for .csi_kchord_bytes_read_if
-            taken_kbytes += more_kbytes
-
-            if len(more_kbytes) == 1:  # as when ord(kbytes_.encode()) < 0x80
-                kord = more_kbytes[-1]
-
-                if not intermediate_bytes:
-                    if 0x30 <= kord < 0x40:
-                        continue
-
-                        # 16 Parameter Bytes in 0123456789:;<=>? at Codes 0x30..0x3F
-
-                if 0x20 <= kord < 0x30:
-                    intermediate_bytes += more_kbytes
-                    continue
-
-                    # 16 Intermediate Bytes of Space or in !"#$%&'()*+,-./ at Codes 0x20..0x2F
-
-            break
-
-            # 63 Final Bytes of @ A..Z [\]^_ ` a..z {|}~ at Codes 0x40..0x7E
-
-        return taken_kbytes
-
-        # often returns the Bytes of 1 CSI Escape Sequence
-        # doesn't raise UnicodeDecodeError
-
-        # may be cut short by end-of-input, or by undecodable Bytes
-        # may take one too many Bytes if begun by ⎋[ and not ended normally
-
-        # todo: limit the length of the CSI Escape Sequence
-
-    def kchar_bytes_read(self) -> bytes:
-        """Read the 1 or more Bytes of 1 UTF-8 Char, but let it stop short"""
-
-        def decodable(kbytes: bytes) -> bool:
-            try:
-                kbytes.decode()  # may raise UnicodeDecodeError
-                return True
-            except UnicodeDecodeError:
-                return False
-
-        taken_kbytes = b""
+        tbp = TerminalBytePacket()
         while True:
             kbyte = self.kbyte_read()
-            assert kbyte, (kbyte,)  # todo: test end-of-input
-            taken_kbytes += kbyte
-
-            if decodable(taken_kbytes):
+            leaders = tbp.take_if(kbyte)
+            if tbp.text or tbp.closed or leaders:
+                break
+            if not self.kbhit(timeout=timeout):
                 break
 
-            suffixes = (b"\xBF", b"\xBF\xBF", b"\xBF\xBF\xBF")
-            if any(decodable(taken_kbytes + _) for _ in suffixes):
-                continue
+        bytes_ = tbp.to_bytes() + leaders
+        return bytes_
 
-                # b"\xC2\x80", b"\xE0\xA0\x80", b"\xF0\x90\x80\x80" .. b"\xF4\x8F\xBF\xBF"
-
-            break
-
-            # todo: invent UTF-8'ish Encoding of Unicode Code >= 0x110000
-
-        assert taken_kbytes  # todo: test end-of-input
-
-        return taken_kbytes
-
-        # often returns the bytes of 1 UTF-8 Char
+        # often returns the Bytes of a complete Key Chord
+        # asks to take one too many Bytes when given an incomplete TerminalBytePacket
         # doesn't raise UnicodeDecodeError
 
-        # may be cut short by end-of-input, or by undecodable Bytes
-        # may take one too many bytes if fed decodable Bytes then an undecodable Byte
+        # todo: tight coupling across StrTerminal.schars_split & BytesTerminal.kbytes_read
 
     def kbyte_read(self) -> bytes:
         """Read 1 Keyboard Byte"""
