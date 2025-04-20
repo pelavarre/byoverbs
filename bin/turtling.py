@@ -2448,9 +2448,9 @@ class Turtle:
         gt = self.glass_teletype
 
         (y_count, x_count) = gt.os_terminal_y_count_x_count()
-        assert y_count >= 4, (y_count,)
+        assert y_count >= 1, (y_count,)
 
-        y = y_count - 3
+        y = y_count  # todo: remember why we coded this as 'y_count - 3' for awhile
         x = 1
         gt.write_row_y_column_x(row_y=y, column_x=x)
 
