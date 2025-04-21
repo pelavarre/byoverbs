@@ -11,6 +11,9 @@ Sh solve tail -F of all the Lines written to the File as yet - no drops, no dupe
 
 Turtle solve skidded lines with more .flush calls?
 
+update/ rewrite demos/glass1000.py to do large screens well?
+macOS Mouse answers ⎋[?1006;1000h till ⎋[?1006;1000l with ⎋[<{b};{y};{x}M and ⎋[<{b};{y};{x}m
+
 ## Mar/2025
 
 turtling: Draw the text on highlights of the Comaford Emotion Wheel

@@ -821,6 +821,8 @@ def yolo1() -> None:
         print(r"To quit, press ⌃\ or close this Terminal Window Pane", end="\r\n")
 
         while True:
+            print(end="\r\n")
+
             (tbp, leaders) = yolo_read_tbp_leaders(bt)
             bytes_ = tbp.to_bytes() + leaders
 
@@ -883,6 +885,9 @@ def yolo_read_tbp_leaders(bt) -> tuple[TerminalBytePacket, bytes]:
                         # todo: Some 6 Byte Reports decode as fewer Chars
 
                 break
+
+            if not bt.kbhit(timeout=0.000):
+                print(tbp.to_bytes(), tbp, repr(tbp), end="\r\n")
 
             if not bt.kbhit(timeout=1.000):
                 break

@@ -85,7 +85,7 @@ import zoneinfo
 from decimal import Decimal as D
 
 
-_: object  # '_: object' tells MyPy to accept '_ =' tests across two and more Datatypes
+_: object  # "_: object" tells MyPy to accept "_ =" tests across two and more Datatypes
 
 _ = D  # todo: lazy-import X.Y as Z, not just lazy-import X as Z
 _ = builtins  # so that CPython:  builtins is __builtins__
