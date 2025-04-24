@@ -27,6 +27,7 @@ git branch --all |grep /feature/ |grep -v /guests/
 
 ssh host1
 git push origin HEAD:guests/jqdoe  # create remote for: git branch
+git push origin \$HASH:refs/heads/guests/jqdoe  # create remote for: git branch
 
 
 # 3 - Copy your Branch out to each Host,
