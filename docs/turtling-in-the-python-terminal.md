@@ -50,7 +50,7 @@ Contents
   - [Play around](#play-around)
   - [Help sort our Wish List](#help-sort-our-wish-list)
 - [Dig in technically, deep into the Python](#dig-in-technically-deep-into-the-python)
-  - [26 Cross-Platform Python Imports](#26-cross-platform-python-imports)
+  - [28 Cross-Platform Python Imports](#28-cross-platform-python-imports)
   - [3 Linux/ macOS Imports](#3-linux-macos-imports)
   - [0 Windows Imports](#0-windows-imports)
   - [Breakpoints](#breakpoints)
@@ -1671,13 +1671,14 @@ its own kind of a tour of the Standard Python Library.
 
 It mixes together like 28 Python Imports
 
-### 26 Cross-Platform Python Imports
+### 28 Cross-Platform Python Imports
 
 > import \_\_main\_\_<br>
 > import argparse<br>
 > import ast<br>
 > import bdb<br>
 > import collections<br>
+> import datetime as dt<br>
 > import decimal<br>
 > import glob<br>
 > import inspect<br>
@@ -1686,10 +1687,12 @@ It mixes together like 28 Python Imports
 > import pathlib<br>
 > import pdb<br>
 > import platform<br>
+> import random<br>
 > import re<br>
 > import shlex<br>
 > import shutil<br>
 > import signal<br>
+> import string<br>
 > import subprocess<br>
 > import sys<br>
 > import textwrap<br>
