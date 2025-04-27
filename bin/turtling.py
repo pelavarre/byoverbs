@@ -490,7 +490,13 @@ MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlm"
 
 
 # FIXME: Try AugmentCode Review of Class TerminalBytePacket
-# FIXME: Tweak up Python Logo Turtles to call TerminalBytePacket like for quick ⎋[M DL_Y etc
+
+# FIXME: Limit rate of input so that hanging in Google Shell doesn't go so wild
+# FIXME: Stop hanging in Google Shell at ⌃⌥↑ etc over ⎋⎋OA
+
+# FIXME: Tweak up Python Logo Turtles to call TerminalBytePacket
+# FIXME: like for quick ⎋[M DL_Y etc
+# FIXME: like for no crash of ⎋ [ M ⎋[A
 
 
 class TerminalBytePacket:
@@ -882,9 +888,11 @@ class TerminalBytePacket:
             assert head or not printable, (decode_if, laters, head, printable)
 
         # Take first 1 or 2 or 3 Bytes into Esc Sequences
+        # ⎋ Esc  # ⎋⎋ Esc Esc  # ⎋⎋O Esc SS3  # ⎋O SS3
+        # ⎋ CSI  # ⎋ Esc CSI
 
-        head_plus = head + laters  # ⎋, ⎋⎋, ⎋⎋[, ⎋[, ⎋O
-        if head_plus in (b"\x1B", b"\x1B\x1B", b"\x1B\x1B[", b"\x1BO", b"\x1B["):
+        head_plus = head + laters
+        if head_plus in (b"\x1B", b"\x1B\x1B", b"\x1B\x1BO", b"\x1B\x1B[", b"\x1BO", b"\x1B["):
             head.extend(laters)
             return b""  # takes first 1 or 2 Bytes into Esc Sequences
 
@@ -899,8 +907,9 @@ class TerminalBytePacket:
             # takes \b \t \n \r \x7F etc
 
         # Take & close 1 Escaped Printable Decoded Char, as Tail
+        # ⎋ Esc  # ⎋⎋ Esc Esc  # ⎋⎋O Esc SS3  # ⎋O SS3
 
-        if head in (b"\x1B", b"\x1B\x1B", b"\x1BO"):  # ⎋ Esc  # ⎋⎋ Esc Esc  # ⎋[O SS3
+        if head in (b"\x1B", b"\x1B\x1B", b"\x1B\x1BO", b"\x1BO"):
             if printable:
                 tail.extend(laters)
                 self.closed = True
@@ -908,7 +917,7 @@ class TerminalBytePacket:
 
             # Take & close Unprintable Chars or 1..4 Undecodable Bytes, as Escaped Tail
 
-            tail.extend(laters)  # todo: test of Unprintable/ Undecodable after ⎋[O SS3
+            tail.extend(laters)  # todo: test of Unprintable/ Undecodable after ⎋O SS3
             self.closed = True
             return b""  # takes & closes Unprintable Chars or 1..4 Undecodable Bytes
 
@@ -1025,12 +1034,12 @@ def yolo1() -> None:
             print(end="\r\n")
 
             t = dt.datetime.now().astimezone()
-            (tbp, laters) = yolo_read_tbp_laters(bt, t=t)
             while True:
-                bytes_ = tbp.to_bytes() + laters
+                (tbp, laters) = yolo_read_tbp_laters(bt, t=t)
                 if laters:
                     print(laters, end="\r\n")
 
+                bytes_ = tbp.to_bytes() + laters
                 if bytes_ == b"\x1C":  # ⌃\
                     return
 
@@ -1334,6 +1343,10 @@ KCAP_BY_KCHARS = {
     "\x1B" "\x0C": "⌥⇧Fn↓",  # ⎋⇧Fn↓  # coded with ⌃L  # aka \f
     "\x1B" "\x10": "⎋⇧Fn",  # ⎋ Meta ⇧ Shift of Fn F1..F12  # not ⌥⇧Fn  # coded with ⌃P
     "\x1B" "\x1B": "⎋⎋",  # Meta Esc  # not ⌥⎋
+    "\x1B" "\x1B" "OA": "⌃⌥↑",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧A  # gCloud Shell
+    "\x1B" "\x1B" "OB": "⌃⌥↓",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧B  # gCloud Shell
+    "\x1B" "\x1B" "OC": "⌃⌥→",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧C  # gCloud Shell
+    "\x1B" "\x1B" "OD": "⌃⌥←",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧D  # gCloud Shell
     "\x1B" "\x1B" "[" "3;5~": "⎋⌃FnDelete",  # ⌥⌃FnDelete  # LS1R
     "\x1B" "\x1B" "[" "A": "⎋↑",  # CSI 04/01 Cursor Up (CUU)  # not ⌥↑
     "\x1B" "\x1B" "[" "B": "⎋↓",  # CSI 04/02 Cursor Down (CUD)  # not ⌥↓
