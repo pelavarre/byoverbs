@@ -5,6 +5,20 @@ What works for me is that first, I chat with you a bit, over at README·Md, calm
 But by the day, I stream insights in real-time in here at Futures·Md, as they bubble up out of my brain.
 Solutions I more drop into Scraps·Txt
 
+## May/2025
+
+drop the dot hits from:  ls.py -1
+
+drop pkg resources
+
+    % ./pelavarre/pybashish/bin/ls.py
+    Traceback (most recent call last):
+      File "/Users/plavarre/Public/./pelavarre/pybashish/bin/ls.py", line 93, in <module>
+        import pkg_resources  # in 2021, actually more native than "import distutils"
+        ^^^^^^^^^^^^^^^^^^^^
+    ModuleNotFoundError: No module named 'pkg_resources'
+    %
+
 ## Apr/2025
 
 Sh solve tail -F of all the Lines written to the File as yet - no drops, no dupes

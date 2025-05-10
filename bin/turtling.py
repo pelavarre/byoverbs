@@ -662,6 +662,8 @@ class TerminalBytePacket:
         self._try_closed_(b"\x1B[", b"3;5", b"H")  # CSI Head with Next and Tail
         self._try_closed_(b"\x1B[", b"6", b" q")  # CSI Head with Neck and Back & Tail
 
+        # FIXME: test each Control Flow Return? test each Control Flow Branch?
+
     def _try_open_(self, *args) -> None:
         """Raise Exception unless the Eval of the Str of the Packet equals its Bytes"""
 
@@ -993,6 +995,8 @@ class TerminalBytePacket:
         # splits '⎋[200~' and '⎋[201~' away from enclosed Bracketed Paste
 
         # todo: limit the length of a CSI Escape Sequence
+
+    # todo: limit rate of input so livelocks go less wild, like in Keyboard/ Screen loopback
 
 
 #

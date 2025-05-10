@@ -75,7 +75,7 @@ split_strips = list(_.strip() for _ in splits)
 split_strip_join = " ".join(split_strips)
 
 shline = "awk -F: {!r}".format(split_strip_join)
-byo.subprocess_shline_exit_if(shline, stdin=None)
+byo.subprocess_shline_exit_if(shline, stdin=None)  # todo: do we mean stdin=subprocess.PIPE ?
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/awk.py

@@ -146,7 +146,7 @@ def subprocess_run(argv) -> None:
 
     byo.sys_stderr_print("+ {}".format(shline))
 
-    _ = subprocess.run(argv, stdin=None)
+    _ = subprocess.run(argv, stdin=None)  # did we mean stdin=subprocess.PIPE?
 
 
 def argv_append_cal_args(argv, args, when) -> None:

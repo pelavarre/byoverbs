@@ -12,6 +12,7 @@ options:
 quirks:
   goes well with Python3 Bash
   classic 'python3' does 'del __file__', unless you breakpoint before the end
+  Python breakpoints don't bother you again after:  pdb.set_trace = lambda: None
 
 examples:
 

@@ -213,6 +213,8 @@ def subprocess_run_stdout_bytes(argv) -> bytes:
 
     return stdout
 
+    # todo: 'stdin=None' is not 'stdin=subprocess.PIPE', but here now do we care?
+
 
 def push_out(obytes) -> None:
     """Copy lotsa Bytes out"""

@@ -592,7 +592,7 @@ def subprocess_exit_run_if(stdin=subprocess.PIPE) -> None:
 
 
 def subprocess_shline_exit_if(  # ) -> subprocess.CompletedProcess:
-    shline, stdin=None
+    shline, stdin=None  # do we want default of stdin=subprocess.PIPE?
 ) -> subprocess.CompletedProcess:
     """Print and exit, else run the ShLine and return after it exits zero"""
 
