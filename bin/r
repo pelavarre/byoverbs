@@ -1,0 +1,12 @@
+if ! which tac >/dev/null; then
+    set -xe
+    tail -r "$@"
+elif [ "$(file --brief $(which tac))" = "$(echo ASCII text)" ]; then
+    set -xe
+    tail -r "$@"
+else
+    set -xe
+    tac "$@"
+fi
+
+# many Mac lack Linux Tac  # many Linux lack Mac Tail R

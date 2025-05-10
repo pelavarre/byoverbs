@@ -1,0 +1,7 @@
+if which jq >/dev/null; then
+    set -xe
+    jq .
+else
+    set -xe
+    python3 -m json.tool --no-ensure-ascii --indent=2A
+fi
