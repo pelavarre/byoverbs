@@ -822,7 +822,7 @@ def sys_exit_if_testdoc() -> None:
 def sys_stdin_prompt_if() -> None:
     """Prompt for TTY EOF before blocking to read more of it"""
 
-    CONTROL_KEYCAP = "\N{Up Arrowhead}"  # ⌃
+    CONTROL_KEYCAP = "\N{UP ARROWHEAD}"  # ⌃
     if sys.stdin.isatty():
         sys_stderr_print("Press {}D TTY EOF to quit".format(CONTROL_KEYCAP))
 

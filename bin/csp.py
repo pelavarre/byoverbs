@@ -1377,7 +1377,7 @@ def process_step_choose_and_reprint(choices, line) -> str:
     if len(choices) == 1:
         choice = choices[-1]
         if strip != str(choice):
-            print("\x1B[A" "\x1B[K", end="")
+            print("\x1b[A" "\x1b[K", end="")
             print(choice)
 
         return choice
@@ -1395,7 +1395,7 @@ def process_step_choose_and_reprint(choices, line) -> str:
     # Else erase the input and run ahead with a random Choice
 
     choice = random.choice(choices)
-    print("\x1B[A", end="")
+    print("\x1b[A", end="")
     print(choice)
 
     return choice

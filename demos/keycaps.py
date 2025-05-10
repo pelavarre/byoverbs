@@ -75,20 +75,20 @@ __version__ = "2025.2.17"  # Monday
 #
 
 
-CSI = "\x1B["  # macOS Terminal takes "\x1B[" as CSI, doesn't take "\N{CSI}" == "\x9B"
+CSI = "\x1b["  # macOS Terminal takes "\x1B[" as CSI, doesn't take "\N{CSI}" == "\x9B"
 
-CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP)  # from upper left "\x1B[1;1H"
+CUP_Y_X = "\x1b[{};{}H"  # Cursor Position (CUP)  # from upper left "\x1B[1;1H"
 
-DECTCEM_CURSOR_HIDE = "\x1B[?25l"  # Hide away the one Cursor on Screen
-DECTCEM_CURSOR_SHOW = "\x1B[?25h"  # Show the one Cursor on Screen
+DECTCEM_CURSOR_HIDE = "\x1b[?25l"  # Hide away the one Cursor on Screen
+DECTCEM_CURSOR_SHOW = "\x1b[?25h"  # Show the one Cursor on Screen
 
-HOME_AND_WIPE = "\x1B[H" "\x1B[2J"  # Wipe Screen with Spaces, warp Cursor into Top Left
-CLEAR = "\x1B[H" "\x1B[2J" "\x1B[3J"  # Like Home and Wipe, but also clear Scrollback
+HOME_AND_WIPE = "\x1b[H" "\x1b[2J"  # Wipe Screen with Spaces, warp Cursor into Top Left
+CLEAR = "\x1b[H" "\x1b[2J" "\x1b[3J"  # Like Home and Wipe, but also clear Scrollback
 # doc'ed as "Erase in Display", "Clear Entire Screen"
 # some Terminals don't need the "\x1B[H" before "\x1B[2J"
 # some Linux Clear's echo $'\x1B[H\x1B[3J\x1B[2J', which doesn't always clear Scrollback
 
-OS_PUT_TERMINAL_SIZE_Y_X = "\x1B[8;{};{}t"  # "CSI 8 t" to Resize Chars per Window
+OS_PUT_TERMINAL_SIZE_Y_X = "\x1b[8;{};{}t"  # "CSI 8 t" to Resize Chars per Window
 # such as "\x1B[8;50;89t" for a Black-styled Python Terminal
 
 
@@ -98,7 +98,7 @@ MAC_PASTE_125MS = 125e-3
 
 NO_COLOR = 0
 
-COLOR_CHARS_FORMAT = "\x1B[{}m{}\x1B[0m"  # .format(color, chars)
+COLOR_CHARS_FORMAT = "\x1b[{}m{}\x1b[0m"  # .format(color, chars)
 # todo: might should color "\x20" Spaces
 
 _36_CYAN = 36
@@ -115,12 +115,12 @@ COLOR_BY_AGE = (36, 32, 33, 35, 31, 34, 30, 37)
 # but their Yellow, Magenta, White come to me as Gold, Pink, Grey
 
 COLORS = list(COLOR_BY_AGE)
-STR_COLORS = ", ".join("\x1B[{}m#{}\x1B[0m".format(_, _) for _ in COLOR_BY_AGE)
+STR_COLORS = ", ".join("\x1b[{}m#{}\x1b[0m".format(_, _) for _ in COLOR_BY_AGE)
 
 COLOR_500MS = 500e-3  # milliseconds of Key Cap life per color
 
 assert len(COLOR_BY_AGE) == 8, len(COLOR_BY_AGE)
-COLOR_AS = " ".join("\x1B[{}m{}\x1B[0m".format(_, "color") for _ in COLOR_BY_AGE)
+COLOR_AS = " ".join("\x1b[{}m{}\x1b[0m".format(_, "color") for _ in COLOR_BY_AGE)
 assert __main__.__doc__, (__main__.__doc__,)
 __main__.__doc__ = __main__.__doc__.replace(8 * " color", " " + COLOR_AS)
 
@@ -379,7 +379,7 @@ def colorize(keycap, t, now):
     # Fire bright when struck, fade to black, then grey, then gone
 
     assert NO_COLOR == 0
-    assert COLOR_CHARS_FORMAT == "\x1B[{}m{}\x1B[0m"
+    assert COLOR_CHARS_FORMAT == "\x1b[{}m{}\x1b[0m"
 
     color = COLOR_BY_AGE[age]
     emit = COLOR_CHARS_FORMAT.format(color, keycap)
@@ -412,7 +412,7 @@ MACBOOK_KEYCAP_CHARS = r"""
 
 MACBOOK_PASTE_KEYCAPS = "⇧ ↑ Fn ⌃ ⌥ ⌘ ← ↓ →".split()
 
-MAC_ACCENTUATORS = b"\x60 \xC2\xB4 \xCB\x86 \xCB\x9C \xC2\xA8".split()  # E I N U Grave
+MAC_ACCENTUATORS = b"\x60 \xc2\xb4 \xcb\x86 \xcb\x9c \xc2\xa8".split()  # E I N U Grave
 
 
 # List the Punctuation Marks found by Chords of Shift plus a Key Cap
@@ -468,7 +468,7 @@ _11_RETURNS += list("{} Return".format(_).strip() for _ in CHORDS)
 KEYCAP_LISTS_BY_STROKE.update(  # more Printable Ascii
     {
         b"\x20": ["Space", "⇧ Space"],
-        b"\x5C": ["\\", "⌥ Y"],  # ⌥ Y is \ in place of ¥, when inside Terminal
+        b"\x5c": ["\\", "⌥ Y"],  # ⌥ Y is \ in place of ¥, when inside Terminal
         b"\x60": ["`", "⌥ `", "⌥ ⇧ `", "⌥ ` Space"],  # Backtick, ⌥ Grave, etc
     }
 )
@@ -484,15 +484,15 @@ KEYCAP_LISTS_BY_STROKE.update(  # more Control C0 Ascii at Mac
             "⌃ ⌥ ⇧ 2",
         ],  # near to ⇧2 for @
         b"\x09": _7_TABS,  # drawn as ⇥
-        b"\x0D": _11_RETURNS,  # drawn as ↩
-        b"\x1B": _11_ESCAPES,  # drawn as ⎋
-        b"\x1B\x5B\x5A": ["⇧ Tab", "⌃ ⇧ Tab", "⌥ ⇧ Tab", "⌃ ⌥ ⇧ Tab"],  # drawn as ⇥
-        b"\x1C": ["⌃ \\", "⌃ ⌥ \\", "⌃ ⌥ ⇧ \\"],
-        b"\x1D": ["⌃ ]", "⌃ ⌥ ]", "⌃ ⌥ ⇧ ]"],
-        b"\x1E": ["⌃ ⇧ 6", "⌃ ⌥ ⇧ 6"],  # near to ⇧6 for ^
-        b"\x1F": ["⌃ -", "⌃ ⌥ -", "⌃ ⇧ -", "⌃ ⌥ ⇧ -"],  # near to ⇧- for _
-        b"\x7F": _8_DELETES,  # or drawn as ⌫ and ⌦
-        b"\xC2\xA0": ["⌥ Space", "⌥ ⇧ Space"],
+        b"\x0d": _11_RETURNS,  # drawn as ↩
+        b"\x1b": _11_ESCAPES,  # drawn as ⎋
+        b"\x1b\x5b\x5a": ["⇧ Tab", "⌃ ⇧ Tab", "⌥ ⇧ Tab", "⌃ ⌥ ⇧ Tab"],  # drawn as ⇥
+        b"\x1c": ["⌃ \\", "⌃ ⌥ \\", "⌃ ⌥ ⇧ \\"],
+        b"\x1d": ["⌃ ]", "⌃ ⌥ ]", "⌃ ⌥ ⇧ ]"],
+        b"\x1e": ["⌃ ⇧ 6", "⌃ ⌥ ⇧ 6"],  # near to ⇧6 for ^
+        b"\x1f": ["⌃ -", "⌃ ⌥ -", "⌃ ⇧ -", "⌃ ⌥ ⇧ -"],  # near to ⇧- for _
+        b"\x7f": _8_DELETES,  # or drawn as ⌫ and ⌦
+        b"\xc2\xa0": ["⌥ Space", "⌥ ⇧ Space"],
     }
 )
 # todo: b"\x0A" is ⌃ Enter at Windows
@@ -511,9 +511,9 @@ assert (0x40 ^ ord("?")) == 0x7F
 
 KEYCAP_LISTS_BY_STROKE.update(  # the Arrow Key Caps at Mac
     {
-        b"\x1B\x5B\x31\x3B\x32\x43": ["⇧ →"],
-        b"\x1B\x5B\x31\x3B\x32\x44": ["⇧ ←"],
-        b"\x1B\x5B\x41": [
+        b"\x1b\x5b\x31\x3b\x32\x43": ["⇧ →"],
+        b"\x1b\x5b\x31\x3b\x32\x44": ["⇧ ←"],
+        b"\x1b\x5b\x41": [
             "↑",
             "⌥ ↑",
             "⇧ ↑",
@@ -522,7 +522,7 @@ KEYCAP_LISTS_BY_STROKE.update(  # the Arrow Key Caps at Mac
             "⌥ ⇧ ↑",
             "⌃ ⌥ ⇧ ↑",
         ],  # drawn as ▲
-        b"\x1B\x5B\x42": [
+        b"\x1b\x5b\x42": [
             "↓",
             "⌥ ↓",
             "⇧ ↓",
@@ -531,162 +531,162 @@ KEYCAP_LISTS_BY_STROKE.update(  # the Arrow Key Caps at Mac
             "⌥ ⇧ ↓",
             "⌃ ⌥ ⇧ ↓",
         ],  # drawn as ▼
-        b"\x1B\x5B\x43": ["→", "⌃ ⌥ →", "⌃ ⇧ →", "⌥ ⇧ →", "⌃ ⌥ ⇧ →"],  # drawn as ▶
-        b"\x1B\x5B\x44": ["←", "⌃ ⌥ ←", "⌃ ⇧ ←", "⌥ ⇧ ←", "⌃ ⌥ ⇧ ←"],  # drawn as ◀
-        b"\x1B\x62": ["⌥ ←"],
-        b"\x1B\x66": ["⌥ →"],
+        b"\x1b\x5b\x43": ["→", "⌃ ⌥ →", "⌃ ⇧ →", "⌥ ⇧ →", "⌃ ⌥ ⇧ →"],  # drawn as ▶
+        b"\x1b\x5b\x44": ["←", "⌃ ⌥ ←", "⌃ ⇧ ←", "⌥ ⇧ ←", "⌃ ⌥ ⇧ ←"],  # drawn as ◀
+        b"\x1b\x62": ["⌥ ←"],
+        b"\x1b\x66": ["⌥ →"],
     }
 )
 
 KEYCAP_LISTS_BY_STROKE.update(  # the Fn Key Caps at Mac
     {
-        b"\x1B\x4F\x50": ["F1"],  # drawn as:  fn F1
-        b"\x1B\x4F\x51": ["F2"],
-        b"\x1B\x4F\x52": ["F3"],
-        b"\x1B\x4F\x53": ["F4"],
-        b"\x1B\x5B\x31\x35\x7E": ["F5"],
-        b"\x1B\x5B\x31\x37\x7E": ["F6", "⌥ F1"],
-        b"\x1B\x5B\x31\x38\x7E": ["F7", "⌥ F2"],
-        b"\x1B\x5B\x31\x39\x7E": ["F8", "⌥ F3"],
-        b"\x1B\x5B\x32\x30\x7E": ["F9", "⌥ F4"],
-        b"\x1B\x5B\x32\x31\x7E": ["F10", "⌥ F5"],
-        b"\x1B\x5B\x32\x33\x7E": ["F11", "⌥ F6"],
-        b"\x1B\x5B\x32\x34\x7E": ["F12", "⌥ F7"],
-        b"\x1B\x5B\x32\x35\x7E": ["⌥ F8", "⇧ F5"],
-        b"\x1B\x5B\x32\x36\x7E": ["⌥ F9", "⇧ F6"],
-        b"\x1B\x5B\x32\x38\x7E": ["⌥ F10", "⇧ F7"],
-        b"\x1B\x5B\x32\x39\x7E": ["⌥ F11", "⇧ F8"],
-        b"\x1B\x5B\x33\x31\x7E": ["⌥ F12", "⇧ F9"],
-        b"\x1B\x5B\x33\x32\x7E": ["⇧ F10"],
-        b"\x1B\x5B\x33\x33\x7E": ["⇧ F11"],
-        b"\x1B\x5B\x33\x34\x7E": ["⇧ F12"],
+        b"\x1b\x4f\x50": ["F1"],  # drawn as:  fn F1
+        b"\x1b\x4f\x51": ["F2"],
+        b"\x1b\x4f\x52": ["F3"],
+        b"\x1b\x4f\x53": ["F4"],
+        b"\x1b\x5b\x31\x35\x7e": ["F5"],
+        b"\x1b\x5b\x31\x37\x7e": ["F6", "⌥ F1"],
+        b"\x1b\x5b\x31\x38\x7e": ["F7", "⌥ F2"],
+        b"\x1b\x5b\x31\x39\x7e": ["F8", "⌥ F3"],
+        b"\x1b\x5b\x32\x30\x7e": ["F9", "⌥ F4"],
+        b"\x1b\x5b\x32\x31\x7e": ["F10", "⌥ F5"],
+        b"\x1b\x5b\x32\x33\x7e": ["F11", "⌥ F6"],
+        b"\x1b\x5b\x32\x34\x7e": ["F12", "⌥ F7"],
+        b"\x1b\x5b\x32\x35\x7e": ["⌥ F8", "⇧ F5"],
+        b"\x1b\x5b\x32\x36\x7e": ["⌥ F9", "⇧ F6"],
+        b"\x1b\x5b\x32\x38\x7e": ["⌥ F10", "⇧ F7"],
+        b"\x1b\x5b\x32\x39\x7e": ["⌥ F11", "⇧ F8"],
+        b"\x1b\x5b\x33\x31\x7e": ["⌥ F12", "⇧ F9"],
+        b"\x1b\x5b\x33\x32\x7e": ["⇧ F10"],
+        b"\x1b\x5b\x33\x33\x7e": ["⇧ F11"],
+        b"\x1b\x5b\x33\x34\x7e": ["⇧ F12"],
     }
 )
 
 KEYCAP_LISTS_BY_STROKE.update(  # the Option Digit strokes at Mac
     {
-        b"\xC2\xBA": ["⌥ 0"],
-        b"\xC2\xA1": ["⌥ 1"],
-        b"\xE2\x84\xA2": ["⌥ 2"],
-        b"\xC2\xA3": ["⌥ 3"],
-        b"\xC2\xA2": ["⌥ 4"],
-        b"\xE2\x88\x9E": ["⌥ 5"],
-        b"\xC2\xA7": ["⌥ 6"],
-        b"\xC2\xB6": ["⌥ 7"],
-        b"\xE2\x80\xA2": ["⌥ 8"],
-        b"\xC2\xAA": ["⌥ 9"],
-        b"\xE2\x80\x9A": ["⌥ ⇧ 0"],
-        b"\xE2\x81\x84": ["⌥ ⇧ 1"],
-        b"\xE2\x82\xAC": ["⌥ ⇧ 2"],
-        b"\xE2\x80\xB9": ["⌥ ⇧ 3"],
-        b"\xE2\x80\xBA": ["⌥ ⇧ 4"],
-        b"\xEF\xAC\x81": ["⌥ ⇧ 5"],
-        b"\xEF\xAC\x82": ["⌥ ⇧ 6"],
-        b"\xE2\x80\xA1": ["⌥ ⇧ 7"],
-        b"\xC2\xB0": ["⌥ ⇧ 8"],
-        b"\xC2\xB7": ["⌥ ⇧ 9"],
+        b"\xc2\xba": ["⌥ 0"],
+        b"\xc2\xa1": ["⌥ 1"],
+        b"\xe2\x84\xa2": ["⌥ 2"],
+        b"\xc2\xa3": ["⌥ 3"],
+        b"\xc2\xa2": ["⌥ 4"],
+        b"\xe2\x88\x9e": ["⌥ 5"],
+        b"\xc2\xa7": ["⌥ 6"],
+        b"\xc2\xb6": ["⌥ 7"],
+        b"\xe2\x80\xa2": ["⌥ 8"],
+        b"\xc2\xaa": ["⌥ 9"],
+        b"\xe2\x80\x9a": ["⌥ ⇧ 0"],
+        b"\xe2\x81\x84": ["⌥ ⇧ 1"],
+        b"\xe2\x82\xac": ["⌥ ⇧ 2"],
+        b"\xe2\x80\xb9": ["⌥ ⇧ 3"],
+        b"\xe2\x80\xba": ["⌥ ⇧ 4"],
+        b"\xef\xac\x81": ["⌥ ⇧ 5"],
+        b"\xef\xac\x82": ["⌥ ⇧ 6"],
+        b"\xe2\x80\xa1": ["⌥ ⇧ 7"],
+        b"\xc2\xb0": ["⌥ ⇧ 8"],
+        b"\xc2\xb7": ["⌥ ⇧ 9"],
     }
 )
 
 KEYCAP_LISTS_BY_STROKE.update(  # the Option Letter strokes at Mac
     {
-        b"\xC3\xA5": ["⌥ A"],
-        b"\xE2\x88\xAB": ["⌥ B"],
-        b"\xC3\xA7": ["⌥ C"],
-        b"\xE2\x88\x82": ["⌥ D"],  # not followed by ⌥ E
-        b"\xC3\xA1": ["⌥ E A"],
-        b"\xC3\xA9": ["⌥ E E"],
-        b"\xC3\xAD": ["⌥ E I"],
-        b"\x6A\xCC\x81": ["⌥ E J"],
-        b"\xC3\xB3": ["⌥ E O"],
-        b"\xC3\xBA": ["⌥ E U"],
-        b"\xC6\x92": ["⌥ F"],
-        b"\xC2\xA9": ["⌥ G"],
-        b"\xCB\x99": ["⌥ H"],  # not followed by ⌥ I
-        b"\xC3\xA2": ["⌥ I A"],
-        b"\xC3\xAA": ["⌥ I E"],
-        b"\xC3\xAE": ["⌥ I I"],
-        b"\xC3\xB4": ["⌥ I O"],
-        b"\xC3\xBB": ["⌥ I U"],
-        b"\xE2\x88\x86": ["⌥ J"],
-        b"\xCB\x9A": ["⌥ K"],
-        b"\xC2\xAC": ["⌥ L"],
-        b"\xC2\xB5": ["⌥ M"],  # not followed by ⌥ N
-        b"\xC3\xA3": ["⌥ N A"],
-        b"\xC3\xB1": ["⌥ N N"],
-        b"\xC3\xB5": ["⌥ N O"],
-        b"\xC3\xB8": ["⌥ O"],
-        b"\xCF\x80": ["⌥ P"],
-        b"\xC5\x93": ["⌥ Q"],
-        b"\xC2\xAE": ["⌥ R"],
-        b"\xC3\x9F": ["⌥ S"],
-        b"\xE2\x80\xA0": ["⌥ T"],  # not followed by ⌥ U
-        b"\xC3\xA4": ["⌥ U A"],
-        b"\xC3\xAB": ["⌥ U E"],
-        b"\xC3\xAF": ["⌥ U I"],
-        b"\xC3\xB6": ["⌥ U O"],
-        b"\xC3\xBC": ["⌥ U U"],
-        b"\xC3\xBF": ["⌥ U Y"],
-        b"\xE2\x88\x9A": ["⌥ V"],
-        b"\xE2\x88\x91": ["⌥ W"],
-        b"\xE2\x89\x88": ["⌥ X"],
-        b"\xCE\xA9": ["⌥ Z"],
-        b"\xC3\x85": ["⌥ ⇧ A"],
-        b"\xC4\xB1": ["⌥ ⇧ B"],
-        b"\xC3\x87": ["⌥ ⇧ C"],
-        b"\xC3\x8E": ["⌥ ⇧ D"],
-        b"\xC2\xB4": ["⌥ E", "⌥ ⇧ E", "⌥ ⇧ E Space"],
-        b"\xC3\x8F": ["⌥ ⇧ F"],
-        b"\xCB\x9D": ["⌥ ⇧ G"],
-        b"\xC3\x93": ["⌥ ⇧ H"],
-        b"\xCB\x86": ["⌥ I", "⌥ ⇧ I", "⌥ ⇧ I Space"],
-        b"\xC3\x94": ["⌥ ⇧ J"],
-        b"\xEF\xA3\xBF": ["⌥ ⇧ K"],
-        b"\xC3\x92": ["⌥ ⇧ L"],
-        b"\xC3\x82": ["⌥ ⇧ M"],
-        b"\xCB\x9C": ["⌥ N", "⌥ ⇧ N", "⌥ ⇧ N Space"],
-        b"\xC3\x98": ["⌥ ⇧ O"],
-        b"\xE2\x88\x8F": ["⌥ ⇧ P"],
-        b"\xC5\x92": ["⌥ ⇧ Q"],
-        b"\xE2\x80\xB0": ["⌥ ⇧ R"],
-        b"\xC3\x8D": ["⌥ ⇧ S"],
-        b"\xCB\x87": ["⌥ ⇧ T"],
-        b"\xC2\xA8": ["⌥ U", "⌥ ⇧ U", "⌥ ⇧ U Space"],
-        b"\xE2\x97\x8A": ["⌥ ⇧ V"],
-        b"\xE2\x80\x9E": ["⌥ ⇧ W"],
-        b"\xCB\x9B": ["⌥ ⇧ X"],
-        b"\xC3\x81": ["⌥ ⇧ Y"],
-        b"\xC2\xB8": ["⌥ ⇧ Z"],
-        b"\xC3\xA0": ["⌥ ` A"],
-        b"\xC3\xA8": ["⌥ ` E"],
-        b"\xC3\xAC": ["⌥ ` I"],
-        b"\xC3\xB2": ["⌥ ` O"],
-        b"\xC3\xB9": ["⌥ ` U"],
+        b"\xc3\xa5": ["⌥ A"],
+        b"\xe2\x88\xab": ["⌥ B"],
+        b"\xc3\xa7": ["⌥ C"],
+        b"\xe2\x88\x82": ["⌥ D"],  # not followed by ⌥ E
+        b"\xc3\xa1": ["⌥ E A"],
+        b"\xc3\xa9": ["⌥ E E"],
+        b"\xc3\xad": ["⌥ E I"],
+        b"\x6a\xcc\x81": ["⌥ E J"],
+        b"\xc3\xb3": ["⌥ E O"],
+        b"\xc3\xba": ["⌥ E U"],
+        b"\xc6\x92": ["⌥ F"],
+        b"\xc2\xa9": ["⌥ G"],
+        b"\xcb\x99": ["⌥ H"],  # not followed by ⌥ I
+        b"\xc3\xa2": ["⌥ I A"],
+        b"\xc3\xaa": ["⌥ I E"],
+        b"\xc3\xae": ["⌥ I I"],
+        b"\xc3\xb4": ["⌥ I O"],
+        b"\xc3\xbb": ["⌥ I U"],
+        b"\xe2\x88\x86": ["⌥ J"],
+        b"\xcb\x9a": ["⌥ K"],
+        b"\xc2\xac": ["⌥ L"],
+        b"\xc2\xb5": ["⌥ M"],  # not followed by ⌥ N
+        b"\xc3\xa3": ["⌥ N A"],
+        b"\xc3\xb1": ["⌥ N N"],
+        b"\xc3\xb5": ["⌥ N O"],
+        b"\xc3\xb8": ["⌥ O"],
+        b"\xcf\x80": ["⌥ P"],
+        b"\xc5\x93": ["⌥ Q"],
+        b"\xc2\xae": ["⌥ R"],
+        b"\xc3\x9f": ["⌥ S"],
+        b"\xe2\x80\xa0": ["⌥ T"],  # not followed by ⌥ U
+        b"\xc3\xa4": ["⌥ U A"],
+        b"\xc3\xab": ["⌥ U E"],
+        b"\xc3\xaf": ["⌥ U I"],
+        b"\xc3\xb6": ["⌥ U O"],
+        b"\xc3\xbc": ["⌥ U U"],
+        b"\xc3\xbf": ["⌥ U Y"],
+        b"\xe2\x88\x9a": ["⌥ V"],
+        b"\xe2\x88\x91": ["⌥ W"],
+        b"\xe2\x89\x88": ["⌥ X"],
+        b"\xce\xa9": ["⌥ Z"],
+        b"\xc3\x85": ["⌥ ⇧ A"],
+        b"\xc4\xb1": ["⌥ ⇧ B"],
+        b"\xc3\x87": ["⌥ ⇧ C"],
+        b"\xc3\x8e": ["⌥ ⇧ D"],
+        b"\xc2\xb4": ["⌥ E", "⌥ ⇧ E", "⌥ ⇧ E Space"],
+        b"\xc3\x8f": ["⌥ ⇧ F"],
+        b"\xcb\x9d": ["⌥ ⇧ G"],
+        b"\xc3\x93": ["⌥ ⇧ H"],
+        b"\xcb\x86": ["⌥ I", "⌥ ⇧ I", "⌥ ⇧ I Space"],
+        b"\xc3\x94": ["⌥ ⇧ J"],
+        b"\xef\xa3\xbf": ["⌥ ⇧ K"],
+        b"\xc3\x92": ["⌥ ⇧ L"],
+        b"\xc3\x82": ["⌥ ⇧ M"],
+        b"\xcb\x9c": ["⌥ N", "⌥ ⇧ N", "⌥ ⇧ N Space"],
+        b"\xc3\x98": ["⌥ ⇧ O"],
+        b"\xe2\x88\x8f": ["⌥ ⇧ P"],
+        b"\xc5\x92": ["⌥ ⇧ Q"],
+        b"\xe2\x80\xb0": ["⌥ ⇧ R"],
+        b"\xc3\x8d": ["⌥ ⇧ S"],
+        b"\xcb\x87": ["⌥ ⇧ T"],
+        b"\xc2\xa8": ["⌥ U", "⌥ ⇧ U", "⌥ ⇧ U Space"],
+        b"\xe2\x97\x8a": ["⌥ ⇧ V"],
+        b"\xe2\x80\x9e": ["⌥ ⇧ W"],
+        b"\xcb\x9b": ["⌥ ⇧ X"],
+        b"\xc3\x81": ["⌥ ⇧ Y"],
+        b"\xc2\xb8": ["⌥ ⇧ Z"],
+        b"\xc3\xa0": ["⌥ ` A"],
+        b"\xc3\xa8": ["⌥ ` E"],
+        b"\xc3\xac": ["⌥ ` I"],
+        b"\xc3\xb2": ["⌥ ` O"],
+        b"\xc3\xb9": ["⌥ ` U"],
     }
 )
 
 KEYCAP_LISTS_BY_STROKE.update(  # the Option Punctuation-Mark strokes at Mac
     {
-        b"\xE2\x80\x93": ["⌥ -"],
-        b"\xE2\x89\xA0": ["⌥ ="],
-        b"\xE2\x80\x9C": ["⌥ ["],
-        b"\xE2\x80\x98": ["⌥ ]"],
-        b"\xC2\xAB": ["⌥ \\"],
-        b"\xE2\x80\xA6": ["⌥ ;"],
-        b"\xC3\xA6": ["⌥ '"],
-        b"\xE2\x89\xA4": ["⌥ ,"],
-        b"\xE2\x89\xA5": ["⌥ ."],
-        b"\xC3\xB7": ["⌥ /"],
-        b"\xE2\x80\x94": ["⌥ ⇧ -"],
-        b"\xC2\xB1": ["⌥ ⇧ ="],
-        b"\xE2\x80\x9D": ["⌥ ⇧ ["],
-        b"\xE2\x80\x99": ["⌥ ⇧ ]"],
-        b"\xC2\xBB": ["⌥ ⇧ \\"],
-        b"\xC3\x9A": ["⌥ ⇧ ;"],
-        b"\xC3\x86": ["⌥ ⇧ '"],
-        b"\xC2\xAF": ["⌥ ⇧ ,"],
-        b"\xCB\x98": ["⌥ ⇧ ."],
-        b"\xC2\xBF": ["⌥ ⇧ /"],
+        b"\xe2\x80\x93": ["⌥ -"],
+        b"\xe2\x89\xa0": ["⌥ ="],
+        b"\xe2\x80\x9c": ["⌥ ["],
+        b"\xe2\x80\x98": ["⌥ ]"],
+        b"\xc2\xab": ["⌥ \\"],
+        b"\xe2\x80\xa6": ["⌥ ;"],
+        b"\xc3\xa6": ["⌥ '"],
+        b"\xe2\x89\xa4": ["⌥ ,"],
+        b"\xe2\x89\xa5": ["⌥ ."],
+        b"\xc3\xb7": ["⌥ /"],
+        b"\xe2\x80\x94": ["⌥ ⇧ -"],
+        b"\xc2\xb1": ["⌥ ⇧ ="],
+        b"\xe2\x80\x9d": ["⌥ ⇧ ["],
+        b"\xe2\x80\x99": ["⌥ ⇧ ]"],
+        b"\xc2\xbb": ["⌥ ⇧ \\"],
+        b"\xc3\x9a": ["⌥ ⇧ ;"],
+        b"\xc3\x86": ["⌥ ⇧ '"],
+        b"\xc2\xaf": ["⌥ ⇧ ,"],
+        b"\xcb\x98": ["⌥ ⇧ ."],
+        b"\xc2\xbf": ["⌥ ⇧ /"],
     }
 )
 
@@ -743,12 +743,12 @@ KEYCAP_LISTS_BY_STROKE.update(  # Control C0 Ascii at Windows
 
 KEYCAP_LISTS_BY_STROKE.update(  # the Arrow Key Caps at Windows
     {
-        b"\xE0\x48": ["↑"],  # drawn as ▲
-        b"\xE0\x4B": ["←"],  # drawn as ◀
-        b"\xE0\x4D": ["→"],  # drawn as ▶
-        b"\xE0\x50": ["↓"],  # drawn as ▼
-        b"\xE0\x73": ["⌃ ←"],
-        b"\xE0\x74": ["⌃ →"],
+        b"\xe0\x48": ["↑"],  # drawn as ▲
+        b"\xe0\x4b": ["←"],  # drawn as ◀
+        b"\xe0\x4d": ["→"],  # drawn as ▶
+        b"\xe0\x50": ["↓"],  # drawn as ▼
+        b"\xe0\x73": ["⌃ ←"],
+        b"\xe0\x74": ["⌃ →"],
     }
 )
 
@@ -756,21 +756,21 @@ KEYCAP_LISTS_BY_STROKE.update(  # some of the Extra Key Caps at Windows
     {
         b"\x00\x76": ["⌃ PgDn"],
         b"\x00\x84": ["⌃ PgUp"],
-        b"\xE0\x47": ["Home"],
-        b"\xE0\x49": ["PgUp"],
-        b"\xE0\x4F": ["End"],
-        b"\xE0\x51": ["PgDn"],
-        b"\xE0\x76": ["⌃ PgDn"],
-        b"\xE0\x86": ["⌃ PgUp"],
+        b"\xe0\x47": ["Home"],
+        b"\xe0\x49": ["PgUp"],
+        b"\xe0\x4f": ["End"],
+        b"\xe0\x51": ["PgDn"],
+        b"\xe0\x76": ["⌃ PgDn"],
+        b"\xe0\x86": ["⌃ PgUp"],
     }
 )
 
 KEYCAP_LISTS_BY_STROKE.update(  # more of the Extra Key Caps at Windows
     {
-        b"\xE0\x52": ["Ins"],
-        b"\xE0\x53": ["Del"],
-        b"\xE0\x92": ["⌃ Ins"],
-        b"\xE0\x93": ["⌃ Del"],
+        b"\xe0\x52": ["Ins"],
+        b"\xe0\x53": ["Del"],
+        b"\xe0\x92": ["⌃ Ins"],
+        b"\xe0\x93": ["⌃ Del"],
     }
 )
 
@@ -966,7 +966,7 @@ def ch_encode_repr(ch):
     c0c1_set = set(c0c1s)
 
     encodables = r"\abeftrn"
-    encoded = b"\\\a\b\x1B\f\t\r\n"
+    encoded = b"\\\a\b\x1b\f\t\r\n"
 
     assert len(encodables) == len(encoded), (len(encodables), len(encoded))
 
@@ -1095,7 +1095,7 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
             if not termios:
                 while msvcrt.kbhit():
                     strokes = msvcrt.getch()
-                    if strokes in (b"\x00", b"\xE0"):
+                    if strokes in (b"\x00", b"\xe0"):
                         strokes += msvcrt.getch()
 
             if termios:
@@ -1165,7 +1165,7 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
         # Return the 1st Keystroke that came as a pair of Accentuator plus 2nd Keystroke
 
         if termios:
-            mac_accentuators = b"\x60 \xC2\xB4 \xCB\x86 \xCB\x9C \xC2\xA8".split()
+            mac_accentuators = b"\x60 \xc2\xb4 \xcb\x86 \xcb\x9c \xc2\xa8".split()
             assert MAC_ACCENTUATORS == mac_accentuators  # Option E I N U Grave
 
             if len(chars) <= 2:
@@ -1203,7 +1203,7 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
         # Take 1 or Keystroke coming in
 
         strokes = msvcrt.getch()
-        if strokes in (b"\x00", b"\xE0"):
+        if strokes in (b"\x00", b"\xe0"):
             strokes += msvcrt.getch()
 
         # Clear the prompt
@@ -1331,7 +1331,7 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
         for _ in range(size.lines):
             self.print()
 
-        assert HOME_AND_WIPE == "\x1B[H" "\x1B[2J"
+        assert HOME_AND_WIPE == "\x1b[H" "\x1b[2J"
         self.print(HOME_AND_WIPE, end="")
 
         sys.stdout.flush()

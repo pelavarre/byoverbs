@@ -51,16 +51,16 @@ FEATURE_STEPPING = None
 DENT = 4 * " "
 
 ESC_STROKES = list()
-ESC_STROKES.append("\x1B")  # Esc
-ESC_STROKES.append("\x1B[A")  # alt encoding of "\N{Upwards Arrow}" ↑
-ESC_STROKES.append("\x1B[B")  # alt encoding of "\N{Downwards Arrow}" ↓
-ESC_STROKES.append("\x1B[C")  # alt encoding of "\N{Upwards Arrow}" ↓
-ESC_STROKES.append("\x1B[D")  # alt encoding of "\N{Leftwards Arrow}" ←
+ESC_STROKES.append("\x1b")  # Esc
+ESC_STROKES.append("\x1b[A")  # alt encoding of "\N{Upwards Arrow}" ↑
+ESC_STROKES.append("\x1b[B")  # alt encoding of "\N{Downwards Arrow}" ↓
+ESC_STROKES.append("\x1b[C")  # alt encoding of "\N{Upwards Arrow}" ↓
+ESC_STROKES.append("\x1b[D")  # alt encoding of "\N{Leftwards Arrow}" ←
 
 TURNS = "XO."
 
 
-COLOR_CHARS_FORMAT = "\x1B[{}m{}\x1B[0m"
+COLOR_CHARS_FORMAT = "\x1b[{}m{}\x1b[0m"
 assert keycaps.COLOR_CHARS_FORMAT == COLOR_CHARS_FORMAT
 
 TOO_BRIGHT_COLORS = keycaps.BRIGHT_COLORS[:1]
@@ -149,10 +149,10 @@ class TicTacToeGame:
         func_by_key.update(
             {
                 "\x03": self.quit_game,  # ⌃C SIGINT KeyboardInterrupt
-                "\x1C": self.quit_game,  # ⌃\ SIGQUIT
+                "\x1c": self.quit_game,  # ⌃\ SIGQUIT
                 "\x08": self.moves_undo_one,  # Backspace ⌃H
-                "\x0A": self.move_onto_empty,  # Enter ⌃J
-                "\x0D": self.move_onto_empty,  # Return ⌃M
+                "\x0a": self.move_onto_empty,  # Enter ⌃J
+                "\x0d": self.move_onto_empty,  # Return ⌃M
                 "\t": self.game_board_clear,  # Tab ⌃I
                 "!": self.move_onto_random,
                 "%": self.rewrite_to_swap_x_o,
@@ -162,30 +162,30 @@ class TicTacToeGame:
                 "Q": self.quit_game,
                 "Y": self.sketch_game,
                 "|": self.rewrite_to_spin_left_right,
-                "\x7F": self.moves_undo_one,  # Delete  # classic ⌃? but not at Mac
-                "\x1B[A": self.move_to_win,  # UpwardsArrow ↑
-                "\x1B[B": self.move_onto_empty,  # DownwardsArrow ↓
-                "\x1B[C": self.moves_redo_one,  # RightwardsArrow →
-                "\x1B[D": self.moves_undo_one,  # LeftwardsArrow ←
-                "\N{Downwards Arrow}": self.move_onto_empty,  # ↓
-                "\N{Leftwards Arrow}": self.moves_undo_one,  # ←
-                "\N{Rightwards Arrow}": self.moves_redo_one,  # →
-                "\N{Upwards Arrow}": self.move_to_win,  # ↑
+                "\x7f": self.moves_undo_one,  # Delete  # classic ⌃? but not at Mac
+                "\x1b[A": self.move_to_win,  # UpwardsArrow ↑
+                "\x1b[B": self.move_onto_empty,  # DownwardsArrow ↓
+                "\x1b[C": self.moves_redo_one,  # RightwardsArrow →
+                "\x1b[D": self.moves_undo_one,  # LeftwardsArrow ←
+                "\N{DOWNWARDS ARROW}": self.move_onto_empty,  # ↓
+                "\N{LEFTWARDS ARROW}": self.moves_undo_one,  # ←
+                "\N{RIGHTWARDS ARROW}": self.moves_redo_one,  # →
+                "\N{UPWARDS ARROW}": self.move_to_win,  # ↑
             }
         )
 
         func_by_key["@"] = self.game_board_clear
         func_by_key["Q"] = self.quit_game
 
-        func_by_key["H"] = func_by_key["\N{Leftwards Arrow}"]  # H mutated by 8x8 games
-        func_by_key["K"] = func_by_key["\N{Upwards Arrow}"]
-        func_by_key["J"] = func_by_key["\N{Downwards Arrow}"]
-        func_by_key["L"] = func_by_key["\N{Rightwards Arrow}"]
+        func_by_key["H"] = func_by_key["\N{LEFTWARDS ARROW}"]  # H mutated by 8x8 games
+        func_by_key["K"] = func_by_key["\N{UPWARDS ARROW}"]
+        func_by_key["J"] = func_by_key["\N{DOWNWARDS ARROW}"]
+        func_by_key["L"] = func_by_key["\N{RIGHTWARDS ARROW}"]
 
-        func_by_key["A"] = func_by_key["\N{Leftwards Arrow}"]  # A mutated below
-        func_by_key["W"] = func_by_key["\N{Upwards Arrow}"]
-        func_by_key["S"] = func_by_key["\N{Downwards Arrow}"]
-        func_by_key["D"] = func_by_key["\N{Rightwards Arrow}"]  # D mutated by 4x4 games
+        func_by_key["A"] = func_by_key["\N{LEFTWARDS ARROW}"]  # A mutated below
+        func_by_key["W"] = func_by_key["\N{UPWARDS ARROW}"]
+        func_by_key["S"] = func_by_key["\N{DOWNWARDS ARROW}"]
+        func_by_key["D"] = func_by_key["\N{RIGHTWARDS ARROW}"]  # D mutated by 4x4 games
 
         func_by_key.update(
             {
@@ -228,7 +228,7 @@ class TicTacToeGame:
         helps = self.helps
         tui = self.tui
 
-        color_chars_format = "\x1B[{}m{}\x1B[0m"
+        color_chars_format = "\x1b[{}m{}\x1b[0m"
         assert keycaps.COLOR_CHARS_FORMAT == color_chars_format
 
         str_moves = list()
@@ -279,10 +279,10 @@ class TicTacToeGame:
         # List the Funcs that know how to run after themselves, meaningfully
 
         arrows = ""
-        arrows += "\N{Downwards Arrow}"  # ↓
-        arrows += "\N{Leftwards Arrow}"  # ←
-        arrows += "\N{Rightwards Arrow}"  # →
-        arrows += "\N{Upwards Arrow}"  # ↑
+        arrows += "\N{DOWNWARDS ARROW}"  # ↓
+        arrows += "\N{LEFTWARDS ARROW}"  # ←
+        arrows += "\N{RIGHTWARDS ARROW}"  # →
+        arrows += "\N{UPWARDS ARROW}"  # ↑
 
         repeatable_funcs = list(func_by_key[arrow] for arrow in arrows)
 
@@ -398,10 +398,10 @@ class TicTacToeGame:
         cap_by_cap["⇧1"] = "!"
         cap_by_cap["⇧2"] = "@"
         cap_by_cap["⇧\\"] = "|"
-        cap_by_cap["\N{Up Arrowhead}" "["] = "Esc"  # "⌃["
-        cap_by_cap["\N{Up Arrowhead}" "I"] = "Tab"  # "⌃I"
-        cap_by_cap["\N{Up Arrowhead}" "J"] = "Enter"  # "⌃J"
-        cap_by_cap["\N{Up Arrowhead}" "M"] = "Return"  # "⌃M"
+        cap_by_cap["\N{UP ARROWHEAD}" "["] = "Esc"  # "⌃["
+        cap_by_cap["\N{UP ARROWHEAD}" "I"] = "Tab"  # "⌃I"
+        cap_by_cap["\N{UP ARROWHEAD}" "J"] = "Enter"  # "⌃J"
+        cap_by_cap["\N{UP ARROWHEAD}" "M"] = "Return"  # "⌃M"
 
         cap = None
         if keycap_lists:
@@ -412,7 +412,7 @@ class TicTacToeGame:
                 cap = cap_by_cap[alt_cap]
 
         keys = [chars]
-        if not chars.startswith("\x1B"):
+        if not chars.startswith("\x1b"):
             keys = list(chars)
 
         return (keys, cap)
@@ -1600,10 +1600,10 @@ class TicTacToeBoard:
     def board_tui_print(self, tui, turn, chords, taken_as):
         """Print the Chords, the Handicaps, the Moves, and the Cells"""
 
-        assert "←" == "\N{Leftwards Arrow}"
-        assert "↑" == "\N{Upwards Arrow}"
-        assert "↓" == "\N{Downwards Arrow}"
-        assert "→" == "\N{Rightwards Arrow}"
+        assert "←" == "\N{LEFTWARDS ARROW}"
+        assert "↑" == "\N{UPWARDS ARROW}"
+        assert "↓" == "\N{DOWNWARDS ARROW}"
+        assert "→" == "\N{RIGHTWARDS ARROW}"
 
         # Format the Chords
 
@@ -1787,7 +1787,7 @@ class TicTacToeBoard:
 
         dminus = DENT[:-1]
 
-        color_chars_format = "\x1B[{}m{}\x1B[0m"
+        color_chars_format = "\x1b[{}m{}\x1b[0m"
         assert keycaps.COLOR_CHARS_FORMAT == color_chars_format
 
         assert len(COLOR_BY_MOVE) >= ((n * n + 1) // 2), (len(COLOR_BY_MOVE), n)

@@ -17,7 +17,7 @@ import time
 X_LIST = (2 * [3, 6, 9, 12, 15, 12, 9, 6]) + [3]
 
 NoBall = " "
-GreenBall = "\N{Large Green Circle}"
+GreenBall = "\N{LARGE GREEN CIRCLE}"
 EmptyRow = (max(X_LIST) + 1) * NoBall
 
 #
@@ -29,7 +29,7 @@ print("Hello")
 print("Let's try forward, back, forward, back, done")
 print()
 
-print("\x1B[?25l")  # DecCsiCursorHide
+print("\x1b[?25l")  # DecCsiCursorHide
 
 x_list = list(X_LIST)
 
@@ -46,7 +46,7 @@ while x_list:
 
 print("\n", end="")
 
-print("\x1B[?25h")  # DecCsiCursorShow
+print("\x1b[?25h")  # DecCsiCursorShow
 
 print()
 print("Ta da")

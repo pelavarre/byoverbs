@@ -125,12 +125,12 @@ def parse_vi_py_args() -> argparse.Namespace:
             bytes_ = path.read_bytes()
             os.write(fd, bytes_)  # FIXME: consume the resulting Stdin
 
-        assert CUP_Y_X1 == "\x1B[{}H"
+        assert CUP_Y_X1 == "\x1b[{}H"
         size = os.get_terminal_size()
         y = size.lines
 
         print()
-        os.write(fd, "\x1B[{}H".format(y).encode())
+        os.write(fd, "\x1b[{}H".format(y).encode())
 
         sys.exit(3)
 
@@ -175,12 +175,12 @@ class ViTerminal:
         ct = self.ct
         bt = ct.bt
 
-        assert CUP_Y_X1 == "\x1B[{}H"
+        assert CUP_Y_X1 == "\x1b[{}H"
 
         y = bt.get_terminal_rows()
 
         ct.write(b"\r\n")
-        ct.write("\x1B[{}H".format(y).encode())
+        ct.write("\x1b[{}H".format(y).encode())
 
         exit_ = ct.__exit__()
 
@@ -194,8 +194,8 @@ class ViTerminal:
         ct = self.ct
         bt = ct.bt
 
-        assert CUP_Y_X1 == "\x1B[{}H"
-        assert ED == b"\x1B[J"
+        assert CUP_Y_X1 == "\x1b[{}H"
+        assert ED == b"\x1b[J"
 
         # Suspend as if 5 L ⌃Z
         # to make room for:  "", "zsh: suspended...", "% fg", "[1]...cont...", ""
@@ -204,9 +204,9 @@ class ViTerminal:
         alt_y = max(y - 4, 1)
 
         ct.write(b"\r\n")
-        ct.write("\x1B[{}H".format(alt_y).encode())
+        ct.write("\x1b[{}H".format(alt_y).encode())
 
-        ct.write(b"\x1B[J")
+        ct.write(b"\x1b[J")
 
         # Suspend and resume this Process Pid
 
@@ -226,7 +226,7 @@ class ViTerminal:
     def run_till_quit(self) -> None:
         """Loop Terminal Input back as Terminal Output"""
 
-        assert CUU == b"\x1B[A"
+        assert CUU == b"\x1b[A"
 
         # Read enough Chords to choose a Func, and then run that Func
 
@@ -294,41 +294,41 @@ class ViTerminal:
 
         #
 
-        assert DecCursorPush == b"\x1B7"
-        assert DecCsiCursorHide == b"\x1B[?25l"
+        assert DecCursorPush == b"\x1b7"
+        assert DecCsiCursorHide == b"\x1b[?25l"
 
-        assert CUP_Y_X1 == "\x1B[{}H"
-        assert EL == b"\x1B[K"
+        assert CUP_Y_X1 == "\x1b[{}H"
+        assert EL == b"\x1b[K"
 
-        assert XtSgrPush == b"\x1B#{"
+        assert XtSgrPush == b"\x1b#{"
 
-        assert SgrOff == b"\x1B[m"
+        assert SgrOff == b"\x1b[m"
 
         y = rows
         text_bytes = text.encode()
 
-        assert XtSgrPop == b"\x1B#}"
-        assert DecCursorPop == b"\x1B8"
-        assert DecCsiCursorShow == b"\x1B[?25h"
+        assert XtSgrPop == b"\x1b#}"
+        assert DecCursorPop == b"\x1b8"
+        assert DecCsiCursorShow == b"\x1b[?25h"
 
         #
 
-        ct.write(b"\x1B7")  # DecCursorPush
-        ct.write(b"\x1B[?25l")  # DecCsiCursorHide
+        ct.write(b"\x1b7")  # DecCursorPush
+        ct.write(b"\x1b[?25l")  # DecCsiCursorHide
 
-        ct.write("\x1B[{}H".format(y).encode())  # CUP_Y_X1
+        ct.write("\x1b[{}H".format(y).encode())  # CUP_Y_X1
 
-        ct.write(b"\x1B[K")  # EL
+        ct.write(b"\x1b[K")  # EL
 
-        ct.write(b"\x1B#{")  # XtSgrPush  # emulated above BytesTerminal at Mac
-        ct.write(b"\x1B[m")  # SgrOff
+        ct.write(b"\x1b#{")  # XtSgrPush  # emulated above BytesTerminal at Mac
+        ct.write(b"\x1b[m")  # SgrOff
 
         ct.write(text_bytes)
 
-        ct.write(b"\x1B#}")  # XtSgrPop  # emulated above BytesTerminal at Mac
+        ct.write(b"\x1b#}")  # XtSgrPop  # emulated above BytesTerminal at Mac
 
-        ct.write(b"\x1B8")  # DecCursorPop
-        ct.write(b"\x1B[?25h")  # DecCsiCursorShow
+        ct.write(b"\x1b8")  # DecCursorPop
+        ct.write(b"\x1b[?25h")  # DecCsiCursorShow
 
         # FIXME teach ChordsTerminal to index Cursors - 0 Main, 1 Status, etc
         # FIXME but aggressively Cursor Pop Show to keep the Cursor Shown
@@ -387,7 +387,7 @@ class ViTerminal:
         func_by_chords = self.func_by_chords
         chars_key_list = self.chars_key_list
 
-        assert ESC == b"\x1B"
+        assert ESC == b"\x1b"
 
         if isinstance(chords, str):
             chars_key = chords
@@ -406,7 +406,7 @@ class ViTerminal:
         else:
             if isinstance(chords, bytes):
                 func = self.shrug  # Vi Bytes
-            elif func_key.startswith("\x1B"):
+            elif func_key.startswith("\x1b"):
                 func = self.write_bytes_key  # Vi C0 Esc Sequence
             else:
                 func = self.slap_back_chars  # Vi Func Not Found
@@ -702,10 +702,10 @@ class ViTerminal:
         assert bytes_key, (bytes_key, chars_key)
         assert chars_key, (chars_key, bytes_key)
 
-        assert b"\x1B" == ESC
+        assert b"\x1b" == ESC
         encode = chars_key.encode()
-        if encode.startswith(b"\x1B"):
-            alt_encode = b"\x0F" + encode  # ⌃O
+        if encode.startswith(b"\x1b"):
+            alt_encode = b"\x0f" + encode  # ⌃O
             assert bytes_key in (encode, alt_encode), (bytes_key, encode, alt_encode)
 
         ct.write(bytes_key)
@@ -765,14 +765,14 @@ class ViTerminal:
         ct = self.ct
 
         assert CR == b"\r"
-        assert EL == b"\x1B[K"
+        assert EL == b"\x1b[K"
 
         status = "Press ⇧Z ⇧Q to quit, or ⌃C ⇧Z ⇧Q "  # trailing Space included
         write = status.encode()
 
         ct.print()
         ct.write(b"\r")
-        ct.write(b"\x1B[K")
+        ct.write(b"\x1b[K")
         ct.write(write)
 
     def slap_back_once(self) -> None:
@@ -831,8 +831,8 @@ class ViTerminal:
             self.slap_back_once()
             return
 
-        assert CUB_N == "\x1B[{}D"
-        self.write_form_digits("\x1B[{}D")
+        assert CUB_N == "\x1b[{}D"
+        self.write_form_digits("\x1b[{}D")
 
     def column_plus_n(self) -> None:  # Vi L  # Vi →
         """Go right"""
@@ -844,8 +844,8 @@ class ViTerminal:
             self.slap_back_once()
             return
 
-        assert CUF_N == "\x1B[{}C"
-        self.write_form_digits("\x1B[{}C")
+        assert CUF_N == "\x1b[{}C"
+        self.write_form_digits("\x1b[{}C")
 
     def row_minus_n(self) -> None:  # Vi K  # Vi ⌃P  # Vi ↑
         """Go up"""
@@ -856,8 +856,8 @@ class ViTerminal:
             self.slap_back_once()
             return
 
-        assert CUU_N == "\x1B[{}A"
-        self.write_form_digits("\x1B[{}A")
+        assert CUU_N == "\x1b[{}A"
+        self.write_form_digits("\x1b[{}A")
 
     def row_plus_n(self) -> None:  # Vi J  # Vi ⌃J  # Vi ⌃N  # Vi ↓
         """Go down"""
@@ -869,9 +869,9 @@ class ViTerminal:
             self.slap_back_once()
             return
 
-        assert CUD_N == "\x1B[{}B"
+        assert CUD_N == "\x1b[{}B"
 
-        self.write_form_digits("\x1B[{}B")
+        self.write_form_digits("\x1b[{}B")
 
     #
     # Move the Cursor relative to the Screen
@@ -893,9 +893,9 @@ class ViTerminal:
     def column_n(self) -> None:  # Vi |  # Vi ⇧\
         """Go from Left of Row"""
 
-        assert CHA_X == "\x1B[{}G"
+        assert CHA_X == "\x1b[{}G"
 
-        self.write_form_digits("\x1B[{}G")
+        self.write_form_digits("\x1b[{}G")
 
     def line_n_start(self) -> None:  # Vi ⇧G
         """Go down from Top of File, to the Nth Line Start"""
@@ -904,17 +904,17 @@ class ViTerminal:
         rows = ct.get_scrolling_rows()
         n = self.pull_digits_int(default=rows)
 
-        assert VPA_Y == "\x1B[{}d"
+        assert VPA_Y == "\x1b[{}d"
 
-        self.write_form_n("\x1B[{}d", n)
+        self.write_form_n("\x1b[{}d", n)
         self.line_start()
 
     def row_high_n_line_start(self) -> None:  # Vi ⇧H
         """Go down from Top of Screen, to the Nth Line Start"""
 
-        assert VPA_Y == "\x1B[{}d"
+        assert VPA_Y == "\x1b[{}d"
 
-        self.write_form_digits("\x1B[{}d")
+        self.write_form_digits("\x1b[{}d")
         self.line_start()
 
     def row_middle_line_start_once(self) -> None:  # Vi ⇧M
@@ -927,11 +927,11 @@ class ViTerminal:
             self.slap_back_chars()  # Vi ⇧M with Digits Arg
             return
 
-        assert VPA_Y == "\x1B[{}d"
+        assert VPA_Y == "\x1b[{}d"
 
         assert rows
         n = (rows + 1) // 2  # Row 2 of 1 2 3 4, Row 3 of 1 2 3 4 5, etc
-        self.write_form_n("\x1B[{}d", n=n)
+        self.write_form_n("\x1b[{}d", n=n)
         self.line_start()
 
         # classic Vi ⇧M drops Digits without Beep
@@ -943,10 +943,10 @@ class ViTerminal:
         rows = ct.get_scrolling_rows()
         n = self.pull_digits_int(default=1)
 
-        assert VPA_Y == "\x1B[{}d"
+        assert VPA_Y == "\x1b[{}d"
 
         alt_n = (rows + 1 - n) if (n < rows) else 1
-        self.write_form_n("\x1B[{}d", n=alt_n)
+        self.write_form_n("\x1b[{}d", n=alt_n)
         self.line_start()
 
     #
@@ -962,14 +962,14 @@ class ViTerminal:
         row = ct.row
         n = self.pull_digits_int(default=1)
 
-        assert CUB_N == "\x1B[{}D"
-        assert CUU_N == "\x1B[{}A"
-        assert CUF_N == "\x1B[{}C"
+        assert CUB_N == "\x1b[{}D"
+        assert CUU_N == "\x1b[{}A"
+        assert CUF_N == "\x1b[{}C"
 
         # Move indefinitely far left, and not at all up, if Column unknown
 
         if column is None:
-            self.write_form_n("\x1B[{}D", n)
+            self.write_form_n("\x1b[{}D", n)
             return
 
         # Slap back moving left from first Char
@@ -1003,13 +1003,13 @@ class ViTerminal:
 
         slips = 0
         if lefts:
-            self.write_form_n("\x1B[{}D", n=lefts)
+            self.write_form_n("\x1b[{}D", n=lefts)
             slips += lefts
         if ups:
-            self.write_form_n("\x1B[{}A", n=ups)
+            self.write_form_n("\x1b[{}A", n=ups)
             slips += ups * columns
         if rights:
-            self.write_form_n("\x1B[{}C", n=rights)
+            self.write_form_n("\x1b[{}C", n=rights)
             slips -= rights
 
         assert ct.column == x, (ct.column, x, slips, alt_n, lefts, ups, rights)
@@ -1025,14 +1025,14 @@ class ViTerminal:
         rows = ct.get_scrolling_rows()
         n = self.pull_digits_int(default=1)
 
-        assert CUF_N == "\x1B[{}C"
-        assert CUD_N == "\x1B[{}B"
-        assert CUB_N == "\x1B[{}D"
+        assert CUF_N == "\x1b[{}C"
+        assert CUD_N == "\x1b[{}B"
+        assert CUB_N == "\x1b[{}D"
 
         # Move indefinitely far right, and not at all down, if Column unknown
 
         if column is None:
-            self.write_form_n("\x1B[{}C", n)
+            self.write_form_n("\x1b[{}C", n)
             return
 
         # Slap back moving right from last Char
@@ -1066,13 +1066,13 @@ class ViTerminal:
 
         slips = 0
         if rights:
-            self.write_form_n("\x1B[{}C", n=rights)
+            self.write_form_n("\x1b[{}C", n=rights)
             slips += rights
         if downs:
-            self.write_form_n("\x1B[{}B", n=downs)
+            self.write_form_n("\x1b[{}B", n=downs)
             slips += downs * columns
         if lefts:
-            self.write_form_n("\x1B[{}D", n=lefts)
+            self.write_form_n("\x1b[{}D", n=lefts)
             slips -= lefts
 
         assert ct.column == x, (ct.column, x, slips, alt_n, rights, downs, lefts)
@@ -1087,9 +1087,9 @@ class ViTerminal:
             self.slap_back_once()
             return
 
-        assert CUU_N == "\x1B[{}A"
+        assert CUU_N == "\x1b[{}A"
 
-        self.write_form_digits("\x1B[{}A")
+        self.write_form_digits("\x1b[{}A")
         self.line_start()
 
     def line_n1_plus_start(self) -> None:  # Vi _  # Vi ⇧-
@@ -1104,11 +1104,11 @@ class ViTerminal:
 
         n = self.pull_digits_int(default=1)
 
-        assert CUD_N == "\x1B[{}B"
+        assert CUD_N == "\x1b[{}B"
 
         n1 = n - 1
         if n1:
-            self.write_form_n("\x1B[{}B", n=n1)
+            self.write_form_n("\x1b[{}B", n=n1)
         self.line_start()
 
     def line_n_plus_start(self) -> None:  # Vi +  # Vi ⇧=  # Vi Return
@@ -1121,9 +1121,9 @@ class ViTerminal:
             self.slap_back_once()
             return
 
-        assert CUD_N == "\x1B[{}B"
+        assert CUD_N == "\x1b[{}B"
 
-        self.write_form_digits("\x1B[{}B")
+        self.write_form_digits("\x1b[{}B")
         self.line_start()
 
     def line_start_once(self) -> None:  # Vi ^  # Vi ⇧6
@@ -1163,11 +1163,11 @@ class ViTerminal:
                 self.slap_back_once()
                 return
 
-        assert CUD_N == "\x1B[{}B"
+        assert CUD_N == "\x1b[{}B"
 
         n1 = n - 1
         if n1:
-            self.write_form_n("\x1B[{}B", n=n1)
+            self.write_form_n("\x1b[{}B", n=n1)
         self.line_end()
 
     def line_end(self) -> None:
@@ -1175,8 +1175,8 @@ class ViTerminal:
 
         ct = self.ct
         columns = ct.get_scrolling_columns()
-        assert CHA_X == "\x1B[{}G"
-        self.write_form_n("\x1B[{}G", n=columns)
+        assert CHA_X == "\x1b[{}G"
+        self.write_form_n("\x1b[{}G", n=columns)
 
         # classic Vi goes to last non-Space Char
 
@@ -1187,8 +1187,8 @@ class ViTerminal:
     def column_plus_n_cut(self) -> None:  # Vi X
         """Cut N Chars here and to the right, from this Row"""
 
-        assert DCH_N == "\x1B[{}P"
-        self.write_form_digits("\x1B[{}P")
+        assert DCH_N == "\x1b[{}P"
+        self.write_form_digits("\x1b[{}P")
 
     def column_minus_n_cut(self) -> None:  # Vi ⇧X
         """Cut N Chars to the left, from this Row"""
@@ -1198,18 +1198,18 @@ class ViTerminal:
         n = self.pull_digits_int(default=1)
 
         assert BS == b"\b"
-        assert DCH_N == "\x1B[{}P"
+        assert DCH_N == "\x1b[{}P"
 
         alt_n = n if (column is None) else min(column - 1, n)
         if alt_n:
             ct.write(alt_n * b"\b")
-            self.write_form_n("\x1B[{}P", n=alt_n)
+            self.write_form_n("\x1b[{}P", n=alt_n)
 
     def row_n_cut(self) -> None:  # Vi D D
         """Cut N Rows here and below, and go to Line Start"""
 
-        assert DL_N == "\x1B[{}M"
-        self.write_form_digits("\x1B[{}M")
+        assert DL_N == "\x1b[{}M"
+        self.write_form_digits("\x1b[{}M")
         self.line_start()
 
         # classic Vi D D beeps vs Digits in the last Row
@@ -1224,9 +1224,9 @@ class ViTerminal:
         rows = ct.get_scrolling_rows()
 
         assert CR == b"\r"
-        assert CUD == b"\x1B[B"
-        assert DCH_N == "\x1B[{}P"
-        assert CUU_N == "\x1B[{}A"
+        assert CUD == b"\x1b[B"
+        assert DCH_N == "\x1b[{}P"
+        assert CUU_N == "\x1b[{}A"
 
         alt_n = n
         if row is not None:
@@ -1235,12 +1235,12 @@ class ViTerminal:
         for i in range(alt_n):
             ct.write(b"\r")
             if i:
-                ct.write(b"\x1B[B")
-            self.write_form_n("\x1B[{}P", n=4)
+                ct.write(b"\x1b[B")
+            self.write_form_n("\x1b[{}P", n=4)
 
         if alt_n > 1:
             alt_n1 = alt_n - 1
-            self.write_form_n("\x1B[{}A", n=alt_n1)
+            self.write_form_n("\x1b[{}A", n=alt_n1)
 
         self.line_start()
 
@@ -1261,18 +1261,18 @@ class ViTerminal:
         ct = self.ct
         n = self.pull_digits_int(default=1)
 
-        assert CUD == b"\x1B[B"
-        assert DL_N == "\x1B[{}M"
-        assert CUU == b"\x1B[A"
-        assert EL == b"\x1B[K"
+        assert CUD == b"\x1b[B"
+        assert DL_N == "\x1b[{}M"
+        assert CUU == b"\x1b[A"
+        assert EL == b"\x1b[K"
 
         n1 = n - 1
         if n1:
-            ct.write(b"\x1B[B")
-            self.write_form_n("\x1B[{}M", n=n1)
-            ct.write(b"\x1B[A")
+            ct.write(b"\x1b[B")
+            self.write_form_n("\x1b[{}M", n=n1)
+            ct.write(b"\x1b[A")
 
-        ct.write(b"\x1B[K")
+        ct.write(b"\x1b[K")
 
     #
     # Work a bit and then Insert
@@ -1297,26 +1297,26 @@ class ViTerminal:
         if row is not None:
             alt_n = min(n, rows + 1 - row)
 
-        assert SM_IRM == b"\x1B[4h"  # Insert without CS_6_BAR
-        assert RM_IRM == b"\x1B[4l"  # Replace without CS_NONE
+        assert SM_IRM == b"\x1b[4h"  # Insert without CS_6_BAR
+        assert RM_IRM == b"\x1b[4l"  # Replace without CS_NONE
 
         assert CR == b"\r"
-        assert CUD == b"\x1B[B"
-        assert CUU_N == "\x1B[{}A"
+        assert CUD == b"\x1b[B"
+        assert CUU_N == "\x1b[{}A"
 
         # Insert 4 Spaces
 
-        with_inserting = ct.write_before_if(b"\x1B[4h", after=b"\x1B[4l")
+        with_inserting = ct.write_before_if(b"\x1b[4h", after=b"\x1b[4l")
 
         for i in range(alt_n):
             ct.write(b"\r")
             if i:
-                ct.write(b"\x1B[B")
+                ct.write(b"\x1b[B")
             ct.write(4 * b" ")
 
         if alt_n > 1:
             alt_n1 = alt_n - 1
-            self.write_form_n("\x1B[{}A", n=alt_n1)
+            self.write_form_n("\x1b[{}A", n=alt_n1)
         self.line_start()
 
         ct.write_after_if(with_inserting)
@@ -1338,12 +1338,12 @@ class ViTerminal:
         ct = self.ct
 
         assert CR == b"\r"
-        assert DL_N == "\x1B[{}M"
-        assert IL == b"\x1B[L"
+        assert DL_N == "\x1b[{}M"
+        assert IL == b"\x1b[L"
 
         ct.write(b"\r")
-        self.write_form_digits("\x1B[{}M")
-        ct.write(b"\x1B[L")
+        self.write_form_digits("\x1b[{}M")
+        ct.write(b"\x1b[L")
 
         self.insert_n_till()
 
@@ -1358,9 +1358,9 @@ class ViTerminal:
             self.slap_back_chars()  # todo: Vi A with Digits Args
             return
 
-        assert CUF == b"\x1B[C"
+        assert CUF == b"\x1b[C"
 
-        ct.write(b"\x1B[C")
+        ct.write(b"\x1b[C")
 
         self.insert_n_till()
 
@@ -1375,10 +1375,10 @@ class ViTerminal:
 
         ct = self.ct
 
-        assert IL == b"\x1B[L"
+        assert IL == b"\x1b[L"
         assert CR == b"\r"
 
-        ct.write(b"\x1B[L")
+        ct.write(b"\x1b[L")
         ct.write(b"\r")
 
         self.insert_n_till()
@@ -1388,12 +1388,12 @@ class ViTerminal:
 
         ct = self.ct
 
-        assert CUD == b"\x1B[B"
-        assert IL == b"\x1B[L"
+        assert CUD == b"\x1b[B"
+        assert IL == b"\x1b[L"
         assert CR == b"\r"
 
-        ct.write(b"\x1B[B")
-        ct.write(b"\x1B[L")
+        ct.write(b"\x1b[B")
+        ct.write(b"\x1b[L")
         ct.write(b"\r")
 
         self.insert_n_till()
@@ -1411,16 +1411,16 @@ class ViTerminal:
             self.slap_back_chars()  # todo: Vi I with Digits Args
             return
 
-        assert SM_IRM == b"\x1B[4h"
-        assert RM_IRM == b"\x1B[4l"
+        assert SM_IRM == b"\x1b[4h"
+        assert RM_IRM == b"\x1b[4l"
 
-        assert CS_NONE == b"\x1B[ q"
-        assert CS_6_BAR == b"\x1B[6 q"
+        assert CS_NONE == b"\x1b[ q"
+        assert CS_6_BAR == b"\x1b[6 q"
 
         # Enter Insert Mode
 
-        with_inserting = ct.write_before_if(b"\x1B[4h", after=b"\x1B[4l")
-        with_cs_6_bar = ct.write_before_if(b"\x1B[6 q", after=b"\x1B[ q")
+        with_inserting = ct.write_before_if(b"\x1b[4h", after=b"\x1b[4l")
+        with_cs_6_bar = ct.write_before_if(b"\x1b[6 q", after=b"\x1b[ q")
 
         # Insert Text Sequences till ⌃C, except for ⌃O and Control Sequences
 
@@ -1436,8 +1436,8 @@ class ViTerminal:
         """Go left, then Shift Left the Tail of this Row"""
 
         ct = self.ct
-        assert DCH_N == "\x1B[{}P"
-        ct.write(b"\b\x1B[P")
+        assert DCH_N == "\x1b[{}P"
+        ct.write(b"\b\x1b[P")
 
         # todo: Vi I Delete in first Column deletes Line-Break
 
@@ -1446,11 +1446,11 @@ class ViTerminal:
 
         ct = self.ct
 
-        assert CUD == b"\x1B[B"
-        assert IL == b"\x1B[L"
+        assert CUD == b"\x1b[B"
+        assert IL == b"\x1b[L"
 
-        ct.write(b"\x1B[B")
-        ct.write(b"\x1B[L")
+        ct.write(b"\x1b[B")
+        ct.write(b"\x1b[L")
         self.line_start()
 
         # todo: Vi I Return splits Row
@@ -1489,16 +1489,16 @@ class ViTerminal:
             self.slap_back_chars()  # todo: Vi ⇧R with Digits Arg
             return
 
-        assert SM_IRM == b"\x1B[4h"
-        assert RM_IRM == b"\x1B[4l"
+        assert SM_IRM == b"\x1b[4h"
+        assert RM_IRM == b"\x1b[4l"
 
-        assert CS_NONE == b"\x1B[ q"
-        assert CS_4_SKID == b"\x1B[4 q"
+        assert CS_NONE == b"\x1b[ q"
+        assert CS_4_SKID == b"\x1b[4 q"
 
         # Enter Replace Mode
 
-        with_replacing = ct.write_before_if(b"\x1B[4l", after=b"\x1B[4h")
-        with_cs_4_skid = ct.write_before_if(b"\x1B[4 q", after=b"\x1B[ q")
+        with_replacing = ct.write_before_if(b"\x1b[4l", after=b"\x1b[4h")
+        with_cs_4_skid = ct.write_before_if(b"\x1b[4 q", after=b"\x1b[ q")
 
         # Replace Text Sequences till ⌃C, except for ⌃O and Control Sequences
 
@@ -1523,11 +1523,11 @@ class ViTerminal:
 
         ct = self.ct
 
-        assert CUD == b"\x1B[B"
-        assert IL == b"\x1B[L"
+        assert CUD == b"\x1b[B"
+        assert IL == b"\x1b[L"
 
-        ct.write(b"\x1B[B")
-        ct.write(b"\x1B[L")
+        ct.write(b"\x1b[B")
+        ct.write(b"\x1b[L")
         self.line_start()
 
         # todo: Vi ⇧R Return matches Vi I Return, but records replacements
@@ -1709,10 +1709,10 @@ class ChordsTerminal:
         enter_writes = self.enter_writes
         exit_writes = self.exit_writes
 
-        assert SM_IRM == b"\x1B[4h"
-        assert RM_IRM == b"\x1B[4l"
+        assert SM_IRM == b"\x1b[4h"
+        assert RM_IRM == b"\x1b[4l"
 
-        assert CS_NONE == b"\x1B[ q"
+        assert CS_NONE == b"\x1b[ q"
 
         if before in enter_writes:
             return None
@@ -1722,14 +1722,14 @@ class ChordsTerminal:
         alt_before = before
         alt_after = after
 
-        if before == b"\x1B[4l":  # remains in RM_IRM after exit
+        if before == b"\x1b[4l":  # remains in RM_IRM after exit
             if before not in exit_writes:
                 alt_before = b""
                 alt_after = b""
 
         self.write(before)  # may be in Exit Writes
 
-        if after == b"\x1B[ q":  # exits to enclosing Enter Write
+        if after == b"\x1b[ q":  # exits to enclosing Enter Write
             if after in exit_writes:
                 index = exit_writes.index(after)
                 alt_after = enter_writes[-1 - index]
@@ -1763,12 +1763,12 @@ class ChordsTerminal:
     def redraw(self) -> None:  # Vi ⌃L
         """Call for Refresh of the ChordsTerminal Cache of BytesTerminal"""
 
-        assert DSR_FOR_CPR == b"\x1B[6n"
+        assert DSR_FOR_CPR == b"\x1b[6n"
 
         self.row = None
         self.column = None
 
-        self.write(b"\x1B[6n")
+        self.write(b"\x1b[6n")
 
         # no Refresh happens till after Read of CPR
 
@@ -1874,23 +1874,23 @@ class ChordsTerminal:
 
         bt = self.bt
 
-        assert ESC == b"\x1B"
-        assert CSI == b"\x1B["
+        assert ESC == b"\x1b"
+        assert CSI == b"\x1b["
 
         assert seq, seq
         assert seq.startswith(ESC), seq
         assert not seq.startswith(CSI)
 
-        assert DecCursorPush == b"\x1B7"
-        assert DecCursorPop == b"\x1B8"
+        assert DecCursorPush == b"\x1b7"
+        assert DecCursorPop == b"\x1b8"
 
         bt.write(seq)
 
-        if seq == b"\x1B7":
+        if seq == b"\x1b7":
             self.pushed_row_column = (self.row, self.column)
             return
 
-        if seq == b"\x1B8":
+        if seq == b"\x1b8":
             (self.row, self.column) = self.pushed_row_column
             return
 
@@ -1902,7 +1902,7 @@ class ChordsTerminal:
         bt = self.bt
         mocked_sgr_seqs = self.mocked_sgr_seqs
 
-        assert CSI == b"\x1B["
+        assert CSI == b"\x1b["
 
         assert seq, seq
         assert seq.startswith(CSI), seq
@@ -1910,20 +1910,20 @@ class ChordsTerminal:
         csi_match = re.match(rb"^" + CsiPattern + rb"$", string=seq)
         assert csi_match, seq
 
-        assert CUU == b"\x1B[A"  # implicit N=1
-        assert CUD == b"\x1B[B"
-        assert CUF == b"\x1B[C"
-        assert CUB == b"\x1B[D"
+        assert CUU == b"\x1b[A"  # implicit N=1
+        assert CUD == b"\x1b[B"
+        assert CUF == b"\x1b[C"
+        assert CUB == b"\x1b[D"
 
-        assert CUP_Y1_X1 == b"\x1B[H"
+        assert CUP_Y1_X1 == b"\x1b[H"
 
-        assert XtSgrPush == b"\x1B#{"
-        assert XtSgrPop == b"\x1B#}"
+        assert XtSgrPush == b"\x1b#{"
+        assert XtSgrPop == b"\x1b#}"
 
         f = bytes(seq[-1:])
         ff = bytes(seq[-2:])
 
-        form_n_match = re.match(b"^\x1B\\[([0-9]*)[A-Za-z]$", string=seq)
+        form_n_match = re.match(b"^\x1b\\[([0-9]*)[A-Za-z]$", string=seq)
         # form_y_x_match = re.match(b"^\x1B\\[([0-9]*);([0-9]*)[A-Za-z]$", string=seq)
         if form_n_match:
             assert csi_match, seq
@@ -1938,7 +1938,7 @@ class ChordsTerminal:
 
         if f == b"m":
             bt.write(seq)
-            if seq == b"\x1B[m":
+            if seq == b"\x1b[m":
                 mocked_sgr_seqs.clear()
             else:
                 mocked_sgr_seqs.append(seq)
@@ -1959,15 +1959,15 @@ class ChordsTerminal:
     def mock_write_csi_n_seq(self, f, n) -> None:
         """Write CSI Pn $F Output into a Mirror/ Shadow/ Mock Terminal"""
 
-        assert CUU_N == "\x1B[{}A"
-        assert CUD_N == "\x1B[{}B"
-        assert CUF_N == "\x1B[{}C"
-        assert CUB_N == "\x1B[{}D"
-        assert CHA_X == "\x1B[{}G"
+        assert CUU_N == "\x1b[{}A"
+        assert CUD_N == "\x1b[{}B"
+        assert CUF_N == "\x1b[{}C"
+        assert CUB_N == "\x1b[{}D"
+        assert CHA_X == "\x1b[{}G"
 
-        assert VPA_Y == "\x1B[{}d"
+        assert VPA_Y == "\x1b[{}d"
 
-        assert CUP_Y_X1 == "\x1B[{}H"
+        assert CUP_Y_X1 == "\x1b[{}H"
 
         # Take some Uppercase Ascii Letters
 
@@ -2039,7 +2039,7 @@ class ChordsTerminal:
         pushed_sgr_seqs = self.pushed_sgr_seqs
 
         if mocked_sgr_seqs:
-            self.write(b"\x1B[m")
+            self.write(b"\x1b[m")
 
         assert not mocked_sgr_seqs, mocked_sgr_seqs
 
@@ -2170,59 +2170,59 @@ class ChordsTerminal:
 #
 
 
-CUU_N = "\x1B[{}A"  # CSI 04/01 Cursor Up (CUU) of ΔY
-CUU = b"\x1B[A"
-CUD_N = "\x1B[{}B"  # CSI 04/02 Cursor Down (CUD) of ΔY
-CUD = b"\x1B[B"
-CUF_N = "\x1B[{}C"  # CSI 04/03 Cursor Right (CUF) of ΔX
-CUF = b"\x1B[C"
-CUB_N = "\x1B[{}D"  # CSI 04/04 Cursor Left (CUB) of ΔX
-CUB = b"\x1B[D"
+CUU_N = "\x1b[{}A"  # CSI 04/01 Cursor Up (CUU) of ΔY
+CUU = b"\x1b[A"
+CUD_N = "\x1b[{}B"  # CSI 04/02 Cursor Down (CUD) of ΔY
+CUD = b"\x1b[B"
+CUF_N = "\x1b[{}C"  # CSI 04/03 Cursor Right (CUF) of ΔX
+CUF = b"\x1b[C"
+CUB_N = "\x1b[{}D"  # CSI 04/04 Cursor Left (CUB) of ΔX
+CUB = b"\x1b[D"
 
-CHA_X = "\x1B[{}G"  # CSI 04/07 Cursor Character Absolute (CHA) of Y
+CHA_X = "\x1b[{}G"  # CSI 04/07 Cursor Character Absolute (CHA) of Y
 
-CUP_Y_X = "\x1B[{};{}H"  # CSI 04/08 Cursor Position (CUP) of Y X
-CUP_Y_X1 = "\x1B[{}H"  # CSI of X=1 at Y
-CUP_Y1_X1 = b"\x1B[H"  # CSI of Y=1 X=1
+CUP_Y_X = "\x1b[{};{}H"  # CSI 04/08 Cursor Position (CUP) of Y X
+CUP_Y_X1 = "\x1b[{}H"  # CSI of X=1 at Y
+CUP_Y1_X1 = b"\x1b[H"  # CSI of Y=1 X=1
 
-ED = b"\x1B[J"  # CSI 04/10 Erase in Page (ED) of no Ps
-EL = b"\x1B[K"  # CSI 04/11 Erase In Line (EL) of no Ps
-IL = b"\x1B[L"  # CSI 04/12 Insert Line (IL)
-DL_N = "\x1B[{}M"  # CSI 04/13 Delete Line (DL) of N
-DCH_N = "\x1B[{}P"  # CSI 05/00 Delete Character (DCH) of N
+ED = b"\x1b[J"  # CSI 04/10 Erase in Page (ED) of no Ps
+EL = b"\x1b[K"  # CSI 04/11 Erase In Line (EL) of no Ps
+IL = b"\x1b[L"  # CSI 04/12 Insert Line (IL)
+DL_N = "\x1b[{}M"  # CSI 04/13 Delete Line (DL) of N
+DCH_N = "\x1b[{}P"  # CSI 05/00 Delete Character (DCH) of N
 
-VPA_Y = "\x1B[{}d"  # CSI 06/04 Line Position Absolute (VPA) of Y
+VPA_Y = "\x1b[{}d"  # CSI 06/04 Line Position Absolute (VPA) of Y
 
-SM_IRM = b"\x1B[4h"  # CSI 06/08 Set Mode (SM)  # 4 Insertion Replacement Mode (IRM)
-RM_IRM = b"\x1B[4l"  # CSI 06/12 Reset Mode (RM)  # 4 Insertion Replacement Mode (IRM)
+SM_IRM = b"\x1b[4h"  # CSI 06/08 Set Mode (SM)  # 4 Insertion Replacement Mode (IRM)
+RM_IRM = b"\x1b[4l"  # CSI 06/12 Reset Mode (RM)  # 4 Insertion Replacement Mode (IRM)
 
-DecCsiCursorShow = b"\x1B[?25h"  # CSI 06/08 Cursor Show  # DECSET.DECTCEM
-DecCsiCursorHide = b"\x1B[?25l"  # CSI 06/12 Cursor Hide  # DECRST.DECTCEM
+DecCsiCursorShow = b"\x1b[?25h"  # CSI 06/08 Cursor Show  # DECSET.DECTCEM
+DecCsiCursorHide = b"\x1b[?25l"  # CSI 06/12 Cursor Hide  # DECRST.DECTCEM
 # aka Set/Reset Mode (SM/RM)  # 25 Private Mode TwentyFive
 
-SgrOff = b"\x1B[m"  # CSI 06/13 Select Graphic Rendition (SGR) of no Ps
+SgrOff = b"\x1b[m"  # CSI 06/13 Select Graphic Rendition (SGR) of no Ps
 
 
 # ⎋[1m ⎋[31m Bold Dim Red runs as ⎋[1m ⎋[91m Bold Bright Red in my G Shells
 
 
-DSR_FOR_CPR = b"\x1B[6n"  # CSI 06/14 Device Status Report (DSR) call for CPR
+DSR_FOR_CPR = b"\x1b[6n"  # CSI 06/14 Device Status Report (DSR) call for CPR
 
 CprPatternYX = rb"\x1B[\\[]([0-9]+);([0-9]+)R"
 # CSI 04/18 Cursor Position Report (CPR) of Y X
 
 
-CS_NONE = b"\x1B[ q"  # CSI 02/00 07/01  # Cursor of no Style
-CS_4_SKID = b"\x1B[4 q"  # CSI 02/00 07/01  # Cursor Style 4 Skid
-CS_6_BAR = b"\x1B[6 q"  # CSI 02/00 07/01  # Cursor Style 6 Bar
+CS_NONE = b"\x1b[ q"  # CSI 02/00 07/01  # Cursor of no Style
+CS_4_SKID = b"\x1b[4 q"  # CSI 02/00 07/01  # Cursor Style 4 Skid
+CS_6_BAR = b"\x1b[6 q"  # CSI 02/00 07/01  # Cursor Style 6 Bar
 # CSI 07/00..07/14 Private or Experimental Use
 
-XtSgrPush = b"\x1B#{"  # CSI 02/03 07/11  # XTPUSHSGR
-XtSgrPop = b"\x1B#}"  # CSI 02/03 07/13  # XTPOPSGR
+XtSgrPush = b"\x1b#{"  # CSI 02/03 07/11  # XTPUSHSGR
+XtSgrPop = b"\x1b#}"  # CSI 02/03 07/13  # XTPOPSGR
 
 
-DecCursorPush = b"\x1B7"  # 01/11 03/07  # Cursor Save  # DECSC
-DecCursorPop = b"\x1B8"  # 01/11 03/08  # Cursor Restore  # DECRC
+DecCursorPush = b"\x1b7"  # 01/11 03/07  # Cursor Save  # DECSC
+DecCursorPop = b"\x1b8"  # 01/11 03/08  # Cursor Restore  # DECRC
 
 
 #
@@ -2230,15 +2230,15 @@ DecCursorPop = b"\x1B8"  # 01/11 03/08  # Cursor Restore  # DECRC
 #
 
 
-Control = "\N{Up Arrowhead}"  # ⌃
-Option = "\N{Option Key}"  # ⌥
-Shift = "\N{Upwards White Arrow}"  # ⇧
-Command = "\N{Place of Interest Sign}"  # ⌘
+Control = "\N{UP ARROWHEAD}"  # ⌃
+Option = "\N{OPTION KEY}"  # ⌥
+Shift = "\N{UPWARDS WHITE ARROW}"  # ⇧
+Command = "\N{PLACE OF INTEREST SIGN}"  # ⌘
 
-EscChord = "\N{Broken Circle With Northwest Arrow}"  # ⎋
+EscChord = "\N{BROKEN CIRCLE WITH NORTHWEST ARROW}"  # ⎋
 
 
-C0_BYTES = b"".join(chr(_).encode() for _ in range(0, 0x20)) + b"\x7F"
+C0_BYTES = b"".join(chr(_).encode() for _ in range(0, 0x20)) + b"\x7f"
 # the Text Bytes of the first 0x80 (128) Bytes are the Bytes not-in the C0_BYTES
 
 # C1_BYTES = b"".join(chr(_).encode() for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
@@ -2275,71 +2275,71 @@ CHORDS_BY_BYTES = dict()
 CHORDS_BY_BYTES[b"\0"] = "⌃Space"  # ⌃Space ⌃⌥Space ⌃⇧Space ⌃⇧2 ⌃⌥⇧2
 CHORDS_BY_BYTES[b"\t"] = "Tab"  # ⌃I ⌃⌥I ⌃⌥⇧I Tab ⌃Tab ⌥Tab ⌃⌥Tab
 CHORDS_BY_BYTES[b"\r"] = "Return"  # ⌃M ⌃⌥M ⌃⌥⇧M Return etc
-CHORDS_BY_BYTES[b"\x1B"] = EscChord  # Esc ⌥Esc ⌥⇧Esc etc
+CHORDS_BY_BYTES[b"\x1b"] = EscChord  # Esc ⌥Esc ⌥⇧Esc etc
 CHORDS_BY_BYTES[b" "] = "Space"  # Space ⇧Space
-CHORDS_BY_BYTES[b"\x7F"] = "Delete"  # Delete ⌥Delete ⌥⇧Delete etc
+CHORDS_BY_BYTES[b"\x7f"] = "Delete"  # Delete ⌥Delete ⌥⇧Delete etc
 
 # b"\r" is also Return ⌃Return ⌥Return ⇧Return ⌃⌥Return ⌃⇧Return ⌥⇧Return ⌃⌥⇧Return
 # b"\x1B" is also Esc ⌃Esc ⌥Esc ⇧Esc ⌃⌥Esc ⌃⇧Esc ⌥⇧Esc ⌃⌥⇧Esc
 # b"\x7F" is also Delete ⌃Delete ⌥Delete ⇧Delete ⌃⌥Delete ⌃⇧Delete ⌥⇧Delete ⌃⌥⇧Delete
 
 
-CHORDS_BY_BYTES[b"\x1B[Z"] = "⇧Tab"  # ⇧Tab ⌃⇧Tab ⌥⇧Tab ⌃⌥⇧Tab
-CHORDS_BY_BYTES[b"\xC2\xA0"] = "⌥Space"  # ⌥Space ⌥⇧Space
+CHORDS_BY_BYTES[b"\x1b[Z"] = "⇧Tab"  # ⇧Tab ⌃⇧Tab ⌥⇧Tab ⌃⌥⇧Tab
+CHORDS_BY_BYTES[b"\xc2\xa0"] = "⌥Space"  # ⌥Space ⌥⇧Space
 
-assert b"\xC2\xA0".decode() == "\u00A0" == "\N{No-Break Space}"
+assert b"\xc2\xa0".decode() == "\u00a0" == "\N{NO-BREAK SPACE}"
 
-CHORDS_BY_BYTES[b"\x1B[A"] = "↑"  # ↑ ⌥↑ ⇧↑ ⌃⌥↑ ⌃⇧↑ ⌥⇧↑ ⌃⌥⇧↑  # macOS takes ⌃↑
-CHORDS_BY_BYTES[b"\x1B[B"] = "↓"  # ↓ ⌥↓ ⇧↓ ⌃⌥↓ ⌃⇧↓ ⌥⇧↓ ⌃⌥⇧↓  # macOS takes ⌃↓
-CHORDS_BY_BYTES[b"\x1B[C"] = "→"  # → ⌃⌥→ ⌃⇧→ ⌥⇧→ ⌃⌥⇧→  # macOS takes ⌃→
-CHORDS_BY_BYTES[b"\x1Bf"] = "⌥→"
-CHORDS_BY_BYTES[b"\x1B[1;2C"] = "⇧→"
-CHORDS_BY_BYTES[b"\x1B[D"] = "←"  # ← ⌃⌥← ⌃⇧← ⌥⇧← ⌃⌥⇧←  # macOS takes ⌃←
-CHORDS_BY_BYTES[b"\x1Bb"] = "⌥←"
-CHORDS_BY_BYTES[b"\x1B[1;2D"] = "⇧←"
+CHORDS_BY_BYTES[b"\x1b[A"] = "↑"  # ↑ ⌥↑ ⇧↑ ⌃⌥↑ ⌃⇧↑ ⌥⇧↑ ⌃⌥⇧↑  # macOS takes ⌃↑
+CHORDS_BY_BYTES[b"\x1b[B"] = "↓"  # ↓ ⌥↓ ⇧↓ ⌃⌥↓ ⌃⇧↓ ⌥⇧↓ ⌃⌥⇧↓  # macOS takes ⌃↓
+CHORDS_BY_BYTES[b"\x1b[C"] = "→"  # → ⌃⌥→ ⌃⇧→ ⌥⇧→ ⌃⌥⇧→  # macOS takes ⌃→
+CHORDS_BY_BYTES[b"\x1bf"] = "⌥→"
+CHORDS_BY_BYTES[b"\x1b[1;2C"] = "⇧→"
+CHORDS_BY_BYTES[b"\x1b[D"] = "←"  # ← ⌃⌥← ⌃⇧← ⌥⇧← ⌃⌥⇧←  # macOS takes ⌃←
+CHORDS_BY_BYTES[b"\x1bb"] = "⌥←"
+CHORDS_BY_BYTES[b"\x1b[1;2D"] = "⇧←"
 
-CHORDS_BY_BYTES[b"\x1BOA"] = "↑"
-CHORDS_BY_BYTES[b"\x1BOB"] = "↓"
-CHORDS_BY_BYTES[b"\x1BOC"] = "→"
-CHORDS_BY_BYTES[b"\x1BOD"] = "←"
+CHORDS_BY_BYTES[b"\x1bOA"] = "↑"
+CHORDS_BY_BYTES[b"\x1bOB"] = "↓"
+CHORDS_BY_BYTES[b"\x1bOC"] = "→"
+CHORDS_BY_BYTES[b"\x1bOD"] = "←"
 # ⎋O replaces ⎋[ for ↑↓→← for b"\x1b[1?h" Application-Cursor-Keys till b"\x1b[1?l"
 
 
 CHORDS_BY_BYTES.update(  # the Fn Key Caps at Mac
     {
-        b"\x1BOP": "F1",
-        b"\x1BOQ": "F2",
-        b"\x1BOR": "F3",
-        b"\x1BOS": "F4",
-        b"\x1B[15~": "F5",
-        b"\x1B[17~": "F6",  # F6  # ⌥F1
-        b"\x1B[18~": "F7",  # F7  # ⌥F2
-        b"\x1B[19~": "F8",  # F8  # ⌥F3
-        b"\x1B[20~": "F9",  # F9  # ⌥F4
-        b"\x1B[21~": "F10",  # F10  # ⌥F5
-        b"\x1B[23~": "⌥F6",  # F11  # ⌥F6  # macOS takes F11
-        b"\x1B[24~": "F12",  # F12  # ⌥F7
-        b"\x1B[25~": "⇧F5",  # ⌥F8  # ⇧F5
-        b"\x1B[26~": "⇧F6",  # ⌥F9  # ⇧F6
-        b"\x1B[28~": "⇧F7",  # ⌥F10  # ⇧F7
-        b"\x1B[29~": "⇧F8",  # ⌥F11  # ⇧F8
-        b"\x1B[31~": "⇧F9",  # ⌥F12  # ⇧F9
-        b"\x1B[32~": "⇧F10",
-        b"\x1B[33~": "⇧F11",
-        b"\x1B[34~": "⇧F12",
+        b"\x1bOP": "F1",
+        b"\x1bOQ": "F2",
+        b"\x1bOR": "F3",
+        b"\x1bOS": "F4",
+        b"\x1b[15~": "F5",
+        b"\x1b[17~": "F6",  # F6  # ⌥F1
+        b"\x1b[18~": "F7",  # F7  # ⌥F2
+        b"\x1b[19~": "F8",  # F8  # ⌥F3
+        b"\x1b[20~": "F9",  # F9  # ⌥F4
+        b"\x1b[21~": "F10",  # F10  # ⌥F5
+        b"\x1b[23~": "⌥F6",  # F11  # ⌥F6  # macOS takes F11
+        b"\x1b[24~": "F12",  # F12  # ⌥F7
+        b"\x1b[25~": "⇧F5",  # ⌥F8  # ⇧F5
+        b"\x1b[26~": "⇧F6",  # ⌥F9  # ⇧F6
+        b"\x1b[28~": "⇧F7",  # ⌥F10  # ⇧F7
+        b"\x1b[29~": "⇧F8",  # ⌥F11  # ⇧F8
+        b"\x1b[31~": "⇧F9",  # ⌥F12  # ⇧F9
+        b"\x1b[32~": "⇧F10",
+        b"\x1b[33~": "⇧F11",
+        b"\x1b[34~": "⇧F12",
     }
 )
 
 CHORDS_BY_BYTES.update(  # the Fn Delete and Fn Arrows
     {
-        b"\x1B[3~": "FnDelete",
-        b"\x1B[3;2~": "Fn⇧Delete",
-        b"\x1B[5~": "Fn⇧↑",
-        b"\x1B[6~": "Fn⇧↓",
-        b"\x1B[H": "Fn⇧←",  # collides w 04/08 Cursor Position (CUP)
-        b"\x1BOH": "Fn←",
-        b"\x1BOF": "Fn→",
-        b"\x1B[F": "Fn⇧→",  # collides w 04/06 Cursor Preceding Line (CPL)
+        b"\x1b[3~": "FnDelete",
+        b"\x1b[3;2~": "Fn⇧Delete",
+        b"\x1b[5~": "Fn⇧↑",
+        b"\x1b[6~": "Fn⇧↓",
+        b"\x1b[H": "Fn⇧←",  # collides w 04/08 Cursor Position (CUP)
+        b"\x1bOH": "Fn←",
+        b"\x1bOF": "Fn→",
+        b"\x1b[F": "Fn⇧→",  # collides w 04/06 Cursor Preceding Line (CPL)
     }
 )
 # usual Tty codes Fn⇧↑ as Fn⇧↑, and Fn⇧↓ as Fn⇧↓, but gives Fn Arrows to macOS Terminal
@@ -2348,128 +2348,128 @@ CHORDS_BY_BYTES.update(  # the Fn Delete and Fn Arrows
 
 CHORDS_BY_BYTES.update(  # the Option Digit strokes at Mac
     {
-        b"\xC2\xBA": "⌥0",
-        b"\xC2\xA1": "⌥1",
-        b"\xE2\x84\xA2": "⌥2",
-        b"\xC2\xA3": "⌥3",
-        b"\xC2\xA2": "⌥4",
-        b"\xE2\x88\x9E": "⌥5",
-        b"\xC2\xA7": "⌥6",
-        b"\xC2\xB6": "⌥7",
-        b"\xE2\x80\xA2": "⌥8",
-        b"\xC2\xAA": "⌥9",
-        b"\xE2\x80\x9A": "⌥⇧0",
-        b"\xE2\x81\x84": "⌥⇧1",
-        b"\xE2\x82\xAC": "⌥⇧2",
-        b"\xE2\x80\xB9": "⌥⇧3",
-        b"\xE2\x80\xBA": "⌥⇧4",
-        b"\xEF\xAC\x81": "⌥⇧5",
-        b"\xEF\xAC\x82": "⌥⇧6",
-        b"\xE2\x80\xA1": "⌥⇧7",
-        b"\xC2\xB0": "⌥⇧8",
-        b"\xC2\xB7": "⌥⇧9",
+        b"\xc2\xba": "⌥0",
+        b"\xc2\xa1": "⌥1",
+        b"\xe2\x84\xa2": "⌥2",
+        b"\xc2\xa3": "⌥3",
+        b"\xc2\xa2": "⌥4",
+        b"\xe2\x88\x9e": "⌥5",
+        b"\xc2\xa7": "⌥6",
+        b"\xc2\xb6": "⌥7",
+        b"\xe2\x80\xa2": "⌥8",
+        b"\xc2\xaa": "⌥9",
+        b"\xe2\x80\x9a": "⌥⇧0",
+        b"\xe2\x81\x84": "⌥⇧1",
+        b"\xe2\x82\xac": "⌥⇧2",
+        b"\xe2\x80\xb9": "⌥⇧3",
+        b"\xe2\x80\xba": "⌥⇧4",
+        b"\xef\xac\x81": "⌥⇧5",
+        b"\xef\xac\x82": "⌥⇧6",
+        b"\xe2\x80\xa1": "⌥⇧7",
+        b"\xc2\xb0": "⌥⇧8",
+        b"\xc2\xb7": "⌥⇧9",
     }
 )
 
 CHORDS_BY_BYTES.update(  # the Option Letter strokes at Mac
     {
-        b"\xC3\xA5": "⌥A",
-        b"\xE2\x88\xAB": "⌥B",
-        b"\xC3\xA7": "⌥C",
-        b"\xE2\x88\x82": "⌥D",  # ⌥E does not come after ⌥D
-        b"\xC3\xA1": "⌥E A",
-        b"\xC3\xA9": "⌥E E",
-        b"\xC3\xAD": "⌥E I",
-        b"\x6A\xCC\x81": "⌥E J",
-        b"\xC3\xB3": "⌥E O",
-        b"\xC3\xBA": "⌥E U",
-        b"\xC6\x92": "⌥F",
-        b"\xC2\xA9": "⌥G",
-        b"\xCB\x99": "⌥H",  # ⌥I does not come after ⌥H
-        b"\xC3\xA2": "⌥I A",
-        b"\xC3\xAA": "⌥I E",
-        b"\xC3\xAE": "⌥I I",
-        b"\xC3\xB4": "⌥I O",
-        b"\xC3\xBB": "⌥I U",
-        b"\xE2\x88\x86": "⌥J",
-        b"\xCB\x9A": "⌥K",
-        b"\xC2\xAC": "⌥L",
-        b"\xC2\xB5": "⌥M",  # ⌥N does not come after ⌥M
-        b"\xC3\xA3": "⌥N A",
-        b"\xC3\xB1": "⌥N N",
-        b"\xC3\xB5": "⌥N O",
-        b"\xC3\xB8": "⌥O",
-        b"\xCF\x80": "⌥P",
-        b"\xC5\x93": "⌥Q",
-        b"\xC2\xAE": "⌥R",
-        b"\xC3\x9F": "⌥S",
-        b"\xE2\x80\xA0": "⌥T",  # ⌥U does not come after ⌥T
-        b"\xC3\xA4": "⌥U A",
-        b"\xC3\xAB": "⌥U E",
-        b"\xC3\xAF": "⌥U I",
-        b"\xC3\xB6": "⌥U O",
-        b"\xC3\xBC": "⌥U U",
-        b"\xC3\xBF": "⌥U Y",
-        b"\xE2\x88\x9A": "⌥V",
-        b"\xE2\x88\x91": "⌥W",
-        b"\xE2\x89\x88": "⌥X",
-        b"\xCE\xA9": "⌥Z",
-        b"\xC3\x85": "⌥⇧A",
-        b"\xC4\xB1": "⌥⇧B",
-        b"\xC3\x87": "⌥⇧C",
-        b"\xC3\x8E": "⌥⇧D",
-        b"\xC2\xB4": "⌥⇧E",  # ⌥E  # ⌥⇧E  # ⌥⇧E Space
-        b"\xC3\x8F": "⌥⇧F",
-        b"\xCB\x9D": "⌥⇧G",
-        b"\xC3\x93": "⌥⇧H",
-        b"\xCB\x86": "⌥⇧I",  # ⌥I  # ⌥⇧I  # ⌥⇧I Space
-        b"\xC3\x94": "⌥⇧J",
-        b"\xEF\xA3\xBF": "⌥⇧K",
-        b"\xC3\x92": "⌥⇧L",
-        b"\xC3\x82": "⌥⇧M",
-        b"\xCB\x9C": "⌥⇧N",  # ⌥N  # ⌥⇧N  # ⌥⇧N Space
-        b"\xC3\x98": "⌥⇧O",
-        b"\xE2\x88\x8F": "⌥⇧P",
-        b"\xC5\x92": "⌥⇧Q",
-        b"\xE2\x80\xB0": "⌥⇧R",
-        b"\xC3\x8D": "⌥⇧S",
-        b"\xCB\x87": "⌥⇧T",
-        b"\xC2\xA8": "⌥⇧U",  # ⌥U  # ⌥⇧U  # ⌥⇧U Space
-        b"\xE2\x97\x8A": "⌥⇧V",
-        b"\xE2\x80\x9E": "⌥⇧W",
-        b"\xCB\x9B": "⌥⇧X",
-        b"\xC3\x81": "⌥⇧Y",
-        b"\xC2\xB8": "⌥⇧Z",
-        b"\xC3\xA0": "⌥`A",
-        b"\xC3\xA8": "⌥`E",
-        b"\xC3\xAC": "⌥`I",
-        b"\xC3\xB2": "⌥`O",
-        b"\xC3\xB9": "⌥`U",
+        b"\xc3\xa5": "⌥A",
+        b"\xe2\x88\xab": "⌥B",
+        b"\xc3\xa7": "⌥C",
+        b"\xe2\x88\x82": "⌥D",  # ⌥E does not come after ⌥D
+        b"\xc3\xa1": "⌥E A",
+        b"\xc3\xa9": "⌥E E",
+        b"\xc3\xad": "⌥E I",
+        b"\x6a\xcc\x81": "⌥E J",
+        b"\xc3\xb3": "⌥E O",
+        b"\xc3\xba": "⌥E U",
+        b"\xc6\x92": "⌥F",
+        b"\xc2\xa9": "⌥G",
+        b"\xcb\x99": "⌥H",  # ⌥I does not come after ⌥H
+        b"\xc3\xa2": "⌥I A",
+        b"\xc3\xaa": "⌥I E",
+        b"\xc3\xae": "⌥I I",
+        b"\xc3\xb4": "⌥I O",
+        b"\xc3\xbb": "⌥I U",
+        b"\xe2\x88\x86": "⌥J",
+        b"\xcb\x9a": "⌥K",
+        b"\xc2\xac": "⌥L",
+        b"\xc2\xb5": "⌥M",  # ⌥N does not come after ⌥M
+        b"\xc3\xa3": "⌥N A",
+        b"\xc3\xb1": "⌥N N",
+        b"\xc3\xb5": "⌥N O",
+        b"\xc3\xb8": "⌥O",
+        b"\xcf\x80": "⌥P",
+        b"\xc5\x93": "⌥Q",
+        b"\xc2\xae": "⌥R",
+        b"\xc3\x9f": "⌥S",
+        b"\xe2\x80\xa0": "⌥T",  # ⌥U does not come after ⌥T
+        b"\xc3\xa4": "⌥U A",
+        b"\xc3\xab": "⌥U E",
+        b"\xc3\xaf": "⌥U I",
+        b"\xc3\xb6": "⌥U O",
+        b"\xc3\xbc": "⌥U U",
+        b"\xc3\xbf": "⌥U Y",
+        b"\xe2\x88\x9a": "⌥V",
+        b"\xe2\x88\x91": "⌥W",
+        b"\xe2\x89\x88": "⌥X",
+        b"\xce\xa9": "⌥Z",
+        b"\xc3\x85": "⌥⇧A",
+        b"\xc4\xb1": "⌥⇧B",
+        b"\xc3\x87": "⌥⇧C",
+        b"\xc3\x8e": "⌥⇧D",
+        b"\xc2\xb4": "⌥⇧E",  # ⌥E  # ⌥⇧E  # ⌥⇧E Space
+        b"\xc3\x8f": "⌥⇧F",
+        b"\xcb\x9d": "⌥⇧G",
+        b"\xc3\x93": "⌥⇧H",
+        b"\xcb\x86": "⌥⇧I",  # ⌥I  # ⌥⇧I  # ⌥⇧I Space
+        b"\xc3\x94": "⌥⇧J",
+        b"\xef\xa3\xbf": "⌥⇧K",
+        b"\xc3\x92": "⌥⇧L",
+        b"\xc3\x82": "⌥⇧M",
+        b"\xcb\x9c": "⌥⇧N",  # ⌥N  # ⌥⇧N  # ⌥⇧N Space
+        b"\xc3\x98": "⌥⇧O",
+        b"\xe2\x88\x8f": "⌥⇧P",
+        b"\xc5\x92": "⌥⇧Q",
+        b"\xe2\x80\xb0": "⌥⇧R",
+        b"\xc3\x8d": "⌥⇧S",
+        b"\xcb\x87": "⌥⇧T",
+        b"\xc2\xa8": "⌥⇧U",  # ⌥U  # ⌥⇧U  # ⌥⇧U Space
+        b"\xe2\x97\x8a": "⌥⇧V",
+        b"\xe2\x80\x9e": "⌥⇧W",
+        b"\xcb\x9b": "⌥⇧X",
+        b"\xc3\x81": "⌥⇧Y",
+        b"\xc2\xb8": "⌥⇧Z",
+        b"\xc3\xa0": "⌥`A",
+        b"\xc3\xa8": "⌥`E",
+        b"\xc3\xac": "⌥`I",
+        b"\xc3\xb2": "⌥`O",
+        b"\xc3\xb9": "⌥`U",
     }
 )
 
 CHORDS_BY_BYTES.update(  # the Option Punctuation-Mark strokes at Mac
     {
-        b"\xE2\x80\x93": "⌥-",
-        b"\xE2\x89\xA0": "⌥=",
-        b"\xE2\x80\x9C": "⌥[",
-        b"\xE2\x80\x98": "⌥]",
-        b"\xC2\xAB": "⌥\\",
-        b"\xE2\x80\xA6": "⌥;",
-        b"\xC3\xA6": "⌥'",
-        b"\xE2\x89\xA4": "⌥,",
-        b"\xE2\x89\xA5": "⌥.",
-        b"\xC3\xB7": "⌥/",
-        b"\xE2\x80\x94": "⌥-",
-        b"\xC2\xB1": "⌥⇧=",
-        b"\xE2\x80\x9D": "⌥⇧[",
-        b"\xE2\x80\x99": "⌥⇧]",
-        b"\xC2\xBB": "⌥⇧\\",
-        b"\xC3\x9A": "⌥⇧;",
-        b"\xC3\x86": "⌥⇧'",
-        b"\xC2\xAF": "⌥⇧,",
-        b"\xCB\x98": "⌥⇧.",
-        b"\xC2\xBF": "⌥⇧/",
+        b"\xe2\x80\x93": "⌥-",
+        b"\xe2\x89\xa0": "⌥=",
+        b"\xe2\x80\x9c": "⌥[",
+        b"\xe2\x80\x98": "⌥]",
+        b"\xc2\xab": "⌥\\",
+        b"\xe2\x80\xa6": "⌥;",
+        b"\xc3\xa6": "⌥'",
+        b"\xe2\x89\xa4": "⌥,",
+        b"\xe2\x89\xa5": "⌥.",
+        b"\xc3\xb7": "⌥/",
+        b"\xe2\x80\x94": "⌥-",
+        b"\xc2\xb1": "⌥⇧=",
+        b"\xe2\x80\x9d": "⌥⇧[",
+        b"\xe2\x80\x99": "⌥⇧]",
+        b"\xc2\xbb": "⌥⇧\\",
+        b"\xc3\x9a": "⌥⇧;",
+        b"\xc3\x86": "⌥⇧'",
+        b"\xc2\xaf": "⌥⇧,",
+        b"\xcb\x98": "⌥⇧.",
+        b"\xc2\xbf": "⌥⇧/",
     }
 )
 
@@ -2483,19 +2483,19 @@ def add_us_ascii_into_chords_by_bytes() -> None:
 
     # Decode the Control Chords not yet decoded
 
-    assert Control == "\N{Up Arrowhead}"  # ⌃
+    assert Control == "\N{UP ARROWHEAD}"  # ⌃
 
     for ord_ in C0_BYTES:
         char = chr(ord_)
         bytes_ = char.encode()
         if bytes_ in chords_by_bytes.keys():
-            assert bytes_ in b"\x00\x09\x0D\x1B\x7F", bytes_
+            assert bytes_ in b"\x00\x09\x0d\x1b\x7f", bytes_
         else:
             chords_by_bytes[bytes_] = Control + chr(ord_ ^ 0x40)
 
     # Decode the Shift'ed and un-Shift'ed US Ascii Letters
 
-    assert Shift == "\N{Upwards White Arrow}"  # ⇧
+    assert Shift == "\N{UPWARDS WHITE ARROW}"  # ⇧
 
     for char in string.ascii_uppercase:  # "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         bytes_ = char.encode()
@@ -2534,21 +2534,21 @@ BS = b"\b"  # 00/08 Backspace
 CR = b"\r"  # 00/13 Carriage Return
 CRLF = b"\r\n"  # 00/13 00/10 Carriage Return + Line Feed
 LF = b"\n"  # 00/10 Line Feed
-ESC = b"\x1B"  # 01/11 Escape
+ESC = b"\x1b"  # 01/11 Escape
 
-CSI = b"\x1B["  # 01/11 05/11 Control Sequence Introducer  # till rb"[\x30-\x7E]"
-OSC = b"\x1B]"  # 01/11 05/13 Operating System Command  # till BEL, CR, Esc \ ST, etc
-SS3 = b"\x1BO"  # 01/11 04/15 Single Shift Three
+CSI = b"\x1b["  # 01/11 05/11 Control Sequence Introducer  # till rb"[\x30-\x7E]"
+OSC = b"\x1b]"  # 01/11 05/13 Operating System Command  # till BEL, CR, Esc \ ST, etc
+SS3 = b"\x1bO"  # 01/11 04/15 Single Shift Three
 
 
-CsiStartPattern = b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"  # leading Zeroes allowed
+CsiStartPattern = b"\x1b\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"  # leading Zeroes allowed
 CsiEndPattern = rb"[\x40-\x7E]"
 CsiPattern = CsiStartPattern + CsiEndPattern
 # Csi Patterns define many Pm, Pn, and Ps, but not the Pt of Esc ] OSC Ps ; Pt BEL
 # in 5.4 Control Sequences of ECMA-48_5th 1991
 
 
-MouseSixByteReportPattern = b"\x1B\\[" rb"M..."  # MPR X Y
+MouseSixByteReportPattern = b"\x1b\\[" rb"M..."  # MPR X Y
 
 
 def control(bytes_) -> bytes:
@@ -2618,7 +2618,7 @@ def bytes_take_control_sequence(bytes_) -> bytes:
 
     # Take a C0 Control Byte by itself
 
-    if head != b"\x1B":
+    if head != b"\x1b":
         return head
 
     # Take 1 whole C0 Esc Sequence that starts these Bytes, else 0 Bytes
@@ -2633,8 +2633,8 @@ def bytes_take_control_sequence(bytes_) -> bytes:
 def bytes_take_esc_sequence(bytes_) -> bytes:
     """Take 1 whole C0 Esc Sequence that starts these Bytes, else 0 Bytes"""
 
-    assert ESC == b"\x1B"
-    assert CsiStartPattern == b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"
+    assert ESC == b"\x1b"
+    assert CsiStartPattern == b"\x1b\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"
     assert CsiEndPattern == rb"[\x40-\x7E]"
 
     assert bytes_.startswith(ESC), bytes_
@@ -2648,9 +2648,9 @@ def bytes_take_esc_sequence(bytes_) -> bytes:
 
     # Look for Esc [ O and a Byte, like as the Single Shift Three (SS3) of F1 F2 F3 F4
 
-    assert SS3 == b"\x1BO"
+    assert SS3 == b"\x1bO"
 
-    if esc_plus == b"\x1BO":
+    if esc_plus == b"\x1bO":
         if not bytes_[2:]:
             return b""
 
@@ -2659,7 +2659,7 @@ def bytes_take_esc_sequence(bytes_) -> bytes:
 
     # Look for Text Byte after Esc, else take it with Esc, else take Esc alone
 
-    if esc_plus != b"\x1B[":  # CSI
+    if esc_plus != b"\x1b[":  # CSI
         if (esc_plus[-1:] in C0_BYTES) or (esc_plus[-1] >= 0x80):
             return esc_plus[:1]
 
@@ -2667,8 +2667,8 @@ def bytes_take_esc_sequence(bytes_) -> bytes:
 
     # Look for more Bytes while Esc [ Sequence incomplete
 
-    assert ESC == b"\x1B"
-    assert CSI == b"\x1B["
+    assert ESC == b"\x1b"
+    assert CSI == b"\x1b["
 
     assert bytes_.startswith(CSI), bytes_
 
@@ -2695,7 +2695,7 @@ def bytes_take_esc_sequence(bytes_) -> bytes:
 def bytes_take_mouse_six_byte_report(bytes_) -> bytes:
     """Take 1 whole Mouse Six Byte Report that starts these Bytes, else 0 Bytes"""
 
-    assert MouseSixByteReportPattern == b"\x1B\\[" rb"M..."  # MPR X Y
+    assert MouseSixByteReportPattern == b"\x1b\\[" rb"M..."  # MPR X Y
     assert len(MouseSixByteReportPattern) == 7
 
     m = re.match(rb"^" + MouseSixByteReportPattern + rb"$", string=bytes_)

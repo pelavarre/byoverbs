@@ -1144,7 +1144,7 @@ def process_step(P: Process) -> None:
             if len(choices) == 1:
                 chosen = choices[-1]
                 if strip != str(chosen):
-                    print("\x1B[A", end="")
+                    print("\x1b[A", end="")
                     print(chosen)
                 break
 
@@ -1157,7 +1157,7 @@ def process_step(P: Process) -> None:
             # Run ahead with a random Choice
 
             chosen = random.choice(choices)
-            print("\x1B[A", end="")
+            print("\x1b[A", end="")
             print(chosen)
             break
 

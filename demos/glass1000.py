@@ -45,19 +45,19 @@ except Exception:  # auth edit of Sys Path for Flake8 with this Try Except Block
 #
 
 
-ESC = "\x1B"  # Esc
+ESC = "\x1b"  # Esc
 CSI = ESC + "["  # Control Sequence Introducer (CSI)
 
 
-ED_2 = "\x1B[2J"  # Erase in Display (ED)  # 2 = Whole Screen
-CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP)  # such as "\x1B[1;1H"
-CUP_1_1 = "\x1B[H"  # Cursor Position (CUP)  # (1, 1) = Upper Left
+ED_2 = "\x1b[2J"  # Erase in Display (ED)  # 2 = Whole Screen
+CUP_Y_X = "\x1b[{};{}H"  # Cursor Position (CUP)  # such as "\x1B[1;1H"
+CUP_1_1 = "\x1b[H"  # Cursor Position (CUP)  # (1, 1) = Upper Left
 
 DECSC = ESC + "7"  # DEC Save Cursor
 DECRC = ESC + "8"  # DEC Restore Cursor
 
-_XTERM_ALT_ = "\x1B[?1049h"  # show Alt Screen
-_XTERM_MAIN_ = "\x1B[?1049l"  # show Main Screen
+_XTERM_ALT_ = "\x1b[?1049h"  # show Alt Screen
+_XTERM_MAIN_ = "\x1b[?1049l"  # show Main Screen
 
 SMCUP = DECSC + _XTERM_ALT_  # Set-Mode Cursor-Positioning
 RMCUP = ED_2 + _XTERM_MAIN_ + DECRC  # Reset-Mode Cursor-Positioning
@@ -66,8 +66,8 @@ _CURSES_INITSCR_ = SMCUP + ED_2 + CUP_1_1
 _CURSES_ENDWIN_ = RMCUP
 
 
-DSR = "\x1B[6n"  # Device Status Report, answered by CPR_Y_X
-CPR_Y_X = "\x1B[{};{}R"  # Cursor Position Report, called for by DSR
+DSR = "\x1b[6n"  # Device Status Report, answered by CPR_Y_X
+CPR_Y_X = "\x1b[{};{}R"  # Cursor Position Report, called for by DSR
 CPR_REGEX = rb"\x1B[\\[]([0-9]+);([0-9]+)R"
 # macOS & Gmail Terminals ignored the "\x1B[?6n" DSR variation in Jan/2023
 
@@ -76,14 +76,14 @@ MAC_PASTE_125MS = 125e-3
 MAC_PASTE_CHUNK_1022 = 1022
 
 
-DECSCUSR_N = "\x1B[{} q"  # Set Cursor Style  # such as "\x1B[2 q"
-DECSCUSR = "\x1B[ q"  # Clear Cursor Style (but doc'ed poorly)
+DECSCUSR_N = "\x1b[{} q"  # Set Cursor Style  # such as "\x1B[2 q"
+DECSCUSR = "\x1b[ q"  # Clear Cursor Style (but doc'ed poorly)
 
 
-Up = "\x1B[A"
-Down = "\x1B[B"
-Right = "\x1B[C"
-Left = "\x1B[D"
+Up = "\x1b[A"
+Down = "\x1b[B"
+Right = "\x1b[C"
+Left = "\x1b[D"
 
 UpCodes = Up.encode()
 DownCodes = Down.encode()
@@ -105,7 +105,7 @@ def main():
     logfile = open("keylogger.bytes", "wb")
 
     with TextUserInterface(sys.stderr) as tui:
-        os.write(sys.stdout.fileno(), b"\x1B[" b"?1000h")  # Mouse Enter
+        os.write(sys.stdout.fileno(), b"\x1b[" b"?1000h")  # Mouse Enter
         try:
             while True:
                 sys.stderr.flush()
@@ -116,11 +116,11 @@ def main():
                     ibyte = tui.kbreadbyte()
                     os.write(logfile.fileno(), ibyte)
                     ibytes += ibyte
-                    if ibytes == b"\x1B":
+                    if ibytes == b"\x1b":
                         continue
-                    elif ibytes[:2] == b"\x1B[":
+                    elif ibytes[:2] == b"\x1b[":
                         continue
-                    elif ibytes[:3] == b"\x1B[M":
+                    elif ibytes[:3] == b"\x1b[M":
                         continue
                     else:
                         sys.exit()
@@ -131,10 +131,10 @@ def main():
                 if cb & 0x20:
                     (cx_, cy_) = (cx - 0x20, cy - 0x20)
 
-                os.write(sys.stdout.fileno(), "\x1B[{};{}H".format(cy_, cx_).encode())
+                os.write(sys.stdout.fileno(), "\x1b[{};{}H".format(cy_, cx_).encode())
 
         finally:
-            os.write(sys.stdout.fileno(), b"\x1B[" b"?1000l")  # Mouse Exit
+            os.write(sys.stdout.fileno(), b"\x1b[" b"?1000l")  # Mouse Exit
 
             (columns, lines) = tui.terminal_size()
             sys.stdout.write(CUP_Y_X.format(lines, 1))

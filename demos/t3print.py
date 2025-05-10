@@ -61,17 +61,17 @@ from_chars = "abcdefghi"
 
 
 to_strs = list()
-to_strs.append("\x1B[36m" "." "\x1B[0m")  # Cyan
-to_strs.append("\x1B[32m" "." "\x1B[0m")  # Green
-to_strs.append("\x1B[33m" "." "\x1B[0m")  # Yello
-to_strs.append("\x1B[35m" "." "\x1B[0m")  # Magenta (often rendered as Pink)
-to_strs.append("\x1B[31m" "." "\x1B[0m")  # Red
-to_strs.append("\x1B[34m" "." "\x1B[0m")  # Blue
-to_strs.append("\x1B[30m" "." "\x1B[0m")  # Black
-to_strs.append("\x1B[37m" "." "\x1B[0m")  # White (often rendered as Grey)
-to_strs.append("\N{Middle Dot}")
+to_strs.append("\x1b[36m" "." "\x1b[0m")  # Cyan
+to_strs.append("\x1b[32m" "." "\x1b[0m")  # Green
+to_strs.append("\x1b[33m" "." "\x1b[0m")  # Yello
+to_strs.append("\x1b[35m" "." "\x1b[0m")  # Magenta (often rendered as Pink)
+to_strs.append("\x1b[31m" "." "\x1b[0m")  # Red
+to_strs.append("\x1b[34m" "." "\x1b[0m")  # Blue
+to_strs.append("\x1b[30m" "." "\x1b[0m")  # Black
+to_strs.append("\x1b[37m" "." "\x1b[0m")  # White (often rendered as Grey)
+to_strs.append("\N{MIDDLE DOT}")
 
-to_strs = list(_.replace(".", "\N{Black Large Circle}") for _ in to_strs)
+to_strs = list(_.replace(".", "\N{BLACK LARGE CIRCLE}") for _ in to_strs)
 
 
 lines = chars.splitlines()

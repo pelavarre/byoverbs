@@ -235,9 +235,9 @@ def one_take_form_echoes(take):
     assert take in range(0x100), take
     chr_take = chr(take)
 
-    esc_echo = "\N{Broken Circle With Northwest Arrow}"  # ⎋
-    control_echo = "\N{Up Arrowhead}"  # ⌃
-    shift_echo = "\N{Upwards White Arrow}"  # ⇧
+    esc_echo = "\N{BROKEN CIRCLE WITH NORTHWEST ARROW}"  # ⎋
+    control_echo = "\N{UP ARROWHEAD}"  # ⌃
+    shift_echo = "\N{UPWARDS WHITE ARROW}"  # ⇧
 
     if take > 0x80:
         echo = "\\x{:02X}".format(take)
@@ -268,7 +268,7 @@ def takes_is_controlling(takes):  # FIXME: unused?
 def takes_is_forwardable(takes):  # FIXME: unused?
     """Say if some Bytes from Keyboard should flow on into the Python Pty"""
 
-    if takes[:1] != b"\x1B":
+    if takes[:1] != b"\x1b":
         return True
 
     if bytes(takes) in CHORDS_BY_TAKES.keys():
@@ -308,14 +308,14 @@ def takes_split_one(takes):
 
         # Take one Esc Byte and then one more Byte
 
-        if takes[:1] == b"\x1B":
+        if takes[:1] == b"\x1b":
             controls.clear()
             if takes[1:]:
                 controls.extend(takes[:2])
 
                 # Take Esc [ and then indefinitely many of b"0123456789:;<=>?"
 
-                if takes[:2] == b"\x1B[":
+                if takes[:2] == b"\x1b[":
                     controls.clear()
 
                     esc = takes[0]
@@ -323,7 +323,7 @@ def takes_split_one(takes):
                     assert esc == 0x1B
                     assert left_square_bracket == ord("[")
 
-                    csi = bytearray(b"\x1B[")
+                    csi = bytearray(b"\x1b[")
                     for take in takes[2:]:
                         csi.append(take)
                         if take not in range(0x30, 0x40):  # todo: is this CSI Spec?
@@ -340,14 +340,14 @@ def takes_split_one(takes):
 
 CHORDS_BY_TAKES = dict()
 
-CHORDS_BY_TAKES[b"\x1Bb"] = "⌥←"
-CHORDS_BY_TAKES[b"\x1Bf"] = "⌥→"
-CHORDS_BY_TAKES[b"\x1B[A"] = "↑"
-CHORDS_BY_TAKES[b"\x1B[B"] = "↓"
-CHORDS_BY_TAKES[b"\x1B[C"] = "→"
-CHORDS_BY_TAKES[b"\x1B[D"] = "←"
-CHORDS_BY_TAKES[b"\x1B[1;2C"] = "⇧→"
-CHORDS_BY_TAKES[b"\x1B[1;2D"] = "⇧←"
+CHORDS_BY_TAKES[b"\x1bb"] = "⌥←"
+CHORDS_BY_TAKES[b"\x1bf"] = "⌥→"
+CHORDS_BY_TAKES[b"\x1b[A"] = "↑"
+CHORDS_BY_TAKES[b"\x1b[B"] = "↓"
+CHORDS_BY_TAKES[b"\x1b[C"] = "→"
+CHORDS_BY_TAKES[b"\x1b[D"] = "←"
+CHORDS_BY_TAKES[b"\x1b[1;2C"] = "⇧→"
+CHORDS_BY_TAKES[b"\x1b[1;2D"] = "⇧←"
 
 
 #

@@ -143,7 +143,7 @@ class ViTerminal:
         ct = self.ct
         bt = self.ct.bt
 
-        assert LowerLeftForm == b"\x1B[{y}H"  # y=1
+        assert LowerLeftForm == b"\x1b[{y}H"  # y=1
 
         ByteTerminal.readline.verbose = True
 
@@ -163,7 +163,7 @@ class ViTerminal:
 
         if not args.quiet:
             size = shutil.get_terminal_size()
-            self.bt_write("\x1B[{y}H".format(y=size.lines).encode())
+            self.bt_write("\x1b[{y}H".format(y=size.lines).encode())
             bt.print()
             bt.print("Press ⌃C ⇧Z ⇧Q or ⌃C : Q ! Return to quit")
 
@@ -175,7 +175,7 @@ class ViTerminal:
         bt = self.ct.bt
 
         assert control(b"C") == b"\x03"
-        assert LowerLeftForm == b"\x1B[{y}H"  # y=1
+        assert LowerLeftForm == b"\x1b[{y}H"  # y=1
 
         if not args.quiet:
             bt.print("Press ⌃C to stop copying Key Chords and Paste to Screen")
@@ -189,7 +189,7 @@ class ViTerminal:
 
         if not args.quiet:
             size = shutil.get_terminal_size()
-            self.bt_write("\x1B[{y}H".format(y=size.lines).encode())
+            self.bt_write("\x1b[{y}H".format(y=size.lines).encode())
             bt.print()
             bt.print("Press ⌃C ⇧Z ⇧Q or ⌃C : Q ! Return to quit")
 
@@ -215,8 +215,8 @@ class ViTerminal:
         bot_by_chars["⇧Z ⇧Q"] = self.quit_bang  # Vi ⇧Z ⇧Q
         bot_by_chars["⇧Z ⇧S"] = self.try_screen  # Vi ⇧Z ⇧S
 
-        assert MouseSgrReportPattern == b"\x1B\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])"
-        assert PasteOpenPattern == b"\x1B\\[200~"
+        assert MouseSgrReportPattern == b"\x1b\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])"
+        assert PasteOpenPattern == b"\x1b\\[200~"
 
         # Define some Key Chord Sequences
 
@@ -225,8 +225,8 @@ class ViTerminal:
         bot_by_chars["⌃N"] = self.to_row_down  # Vi ⌃N
         bot_by_chars["⌃P"] = self.to_row_up  # Vi ⌃P
 
-        bot_by_chars["\x1B[200~"] = self.got_paste_report  # till CSI 201 ~
-        bot_by_chars["\x1B[<"] = self.got_mouse_report  # CSI < ... M, or ... m
+        bot_by_chars["\x1b[200~"] = self.got_paste_report  # till CSI 201 ~
+        bot_by_chars["\x1b[<"] = self.got_mouse_report  # CSI < ... M, or ... m
 
         bot_by_chars["↑"] = self.to_row_up
         bot_by_chars["↓"] = self.to_row_down
@@ -273,27 +273,27 @@ class ViTerminal:
 
         # Send DSR for CPR
 
-        assert DeviceStatusReport == b"\x1B[6n"
-        self.bt_write(b"\x1B[6n")
+        assert DeviceStatusReport == b"\x1b[6n"
+        self.bt_write(b"\x1b[6n")
 
         if False:  # jitter Sun 16/Apr
             self.try_keyboard()
-            self.bt_write(b"\x1B[6n")
+            self.bt_write(b"\x1b[6n")
 
         # Receive CPR
 
-        assert CursorPositionForm == b"\x1B[{y};{x}H"  # y=1, x=1
-        assert CursorPositionReportPattern == b"\x1B\\[([0-9]+);([0-9]+)R"
-        assert EraseInLineForm == b"\x1B[{ps}K"  # ps=0
-        assert LowerLeftForm == b"\x1B[{y}H"  # y=1
+        assert CursorPositionForm == b"\x1b[{y};{x}H"  # y=1, x=1
+        assert CursorPositionReportPattern == b"\x1b\\[([0-9]+);([0-9]+)R"
+        assert EraseInLineForm == b"\x1b[{ps}K"  # ps=0
+        assert LowerLeftForm == b"\x1b[{y}H"  # y=1
 
         line = self.readline()
 
-        m = re.match(b"^\x1B\\[([0-9]+);([0-9]+)R$", string=line)
+        m = re.match(b"^\x1b\\[([0-9]+);([0-9]+)R$", string=line)
         if not m:
             size = shutil.get_terminal_size()
-            self.bt_write("\x1B[{y}H".format(y=size.lines).encode())
-            self.bt_write("\x1B[{ps}K".format(ps="").encode())
+            self.bt_write("\x1b[{y}H".format(y=size.lines).encode())
+            self.bt_write("\x1b[{ps}K".format(ps="").encode())
             self.bt.print(line)
 
             self.write_bel()
@@ -308,21 +308,21 @@ class ViTerminal:
             size.lines, size.columns, y, x
         )
 
-        self.bt_write("\x1B[{y}H".format(y=size.lines).encode())
-        self.bt_write("\x1B[{ps}K".format(ps="").encode())
+        self.bt_write("\x1b[{y}H".format(y=size.lines).encode())
+        self.bt_write("\x1b[{ps}K".format(ps="").encode())
         self.bt_write(status_chars.encode())
 
-        self.bt_write("\x1B[{y};{x}H".format(y=y, x=x).encode())
+        self.bt_write("\x1b[{y};{x}H".format(y=y, x=x).encode())
 
     def got_paste_report(self):  # OCPBR
         """React to Paste"""
 
-        assert PasteClosePattern == b"\x1B\\[201~"
+        assert PasteClosePattern == b"\x1b\\[201~"
 
         lines = b""
         while True:  # todo: time out to break free without PasteClosePattern
             line = self.readline()
-            if line == b"\x1B[201~":
+            if line == b"\x1b[201~":
                 break
             lines += line
 
@@ -334,12 +334,12 @@ class ViTerminal:
 
         line = self.line
 
-        assert CursorPositionForm == b"\x1B[{y};{x}H"  # y=1, x=1
-        assert MouseSgrReportPattern == b"\x1B\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])"
+        assert CursorPositionForm == b"\x1b[{y};{x}H"  # y=1, x=1
+        assert MouseSgrReportPattern == b"\x1b\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])"
         assert MouseSgrPress == b"M"
         assert MouseSgrRelease == b"m"
 
-        m = re.match(b"\x1B\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])", string=line)
+        m = re.match(b"\x1b\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])", string=line)
         if not m:
             self.write_bel()
             return
@@ -359,7 +359,7 @@ class ViTerminal:
         if pb & 0x4:  # ⇧ Shift
             mask = mask & ~0x4
 
-        self.bt_write("\x1B[{y};{x}H".format(y=py, x=px).encode())
+        self.bt_write("\x1b[{y};{x}H".format(y=py, x=px).encode())
 
         if mask:
             self.write_bel()
@@ -372,33 +372,33 @@ class ViTerminal:
     def to_char_next(self):  # Vi Space, but past Last Char and stops before next Row
         """Cursor Move Next"""
 
-        assert CursorForwardForm == b"\x1B[{x}C"  # x=1
-        self.bt_write("\x1B[{x}C".format(x="").encode())
+        assert CursorForwardForm == b"\x1b[{x}C"  # x=1
+        self.bt_write("\x1b[{x}C".format(x="").encode())
 
     def to_column_left(self):  # Vi H
         """Cursor Move Left"""
 
         assert BS == b"\b"
-        assert CursorBackwardForm == b"\x1B[{x}D"  # x=1
+        assert CursorBackwardForm == b"\x1b[{x}D"  # x=1
         self.bt_write(b"\b")
 
     def to_column_right(self):  # Vi L, but goes past last Char in Row
         """Cursor Move Right"""
 
-        assert CursorForwardForm == b"\x1B[{x}C"  # x=1
-        self.bt_write("\x1B[{x}C".format(x="").encode())
+        assert CursorForwardForm == b"\x1b[{x}C"  # x=1
+        self.bt_write("\x1b[{x}C".format(x="").encode())
 
     def to_row_down(self):  # Vi J  # Vi ⌃N
         """Cursor Move Down"""
 
-        assert CursorDownForm == b"\x1B[{y}B"  # y=1
-        self.bt_write("\x1B[{y}B".format(y="").encode())
+        assert CursorDownForm == b"\x1b[{y}B"  # y=1
+        self.bt_write("\x1b[{y}B".format(y="").encode())
 
     def to_row_up(self):  # Vi K  # Vi ⌃P
         """Cursor Move Up"""
 
-        assert CursorUpForm == b"\x1B[{y}A"  # y=1
-        self.bt_write("\x1B[{y}A".format(y="").encode())
+        assert CursorUpForm == b"\x1b[{y}A"  # y=1
+        self.bt_write("\x1b[{y}A".format(y="").encode())
 
     #
     # Move the Cursor to the Left Margin of some nearby Row
@@ -413,26 +413,26 @@ class ViTerminal:
     def to_column_chosen(self):  # Vi ⇧\  # Vi |
         """Cursor Move to chosen Column of Row"""
 
-        assert CursorCharAbsoluteForm == b"\x1B[{x}G"  # x=1
-        self.bt_write("\x1B[{x}G".format(x="").encode())
+        assert CursorCharAbsoluteForm == b"\x1b[{x}G"  # x=1
+        self.bt_write("\x1b[{x}G".format(x="").encode())
 
     def to_column_beyond(self):  # Vi ⇧4  # Vi $  # but past last Char in Row
         """Cursor Move to last Column of Row"""
 
-        assert CursorCharAbsoluteForm == b"\x1B[{x}G"  # x=1
+        assert CursorCharAbsoluteForm == b"\x1b[{x}G"  # x=1
 
         size = shutil.get_terminal_size()
-        reply = "\x1B[{x}G".format(x=size.columns).encode()
+        reply = "\x1b[{x}G".format(x=size.columns).encode()
         self.bt_write(reply)
 
     def to_dent_down(self):  # Vi ⇧=  # Vi +  # but left of Dent
         """Cursor Move to first Column of Row and Down"""
 
         assert CR == b"\r"
-        assert CursorDownForm == b"\x1B[{y}B"  # y=1
+        assert CursorDownForm == b"\x1b[{y}B"  # y=1
 
         self.bt_write(b"\r")
-        self.bt_write("\x1B[{y}B".format(y="").encode())
+        self.bt_write("\x1b[{y}B".format(y="").encode())
 
     def to_dent_here_down(self):  # Vi ⇧-  # Vi _  # but left of Dent
         """Cursor Move to first Column of Row"""
@@ -443,8 +443,8 @@ class ViTerminal:
     def to_dent_first(self):  # Vi ⇧H  # but same Column, not right of Dent
         """Cursor Move to first Row of Screen"""
 
-        assert LinePositionAbsoluteForm == b"\x1B[{y}d"  # y=1
-        self.bt_write("\x1B[{y}d".format(y="").encode())
+        assert LinePositionAbsoluteForm == b"\x1b[{y}d"  # y=1
+        self.bt_write("\x1b[{y}d".format(y="").encode())
 
     def to_dent_left(self):  # Vi ⇧6  # Vi ^  # but left of Dent
         """Cursor Move to first Column of Row"""
@@ -455,19 +455,19 @@ class ViTerminal:
     def to_dent_middle(self):  # Vi ⇧M  # but same Column, not right of Dent
         """Cursor Move to middle Row of Screen"""
 
-        assert LinePositionAbsoluteForm == b"\x1B[{y}d"  # y=1
+        assert LinePositionAbsoluteForm == b"\x1b[{y}d"  # y=1
 
         size = shutil.get_terminal_size()
-        reply = "\x1B[{y}d".format(y=(size.lines // 2)).encode()
+        reply = "\x1b[{y}d".format(y=(size.lines // 2)).encode()
         self.bt_write(reply)
 
     def to_dent_last(self):  # Vi ⇧L  # but same Column, not right of Dent
         """Cursor Move to last Row of Screen"""
 
-        assert LinePositionAbsoluteForm == b"\x1B[{y}d"  # y=1
+        assert LinePositionAbsoluteForm == b"\x1b[{y}d"  # y=1
 
         size = shutil.get_terminal_size()
-        reply = "\x1B[{y}d".format(y=size.lines).encode()
+        reply = "\x1b[{y}d".format(y=size.lines).encode()
         self.bt_write(reply)
 
         # Vi ⇧G  # but same Column, not right of Dent, and not below Screen
@@ -475,8 +475,8 @@ class ViTerminal:
     def to_dent_up(self):  # Vi -  # but left of Dent
         """Cursor Move Up"""
 
-        assert CursorUpForm == b"\x1B[{y}A"  # y=1
-        self.bt_write(b"\x1B[A")
+        assert CursorUpForm == b"\x1b[{y}A"  # y=1
+        self.bt_write(b"\x1b[A")
 
     #
     #
@@ -560,16 +560,16 @@ class CharTerminal:
 
         bt = self.bt
 
-        assert BracketedPasteEnter == b"\x1B[?2004h"
-        assert MouseEnter == b"\x1B[?1000h"
-        assert MouseSgrUp == b"\x1B[?1006h"
+        assert BracketedPasteEnter == b"\x1b[?2004h"
+        assert MouseEnter == b"\x1b[?1000h"
+        assert MouseSgrUp == b"\x1b[?1006h"
 
         bt.__enter__()
 
         if not args.quiet:
-            bt.write(b"\x1B[?1000h")
-            bt.write(b"\x1B[?1006h")
-            bt.write(b"\x1B[?2004h")
+            bt.write(b"\x1b[?1000h")
+            bt.write(b"\x1b[?1006h")
+            bt.write(b"\x1b[?2004h")
 
         return self
 
@@ -580,20 +580,20 @@ class CharTerminal:
 
         bt = self.bt
 
-        assert BracketedPasteExit == b"\x1B[?2004l"
-        assert MouseExit == b"\x1B[?1000l"
-        assert MouseSgrDown == b"\x1B[?1006l"
+        assert BracketedPasteExit == b"\x1b[?2004l"
+        assert MouseExit == b"\x1b[?1000l"
+        assert MouseSgrDown == b"\x1b[?1006l"
 
-        assert LowerLeftForm == b"\x1B[{y}H"  # y=1
+        assert LowerLeftForm == b"\x1b[{y}H"  # y=1
 
         size = shutil.get_terminal_size()
 
         if not args.quiet:
-            bt.write(b"\x1B[?2004l")
-            bt.write(b"\x1B[?1006l")
-            bt.write(b"\x1B[?1000l")
+            bt.write(b"\x1b[?2004l")
+            bt.write(b"\x1b[?1006l")
+            bt.write(b"\x1b[?1000l")
 
-        bt.write("\x1B[{y}H".format(y=size.lines).encode())
+        bt.write("\x1b[{y}H".format(y=size.lines).encode())
 
         bt.__exit__()
 
@@ -681,18 +681,18 @@ class CharTerminal:
 #
 
 
-Control = "\N{Up Arrowhead}"  # ⌃
-Option = "\N{Option Key}"  # ⌥
-Shift = "\N{Upwards White Arrow}"  # ⇧
-Command = "\N{Place of Interest Sign}"  # ⌘
+Control = "\N{UP ARROWHEAD}"  # ⌃
+Option = "\N{OPTION KEY}"  # ⌥
+Shift = "\N{UPWARDS WHITE ARROW}"  # ⇧
+Command = "\N{PLACE OF INTEREST SIGN}"  # ⌘
 
 
 C0_CONTROLS = b"".join(chr(_).encode() for _ in list(range(0x20)) + [0x7F])
 
-Esc = b"\x1B"  # Escape  # ESC
+Esc = b"\x1b"  # Escape  # ESC
 
 
-assert b"\xC2\xA0".decode() == "\u00A0" == "\N{No-Break Space}"
+assert b"\xc2\xa0".decode() == "\u00a0" == "\N{NO-BREAK SPACE}"
 
 
 CHORDS_BY_BYTES = dict()
@@ -701,17 +701,17 @@ CHORDS_BY_BYTES[b"\0"] = "⌃Space"  # ⌃Space ⌃⌥Space ⌃⇧Space ⌃⇧2 
 CHORDS_BY_BYTES[b"\t"] = "Tab"  # ⌃I ⌃⌥I ⌃⌥⇧I Tab ⌃Tab ⌥Tab ⌃⌥Tab
 CHORDS_BY_BYTES[b"\r"] = "Return"  # ⌃M ⌃⌥M ⌃⌥⇧M Return etc
 CHORDS_BY_BYTES[b" "] = "Space"  # Space ⇧Space
-CHORDS_BY_BYTES[b"\x1B[Z"] = "⇧Tab"  # ⇧Tab ⌃⇧Tab ⌥⇧Tab ⌃⌥⇧Tab
-CHORDS_BY_BYTES[b"\xC2\xA0"] = "⌥Space"  # ⌥Space ⌥⇧Space
+CHORDS_BY_BYTES[b"\x1b[Z"] = "⇧Tab"  # ⇧Tab ⌃⇧Tab ⌥⇧Tab ⌃⌥⇧Tab
+CHORDS_BY_BYTES[b"\xc2\xa0"] = "⌥Space"  # ⌥Space ⌥⇧Space
 
-CHORDS_BY_BYTES[b"\x1B[A"] = "↑"  # ↑ ⌥↑ ⇧↑ ⌃⌥↑ ⌃⇧↑ ⌥⇧↑ ⌃⌥⇧↑  # macOS takes ⌃↑
-CHORDS_BY_BYTES[b"\x1B[B"] = "↓"  # ↓ ⌥↓ ⇧↓ ⌃⌥↓ ⌃⇧↓ ⌥⇧↓ ⌃⌥⇧↓  # macOS takes ⌃↓
-CHORDS_BY_BYTES[b"\x1B[C"] = "→"  # → ⌃⌥→ ⌃⇧→ ⌥⇧→ ⌃⌥⇧→  # macOS takes ⌃→
-CHORDS_BY_BYTES[b"\x1Bf"] = "⌥→"
-CHORDS_BY_BYTES[b"\x1B[1;2C"] = "⇧→"
-CHORDS_BY_BYTES[b"\x1B[D"] = "←"  # ← ⌃⌥← ⌃⇧← ⌥⇧← ⌃⌥⇧←  # macOS takes ⌃←
-CHORDS_BY_BYTES[b"\x1Bb"] = "⌥←"
-CHORDS_BY_BYTES[b"\x1B[1;2D"] = "⇧←"
+CHORDS_BY_BYTES[b"\x1b[A"] = "↑"  # ↑ ⌥↑ ⇧↑ ⌃⌥↑ ⌃⇧↑ ⌥⇧↑ ⌃⌥⇧↑  # macOS takes ⌃↑
+CHORDS_BY_BYTES[b"\x1b[B"] = "↓"  # ↓ ⌥↓ ⇧↓ ⌃⌥↓ ⌃⇧↓ ⌥⇧↓ ⌃⌥⇧↓  # macOS takes ⌃↓
+CHORDS_BY_BYTES[b"\x1b[C"] = "→"  # → ⌃⌥→ ⌃⇧→ ⌥⇧→ ⌃⌥⇧→  # macOS takes ⌃→
+CHORDS_BY_BYTES[b"\x1bf"] = "⌥→"
+CHORDS_BY_BYTES[b"\x1b[1;2C"] = "⇧→"
+CHORDS_BY_BYTES[b"\x1b[D"] = "←"  # ← ⌃⌥← ⌃⇧← ⌥⇧← ⌃⌥⇧←  # macOS takes ⌃←
+CHORDS_BY_BYTES[b"\x1bb"] = "⌥←"
+CHORDS_BY_BYTES[b"\x1b[1;2D"] = "⇧←"
 
 # ⌃M is also Return ⌃Return ⌥Return ⇧Return ⌃⌥Return ⌃⇧Return ⌥⇧Return ⌃⌥⇧Return
 
@@ -723,7 +723,7 @@ def add_us_ascii_into_chords_by_bytes():
 
     # Decode Control Chords
 
-    assert Control == "\N{Up Arrowhead}"  # ⌃
+    assert Control == "\N{UP ARROWHEAD}"  # ⌃
 
     for ord_ in C0_CONTROLS:
         char = chr(ord_)
@@ -734,7 +734,7 @@ def add_us_ascii_into_chords_by_bytes():
 
     # Decode Shift'ed and un-Shift'ed US Ascii Letters
 
-    assert Shift == "\N{Upwards White Arrow}"  # ⇧
+    assert Shift == "\N{UPWARDS WHITE ARROW}"  # ⇧
 
     for char in string.ascii_uppercase:
         bytes_ = char.encode()
@@ -767,153 +767,153 @@ assert ((" " not in _) for _ in CHORDS_BY_BYTES.values())
 
 CHORDS_BY_BYTES.update(  # the Fn Key Caps at Mac
     {
-        b"\x1B\x4F\x50": "F1",
-        b"\x1B\x4F\x51": "F2",
-        b"\x1B\x4F\x52": "F3",
-        b"\x1B\x4F\x53": "F4",
-        b"\x1B\x5B\x31\x35\x7E": "F5",
-        b"\x1B\x5B\x31\x37\x7E": "F6",  # F6  # ⌥F1
-        b"\x1B\x5B\x31\x38\x7E": "F7",  # F7  # ⌥F2
-        b"\x1B\x5B\x31\x39\x7E": "F8",  # F8  # ⌥F3
-        b"\x1B\x5B\x32\x30\x7E": "F9",  # F9  # ⌥F4
-        b"\x1B\x5B\x32\x31\x7E": "F10",  # F10  # ⌥F5
-        b"\x1B\x5B\x32\x33\x7E": "⌥F6",  # F11  # ⌥F6  # macOS takes F11
-        b"\x1B\x5B\x32\x34\x7E": "F12",  # F12  # ⌥F7
-        b"\x1B\x5B\x32\x35\x7E": "⇧F5",  # ⌥F8  # ⇧F5
-        b"\x1B\x5B\x32\x36\x7E": "⇧F6",  # ⌥F9  # ⇧F6
-        b"\x1B\x5B\x32\x38\x7E": "⇧F7",  # ⌥F10  # ⇧F7
-        b"\x1B\x5B\x32\x39\x7E": "⇧F8",  # ⌥F11  # ⇧F8
-        b"\x1B\x5B\x33\x31\x7E": "⇧F9",  # ⌥F12  # ⇧F9
-        b"\x1B\x5B\x33\x32\x7E": "⇧F10",
-        b"\x1B\x5B\x33\x33\x7E": "⇧F11",
-        b"\x1B\x5B\x33\x34\x7E": "⇧F12",
+        b"\x1b\x4f\x50": "F1",
+        b"\x1b\x4f\x51": "F2",
+        b"\x1b\x4f\x52": "F3",
+        b"\x1b\x4f\x53": "F4",
+        b"\x1b\x5b\x31\x35\x7e": "F5",
+        b"\x1b\x5b\x31\x37\x7e": "F6",  # F6  # ⌥F1
+        b"\x1b\x5b\x31\x38\x7e": "F7",  # F7  # ⌥F2
+        b"\x1b\x5b\x31\x39\x7e": "F8",  # F8  # ⌥F3
+        b"\x1b\x5b\x32\x30\x7e": "F9",  # F9  # ⌥F4
+        b"\x1b\x5b\x32\x31\x7e": "F10",  # F10  # ⌥F5
+        b"\x1b\x5b\x32\x33\x7e": "⌥F6",  # F11  # ⌥F6  # macOS takes F11
+        b"\x1b\x5b\x32\x34\x7e": "F12",  # F12  # ⌥F7
+        b"\x1b\x5b\x32\x35\x7e": "⇧F5",  # ⌥F8  # ⇧F5
+        b"\x1b\x5b\x32\x36\x7e": "⇧F6",  # ⌥F9  # ⇧F6
+        b"\x1b\x5b\x32\x38\x7e": "⇧F7",  # ⌥F10  # ⇧F7
+        b"\x1b\x5b\x32\x39\x7e": "⇧F8",  # ⌥F11  # ⇧F8
+        b"\x1b\x5b\x33\x31\x7e": "⇧F9",  # ⌥F12  # ⇧F9
+        b"\x1b\x5b\x33\x32\x7e": "⇧F10",
+        b"\x1b\x5b\x33\x33\x7e": "⇧F11",
+        b"\x1b\x5b\x33\x34\x7e": "⇧F12",
     }
 )
 
 CHORDS_BY_BYTES.update(  # the Option Digit strokes at Mac
     {
-        b"\xC2\xBA": "⌥0",
-        b"\xC2\xA1": "⌥1",
-        b"\xE2\x84\xA2": "⌥2",
-        b"\xC2\xA3": "⌥3",
-        b"\xC2\xA2": "⌥4",
-        b"\xE2\x88\x9E": "⌥5",
-        b"\xC2\xA7": "⌥6",
-        b"\xC2\xB6": "⌥7",
-        b"\xE2\x80\xA2": "⌥8",
-        b"\xC2\xAA": "⌥9",
-        b"\xE2\x80\x9A": "⌥⇧0",
-        b"\xE2\x81\x84": "⌥⇧1",
-        b"\xE2\x82\xAC": "⌥⇧2",
-        b"\xE2\x80\xB9": "⌥⇧3",
-        b"\xE2\x80\xBA": "⌥⇧4",
-        b"\xEF\xAC\x81": "⌥⇧5",
-        b"\xEF\xAC\x82": "⌥⇧6",
-        b"\xE2\x80\xA1": "⌥⇧7",
-        b"\xC2\xB0": "⌥⇧8",
-        b"\xC2\xB7": "⌥⇧9",
+        b"\xc2\xba": "⌥0",
+        b"\xc2\xa1": "⌥1",
+        b"\xe2\x84\xa2": "⌥2",
+        b"\xc2\xa3": "⌥3",
+        b"\xc2\xa2": "⌥4",
+        b"\xe2\x88\x9e": "⌥5",
+        b"\xc2\xa7": "⌥6",
+        b"\xc2\xb6": "⌥7",
+        b"\xe2\x80\xa2": "⌥8",
+        b"\xc2\xaa": "⌥9",
+        b"\xe2\x80\x9a": "⌥⇧0",
+        b"\xe2\x81\x84": "⌥⇧1",
+        b"\xe2\x82\xac": "⌥⇧2",
+        b"\xe2\x80\xb9": "⌥⇧3",
+        b"\xe2\x80\xba": "⌥⇧4",
+        b"\xef\xac\x81": "⌥⇧5",
+        b"\xef\xac\x82": "⌥⇧6",
+        b"\xe2\x80\xa1": "⌥⇧7",
+        b"\xc2\xb0": "⌥⇧8",
+        b"\xc2\xb7": "⌥⇧9",
     }
 )
 
 CHORDS_BY_BYTES.update(  # the Option Letter strokes at Mac
     {
-        b"\xC3\xA5": "⌥A",
-        b"\xE2\x88\xAB": "⌥B",
-        b"\xC3\xA7": "⌥C",
-        b"\xE2\x88\x82": "⌥D",  # ⌥E does not come after ⌥D
-        b"\xC3\xA1": "⌥E A",
-        b"\xC3\xA9": "⌥E E",
-        b"\xC3\xAD": "⌥E I",
-        b"\x6A\xCC\x81": "⌥E J",
-        b"\xC3\xB3": "⌥E O",
-        b"\xC3\xBA": "⌥E U",
-        b"\xC6\x92": "⌥F",
-        b"\xC2\xA9": "⌥G",
-        b"\xCB\x99": "⌥H",  # ⌥I does not come after ⌥H
-        b"\xC3\xA2": "⌥I A",
-        b"\xC3\xAA": "⌥I E",
-        b"\xC3\xAE": "⌥I I",
-        b"\xC3\xB4": "⌥I O",
-        b"\xC3\xBB": "⌥I U",
-        b"\xE2\x88\x86": "⌥J",
-        b"\xCB\x9A": "⌥K",
-        b"\xC2\xAC": "⌥L",
-        b"\xC2\xB5": "⌥M",  # ⌥N does not come after ⌥M
-        b"\xC3\xA3": "⌥N A",
-        b"\xC3\xB1": "⌥N N",
-        b"\xC3\xB5": "⌥N O",
-        b"\xC3\xB8": "⌥O",
-        b"\xCF\x80": "⌥P",
-        b"\xC5\x93": "⌥Q",
-        b"\xC2\xAE": "⌥R",
-        b"\xC3\x9F": "⌥S",
-        b"\xE2\x80\xA0": "⌥T",  # ⌥U does not come after ⌥T
-        b"\xC3\xA4": "⌥U A",
-        b"\xC3\xAB": "⌥U E",
-        b"\xC3\xAF": "⌥U I",
-        b"\xC3\xB6": "⌥U O",
-        b"\xC3\xBC": "⌥U U",
-        b"\xC3\xBF": "⌥U Y",
-        b"\xE2\x88\x9A": "⌥V",
-        b"\xE2\x88\x91": "⌥W",
-        b"\xE2\x89\x88": "⌥X",
-        b"\xCE\xA9": "⌥Z",
-        b"\xC3\x85": "⌥⇧A",
-        b"\xC4\xB1": "⌥⇧B",
-        b"\xC3\x87": "⌥⇧C",
-        b"\xC3\x8E": "⌥⇧D",
-        b"\xC2\xB4": "⌥⇧E",  # ⌥E  # ⌥⇧E  # ⌥⇧E Space
-        b"\xC3\x8F": "⌥⇧F",
-        b"\xCB\x9D": "⌥⇧G",
-        b"\xC3\x93": "⌥⇧H",
-        b"\xCB\x86": "⌥⇧I",  # ⌥I  # ⌥⇧I  # ⌥⇧I Space
-        b"\xC3\x94": "⌥⇧J",
-        b"\xEF\xA3\xBF": "⌥⇧K",
-        b"\xC3\x92": "⌥⇧L",
-        b"\xC3\x82": "⌥⇧M",
-        b"\xCB\x9C": "⌥⇧N",  # ⌥N  # ⌥⇧N  # ⌥⇧N Space
-        b"\xC3\x98": "⌥⇧O",
-        b"\xE2\x88\x8F": "⌥⇧P",
-        b"\xC5\x92": "⌥⇧Q",
-        b"\xE2\x80\xB0": "⌥⇧R",
-        b"\xC3\x8D": "⌥⇧S",
-        b"\xCB\x87": "⌥⇧T",
-        b"\xC2\xA8": "⌥⇧U",  # ⌥U  # ⌥⇧U  # ⌥⇧U Space
-        b"\xE2\x97\x8A": "⌥⇧V",
-        b"\xE2\x80\x9E": "⌥⇧W",
-        b"\xCB\x9B": "⌥⇧X",
-        b"\xC3\x81": "⌥⇧Y",
-        b"\xC2\xB8": "⌥⇧Z",
-        b"\xC3\xA0": "⌥`A",
-        b"\xC3\xA8": "⌥`E",
-        b"\xC3\xAC": "⌥`I",
-        b"\xC3\xB2": "⌥`O",
-        b"\xC3\xB9": "⌥`U",
+        b"\xc3\xa5": "⌥A",
+        b"\xe2\x88\xab": "⌥B",
+        b"\xc3\xa7": "⌥C",
+        b"\xe2\x88\x82": "⌥D",  # ⌥E does not come after ⌥D
+        b"\xc3\xa1": "⌥E A",
+        b"\xc3\xa9": "⌥E E",
+        b"\xc3\xad": "⌥E I",
+        b"\x6a\xcc\x81": "⌥E J",
+        b"\xc3\xb3": "⌥E O",
+        b"\xc3\xba": "⌥E U",
+        b"\xc6\x92": "⌥F",
+        b"\xc2\xa9": "⌥G",
+        b"\xcb\x99": "⌥H",  # ⌥I does not come after ⌥H
+        b"\xc3\xa2": "⌥I A",
+        b"\xc3\xaa": "⌥I E",
+        b"\xc3\xae": "⌥I I",
+        b"\xc3\xb4": "⌥I O",
+        b"\xc3\xbb": "⌥I U",
+        b"\xe2\x88\x86": "⌥J",
+        b"\xcb\x9a": "⌥K",
+        b"\xc2\xac": "⌥L",
+        b"\xc2\xb5": "⌥M",  # ⌥N does not come after ⌥M
+        b"\xc3\xa3": "⌥N A",
+        b"\xc3\xb1": "⌥N N",
+        b"\xc3\xb5": "⌥N O",
+        b"\xc3\xb8": "⌥O",
+        b"\xcf\x80": "⌥P",
+        b"\xc5\x93": "⌥Q",
+        b"\xc2\xae": "⌥R",
+        b"\xc3\x9f": "⌥S",
+        b"\xe2\x80\xa0": "⌥T",  # ⌥U does not come after ⌥T
+        b"\xc3\xa4": "⌥U A",
+        b"\xc3\xab": "⌥U E",
+        b"\xc3\xaf": "⌥U I",
+        b"\xc3\xb6": "⌥U O",
+        b"\xc3\xbc": "⌥U U",
+        b"\xc3\xbf": "⌥U Y",
+        b"\xe2\x88\x9a": "⌥V",
+        b"\xe2\x88\x91": "⌥W",
+        b"\xe2\x89\x88": "⌥X",
+        b"\xce\xa9": "⌥Z",
+        b"\xc3\x85": "⌥⇧A",
+        b"\xc4\xb1": "⌥⇧B",
+        b"\xc3\x87": "⌥⇧C",
+        b"\xc3\x8e": "⌥⇧D",
+        b"\xc2\xb4": "⌥⇧E",  # ⌥E  # ⌥⇧E  # ⌥⇧E Space
+        b"\xc3\x8f": "⌥⇧F",
+        b"\xcb\x9d": "⌥⇧G",
+        b"\xc3\x93": "⌥⇧H",
+        b"\xcb\x86": "⌥⇧I",  # ⌥I  # ⌥⇧I  # ⌥⇧I Space
+        b"\xc3\x94": "⌥⇧J",
+        b"\xef\xa3\xbf": "⌥⇧K",
+        b"\xc3\x92": "⌥⇧L",
+        b"\xc3\x82": "⌥⇧M",
+        b"\xcb\x9c": "⌥⇧N",  # ⌥N  # ⌥⇧N  # ⌥⇧N Space
+        b"\xc3\x98": "⌥⇧O",
+        b"\xe2\x88\x8f": "⌥⇧P",
+        b"\xc5\x92": "⌥⇧Q",
+        b"\xe2\x80\xb0": "⌥⇧R",
+        b"\xc3\x8d": "⌥⇧S",
+        b"\xcb\x87": "⌥⇧T",
+        b"\xc2\xa8": "⌥⇧U",  # ⌥U  # ⌥⇧U  # ⌥⇧U Space
+        b"\xe2\x97\x8a": "⌥⇧V",
+        b"\xe2\x80\x9e": "⌥⇧W",
+        b"\xcb\x9b": "⌥⇧X",
+        b"\xc3\x81": "⌥⇧Y",
+        b"\xc2\xb8": "⌥⇧Z",
+        b"\xc3\xa0": "⌥`A",
+        b"\xc3\xa8": "⌥`E",
+        b"\xc3\xac": "⌥`I",
+        b"\xc3\xb2": "⌥`O",
+        b"\xc3\xb9": "⌥`U",
     }
 )
 
 CHORDS_BY_BYTES.update(  # the Option Punctuation-Mark strokes at Mac
     {
-        b"\xE2\x80\x93": "⌥-",
-        b"\xE2\x89\xA0": "⌥=",
-        b"\xE2\x80\x9C": "⌥[",
-        b"\xE2\x80\x98": "⌥]",
-        b"\xC2\xAB": "⌥\\",
-        b"\xE2\x80\xA6": "⌥;",
-        b"\xC3\xA6": "⌥'",
-        b"\xE2\x89\xA4": "⌥,",
-        b"\xE2\x89\xA5": "⌥.",
-        b"\xC3\xB7": "⌥/",
-        b"\xE2\x80\x94": "⌥-",
-        b"\xC2\xB1": "⌥⇧=",
-        b"\xE2\x80\x9D": "⌥⇧[",
-        b"\xE2\x80\x99": "⌥⇧]",
-        b"\xC2\xBB": "⌥⇧\\",
-        b"\xC3\x9A": "⌥⇧;",
-        b"\xC3\x86": "⌥⇧'",
-        b"\xC2\xAF": "⌥⇧,",
-        b"\xCB\x98": "⌥⇧.",
-        b"\xC2\xBF": "⌥⇧/",
+        b"\xe2\x80\x93": "⌥-",
+        b"\xe2\x89\xa0": "⌥=",
+        b"\xe2\x80\x9c": "⌥[",
+        b"\xe2\x80\x98": "⌥]",
+        b"\xc2\xab": "⌥\\",
+        b"\xe2\x80\xa6": "⌥;",
+        b"\xc3\xa6": "⌥'",
+        b"\xe2\x89\xa4": "⌥,",
+        b"\xe2\x89\xa5": "⌥.",
+        b"\xc3\xb7": "⌥/",
+        b"\xe2\x80\x94": "⌥-",
+        b"\xc2\xb1": "⌥⇧=",
+        b"\xe2\x80\x9d": "⌥⇧[",
+        b"\xe2\x80\x99": "⌥⇧]",
+        b"\xc2\xbb": "⌥⇧\\",
+        b"\xc3\x9a": "⌥⇧;",
+        b"\xc3\x86": "⌥⇧'",
+        b"\xc2\xaf": "⌥⇧,",
+        b"\xcb\x98": "⌥⇧.",
+        b"\xc2\xbf": "⌥⇧/",
     }
 )
 
@@ -1036,27 +1036,27 @@ class ByteTerminal:
     def bytes_splitbytes(self, bytes_):
         """Split out the Bytes of the first Key Chords or Paste"""
 
-        assert Esc == b"\x1B"
-        assert CSI == b"\x1B["
-        assert MouseSixByteReportPattern == b"\x1B\\[M..."
+        assert Esc == b"\x1b"
+        assert CSI == b"\x1b["
+        assert MouseSixByteReportPattern == b"\x1b\\[M..."
 
         # Take anything but Esc
 
-        if not bytes_.startswith(b"\x1B"):  # Esc
-            some = bytes_.partition(b"\x1B")[0]
-        elif bytes_.startswith(b"\x1B"):  # Esc
+        if not bytes_.startswith(b"\x1b"):  # Esc
+            some = bytes_.partition(b"\x1b")[0]
+        elif bytes_.startswith(b"\x1b"):  # Esc
             some = b""
 
             # Take a MouseSixByteReportPattern from b"\x1B[M" and more
 
-            if bytes_.startswith(b"\x1B[M"):  # CSI
+            if bytes_.startswith(b"\x1b[M"):  # CSI
                 m = re.match(MouseSixByteReportPattern, bytes_)  # todo: testme
                 if m:
                     some = bytes_
 
             # Take CSI plus Unsigned Decimal Ints split or marked by ";", "<", and "?"
 
-            elif bytes_.startswith(b"\x1B["):
+            elif bytes_.startswith(b"\x1b["):
                 for index in range(2, len(bytes_)):
                     end = bytes_[index:][:1]
                     csi_middles = b"0123456789;<?"
@@ -1091,50 +1091,50 @@ class ByteTerminal:
 
 BS = b"\b"  # Backspace  # BS
 CR = b"\r"  # Carriage Return   # CR
-assert Esc == b"\x1B"  # Escape  # ESC
+assert Esc == b"\x1b"  # Escape  # ESC
 
-CSI = b"\x1B["  # Control Sequence Introducer  # CSI
+CSI = b"\x1b["  # Control Sequence Introducer  # CSI
 
-DeviceStatusReport = b"\x1B[6n"  # CSI Ps n  # DSR  # Ps = 6  # Send for CPR
+DeviceStatusReport = b"\x1b[6n"  # CSI Ps n  # DSR  # Ps = 6  # Send for CPR
 
-BracketedPasteEnter = b"\x1B[?2004h"  # CSI ? Pm h  # Ps = 2 0 0 4  # DECSET
-BracketedPasteExit = b"\x1B[?2004l"  # CSI ? Pm l  # Ps = 2 0 0 4  # DECRST
+BracketedPasteEnter = b"\x1b[?2004h"  # CSI ? Pm h  # Ps = 2 0 0 4  # DECSET
+BracketedPasteExit = b"\x1b[?2004l"  # CSI ? Pm l  # Ps = 2 0 0 4  # DECRST
 
-MouseEnter = b"\x1B[?1000h"  # CSI ? Pm h  # Ps = 1 0 0 0  # DECSET
-MouseSgrUp = b"\x1B[?1006h"  # CSI ? Pm h  # Ps = 1 0 0 6  # DECSET
-MouseSgrDown = b"\x1B[?1006l"  # CSI ? Pm h  # Ps = 1 0 0 6  # DECRST
-MouseExit = b"\x1B[?1000l"  # CSI ? Pm h  # Ps = 1 0 0 0  # DECRST
-
-
-CursorPositionForm = b"\x1B[{y};{x}H"  # CSI Ps ; Ps H  # CursorPosition CUP  # y=1,x=1
-
-UpperLeft = b"\x1BH"  # the 4 variations on CPR of (), (y), (y,x), (x)
-LowerLeftForm = b"\x1B[{y}H"  # y=1
-LowerRightForm = b"\x1B[{y};{x}H"  # y=1,x=1
-UpperRightForm = b"\x1B[;{x}H"  # x=1
-
-CursorUpForm = b"\x1B[{y}A"  # CSI Ps A  # Cursor Up CUU  # y=1
-CursorDownForm = b"\x1B[{y}B"  # CSI Ps B  # Cursor Down CUD  # y=1
-CursorForwardForm = b"\x1B[{x}C"  # CSI Ps C  # Cursor Forward CUF  # x=1
-CursorBackwardForm = b"\x1B[{x}D"  # CSI Ps D  # Cursor Backward CUB  # x=1
-
-CursorCharAbsoluteForm = b"\x1B[{x}G"  # y=1
-LinePositionAbsoluteForm = b"\x1B[{y}d"  # y=1
-
-EraseInLineForm = b"\x1B[{ps}K"  # CSI Ps K  # EL  # Ps = 0  # Erase to Right  # ps=0
+MouseEnter = b"\x1b[?1000h"  # CSI ? Pm h  # Ps = 1 0 0 0  # DECSET
+MouseSgrUp = b"\x1b[?1006h"  # CSI ? Pm h  # Ps = 1 0 0 6  # DECSET
+MouseSgrDown = b"\x1b[?1006l"  # CSI ? Pm h  # Ps = 1 0 0 6  # DECRST
+MouseExit = b"\x1b[?1000l"  # CSI ? Pm h  # Ps = 1 0 0 0  # DECRST
 
 
-CursorPositionReportPattern = b"\x1B\\[([0-9]+);([0-9]+)R"  # CSI r ; c R  # CPR Y X
+CursorPositionForm = b"\x1b[{y};{x}H"  # CSI Ps ; Ps H  # CursorPosition CUP  # y=1,x=1
+
+UpperLeft = b"\x1bH"  # the 4 variations on CPR of (), (y), (y,x), (x)
+LowerLeftForm = b"\x1b[{y}H"  # y=1
+LowerRightForm = b"\x1b[{y};{x}H"  # y=1,x=1
+UpperRightForm = b"\x1b[;{x}H"  # x=1
+
+CursorUpForm = b"\x1b[{y}A"  # CSI Ps A  # Cursor Up CUU  # y=1
+CursorDownForm = b"\x1b[{y}B"  # CSI Ps B  # Cursor Down CUD  # y=1
+CursorForwardForm = b"\x1b[{x}C"  # CSI Ps C  # Cursor Forward CUF  # x=1
+CursorBackwardForm = b"\x1b[{x}D"  # CSI Ps D  # Cursor Backward CUB  # x=1
+
+CursorCharAbsoluteForm = b"\x1b[{x}G"  # y=1
+LinePositionAbsoluteForm = b"\x1b[{y}d"  # y=1
+
+EraseInLineForm = b"\x1b[{ps}K"  # CSI Ps K  # EL  # Ps = 0  # Erase to Right  # ps=0
+
+
+CursorPositionReportPattern = b"\x1b\\[([0-9]+);([0-9]+)R"  # CSI r ; c R  # CPR Y X
 # CPR rarely indexed as CSI Pm R
 
-PasteOpenPattern = b"\x1B\\[200~"  # Os Copy-Paste Buffer Report  # OCBR
-PasteClosePattern = b"\x1B\\[201~"
+PasteOpenPattern = b"\x1b\\[200~"  # Os Copy-Paste Buffer Report  # OCBR
+PasteClosePattern = b"\x1b\\[201~"
 
-MouseSixByteReportPattern = b"\x1B\\[M..."  # MPR X Y
+MouseSixByteReportPattern = b"\x1b\\[M..."  # MPR X Y
 
 MouseSgrPress = b"M"
 MouseSgrRelease = b"m"
-MouseSgrReportPattern = b"\x1B\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])"  # MPR X Y
+MouseSgrReportPattern = b"\x1b\\[<([0-9]+);([0-9]+);([0-9]+)([Mm])"  # MPR X Y
 # CSI < Pm M  # py ; px ; pb  # MPR X Y  # indexed as:  a final character which is M
 # CSI < Pm m  # py ; px ; pb  # MPR X Y  # indexed as:  and m  for
 

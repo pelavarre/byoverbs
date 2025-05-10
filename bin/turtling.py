@@ -80,8 +80,8 @@ DegreeSign = unicodedata.lookup("Degree Sign")  # ° U+00B0
 FullBlock = unicodedata.lookup("Full Block")  # █ U+2588
 Turtle_ = unicodedata.lookup("Turtle")  # 🐢 U+01F422
 
-Plain = "\x1B[" "m"  # Unstyled, uncolored, ...
-Bold = "\x1B[" "1m"
+Plain = "\x1b[" "m"  # Unstyled, uncolored, ...
+Bold = "\x1b[" "1m"
 
 
 COLOR_ACCENTS = (None, 3, 4, 4.6, 8, 24)  # Bits of Terminal Color (4.6 for 25-Step Grayscale)
@@ -347,55 +347,55 @@ HT = "\t"  # 00/09 Character Tabulation ⌃I
 LF = "\n"  # 00/10 Line Feed ⌃J  # akin to CSI CUD "\x1B" "[" "B"
 CR = "\r"  # 00/13 Carriage Return ⌃M  # akin to CSI CHA "\x1B" "[" "G"
 
-ESC = "\x1B"  # 01/11 Escape ⌃[  # also known as printf '\e'  # but Python doesn't define \e
+ESC = "\x1b"  # 01/11 Escape ⌃[  # also known as printf '\e'  # but Python doesn't define \e
 
-DECSC = "\x1B" "7"  # ESC 03/07 Save Cursor [Checkpoint] (DECSC)
-DECRC = "\x1B" "8"  # ESC 03/08 Restore Cursor [Revert] (DECRC)
-SS3 = "\x1B" "O"  # ESC 04/15 Single Shift Three  # in macOS F1 F2 F3 F4
+DECSC = "\x1b" "7"  # ESC 03/07 Save Cursor [Checkpoint] (DECSC)
+DECRC = "\x1b" "8"  # ESC 03/08 Restore Cursor [Revert] (DECRC)
+SS3 = "\x1b" "O"  # ESC 04/15 Single Shift Three  # in macOS F1 F2 F3 F4
 
-CSI = "\x1B" "["  # 05/11 Control Sequence Introducer
+CSI = "\x1b" "["  # 05/11 Control Sequence Introducer
 CSI_EXTRAS = "".join(chr(_) for _ in range(0x20, 0x40))  # !"#$%&'()*+,-./0123456789:;<=>?, no @
 # Parameter, Intermediate, and Not-Final Bytes of a CSI Escape Sequence
 
 
-CUU_Y = "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-CUD_Y = "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down  # \n is Pn 1 except from last Row
-CUF_X = "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
-CUB_X = "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left  # \b is Pn 1
+CUU_Y = "\x1b" "[" "{}A"  # CSI 04/01 Cursor Up
+CUD_Y = "\x1b" "[" "{}B"  # CSI 04/02 Cursor Down  # \n is Pn 1 except from last Row
+CUF_X = "\x1b" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
+CUB_X = "\x1b" "[" "{}D"  # CSI 04/04 Cursor [Back] Left  # \b is Pn 1
 
-CNL_Y = "\x1B" "[" "{}E"  # CSI 04/05 Cursor Next Line (CNL)  # \r\n but never implies ⎋[⇧S
+CNL_Y = "\x1b" "[" "{}E"  # CSI 04/05 Cursor Next Line (CNL)  # \r\n but never implies ⎋[⇧S
 
-CHA_Y = "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # \r is Pn 1
-VPA_Y = "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+CHA_Y = "\x1b" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # \r is Pn 1
+VPA_Y = "\x1b" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
 # CUP_1_1 = "\x1B" "[" "H"  # CSI 04/08 Cursor Position
 # CUP_Y_1 = "\x1B" "[" "{}H"  # CSI 04/08 Cursor Position
 # CUP_1_X = "\x1B" "[" ";{}H"  # CSI 04/08 Cursor Position
-CUP_Y_X = "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
+CUP_Y_X = "\x1b" "[" "{};{}H"  # CSI 04/08 Cursor Position
 
-CHT_X = "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation  # \t is Pn 1
-CBT_X = "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
+CHT_X = "\x1b" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation  # \t is Pn 1
+CBT_X = "\x1b" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
 
 
-ED_P = "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
+ED_P = "\x1b" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
 
-ICH_X = "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
-IL_Y = "\x1B" "[" "{}L"  # CSI 04/12 Insert Line
-DL_Y = "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
-DCH_X = "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
+ICH_X = "\x1b" "[" "{}@"  # CSI 04/00 Insert Character
+IL_Y = "\x1b" "[" "{}L"  # CSI 04/12 Insert Line
+DL_Y = "\x1b" "[" "{}M"  # CSI 04/13 Delete Line
+DCH_X = "\x1b" "[" "{}P"  # CSI 05/00 Delete Character
 
-DECIC_X = "\x1B" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
-DECDC_X = "\x1B" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
+DECIC_X = "\x1b" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
+DECDC_X = "\x1b" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
 # both with an Intermediate Byte of 02/07 ' Apostrophe [Tick]
 # despite DECDC_X and DECIC_X absent from macOS Terminal
 
-EL_P = "\x1B" "[" "{}K"  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
+EL_P = "\x1b" "[" "{}K"  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
 
-SU_Y = "\x1B" "[" "{}S"  # CSI 05/03 Scroll Up   # Insert Bottom Lines
-SD_Y = "\x1B" "[" "{}T"  # CSI 05/04 Scroll Down  # Insert Top Lines
+SU_Y = "\x1b" "[" "{}S"  # CSI 05/03 Scroll Up   # Insert Bottom Lines
+SD_Y = "\x1b" "[" "{}T"  # CSI 05/04 Scroll Down  # Insert Top Lines
 
-SM_IRM = "\x1B" "[" "4h"  # CSI 06/08 4 Set Mode Insert/ Replace
-RM_IRM = "\x1B" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
+SM_IRM = "\x1b" "[" "4h"  # CSI 06/08 4 Set Mode Insert/ Replace
+RM_IRM = "\x1b" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
 
 # todo = "\x1B" "[" "1000h"  # CSI 06/08 4 Set Mode  # Mouse Reports
 # todo = "\x1B" "[" "1005h"  # CSI 06/08 4 Set Mode  # UTF-8 vs VT200 Byte Encoding
@@ -407,19 +407,19 @@ RM_IRM = "\x1B" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
 # todo = "\x1B" "[" "1006l"  # CSI 06/12 4 Reset Mode  # SGR
 # todo = "\x1B" "[" "1015l"  # CSI 06/08 4 Set Mode  # URXVT
 
-SGR = "\x1B" "[" "{}m"  # CSI 06/13 Select Graphic Rendition
+SGR = "\x1b" "[" "{}m"  # CSI 06/13 Select Graphic Rendition
 
-DSR_0 = "\x1B" "[" "0n"  # CSI 06/14 [Request] Device Status Report  # Ps 0 because DSR_5
-DSR_5 = "\x1B" "[" "5n"  # CSI 06/14 [Request] Device Status Report  # Ps 5 for DSR_0 In
-DSR_6 = "\x1B" "[" "6n"  # CSI 06/14 [Request] Device Status Report  # Ps 6 for CPR In
+DSR_0 = "\x1b" "[" "0n"  # CSI 06/14 [Request] Device Status Report  # Ps 0 because DSR_5
+DSR_5 = "\x1b" "[" "5n"  # CSI 06/14 [Request] Device Status Report  # Ps 5 for DSR_0 In
+DSR_6 = "\x1b" "[" "6n"  # CSI 06/14 [Request] Device Status Report  # Ps 6 for CPR In
 
-DECSCUSR = "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
-DECSCUSR_SKID = "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
-DECSCUSR_BAR = "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
+DECSCUSR = "\x1b" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
+DECSCUSR_SKID = "\x1b" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
+DECSCUSR_BAR = "\x1b" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
 # all three with an Intermediate Byte of 02/00 ' ' Space
 
-XTWINOPS_8 = "\x1B" "[" "8t"  # CSI 07/04 [Response]   # Ps 8 In because XTWINOPS_18 Out
-XTWINOPS_18 = "\x1B" "[" "18t"  # CSI 07/04 [Request]   # Ps 18 Out for XTWINOPS_8 In
+XTWINOPS_8 = "\x1b" "[" "8t"  # CSI 07/04 [Response]   # Ps 8 In because XTWINOPS_18 Out
+XTWINOPS_18 = "\x1b" "[" "18t"  # CSI 07/04 [Request]   # Ps 18 Out for XTWINOPS_8 In
 
 
 # we've sorted the Str Literals above mostly by their CSI Final Byte's:  A, B, C, D, G, Z, m, etc
@@ -502,9 +502,9 @@ MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES = "@ABCDEGHIJKLMPSTZdhlm"
 class TerminalBytePacket:
     """Hold 1 Control Character, else 1 or more Text Characters, else some Bytes"""
 
-    assert ESC == "\x1B"  # ⎋
-    assert CSI == "\x1B" "["  # ⎋[
-    assert SS3 == "\x1B" "O"  # ⎋O
+    assert ESC == "\x1b"  # ⎋
+    assert CSI == "\x1b" "["  # ⎋[
+    assert SS3 == "\x1b" "O"  # ⎋O
 
     text: str  # 0 or more Chars of Printable Text
 
@@ -640,27 +640,27 @@ class TerminalBytePacket:
         assert str(tbp) == "Superb" and not tbp.closed, (tbp,)
 
         self._try_open_(b"")  # empty
-        self._try_open_(b"\x1B")  # first Byte of Esc Sequence
-        self._try_open_(b"\x1B\x1B")  # first Two Bytes of Esc-Esc Sequence
-        self._try_open_(b"\x1BO")  # first Two Bytes of Three-Byte SS3 Sequence
-        self._try_open_(b"\x1B[", b"6", b" ")  # CSI Head with Neck and Back but no Tail
-        self._try_open_(b"\xED\x80")  # Head of >= 3 Byte UTF-8 Encoding
-        self._try_open_(b"\xF4\x80\x80")  # Head of >= 4 Byte UTF-8 Encoding
-        self._try_open_(b"\x1B[M#\xFF")  # Undecodable Head, incomplete CSI Mouse Report
-        self._try_open_(b"\x1B[M \xC4\x8A")  # Head only, 6 Byte incomplete CSI Mouse Report
+        self._try_open_(b"\x1b")  # first Byte of Esc Sequence
+        self._try_open_(b"\x1b\x1b")  # first Two Bytes of Esc-Esc Sequence
+        self._try_open_(b"\x1bO")  # first Two Bytes of Three-Byte SS3 Sequence
+        self._try_open_(b"\x1b[", b"6", b" ")  # CSI Head with Neck and Back but no Tail
+        self._try_open_(b"\xed\x80")  # Head of >= 3 Byte UTF-8 Encoding
+        self._try_open_(b"\xf4\x80\x80")  # Head of >= 4 Byte UTF-8 Encoding
+        self._try_open_(b"\x1b[M#\xff")  # Undecodable Head, incomplete CSI Mouse Report
+        self._try_open_(b"\x1b[M \xc4\x8a")  # Head only, 6 Byte incomplete CSI Mouse Report
 
         # Try some Sequences closed against taking more Bytes
 
         self._try_closed_(b"\n")  # Head only, of 7-bit Control Byte
-        self._try_closed_(b"\x1B\x1B[", b"3;5", b"~")  # CSI Head with Neck and Tail, no Back
-        self._try_closed_(b"\xC0")  # Head only, of 8-bit Control Byte
-        self._try_closed_(b"\xFF")  # Head only, of 8-bit Control Byte
-        self._try_closed_(b"\xC2\xAD")  # Head only, of 2 Byte UTF-8 of U+00AD Soft-Hyphen Control
-        self._try_closed_(b"\x1B", b"A")  # Head & Text Tail of a Two-Byte Esc Sequence
-        self._try_closed_(b"\x1B", b"\t")  # Head & Control Tail of a Two-Byte Esc Sequence
-        self._try_closed_(b"\x1BO", b"P")  # Head & Text Tail of a Three-Byte SS3 Sequence
-        self._try_closed_(b"\x1B[", b"3;5", b"H")  # CSI Head with Next and Tail
-        self._try_closed_(b"\x1B[", b"6", b" q")  # CSI Head with Neck and Back & Tail
+        self._try_closed_(b"\x1b\x1b[", b"3;5", b"~")  # CSI Head with Neck and Tail, no Back
+        self._try_closed_(b"\xc0")  # Head only, of 8-bit Control Byte
+        self._try_closed_(b"\xff")  # Head only, of 8-bit Control Byte
+        self._try_closed_(b"\xc2\xad")  # Head only, of 2 Byte UTF-8 of U+00AD Soft-Hyphen Control
+        self._try_closed_(b"\x1b", b"A")  # Head & Text Tail of a Two-Byte Esc Sequence
+        self._try_closed_(b"\x1b", b"\t")  # Head & Control Tail of a Two-Byte Esc Sequence
+        self._try_closed_(b"\x1bO", b"P")  # Head & Text Tail of a Three-Byte SS3 Sequence
+        self._try_closed_(b"\x1b[", b"3;5", b"H")  # CSI Head with Next and Tail
+        self._try_closed_(b"\x1b[", b"6", b" q")  # CSI Head with Neck and Back & Tail
 
         # FIXME: test each Control Flow Return? test each Control Flow Branch?
 
@@ -698,7 +698,7 @@ class TerminalBytePacket:
         stash = self.stash
 
         head_plus = head + stash  # if closing a 6-Byte Mouse-Report that decodes to < 6 Chars
-        if head_plus.startswith(b"\x1B[M"):
+        if head_plus.startswith(b"\x1b[M"):
             try:
                 decode = head_plus.decode()
                 if len(decode) < 6:
@@ -804,7 +804,7 @@ class TerminalBytePacket:
     def any_decodes_startswith(self, bytes_) -> str:
         """Return Say if these Bytes start 1 or more UTF-8 Encodings of Chars"""
 
-        suffixes = (b"\x80", b"\xBF", b"\x80\x80", b"\xBF\xBF", b"\x80\x80\x80", b"\xBF\xBF\xBF")
+        suffixes = (b"\x80", b"\xbf", b"\x80\x80", b"\xbf\xbf", b"\x80\x80\x80", b"\xbf\xbf\xbf")
 
         for suffix in suffixes:
             suffixed = bytes_ + suffix
@@ -831,12 +831,12 @@ class TerminalBytePacket:
 
         # Do take the 3rd Byte of this kind of CSI here, and don't take the first 2 Bytes here
 
-        if (head == b"\x1B[") and (not neck) and (not back):
+        if (head == b"\x1b[") and (not neck) and (not back):
             if laters == b"M":
                 head.extend(laters)
                 return b""  # takes 3rd Byte of CSI Mouse Report here
 
-        if not head.startswith(b"\x1B[M"):  # ⎋[M Mouse Report
+        if not head.startswith(b"\x1b[M"):  # ⎋[M Mouse Report
             return laters  # doesn't take the first 2 Bytes of Mouse Report here
 
         # Take 3..15 Bytes into a 3..6 Char Mouse Report
@@ -878,7 +878,7 @@ class TerminalBytePacket:
 
         # Look only outside of Mouse Reports
 
-        assert not head.startswith(b"\x1B[M"), (head,)  # Mouse Report
+        assert not head.startswith(b"\x1b[M"), (head,)  # Mouse Report
 
         # Look only at Undecodable, Unprintable, or Escaped Bytes
 
@@ -894,7 +894,7 @@ class TerminalBytePacket:
         # ⎋ CSI  # ⎋ Esc CSI
 
         head_plus = head + laters
-        if head_plus in (b"\x1B", b"\x1B\x1B", b"\x1B\x1BO", b"\x1B\x1B[", b"\x1BO", b"\x1B["):
+        if head_plus in (b"\x1b", b"\x1b\x1b", b"\x1b\x1bO", b"\x1b\x1b[", b"\x1bO", b"\x1b["):
             head.extend(laters)
             return b""  # takes first 1 or 2 Bytes into Esc Sequences
 
@@ -911,7 +911,7 @@ class TerminalBytePacket:
         # Take & close 1 Escaped Printable Decoded Char, as Tail
         # ⎋ Esc  # ⎋⎋ Esc Esc  # ⎋⎋O Esc SS3  # ⎋O SS3
 
-        if head in (b"\x1B", b"\x1B\x1B", b"\x1B\x1BO", b"\x1BO"):
+        if head in (b"\x1b", b"\x1b\x1b", b"\x1b\x1bO", b"\x1bO"):
             if printable:
                 tail.extend(laters)
                 self.closed = True
@@ -957,9 +957,9 @@ class TerminalBytePacket:
 
         # Look only at unclosed CSI or Esc CSI Sequence
 
-        assert CSI == "\x1B" "[", (CSI,)  # ⎋[
-        if not head.startswith(b"\x1B\x1B["):  # ⎋⎋[ Esc CSI
-            assert head.startswith(b"\x1B["), (head,)  # ⎋[ CSI
+        assert CSI == "\x1b" "[", (CSI,)  # ⎋[
+        if not head.startswith(b"\x1b\x1b["):  # ⎋⎋[ Esc CSI
+            assert head.startswith(b"\x1b["), (head,)  # ⎋[ CSI
 
         assert not tail, (tail,)
         assert not closed, (closed,)
@@ -1007,7 +1007,7 @@ class TerminalBytePacket:
 def yolo2() -> None:
     """Loop Keyboard back to Screen"""
 
-    assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
+    assert DL_Y == "\x1b" "[" "{}M"  # CSI 04/13 Delete Line
 
     with BytesTerminal() as bt:
         print("Loop Keyboard back to Screen", end="\r\n")
@@ -1021,14 +1021,14 @@ def yolo2() -> None:
             data = bytes_
             os.write(fd, data)
 
-            if bytes_ == b"\x1C":  # ⌃\
+            if bytes_ == b"\x1c":  # ⌃\
                 return
 
 
 def yolo1() -> None:
     """Trace Keyboard"""
 
-    assert DL_Y == "\x1B" "[" "{}M"  # CSI 04/13 Delete Line
+    assert DL_Y == "\x1b" "[" "{}M"  # CSI 04/13 Delete Line
 
     with BytesTerminal() as bt:
         print("Tracing Keyboard ...", end="\r\n")
@@ -1044,7 +1044,7 @@ def yolo1() -> None:
                     print(laters, end="\r\n")
 
                 bytes_ = tbp.to_bytes() + laters
-                if bytes_ == b"\x1C":  # ⌃\
+                if bytes_ == b"\x1c":  # ⌃\
                     return
 
                 if bt.kbhit(timeout=0):  # sometimes catches Release or Press after Press
@@ -1088,7 +1088,7 @@ def yolo_read_tbp_laters(bt, t) -> tuple[TerminalBytePacket, bytes]:
                 tbp.close()
                 break
 
-        if tbp.head == b"\x1B[M":  # takes ⎋[M DL_Y quickly, when not ⎋[M... Mouse Report
+        if tbp.head == b"\x1b[M":  # takes ⎋[M DL_Y quickly, when not ⎋[M... Mouse Report
             tbp.close()
             break
 
@@ -1337,64 +1337,64 @@ KCAP_SEP = " "  # solves '⇧Tab' vs '⇧T a b', '⎋⇧FnX' vs '⎋⇧Fn X', et
 KCAP_BY_KCHARS = {
     "\x00": "⌃Spacebar",  # ⌃@  # ⌃⇧2
     "\x09": "Tab",  # '\t' ⇥
-    "\x0D": "Return",  # '\r' ⏎
-    "\x1B": "⎋",  # Esc  # Meta  # includes ⎋Spacebar ⎋Tab ⎋Return ⎋Delete without ⌥
-    "\x1B" "\x01": "⌥⇧Fn←",  # ⎋⇧Fn←   # coded with ⌃A
-    "\x1B" "\x03": "⎋FnReturn",  # coded with ⌃C  # not ⌥FnReturn
-    "\x1B" "\x04": "⌥⇧Fn→",  # ⎋⇧Fn→   # coded with ⌃D
-    "\x1B" "\x08": "⎋⌃Delete",  # ⎋⌃Delete  # coded with ⌃H  # aka \b
-    "\x1B" "\x0B": "⌥⇧Fn↑",  # ⎋⇧Fn↑   # coded with ⌃K
-    "\x1B" "\x0C": "⌥⇧Fn↓",  # ⎋⇧Fn↓  # coded with ⌃L  # aka \f
-    "\x1B" "\x10": "⎋⇧Fn",  # ⎋ Meta ⇧ Shift of Fn F1..F12  # not ⌥⇧Fn  # coded with ⌃P
-    "\x1B" "\x1B": "⎋⎋",  # Meta Esc  # not ⌥⎋
-    "\x1B" "\x1B" "OA": "⌃⌥↑",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧A  # gCloud Shell
-    "\x1B" "\x1B" "OB": "⌃⌥↓",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧B  # gCloud Shell
-    "\x1B" "\x1B" "OC": "⌃⌥→",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧C  # gCloud Shell
-    "\x1B" "\x1B" "OD": "⌃⌥←",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧D  # gCloud Shell
-    "\x1B" "\x1B" "[" "3;5~": "⎋⌃FnDelete",  # ⌥⌃FnDelete  # LS1R
-    "\x1B" "\x1B" "[" "A": "⎋↑",  # CSI 04/01 Cursor Up (CUU)  # not ⌥↑
-    "\x1B" "\x1B" "[" "B": "⎋↓",  # CSI 04/02 Cursor Down (CUD)  # not ⌥↓
-    "\x1B" "\x1B" "[" "Z": "⎋⇧Tab",  # ⇤  # CSI 05/10 CBT  # not ⌥⇧Tab
-    "\x1B" "\x28": "⎋FnDelete",  # not ⌥FnDelete
-    "\x1B" "OP": "F1",  # ESC 04/15 Single-Shift Three (SS3)  # SS3 ⇧P
-    "\x1B" "OQ": "F2",  # SS3 ⇧Q
-    "\x1B" "OR": "F3",  # SS3 ⇧R
-    "\x1B" "OS": "F4",  # SS3 ⇧S
-    "\x1B" "[" "15~": "F5",  # CSI 07/14 Locking-Shift One Right (LS1R)
-    "\x1B" "[" "17~": "F6",  # ⌥F1  # ⎋F1  # LS1R
-    "\x1B" "[" "18~": "F7",  # ⌥F2  # ⎋F2  # LS1R
-    "\x1B" "[" "19~": "F8",  # ⌥F3  # ⎋F3  # LS1R
-    "\x1B" "[" "1;2C": "⇧→",  # CSI 04/03 Cursor [Forward] Right (CUF_YX) Y=1 X=2
-    "\x1B" "[" "1;2D": "⇧←",  # CSI 04/04 Cursor [Back] Left (CUB_YX) Y=1 X=2
-    "\x1B" "[" "20~": "F9",  # ⌥F4  # ⎋F4  # LS1R
-    "\x1B" "[" "21~": "F10",  # ⌥F5  # ⎋F5  # LS1R
-    "\x1B" "[" "23~": "F11",  # ⌥F6  # ⎋F6  # LS1R  # macOS takes F11
-    "\x1B" "[" "24~": "F12",  # ⌥F7  # ⎋F7  # LS1R
-    "\x1B" "[" "25~": "⇧F5",  # ⌥F8  # ⎋F8  # LS1R
-    "\x1B" "[" "26~": "⇧F6",  # ⌥F9  # ⎋F9  # LS1R
-    "\x1B" "[" "28~": "⇧F7",  # ⌥F10  # ⎋F10  # LS1R
-    "\x1B" "[" "29~": "⇧F8",  # ⌥F11  # ⎋F11  # LS1R
-    "\x1B" "[" "31~": "⇧F9",  # ⌥F12  # ⎋F12  # LS1R
-    "\x1B" "[" "32~": "⇧F10",  # LS1R
-    "\x1B" "[" "33~": "⇧F11",  # LS1R
-    "\x1B" "[" "34~": "⇧F12",  # LS1R
-    "\x1B" "[" "3;2~": "⇧FnDelete",  # LS1R
-    "\x1B" "[" "3;5~": "⌃FnDelete",  # LS1R
-    "\x1B" "[" "3~": "FnDelete",  # LS1R
-    "\x1B" "[" "5~": "⇧Fn↑",
-    "\x1B" "[" "6~": "⇧Fn↓",
-    "\x1B" "[" "A": "↑",  # CSI 04/01 Cursor Up (CUU)
-    "\x1B" "[" "B": "↓",  # CSI 04/02 Cursor Down (CUD)
-    "\x1B" "[" "C": "→",  # CSI 04/03 Cursor Right [Forward] (CUF)
-    "\x1B" "[" "D": "←",  # CSI 04/04 Cursor [Back] Left (CUB)
-    "\x1B" "[" "F": "⇧Fn→",  # CSI 04/06 Cursor Preceding Line (CPL)
-    "\x1B" "[" "H": "⇧Fn←",  # CSI 04/08 Cursor Position (CUP)
-    "\x1B" "[" "Z": "⇧Tab",  # ⇤  # CSI 05/10 Cursor Backward Tabulation (CBT)
-    "\x1B" "b": "⌥←",  # ⎋B  # ⎋←  # Emacs M-b Backword-Word
-    "\x1B" "f": "⌥→",  # ⎋F  # ⎋→  # Emacs M-f Forward-Word
+    "\x0d": "Return",  # '\r' ⏎
+    "\x1b": "⎋",  # Esc  # Meta  # includes ⎋Spacebar ⎋Tab ⎋Return ⎋Delete without ⌥
+    "\x1b" "\x01": "⌥⇧Fn←",  # ⎋⇧Fn←   # coded with ⌃A
+    "\x1b" "\x03": "⎋FnReturn",  # coded with ⌃C  # not ⌥FnReturn
+    "\x1b" "\x04": "⌥⇧Fn→",  # ⎋⇧Fn→   # coded with ⌃D
+    "\x1b" "\x08": "⎋⌃Delete",  # ⎋⌃Delete  # coded with ⌃H  # aka \b
+    "\x1b" "\x0b": "⌥⇧Fn↑",  # ⎋⇧Fn↑   # coded with ⌃K
+    "\x1b" "\x0c": "⌥⇧Fn↓",  # ⎋⇧Fn↓  # coded with ⌃L  # aka \f
+    "\x1b" "\x10": "⎋⇧Fn",  # ⎋ Meta ⇧ Shift of Fn F1..F12  # not ⌥⇧Fn  # coded with ⌃P
+    "\x1b" "\x1b": "⎋⎋",  # Meta Esc  # not ⌥⎋
+    "\x1b" "\x1b" "OA": "⌃⌥↑",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧A  # gCloud Shell
+    "\x1b" "\x1b" "OB": "⌃⌥↓",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧B  # gCloud Shell
+    "\x1b" "\x1b" "OC": "⌃⌥→",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧C  # gCloud Shell
+    "\x1b" "\x1b" "OD": "⌃⌥←",  # ESC 04/15 Single-Shift Three (SS3)  # ESC SS3 ⇧D  # gCloud Shell
+    "\x1b" "\x1b" "[" "3;5~": "⎋⌃FnDelete",  # ⌥⌃FnDelete  # LS1R
+    "\x1b" "\x1b" "[" "A": "⎋↑",  # CSI 04/01 Cursor Up (CUU)  # not ⌥↑
+    "\x1b" "\x1b" "[" "B": "⎋↓",  # CSI 04/02 Cursor Down (CUD)  # not ⌥↓
+    "\x1b" "\x1b" "[" "Z": "⎋⇧Tab",  # ⇤  # CSI 05/10 CBT  # not ⌥⇧Tab
+    "\x1b" "\x28": "⎋FnDelete",  # not ⌥FnDelete
+    "\x1b" "OP": "F1",  # ESC 04/15 Single-Shift Three (SS3)  # SS3 ⇧P
+    "\x1b" "OQ": "F2",  # SS3 ⇧Q
+    "\x1b" "OR": "F3",  # SS3 ⇧R
+    "\x1b" "OS": "F4",  # SS3 ⇧S
+    "\x1b" "[" "15~": "F5",  # CSI 07/14 Locking-Shift One Right (LS1R)
+    "\x1b" "[" "17~": "F6",  # ⌥F1  # ⎋F1  # LS1R
+    "\x1b" "[" "18~": "F7",  # ⌥F2  # ⎋F2  # LS1R
+    "\x1b" "[" "19~": "F8",  # ⌥F3  # ⎋F3  # LS1R
+    "\x1b" "[" "1;2C": "⇧→",  # CSI 04/03 Cursor [Forward] Right (CUF_YX) Y=1 X=2
+    "\x1b" "[" "1;2D": "⇧←",  # CSI 04/04 Cursor [Back] Left (CUB_YX) Y=1 X=2
+    "\x1b" "[" "20~": "F9",  # ⌥F4  # ⎋F4  # LS1R
+    "\x1b" "[" "21~": "F10",  # ⌥F5  # ⎋F5  # LS1R
+    "\x1b" "[" "23~": "F11",  # ⌥F6  # ⎋F6  # LS1R  # macOS takes F11
+    "\x1b" "[" "24~": "F12",  # ⌥F7  # ⎋F7  # LS1R
+    "\x1b" "[" "25~": "⇧F5",  # ⌥F8  # ⎋F8  # LS1R
+    "\x1b" "[" "26~": "⇧F6",  # ⌥F9  # ⎋F9  # LS1R
+    "\x1b" "[" "28~": "⇧F7",  # ⌥F10  # ⎋F10  # LS1R
+    "\x1b" "[" "29~": "⇧F8",  # ⌥F11  # ⎋F11  # LS1R
+    "\x1b" "[" "31~": "⇧F9",  # ⌥F12  # ⎋F12  # LS1R
+    "\x1b" "[" "32~": "⇧F10",  # LS1R
+    "\x1b" "[" "33~": "⇧F11",  # LS1R
+    "\x1b" "[" "34~": "⇧F12",  # LS1R
+    "\x1b" "[" "3;2~": "⇧FnDelete",  # LS1R
+    "\x1b" "[" "3;5~": "⌃FnDelete",  # LS1R
+    "\x1b" "[" "3~": "FnDelete",  # LS1R
+    "\x1b" "[" "5~": "⇧Fn↑",
+    "\x1b" "[" "6~": "⇧Fn↓",
+    "\x1b" "[" "A": "↑",  # CSI 04/01 Cursor Up (CUU)
+    "\x1b" "[" "B": "↓",  # CSI 04/02 Cursor Down (CUD)
+    "\x1b" "[" "C": "→",  # CSI 04/03 Cursor Right [Forward] (CUF)
+    "\x1b" "[" "D": "←",  # CSI 04/04 Cursor [Back] Left (CUB)
+    "\x1b" "[" "F": "⇧Fn→",  # CSI 04/06 Cursor Preceding Line (CPL)
+    "\x1b" "[" "H": "⇧Fn←",  # CSI 04/08 Cursor Position (CUP)
+    "\x1b" "[" "Z": "⇧Tab",  # ⇤  # CSI 05/10 Cursor Backward Tabulation (CBT)
+    "\x1b" "b": "⌥←",  # ⎋B  # ⎋←  # Emacs M-b Backword-Word
+    "\x1b" "f": "⌥→",  # ⎋F  # ⎋→  # Emacs M-f Forward-Word
     "\x20": "Spacebar",  # ' ' ␠ ␣ ␢
-    "\x7F": "Delete",  # ␡ ⌫ ⌦
-    "\xA0": "⌥Spacebar",  # '\N{No-Break Space}'
+    "\x7f": "Delete",  # ␡ ⌫ ⌦
+    "\xa0": "⌥Spacebar",  # '\N{No-Break Space}'
 }
 
 assert list(KCAP_BY_KCHARS.keys()) == sorted(KCAP_BY_KCHARS.keys())
@@ -1476,7 +1476,7 @@ OPTION_KSTR_BY_1_KCHAR = {
 
 OPTION_KTEXT = """
      ⁄Æ‹›ﬁ‡æ·‚°±≤–≥÷º¡™£¢∞§¶•ªÚ…¯≠˘¿
-    €ÅıÇÎ Ï˝Ó Ô\uF8FFÒÂ Ø∏Œ‰Íˇ ◊„˛Á¸“«‘ﬂ—
+    €ÅıÇÎ Ï˝Ó Ô\uf8ffÒÂ Ø∏Œ‰Íˇ ◊„˛Á¸“«‘ﬂ—
      å∫ç∂ ƒ©˙ ∆˚¬µ øπœ®ß† √∑≈¥Ω”»’
 """
 
@@ -1553,8 +1553,8 @@ class StrTerminal:
         bt = self.bytes_terminal
         kchords = self.kchords
 
-        ctext = "\x1B[m"  # 1m Sgr Plain
-        ctext += "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+        ctext = "\x1b[m"  # 1m Sgr Plain
+        ctext += "\x1b[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
         self.schars_write(ctext)  # todo: restore only after disturbing
 
         if kchords:
@@ -1746,14 +1746,14 @@ class StrTerminal:
         bt = self.bytes_terminal
         kchords = self.kchords
 
-        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
+        assert DSR_6 == "\x1b" "[" "6n"  # CSI 06/14 DSR  # Ps 6 for CPR
 
         # Settle for a stale Sample,
         # else call for a fresh Sample and block till it comes
 
         if bt.sbytes_list[-1:] != [DSR_6.encode()]:  # todo: looser bt/st coupling
 
-            self.schars_write("\x1B" "[" "6n")
+            self.schars_write("\x1b" "[" "6n")
 
             while True:
                 kbytes = bt.kbytes_pull(timeout=timeout)  # may contain b' ' near to KCAP_SEP
@@ -1805,16 +1805,16 @@ class StrTerminal:
 
         assert CSI_PIF_REGEX == r"(\x1B\[)" r"([0-?]*)" r"([ -/]*)" r"(.)"  # 4 Kinds of Bytes
 
-        assert DECIC_X == "\x1B" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
-        assert DECDC_X == "\x1B" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
+        assert DECIC_X == "\x1b" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
+        assert DECDC_X == "\x1b" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
 
-        assert DECSCUSR == "\x1B" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
-        assert DECSCUSR_SKID == "\x1B" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
-        assert DECSCUSR_BAR == "\x1B" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
+        assert DECSCUSR == "\x1b" "[" " q"  # CSI 02/00 07/01  # '' No-Style Cursor
+        assert DECSCUSR_SKID == "\x1b" "[" "4 q"  # CSI 02/00 07/01  # 4 Skid Cursor
+        assert DECSCUSR_BAR == "\x1b" "[" "6 q"  # CSI 02/00 07/01  # 6 Bar Cursor
 
-        assert DSR_5 == "\x1B" "[" "5n"  # CSI 06/14 [Request] Device Status Report  # Ps 5 for DSR_0
-        assert DSR_6 == "\x1B" "[" "6n"  # CSI 06/14 [Request] Device Status Report  # Ps 6 for CPR
-        assert XTWINOPS_18 == "\x1B" "[" "18t"  # CSI 07/04 [Request]   # Ps 18 for XTWINOPS_8
+        assert DSR_5 == "\x1b" "[" "5n"  # CSI 06/14 [Request] Device Status Report  # Ps 5 for DSR_0
+        assert DSR_6 == "\x1b" "[" "6n"  # CSI 06/14 [Request] Device Status Report  # Ps 6 for CPR
+        assert XTWINOPS_18 == "\x1b" "[" "18t"  # CSI 07/04 [Request]   # Ps 18 for XTWINOPS_8
 
         assert MACOS_TERMINAL_CSI_SIMPLE_FINAL_BYTES == "@ABCDEGHIJKLMPSTZdhlm"
 
@@ -1837,7 +1837,7 @@ class StrTerminal:
 
         # Accept the ⎋7 cursor-checkpoint, and ⎋8 cursor-revert
 
-        if schars in ("\x1B" "7", "\x1B" "8"):
+        if schars in ("\x1b" "7", "\x1b" "8"):
             return True
 
         # Accept the CSI Escape Sequences that a macOS Terminal accepts
@@ -1893,35 +1893,35 @@ class StrTerminal:
     def columns_delete_n(self, n) -> None:  # a la VT420 DECDC ⎋['~
         """Delete N Columns (but snap the Cursor back to where it started)"""
 
-        assert DCH_X == "\x1B" "[" "{}P"  # CSI 05/00 Delete Character
-        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+        assert DCH_X == "\x1b" "[" "{}P"  # CSI 05/00 Delete Character
+        assert VPA_Y == "\x1b" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
         (y_count, x_count) = self.y_count_x_count_read(timeout=0)
         (row_y, column_x) = self.row_y_column_x_read(timeout=0)
 
         for y in range(1, y_count + 1):
-            ctext = "\x1B" "[" f"{y}d"
-            ctext += "\x1B" "[" f"{n}P"
+            ctext = "\x1b" "[" f"{y}d"
+            ctext += "\x1b" "[" f"{n}P"
             self.schars_write(ctext)  # for .columns_delete_n
 
-        ctext = "\x1B" "[" f"{row_y}d"
+        ctext = "\x1b" "[" f"{row_y}d"
         self.schars_write(ctext)  # for .columns_delete_n
 
     def columns_insert_n(self, n) -> None:  # a la VT420 DECIC ⎋['}
         """Insert N Columns (but snap the Cursor back to where it started)"""
 
-        assert ICH_X == "\x1B" "[" "{}@"  # CSI 04/00 Insert Character
-        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
+        assert ICH_X == "\x1b" "[" "{}@"  # CSI 04/00 Insert Character
+        assert VPA_Y == "\x1b" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
         (y_count, x_count) = self.y_count_x_count_read(timeout=0)
         (row_y, column_x) = self.row_y_column_x_read(timeout=0)
 
         for y in range(1, y_count + 1):
-            ctext = "\x1B" "[" f"{y}d"
-            ctext += "\x1B" "[" f"{n}@"
+            ctext = "\x1b" "[" f"{y}d"
+            ctext += "\x1b" "[" f"{n}@"
             self.schars_write(ctext)  # for .columns_insert_n
 
-        ctext = "\x1B" "[" f"{row_y}d"
+        ctext = "\x1b" "[" f"{row_y}d"
         self.schars_write(ctext)  # for .columns_insert_n
 
     #
@@ -1934,9 +1934,9 @@ class StrTerminal:
         assert row_y >= 1, (row_y,)  # rows counted down from Row 1 at Top
         assert column_x >= 1, (column_x,)  # columns counted up from Column 1 at Left
 
-        assert CUP_Y_X == "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position (CUP)
+        assert CUP_Y_X == "\x1b" "[" "{};{}H"  # CSI 04/08 Cursor Position (CUP)
 
-        self.schars_write("\x1B" "[" f"{row_y};{column_x}H")
+        self.schars_write("\x1b" "[" f"{row_y};{column_x}H")
 
         self.row_y = row_y
         self.column_x = column_x
@@ -1960,12 +1960,12 @@ class StrTerminal:
         bt = self.bytes_terminal
         writelog = self.writelog
 
-        assert ED_P == "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 2 Rows, etc
+        assert ED_P == "\x1b" "[" "{}J"  # CSI 04/10 Erase in Display  # 2 Rows, etc
 
         for split in self.schars_split(schars):
             sbytes = split.encode()
 
-            if split == "\x1B" "[2J":
+            if split == "\x1b" "[2J":
                 bt.sbytes_write(sbytes)
                 writelog.clear()
             elif not split.isprintable():
@@ -2015,15 +2015,15 @@ class StrTerminal:
 
         # Emulate 2 Control Chars
 
-        assert DECSC == "\x1B" "7"  # ESC 03/07 Save Cursor [Checkpoint] (DECSC)
-        assert DECRC == "\x1B" "8"  # ESC 03/08 Restore Cursor [Revert] (DECRC)
+        assert DECSC == "\x1b" "7"  # ESC 03/07 Save Cursor [Checkpoint] (DECSC)
+        assert DECRC == "\x1b" "8"  # ESC 03/08 Restore Cursor [Revert] (DECRC)
 
-        if schars == "\x1B" "7":
+        if schars == "\x1b" "7":
             self.revert_y = self.row_y
             self.revert_x = self.column_x
             return
 
-        if schars == "\x1B" "8":
+        if schars == "\x1b" "8":
             self.row_y = self.revert_y if (self.revert_y >= 1) else 1
             self.column_x = self.revert_x if (self.revert_x >= 1) else 1
             return
@@ -2054,12 +2054,12 @@ class StrTerminal:
         py = py if py else "1"
         px = px if px else "1"
 
-        assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-        assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
-        assert CUF_X == "\x1B" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
-        assert CUB_X == "\x1B" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
+        assert CUU_Y == "\x1b" "[" "{}A"  # CSI 04/01 Cursor Up
+        assert CUD_Y == "\x1b" "[" "{}B"  # CSI 04/02 Cursor Down
+        assert CUF_X == "\x1b" "[" "{}C"  # CSI 04/03 Cursor [Forward] Right
+        assert CUB_X == "\x1b" "[" "{}D"  # CSI 04/04 Cursor [Back] Left
 
-        assert CNL_Y == "\x1B" "[" "{}E"  # CSI 04/05 Cursor Next Line (CNL)
+        assert CNL_Y == "\x1b" "[" "{}E"  # CSI 04/05 Cursor Next Line (CNL)
 
         if csi and (f == "A"):
             self.row_y -= int(p)
@@ -2074,9 +2074,9 @@ class StrTerminal:
             self.row_y += int(p)
             self.column_x = 1
 
-        assert CHA_Y == "\x1B" "[" "{}G"  # CSI 04/07 Cursor Character Absolute
-        assert VPA_Y == "\x1B" "[" "{}d"  # CSI 06/04 Line Position Absolute
-        assert CUP_Y_X == "\x1B" "[" "{};{}H"  # CSI 04/08 Cursor Position
+        assert CHA_Y == "\x1b" "[" "{}G"  # CSI 04/07 Cursor Character Absolute
+        assert VPA_Y == "\x1b" "[" "{}d"  # CSI 06/04 Line Position Absolute
+        assert CUP_Y_X == "\x1b" "[" "{};{}H"  # CSI 04/08 Cursor Position
 
         if csi and (f == "G"):
             self.column_x = int(p)
@@ -2086,8 +2086,8 @@ class StrTerminal:
             self.row_y = int(py)
             self.column_x = int(px)
 
-        assert CHT_X == "\x1B" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation
-        assert CBT_X == "\x1B" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
+        assert CHT_X == "\x1b" "[" "{}I"  # CSI 04/09 Cursor Forward [Horizontal] Tabulation
+        assert CBT_X == "\x1b" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
 
         if csi and (f == "I"):
             tab = 1 + 8 * ((self.column_x - 1) // 8)
@@ -2101,9 +2101,9 @@ class StrTerminal:
     def schars_split(self, schars) -> list[str]:
         """Split Chars into Text and Controls"""  # todo: should match BytesTerminal.kbytes_read
 
-        assert ESC == "\x1B"
-        assert CSI == "\x1B" "["
-        assert SS3 == "\x1B" "O"
+        assert ESC == "\x1b"
+        assert CSI == "\x1b" "["
+        assert SS3 == "\x1b" "O"
 
         splits = list()
 
@@ -2129,7 +2129,7 @@ class StrTerminal:
 
             # Split out 1 Control Char, and start over
 
-            if not split.startswith("\x1B"):
+            if not split.startswith("\x1b"):
                 splits.append(split)  # 1 Control Char  # ['\r', '\n']
                 split = sch
                 continue
@@ -2140,39 +2140,39 @@ class StrTerminal:
 
             if len(split) == 1:
                 split += sch
-                if split_plus not in ("\x1B\x1B", "\x1B[", "\x1BO"):  # ESC ESC, CSI, SS3
+                if split_plus not in ("\x1b\x1b", "\x1b[", "\x1bO"):  # ESC ESC, CSI, SS3
                     splits.append(split)  # 1 Esc Pair
                     split = ""
                 continue
 
             # Split out 1 SS3 Sequence, or begun plus a Byte
 
-            if split == "\x1B\x1B":
+            if split == "\x1b\x1b":
                 split += sch
-                if split_plus in ("\x1B\x1BO", "\x1B\x1B["):  # ESC SS3, ESC CSI
+                if split_plus in ("\x1b\x1bO", "\x1b\x1b["):  # ESC SS3, ESC CSI
                     continue
 
                 splits.append(split)
                 split = ""
                 continue
 
-            if split in ("\x1BO", "\x1B\x1BO"):  # SS3, ESC SS3
+            if split in ("\x1bO", "\x1b\x1bO"):  # SS3, ESC SS3
                 split += sch
 
                 splits.append(split)
                 split = ""
                 continue
 
-            assert split.startswith("\x1B[") or split.startswith("\x1B\x1B["), (split,)  # CSI
+            assert split.startswith("\x1b[") or split.startswith("\x1b\x1b["), (split,)  # CSI
 
             # Split out 1 CSI Sequence, or begun plus a Byte
 
-            prefix = "\x1B"
-            if split.startswith("\x1B\x1B"):
-                prefix = "\x1B\x1B"
+            prefix = "\x1b"
+            if split.startswith("\x1b\x1b"):
+                prefix = "\x1b\x1b"
 
             csi_tail = split.removeprefix(prefix + "[")
-            csi = "\x1B[" + csi_tail + sch
+            csi = "\x1b[" + csi_tail + sch
             csi_plus = csi + "."
 
             m0 = re.fullmatch(CSI_PIF_REGEX, string=csi_plus)
@@ -2273,23 +2273,23 @@ class StrTerminal:
         if kstr[:1] == "⎋":  # '⎋7'  # '⎋8'
             if len(kstr) == 2:
                 if kstr[-1].isprintable():
-                    kbytes = b"\x1B" + kstr[-1].encode()
+                    kbytes = b"\x1b" + kstr[-1].encode()
                     return kbytes
 
         if kstr.startswith("⎋O"):  # '⎋OQ'  # '⎋OR'
             if len(kstr) == 3:
                 if kstr[-1].isprintable():
-                    kbytes = b"\x1B" + b"O" + kstr[-1].encode()
+                    kbytes = b"\x1b" + b"O" + kstr[-1].encode()
                     return kbytes
 
         if kstr.startswith("⎋⎋O"):  # '⎋⎋OQ'  # '⎋⎋OR'
             if len(kstr) == 4:
                 if kstr[-1].isprintable():
-                    kbytes = b"\x1B\x1B" + b"O" + kstr[-1].encode()
+                    kbytes = b"\x1b\x1b" + b"O" + kstr[-1].encode()
                     return kbytes
 
         if re.fullmatch(r"(⎋\[)" r"([0-?]*)" r"([ -/]*)" r"(.)", string=kstr):  # '⎋[2;2H'
-            kbytes = b"\x1B" + kstr[1:].encode()
+            kbytes = b"\x1b" + kstr[1:].encode()
             return kbytes
 
         raise NotImplementedError(kstr)
@@ -2389,15 +2389,15 @@ class GlassTeletype:
             self.schars_write(" ")
 
         elif kstr == "⇧Tab":
-            self.schars_write("\x1B[Z")  # CSI 05/10 Cursor Backward Tabulation (CBT)
+            self.schars_write("\x1b[Z")  # CSI 05/10 Cursor Backward Tabulation (CBT)
         elif kstr == "←":
-            self.schars_write("\x1B[D")  # CSI 04/04 Cursor [Backward] Left
+            self.schars_write("\x1b[D")  # CSI 04/04 Cursor [Backward] Left
         elif kstr == "↑":
-            self.schars_write("\x1B[A")  # CSI 04/01 Cursor [Up] Previous
+            self.schars_write("\x1b[A")  # CSI 04/01 Cursor [Up] Previous
         elif kstr == "→":
-            self.schars_write("\x1B[C")  # CSI 04/03 Cursor [Forward] Right
+            self.schars_write("\x1b[C")  # CSI 04/03 Cursor [Forward] Right
         elif kstr == "↓":
-            self.schars_write("\x1B[B")  # CSI 04/02 Cursor [Down] Next
+            self.schars_write("\x1b[B")  # CSI 04/02 Cursor [Down] Next
 
         else:
             self.kchord_write_kbytes_else_print_kstr(kchord)
@@ -2442,8 +2442,8 @@ class GlassTeletype:
 
         schars = kbytes.decode()  # may raise UnicodeDecodeError
 
-        assert DECIC_X == "\x1B" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
-        assert DECDC_X == "\x1B" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
+        assert DECIC_X == "\x1b" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
+        assert DECDC_X == "\x1b" "[" "{}'~"  # CSI 02/07 07/14 DECDC_X
 
         if not st.schars_to_writable(schars):
             st.schars_print(kstr, end=" ")
@@ -2479,54 +2479,54 @@ class GlassTeletype:
     def do_char_delete_left(self, kchord) -> None:  # ⌃H  # Delete
         """Delete 1 Character at the Left of the Turtle"""
 
-        self.schars_write("\b\x1B[P")  # CSI 05/00 Delete Character
+        self.schars_write("\b\x1b[P")  # CSI 05/00 Delete Character
 
         # todo: join lines from left edge
 
     def do_char_delete_right(self, kchord) -> None:  # ⌃D
         """Delete 1 Character at Right (like a Windows Delete)"""
 
-        self.schars_write("\x1B[P")  # CSI 05/00 Delete Character
+        self.schars_write("\x1b[P")  # CSI 05/00 Delete Character
 
         # todo: join lines from right edge
 
     def do_column_go_left(self, kchord) -> None:  # ⌃B
         """Go to the Character at Left of the Turtle"""
 
-        self.schars_write("\x1B[D")  # CSI 04/04 Cursor [Backward] Left  # could be "\b"
+        self.schars_write("\x1b[D")  # CSI 04/04 Cursor [Backward] Left  # could be "\b"
 
         # todo: wrap back across left edge
 
     def do_column_go_leftmost(self, kchord) -> None:  # ⌃A
         """Go to first Character of Row"""
 
-        self.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
+        self.schars_write("\x1b[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
 
     def do_column_go_right(self, kchord) -> None:  # ⌃F
         """Go to the next Character of Row"""
 
-        self.schars_write("\x1B[C")  # CSI 04/03 Cursor [Forward] Right
+        self.schars_write("\x1b[C")  # CSI 04/03 Cursor [Forward] Right
 
         # todo: wrap forward across right edge
 
     def do_row_go_down(self, kchord) -> None:  # ⌃N
         """Move as if you pressed the ↓ Down Arrow"""
 
-        self.schars_write("\x1B[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
+        self.schars_write("\x1b[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
 
     def do_row_go_up(self, kchord) -> None:  # ⌃P
         """Move as if you pressed the ↑ Up Arrow"""
 
-        self.schars_write("\x1B[A")  # CSI 04/01 Cursor [Up] Previous
+        self.schars_write("\x1b[A")  # CSI 04/01 Cursor [Up] Previous
 
     def do_row_insert_below(self, kchord) -> None:  # ⌃O
         """Insert a Row below this Row"""
 
         (row_y, column_x) = self.os_terminal_y_row_x_column()
         if column_x != 1:
-            self.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
+            self.schars_write("\x1b[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
         else:
-            self.schars_write("\x1B[L")  # CSI 04/12 Insert Line
+            self.schars_write("\x1b[L")  # CSI 04/12 Insert Line
 
         # todo: split differently at left edge, at right edge, at middle
 
@@ -2535,10 +2535,10 @@ class GlassTeletype:
 
         (row_y, column_x) = self.os_terminal_y_row_x_column()
         if column_x != 1:
-            self.schars_write("\x1B[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
+            self.schars_write("\x1b[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
         else:
-            self.schars_write("\x1B[L")  # CSI 04/12 Insert Line
-            self.schars_write("\x1B[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
+            self.schars_write("\x1b[L")  # CSI 04/12 Insert Line
+            self.schars_write("\x1b[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
 
         # todo: split differently at left edge, at right edge, at middle
 
@@ -2548,13 +2548,13 @@ class GlassTeletype:
         st = self.str_terminal
         kchords = st.kchords
 
-        self.schars_write("\x1B[K")  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
+        self.schars_write("\x1b[K")  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
 
         (row_y, column_x) = self.os_terminal_y_row_x_column()
         if column_x == 1:
             kstrs = list(_[-1] for _ in kchords[-2:])
             if kstrs == ["⌃K", "⌃K"]:
-                self.schars_write("\x1B[M")  # CSI 04/13 Delete Line
+                self.schars_write("\x1b[M")  # CSI 04/13 Delete Line
 
                 kchord = (b"", "")  # takes ⌃K ⌃K ⌃K as ⌃K ⌃K and ⌃K
                 kchords.append(kchord)
@@ -2802,7 +2802,7 @@ class Turtle:
     def clearscreen(self) -> dict:
         """Write Spaces over every Character of every Screen Row and Column (CLS or CLEAR or CS for short)"""
 
-        ctext = "\x1B[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
+        ctext = "\x1b[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
         self._schars_write_(ctext)
 
         (x_min, x_max, y_min, y_max) = self._xy_min_max_()
@@ -3115,7 +3115,7 @@ class Turtle:
     def hideturtle(self) -> dict:
         """Stop showing where the Turtle is (HT for short)"""
 
-        ctext = "\x1B[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
+        ctext = "\x1b[?25l"  # 06/12 Reset Mode (RM) 25 VT220 DECTCEM
         self._schars_write_(ctext)
 
         self.hiding = True
@@ -3213,7 +3213,7 @@ class Turtle:
         (row_y, column_x) = gt.os_terminal_y_row_x_column()
 
         text = " ".join(str(_) for _ in args)
-        ctext = f"\x1B[{row_y};{column_x}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
+        ctext = f"\x1b[{row_y};{column_x}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
         ctext += "\n"  # just Line-Feed \n without Carriage-Return \r
 
         self._schars_write_(text)  # for .label
@@ -3562,9 +3562,9 @@ class Turtle:
 
         for penscape in penscapes:
             part = penscape
-            part = part.partition("\x1B[38;5;")[-1]
+            part = part.partition("\x1b[38;5;")[-1]
             part = part.partition("m")[0]
-            if f"\x1B[38;5;{part}m" == penscape:
+            if f"\x1b[38;5;{part}m" == penscape:
                 code = int(part)
 
                 assert (16 + (6 * 6 * 6) + 24) == 0x100
@@ -3648,7 +3648,7 @@ class Turtle:
                 continue
 
             if casefold == "bold":
-                penscapes.append("\x1B[1m")  # 1m Sgr Plain
+                penscapes.append("\x1b[1m")  # 1m Sgr Plain
                 continue
 
             # Take any of the 8 smallest Color Words
@@ -3724,26 +3724,26 @@ class Turtle:
 
         if accent_ == 3:
 
-            backscapes.append(f"\x1B[{40 + color}m")  # 3-Bit Color
+            backscapes.append(f"\x1b[{40 + color}m")  # 3-Bit Color
 
         elif accent_ == 4:
 
             if color < 8:
-                backscapes.append(f"\x1B[{100 + color}m")  # second half of 4-Bit Color
+                backscapes.append(f"\x1b[{100 + color}m")  # second half of 4-Bit Color
             else:
-                backscapes.append(f"\x1B[{40 + color - 8}m")  # first half of 4-Bit Color
+                backscapes.append(f"\x1b[{40 + color - 8}m")  # first half of 4-Bit Color
 
         elif accent_ == 4.6:
 
             if color < 24:
-                backscapes.append(f"\x1B[48;5;{232 + color}m")
+                backscapes.append(f"\x1b[48;5;{232 + color}m")
             else:
                 assert color == 24, (color, accent, accent_)
-                backscapes.append(f"\x1B[48;5;{232 - 1}m")  # 231 8-Bit Color R G B = Max 5 5 5
+                backscapes.append(f"\x1b[48;5;{232 - 1}m")  # 231 8-Bit Color R G B = Max 5 5 5
 
         elif accent_ == 8:
 
-            backscapes.append(f"\x1B[48;5;{color}m")
+            backscapes.append(f"\x1b[48;5;{color}m")
 
         else:
             assert accent_ == 24, (color, accent_, accent)
@@ -3752,7 +3752,7 @@ class Turtle:
             g = (color >> 8) & 0xFF
             b = color & 0xFF
 
-            backscapes.append(f"\x1B[48;2;{r};{g};{b}m")  # 24-Bit R:G:B Color
+            backscapes.append(f"\x1b[48;2;{r};{g};{b}m")  # 24-Bit R:G:B Color
 
     def _penscapes_take_numbers_(self, penscapes, color, accent) -> None:
         """Choose foreground Pen Color Escape Control Sequences by Number"""
@@ -3771,26 +3771,26 @@ class Turtle:
 
         if accent_ == 3:
 
-            penscapes.append(f"\x1B[{30 + color}m")  # 3-Bit Color
+            penscapes.append(f"\x1b[{30 + color}m")  # 3-Bit Color
 
         elif accent_ == 4:
 
             if color < 8:
-                penscapes.append(f"\x1B[{90 + color}m")  # second half of 4-Bit Color
+                penscapes.append(f"\x1b[{90 + color}m")  # second half of 4-Bit Color
             else:
-                penscapes.append(f"\x1B[{30 + color - 8}m")  # first half of 4-Bit Color
+                penscapes.append(f"\x1b[{30 + color - 8}m")  # first half of 4-Bit Color
 
         elif accent_ == 4.6:
 
             if color < 24:
-                penscapes.append(f"\x1B[38;5;{232 + color}m")
+                penscapes.append(f"\x1b[38;5;{232 + color}m")
             else:
                 assert color == 24, (color, accent, accent_)
-                penscapes.append(f"\x1B[38;5;{232 - 1}m")  # 231 8-Bit Color R G B = Max 5 5 5
+                penscapes.append(f"\x1b[38;5;{232 - 1}m")  # 231 8-Bit Color R G B = Max 5 5 5
 
         elif accent_ == 8:
 
-            penscapes.append(f"\x1B[38;5;{color}m")
+            penscapes.append(f"\x1b[38;5;{color}m")
 
         else:
             assert accent_ == 24, (color, accent_, accent)
@@ -3799,7 +3799,7 @@ class Turtle:
             g = (color >> 8) & 0xFF
             b = color & 0xFF
 
-            penscapes.append(f"\x1B[38;2;{r};{g};{b}m")  # 24-Bit R:G:B Color
+            penscapes.append(f"\x1b[38;2;{r};{g};{b}m")  # 24-Bit R:G:B Color
 
     assert TurtlingDefaults["setpenpunch_mark"] == "██", (TurtlingDefaults,)
 
@@ -3909,7 +3909,7 @@ class Turtle:
     def showturtle(self) -> dict:
         """Start showing where the Turtle is (ST for short)"""
 
-        ctext = "\x1B[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
+        ctext = "\x1b[?25h"  # 06/08 Set Mode (SMS) 25 VT220 DECTCEM
         self._schars_write_(ctext)
 
         self.hiding = False
@@ -4193,11 +4193,11 @@ class Turtle:
         if e_left < e_still:
             assert e_right >= e_still, (e_still, e_left, e_right, x, x2)
             if xys is None:
-                self._schars_write_("\x1B[D")
+                self._schars_write_("\x1b[D")
         elif e_right < e_still:
             assert e_left >= e_still, (e_still, e_left, e_right, x, x2)
             if xys is None:
-                self._schars_write_("\x1B[C")
+                self._schars_write_("\x1b[C")
 
         # Pass back the look ahead, on request
 
@@ -4231,21 +4231,21 @@ class Turtle:
         if wx < x:
             pn = int(2 * (x - wx))  # doublewide X
             assert pn >= 1, (pn,)
-            x_ctext = f"\x1B[{pn}C"  # CSI 04/03 Cursor [Forward] Right
+            x_ctext = f"\x1b[{pn}C"  # CSI 04/03 Cursor [Forward] Right
         elif wx > x:
             pn = int(2 * (wx - x))  # doublewide X
-            x_ctext = f"\x1B[{pn}D"  # CSI 04/04 Cursor [Backward] Left
+            x_ctext = f"\x1b[{pn}D"  # CSI 04/04 Cursor [Backward] Left
         else:
             x_ctext = ""
 
         if wy < y:
             pn = int(y - wy)
             assert pn >= 1, (pn,)
-            y_ctext = f"\x1B[{pn}B"  # CSI 04/02 Cursor [Down] Next
+            y_ctext = f"\x1b[{pn}B"  # CSI 04/02 Cursor [Down] Next
         elif wy > y:
             pn = int(wy - y)
             assert pn >= 1, (pn,)
-            y_ctext = f"\x1B[{pn}A"  # CSI 04/01 Cursor [Up] Previous
+            y_ctext = f"\x1b[{pn}A"  # CSI 04/01 Cursor [Up] Previous
         else:
             y_ctext = ""
 
@@ -4254,7 +4254,7 @@ class Turtle:
         ctext = f"{y_ctext}{x_ctext}"
         if ctext:
             if platform.system() == "Darwin":
-                ctext = "\x1B[A" + "\x1B[B" + ctext  # else macOS leaves thin 1-pixel base lines
+                ctext = "\x1b[A" + "\x1b[B" + ctext  # else macOS leaves thin 1-pixel base lines
 
         self._schars_write_(ctext)
 
@@ -4532,13 +4532,13 @@ class Turtle:
 
             # Slow down on demand
 
-            assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-            assert CUD_Y == "\x1B" "[" "{}B"  # CSI 04/02 Cursor Down
+            assert CUU_Y == "\x1b" "[" "{}A"  # CSI 04/01 Cursor Up
+            assert CUD_Y == "\x1b" "[" "{}B"  # CSI 04/02 Cursor Down
 
             if not hiding:
                 time.sleep(rest)  # todo: a la ._rest_if_  # todo: break Sleep with KB Hit
                 if platform.system() == "Darwin":
-                    self._schars_write_("\x1B[A" "\x1B[B")  # else thin 1-pixel base lines
+                    self._schars_write_("\x1b[A" "\x1b[B")  # else thin 1-pixel base lines
 
         if not broke:
             self.setpencolor(Yellow, accent=8)
@@ -4792,10 +4792,10 @@ class Turtle:
 
         # Blink out after drawing over Here and There
 
-        st.schars_write(f"\x1B[{row_y1};{column_x1}H")
+        st.schars_write(f"\x1b[{row_y1};{column_x1}H")
         st.schars_write("  ")
 
-        st.schars_write(f"\x1B[{row_y2};{column_x2}H")  # todo: skip if unmoving
+        st.schars_write(f"\x1b[{row_y2};{column_x2}H")  # todo: skip if unmoving
 
     def _puck_chase_(self, column_x1, row_y1) -> None:
         """Turn aside if Food on the side, while Nne ahead and None behind"""
@@ -6356,7 +6356,7 @@ class TurtlingSketchist:
 
             # Reply to 1 Keyboard Chord
 
-            assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
+            assert CUU_Y == "\x1b" "[" "{}A"  # CSI 04/01 Cursor Up
 
             if bt_fd in select_:
                 kchord = st.kchord_pull(timeout=1.000)
@@ -6367,7 +6367,7 @@ class TurtlingSketchist:
                     try:
                         t.bye()
                     finally:
-                        st.schars_print("\x1B[A", end="")
+                        st.schars_print("\x1b[A", end="")
                         st.schars_print("⎋\\", end="\r\n")
                     break
 
@@ -6602,7 +6602,7 @@ class TurtleClient:
         ps = self.ps
         pycodes = self.pycodes
 
-        ps1 = f"{Turtle_}\x1B[2D\x1B[2C? {Bold}"  # gCloud Shell needs the 2D 2C
+        ps1 = f"{Turtle_}\x1b[2D\x1b[2C? {Bold}"  # gCloud Shell needs the 2D 2C
         postedit = Plain
 
         # Till quit
@@ -6737,7 +6737,7 @@ class TurtleClient:
                             notes = value["notes"]
                             if notes:
 
-                                eprint("\r" "\x1B[K", end="")
+                                eprint("\r" "\x1b[K", end="")
                                 sys.stderr.flush()
 
                                 for note in notes:
@@ -6758,12 +6758,12 @@ class TurtleClient:
 
             except KeyboardInterrupt:  # ⌃C SigInt
 
-                assert CUU_Y == "\x1B" "[" "{}A"  # CSI 04/01 Cursor Up
-                assert ED_P == "\x1B" "[" "{}J"  # CSI 04/10 Erase in Display  # 2 Rows, etc
+                assert CUU_Y == "\x1b" "[" "{}A"  # CSI 04/01 Cursor Up
+                assert ED_P == "\x1b" "[" "{}J"  # CSI 04/10 Erase in Display  # 2 Rows, etc
 
                 if ilines:
-                    eprint("\x1B[" f"{len(ilines)}A")
-                eprint("\r" "\x1B[" "J", end="")
+                    eprint("\x1b[" f"{len(ilines)}A")
+                eprint("\r" "\x1b[" "J", end="")
 
                 eprint(ps1, end="\r\n")
                 eprint("KeyboardInterrupt")
@@ -6784,7 +6784,7 @@ class TurtleClient:
         # Clear Auto-Echo of Input, to make room to echo it when taken
 
         if ilines:
-            eprint("\x1B[" f"{len(ilines)}A" "\x1B[" "J", end="")
+            eprint("\x1b[" f"{len(ilines)}A" "\x1b[" "J", end="")
 
         # Succeed
 

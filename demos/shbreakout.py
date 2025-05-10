@@ -50,11 +50,11 @@ if not hasattr(__builtins__, "breakpoint"):
 
 DOC = __main__.__doc__
 
-DOC = DOC.replace("$B", "\N{Black Square}")  # ■ U+25A0
-DOC = DOC.replace("$D", "\N{Downwards Arrow}")  # ↓ U+2193
-DOC = DOC.replace("$L", "\N{Leftwards Arrow}")  # ← U+2190
-DOC = DOC.replace("$R", "\N{Rightwards Arrow}")  # → U+2192
-DOC = DOC.replace("$U", "\N{Upwards Arrow}")  # ↑ U+2191
+DOC = DOC.replace("$B", "\N{BLACK SQUARE}")  # ■ U+25A0
+DOC = DOC.replace("$D", "\N{DOWNWARDS ARROW}")  # ↓ U+2193
+DOC = DOC.replace("$L", "\N{LEFTWARDS ARROW}")  # ← U+2190
+DOC = DOC.replace("$R", "\N{RIGHTWARDS ARROW}")  # → U+2192
+DOC = DOC.replace("$U", "\N{UPWARDS ARROW}")  # ↑ U+2191
 
 __main__.__doc__ = DOC
 
@@ -67,12 +67,12 @@ __main__.__doc__ = DOC
 #
 
 
-CSI = "\x1B["  # macOS Terminal takes "\x1B[" as CSI, doesn't take "\N{CSI}" == "\x9B"
+CSI = "\x1b["  # macOS Terminal takes "\x1B[" as CSI, doesn't take "\N{CSI}" == "\x9B"
 
-CUP_Y_X = "\x1B[{};{}H"  # Cursor Position (CUP)  # from upper left "\x1B[1;1H"
+CUP_Y_X = "\x1b[{};{}H"  # Cursor Position (CUP)  # from upper left "\x1B[1;1H"
 
-DECTCEM_CURSOR_HIDE = "\x1B[?25l"  # Hide away the one Cursor on Screen
-DECTCEM_CURSOR_SHOW = "\x1B[?25h"  # Show the one Cursor on Screen
+DECTCEM_CURSOR_HIDE = "\x1b[?25l"  # Hide away the one Cursor on Screen
+DECTCEM_CURSOR_SHOW = "\x1b[?25h"  # Show the one Cursor on Screen
 
 
 #
@@ -82,10 +82,10 @@ DECTCEM_CURSOR_SHOW = "\x1B[?25h"  # Show the one Cursor on Screen
 
 Space = "Space"
 
-Down = "\N{Downwards Arrow}"
-Left = "\N{Leftwards Arrow}"
-Right = "\N{Rightwards Arrow}"
-Up = "\N{Upwards Arrow}"
+Down = "\N{DOWNWARDS ARROW}"
+Left = "\N{LEFTWARDS ARROW}"
+Right = "\N{RIGHTWARDS ARROW}"
+Up = "\N{UPWARDS ARROW}"
 
 
 #
@@ -93,7 +93,7 @@ Up = "\N{Upwards Arrow}"
 #
 
 
-BALL = "\N{Black Square}"  # ■ U+25A0  # Black in Light Mode, White in Dark Mode
+BALL = "\N{BLACK SQUARE}"  # ■ U+25A0  # Black in Light Mode, White in Dark Mode
 
 BRICK = BALL
 

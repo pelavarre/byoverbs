@@ -378,7 +378,7 @@ def sprites_take_abcd(sprites, abcd) -> str:  # noqa C901
 
     assert (ord("L") ^ 0x40) == 0x0C
 
-    if dbyte == b"\x0C":  # ⌃L
+    if dbyte == b"\x0c":  # ⌃L
         ts.rows_rewrite(ts.rows, bitrows=ts.bitrows)
 
         return ""
@@ -457,8 +457,8 @@ class TerminalShadow:
     def rows_rewrite(self, rows, bitrows) -> None:
         """Rewrite the Rows of Text"""
 
-        assert CUU_N == "\x1B[{}A"  # Up
-        assert EL == "\x1B[K"  # Erase in Line (EL)  # 04/11
+        assert CUU_N == "\x1b[{}A"  # Up
+        assert EL == "\x1b[K"  # Erase in Line (EL)  # 04/11
 
         alt_rows = list(rows)
         alt_bitrows = list(bitrows)
@@ -468,12 +468,12 @@ class TerminalShadow:
         y = self.y
 
         if y:
-            cuu = "\x1B[{}A".format(y)
+            cuu = "\x1b[{}A".format(y)
             xprint(cuu, end="")
 
         xprint("\r", end="")
 
-        el = "\x1B[K"
+        el = "\x1b[K"
         for i, pair in enumerate(zip(alt_rows, alt_bitrows)):
             (row, bitrow) = pair
             assert len(row) == len(bitrow), (len(row), len(bitrow), i, n)
@@ -481,7 +481,7 @@ class TerminalShadow:
             compressed = ""
             for x, ch in enumerate(row):
                 bit = bitrow[x]
-                polarity = "\x1B[7m" if bit else "\x1B[m"  # todo: don't write unneeded
+                polarity = "\x1b[7m" if bit else "\x1b[m"  # todo: don't write unneeded
                 if ch != "\t":  # prints all but Tabs
                     compressed += polarity + ch
                 elif not compressed.endswith("\t"):  # prints first Tab
@@ -537,12 +537,12 @@ class TerminalShadow:
 
             # Take C0_CONTROLS as moving the (Y, X) Cursor
 
-            assert "\b" == "\N{Backspace}"
-            assert "\r" == "\N{Carriage Return}"
-            assert "\n" == "\N{Line Feed}"
+            assert "\b" == "\N{BACKSPACE}"
+            assert "\r" == "\N{CARRIAGE RETURN}"
+            assert "\n" == "\N{LINE FEED}"
 
-            assert "\x1B[m" == Sgr.Plain  # 06/13
-            assert "\x1B[7m" == Sgr.ReverseVideo  # 06/13
+            assert "\x1b[m" == Sgr.Plain  # 06/13
+            assert "\x1b[7m" == Sgr.ReverseVideo  # 06/13
 
             if seq == b"\t":
                 pass
@@ -656,40 +656,40 @@ class TerminalShadow:
         x = self.x
         yx = (y, x)
 
-        assert CSI == b"\x1B["
+        assert CSI == b"\x1b["
 
-        head = b"\x1B["  # "Control Sequence Inducer (CSI)"
-        body = seq[len(b"\x1B[") : -1]  # "Parameter Bytes"
+        head = b"\x1b["  # "Control Sequence Inducer (CSI)"
+        body = seq[len(b"\x1b[") : -1]  # "Parameter Bytes"
         tail = seq[-1:]  # "Final Byte"
 
         assert (head + body + tail) == seq, (head, body, tail, seq)
 
         # Choose Reverse-Video or Plain
 
-        assert "\x1B[m" == Sgr.Plain  # 06/13
-        assert "\x1B[7m" == Sgr.ReverseVideo  # 06/13
+        assert "\x1b[m" == Sgr.Plain  # 06/13
+        assert "\x1b[7m" == Sgr.ReverseVideo  # 06/13
 
-        if seq == b"\x1B[m":  # 06/13
+        if seq == b"\x1b[m":  # 06/13
             vvprint(f"{yx=} {seq=}")  # b"\x1B[m"
             self.inks.clear()
             return
 
-        if seq == b"\x1B[0m":  # 06/13
+        if seq == b"\x1b[0m":  # 06/13
             vvprint(f"{yx=} {seq=}")  # b"\x1B[0m"
             self.inks.clear()
             return
 
-        if seq == b"\x1B[7m":  # 06/13
+        if seq == b"\x1b[7m":  # 06/13
             vvprint(f"{yx=} {seq=}")  # b"\x1B[7m"
             self.inks.append(seq)
             return
 
         # Move the Terminal Cursor by Relative Y and X Distances
 
-        assert CUU_N == "\x1B[{}A"  # Up
-        assert CUD_N == "\x1B[{}B"  # Down
-        assert CUF_N == "\x1B[{}C"  # Forwards Right
-        assert CUB_N == "\x1B[{}D"  # Backwards Left
+        assert CUU_N == "\x1b[{}A"  # Up
+        assert CUD_N == "\x1b[{}B"  # Down
+        assert CUF_N == "\x1b[{}C"  # Forwards Right
+        assert CUB_N == "\x1b[{}D"  # Backwards Left
 
         if tail in b"ABCD":
             vvprint(f"{yx=} {seq=}")  # \x1B[{}A but for A or B or C or D
@@ -720,8 +720,8 @@ class TerminalShadow:
 
         # Truncate the Row, or the Rows, on Demand
 
-        assert ED == "\x1B[J"  # Erase in Display  # 04/12
-        assert EL == "\x1B[K"  # Erase in Line (EL)  # 04/11
+        assert ED == "\x1b[J"  # Erase in Display  # 04/12
+        assert EL == "\x1b[K"  # Erase in Line (EL)  # 04/11
 
         if tail == b"J":
             if not body:
@@ -804,7 +804,7 @@ LF = b"\n"  # 00/10 "\N{Line Feed}"
 #
 
 
-C0_BYTES = bytes(_ for _ in range(0, 0x20)) + b"\x7F"
+C0_BYTES = bytes(_ for _ in range(0, 0x20)) + b"\x7f"
 C1_BYTES = bytes(_ for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
 UTF8_START_BYTES = bytes(_ for _ in range(0xC2, 0xF5))
 
@@ -820,21 +820,21 @@ assert len(UTF8_START_BYTES) == 0x33 == 51
 #
 
 
-ESC = b"\x1B"  # 01/11 Escape
+ESC = b"\x1b"  # 01/11 Escape
 
-CSI = b"\x1B["  # 01/11 05/11 Control Sequence Introducer  # till rb"[\x30-\x7E]"
-OSC = b"\x1B]"  # 01/11 05/13 Operating System Command  # till BEL, CR, Esc \ ST, etc
-_DCSG0 = b"\x1B("  # 01/11 02/08 Designate G0 Character Set
-SS3 = b"\x1BO"  # 01/11 04/15 Single Shift Three
+CSI = b"\x1b["  # 01/11 05/11 Control Sequence Introducer  # till rb"[\x30-\x7E]"
+OSC = b"\x1b]"  # 01/11 05/13 Operating System Command  # till BEL, CR, Esc \ ST, etc
+_DCSG0 = b"\x1b("  # 01/11 02/08 Designate G0 Character Set
+SS3 = b"\x1bO"  # 01/11 04/15 Single Shift Three
 
-CsiStartPattern = b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"  # leading Zeroes allowed
+CsiStartPattern = b"\x1b\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"  # leading Zeroes allowed
 CsiEndPattern = rb"[\x40-\x7E]"
 CsiPattern = CsiStartPattern + CsiEndPattern
 # Csi Patterns define many Pm, Pn, and Ps, but not the Pt of Esc ] OSC Ps ; Pt BEL
 # in 5.4 Control Sequences of ECMA-48_5th 1991
 
-MouseThreeByteStartPattern = b"\x1B\\[" rb"M"
-MouseSixByteEndPattern = b"\x1B\\[" rb"M..."  # MPR X Y
+MouseThreeByteStartPattern = b"\x1b\\[" rb"M"
+MouseSixByteEndPattern = b"\x1b\\[" rb"M..."  # MPR X Y
 
 
 #
@@ -878,8 +878,8 @@ def _bytes_take_mouse_six_else(data) -> typing.Union[bytes, None]:  # bytes | No
 
     assert data, data  # not empty here
 
-    assert MouseThreeByteStartPattern == b"\x1B\\[" rb"M"
-    assert MouseSixByteEndPattern == b"\x1B\\[" rb"M..."  # MPR X Y
+    assert MouseThreeByteStartPattern == b"\x1b\\[" rb"M"
+    assert MouseSixByteEndPattern == b"\x1b\\[" rb"M..."  # MPR X Y
     assert len(MouseThreeByteStartPattern) == 4  # pattern of 4 Bytes to take 3 Bytes
     assert len(MouseSixByteEndPattern) == 7  # pattern of 7 Bytes to take 6 Bytes
 
@@ -916,9 +916,9 @@ def _bytes_take_c0_plus_else(data) -> typing.Union[bytes, None]:  # bytes | None
 
     # Do take a C0 Control Byte by itself, other than Esc
 
-    assert ESC == b"\x1B"
+    assert ESC == b"\x1b"
 
-    if head != b"\x1B":
+    if head != b"\x1b":
         return head  # doesn't say block for \r\n after \r, like Screen Writers do
 
     # Take 1 whole C0 Esc Control Sequence, else zero Bytes while partial, else None
@@ -931,10 +931,10 @@ def _bytes_take_c0_plus_else(data) -> typing.Union[bytes, None]:  # bytes | None
 def _bytes_take_c0_esc_etc_else(data) -> bytes:  # noqa C901
     """Take 1 whole C0 Esc Control Sequence, else zero Bytes while partial, else None"""
 
-    assert data.startswith(b"\x1B"), (data,)  # given Esc already here
+    assert data.startswith(b"\x1b"), (data,)  # given Esc already here
 
-    assert ESC == b"\x1B"
-    assert CsiStartPattern == b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"
+    assert ESC == b"\x1b"
+    assert CsiStartPattern == b"\x1b\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"
     assert CsiEndPattern == rb"[\x40-\x7E]"
 
     assert data.startswith(ESC), data
@@ -945,14 +945,14 @@ def _bytes_take_c0_esc_etc_else(data) -> bytes:  # noqa C901
         return b""  # partial C0 Esc Control Sequence
 
     esc_plus = data[:2]
-    assert esc_plus[:1] == b"\x1B", (esc_plus,)
+    assert esc_plus[:1] == b"\x1b", (esc_plus,)
 
     # Do say block for the Byte after Esc O,
     # such as the Single Shift Three (SS3) of F1 F2 F3 F4
 
-    assert SS3 == b"\x1BO"
+    assert SS3 == b"\x1bO"
 
-    if esc_plus == b"\x1BO":
+    if esc_plus == b"\x1bO":
         if not data[2:]:
             return b""  # partial C0 SS3 Control Sequence
 
@@ -962,9 +962,9 @@ def _bytes_take_c0_esc_etc_else(data) -> bytes:  # noqa C901
     # Do say block for the Byte after Esc (,
     # such as the VT100's 01/11 02/08 Designate G0 Character Set
 
-    assert _DCSG0 == b"\x1B("
+    assert _DCSG0 == b"\x1b("
 
-    if esc_plus == b"\x1B(":
+    if esc_plus == b"\x1b(":
         if not data[2:]:
             return b""  # partial C0 SS3 Control Sequence
 
@@ -976,11 +976,11 @@ def _bytes_take_c0_esc_etc_else(data) -> bytes:  # noqa C901
     # Take Esc with a Text Byte of 7-Bit US-Ascii as a Byte Pair,
     # and take Esc alone when given before Esc or Control or not 7-bit US-Ascii
 
-    if esc_plus != b"\x1B[":  # CSI
+    if esc_plus != b"\x1b[":  # CSI
         if (esc_plus[-1:] in C0_BYTES) or (esc_plus[-1] >= 0x80):
-            return b"\x1B"
+            return b"\x1b"
 
-        if esc_plus == b"\x1B]":  # OSC
+        if esc_plus == b"\x1b]":  # OSC
             find = data.find(b"\x07")
             if find < 0:  # todo: ugh, unbounded delay till b"\x07" does arrive
                 return b""
@@ -994,8 +994,8 @@ def _bytes_take_c0_esc_etc_else(data) -> bytes:  # noqa C901
 
     # Do say block for the Bytes after Esc [
 
-    assert ESC == b"\x1B"
-    assert CSI == b"\x1B["
+    assert ESC == b"\x1b"
+    assert CSI == b"\x1b["
 
     assert data.startswith(CSI), data
 
@@ -1070,20 +1070,20 @@ def _bytes_take_one(data) -> bytes:
 #
 
 
-CUU_N = "\x1B[{}A"  # CSI 04/01 Cursor Up (CUU) of ΔY
-CUD_N = "\x1B[{}B"  # CSI 04/02 Cursor Down (CUD) of ΔY
-CUF_N = "\x1B[{}C"  # CSI 04/03 Cursor Right (CUF) of ΔX
-CUB_N = "\x1B[{}D"  # CSI 04/04 Cursor Left (CUB) of ΔX
+CUU_N = "\x1b[{}A"  # CSI 04/01 Cursor Up (CUU) of ΔY
+CUD_N = "\x1b[{}B"  # CSI 04/02 Cursor Down (CUD) of ΔY
+CUF_N = "\x1b[{}C"  # CSI 04/03 Cursor Right (CUF) of ΔX
+CUB_N = "\x1b[{}D"  # CSI 04/04 Cursor Left (CUB) of ΔX
 
-ED = "\x1B[J"  # CSI 04/12 Erase in Display (ED)
-EL = "\x1B[K"  # CSI 04/11 Erase in Line (EL)
+ED = "\x1b[J"  # CSI 04/12 Erase in Display (ED)
+EL = "\x1b[K"  # CSI 04/11 Erase in Line (EL)
 
 
 class Sgr:
     """CSI 06/13 Select Graphic Rendition (SGR)"""
 
-    Plain = "\x1B[m"
-    ReverseVideo = "\x1B[7m"  # aka InverseVideo
+    Plain = "\x1b[m"
+    ReverseVideo = "\x1b[7m"  # aka InverseVideo
 
 
 @dataclasses.dataclass
@@ -1316,39 +1316,39 @@ class TerminalSprite:
 
         # Work out how to flip it
 
-        assert Sgr.Plain == "\x1B[m"  # 06/13
-        assert Sgr.ReverseVideo == "\x1B[7m"  # 06/13
+        assert Sgr.Plain == "\x1b[m"  # 06/13
+        assert Sgr.ReverseVideo == "\x1b[7m"  # 06/13
 
         polarity = ""
         plain = ""
         if bit:
-            polarity = "\x1B[7m"  # Reverse-Video
-            plain = "\x1B[m"  # Plain
+            polarity = "\x1b[7m"  # Reverse-Video
+            plain = "\x1b[m"  # Plain
 
         bs = "\b"
 
         # Work out where to flip it
 
-        assert CUU_N == "\x1B[{}A"  # Up
-        assert CUD_N == "\x1B[{}B"  # Down
-        assert CUF_N == "\x1B[{}C"  # Forwards Right
-        assert CUB_N == "\x1B[{}D"  # Backwards Left
+        assert CUU_N == "\x1b[{}A"  # Up
+        assert CUD_N == "\x1b[{}B"  # Down
+        assert CUF_N == "\x1b[{}C"  # Forwards Right
+        assert CUB_N == "\x1b[{}D"  # Backwards Left
 
         yto = yfrom = ""
         if y < ts.y:
-            yto = "\x1B[{}A".format(ts.y - y)
-            yfrom = "\x1B[{}B".format(ts.y - y)
+            yto = "\x1b[{}A".format(ts.y - y)
+            yfrom = "\x1b[{}B".format(ts.y - y)
         elif ts.y < y:
-            yto = "\x1B[{}B".format(y - ts.y)
-            yfrom = "\x1B[{}A".format(y - ts.y)
+            yto = "\x1b[{}B".format(y - ts.y)
+            yfrom = "\x1b[{}A".format(y - ts.y)
 
         xto = xfrom = ""
         if x < ts.x:
-            xto = "\x1B[{}D".format(ts.x - x)
-            xfrom = "\x1B[{}C".format(ts.x - x)
+            xto = "\x1b[{}D".format(ts.x - x)
+            xfrom = "\x1b[{}C".format(ts.x - x)
         elif ts.x < x:
-            xto = "\x1B[{}C".format(x - ts.x)
-            xfrom = "\x1B[{}D".format(x - ts.x)
+            xto = "\x1b[{}C".format(x - ts.x)
+            xfrom = "\x1b[{}D".format(x - ts.x)
 
         # Flip it
 

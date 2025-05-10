@@ -48,15 +48,15 @@ BoardLines = Board.splitlines()
 
 Y1Below = 3 + len(BoardLines)
 
-White = "\N{Medium White Circle}"
-Black = "\N{Medium Black Circle}"  # 'Medium' Black better than 'Large', but why?
-Red = "\N{Large Red Circle}"
-Blue = "\N{Large Blue Circle}"
-Orange = "\N{Large Orange Circle}"
-Yellow = "\N{Large Yellow Circle}"
-Green = "\N{Large Green Circle}"
-Purple = "\N{Large Purple Circle}"
-Brown = "\N{Large Brown Circle}"
+White = "\N{MEDIUM WHITE CIRCLE}"
+Black = "\N{MEDIUM BLACK CIRCLE}"  # 'Medium' Black better than 'Large', but why?
+Red = "\N{LARGE RED CIRCLE}"
+Blue = "\N{LARGE BLUE CIRCLE}"
+Orange = "\N{LARGE ORANGE CIRCLE}"
+Yellow = "\N{LARGE YELLOW CIRCLE}"
+Green = "\N{LARGE GREEN CIRCLE}"
+Purple = "\N{LARGE PURPLE CIRCLE}"
+Brown = "\N{LARGE BROWN CIRCLE}"
 
 ... == White, Black, Red, Blue, Orange, Yellow, Green, Purple, Brown
 
@@ -176,15 +176,15 @@ def board_paint() -> None:
 
         y = y1
         for glyph in four_glyphs:
-            print(f"\x1B[{y};{x1}H" + glyph, end="")
+            print(f"\x1b[{y};{x1}H" + glyph, end="")
             y -= 1
 
-    print(f"\x1B[{Y1Below}H", end="")
+    print(f"\x1b[{Y1Below}H", end="")
 
     print()
     print()
 
-    print("\x1B[J", end="")
+    print("\x1b[J", end="")
 
     if Main.turn < 0:
         print(f"Turn {-Main.turn} - SCRAMBLING")
@@ -228,20 +228,20 @@ def board_judge() -> None:
 def main() -> None:
     """Launch this Process"""
 
-    print("\x1B[H" + "\x1B[2J" + "\x1B[3J")  # a la Sh 'clear'
+    print("\x1b[H" + "\x1b[2J" + "\x1b[3J")  # a la Sh 'clear'
 
-    print("\x1B[?25l")  # DecCsiCursorHide
+    print("\x1b[?25l")  # DecCsiCursorHide
     try:
         try_main()
     finally:
-        print("\x1B[?25h")  # DecCsiCursorShow
-        print(f"\x1B[{Y1Below}H")
+        print("\x1b[?25h")  # DecCsiCursorShow
+        print(f"\x1b[{Y1Below}H")
 
 
 def try_main() -> None:
     """Play the Game, over and over and over"""
 
-    print(f"\x1B[{Y1Below}H", end="")
+    print(f"\x1b[{Y1Below}H", end="")
 
     if FEATURE_STAGING:
         balls_patch_up_for_staging()

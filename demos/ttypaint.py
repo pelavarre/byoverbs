@@ -163,8 +163,8 @@ class ScreenEditor:
     def write_exit(self):
         """Write to cancel changes to Terminal Mode, before exiting"""
 
-        self.write(b"\x1B[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert Mode (IRM)
-        self.write(b"\x1B[ q")  # CSI Pm SP q Cursor Style (DECSCUSR)  # (default)
+        self.write(b"\x1b[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert Mode (IRM)
+        self.write(b"\x1b[ q")  # CSI Pm SP q Cursor Style (DECSCUSR)  # (default)
 
         if True:  # jitter Fri 14/Apr
             self.to_lower_left()
@@ -183,12 +183,12 @@ class ScreenEditor:
     def to_lower_left(self):
         """Cursor Move to Lower Left"""
 
-        assert CUP_Y_X == b"\x1B[{};{}H"
+        assert CUP_Y_X == b"\x1b[{};{}H"
 
         (x, y) = self.get_terminal_size()
 
         x_1 = 1
-        self.write("\x1B[{};{}H".format(y, x_1).encode())
+        self.write("\x1b[{};{}H".format(y, x_1).encode())
 
     #
     # Take Keyboard Input Lines as saying more than they do
@@ -231,9 +231,9 @@ class ScreenEditor:
 
         texting = self.texting
 
-        assert line.startswith(b"\x1B"), line
+        assert line.startswith(b"\x1b"), line
 
-        if line.startswith(b"\x1B["):
+        if line.startswith(b"\x1b["):
             self.on_csi(line)
             return
 
@@ -245,11 +245,11 @@ class ScreenEditor:
     def on_csi(self, line):
         r"""Reply to '\e[' Keyboard Input Lines"""
 
-        assert MouseButton == b"\x1B[" b"M"
+        assert MouseButton == b"\x1b[" b"M"
 
-        assert line.startswith(b"\x1B["), line
+        assert line.startswith(b"\x1b["), line
 
-        if (len(line) == 6) and line.startswith(b"\x1B[" b"M"):
+        if (len(line) == 6) and line.startswith(b"\x1b[" b"M"):
             self.on_mouse(line)
             return
 
@@ -292,14 +292,14 @@ class ScreenEditor:
         # Write the Status Row and restore Cursor Position
 
         self.to_lower_left()
-        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+        self.write(b"\x1b[K")  # CSI Ps K  # Erase in Line (DECSEL)
         self.write(chars.encode())
-        self.write("\x1B[{};{}H".format(y, x).encode())
+        self.write("\x1b[{};{}H".format(y, x).encode())
 
     def on_mouse(self, line):
         r"""Reply to '\e[M' Keyboard Input Lines"""
 
-        assert CUP_Y_X == b"\x1B[{};{}H"
+        assert CUP_Y_X == b"\x1b[{};{}H"
 
         (cb, cx, cy) = (line[-3], line[-2], line[-1])
 
@@ -309,7 +309,7 @@ class ScreenEditor:
 
         (x, y) = (cx - 0x20, cy - 0x20)
 
-        self.write("\x1B[{};{}H".format(y, x).encode())
+        self.write("\x1b[{};{}H".format(y, x).encode())
 
     def write_bel(self, line):
         """Write 1 Bel"""
@@ -346,9 +346,9 @@ class ScreenEditor:
         self.texting = None
 
         if texting == "Inserting":
-            self.write(b"\x1B[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert (IRM)
+            self.write(b"\x1b[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert (IRM)
 
-        self.write(b"\x1B[ q")  # CSI Pm SP q Cursor Style (DECSCUSR)
+        self.write(b"\x1b[ q")  # CSI Pm SP q Cursor Style (DECSCUSR)
 
     def helping_visit(self, line):  # Vi ⌃O
         """Take one Keyboard Input Line as Helping"""
@@ -358,7 +358,7 @@ class ScreenEditor:
         texting = self.texting_backup()
 
         self.status_chars = "⌃O"
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
         self.helping_enter(line)
 
@@ -369,7 +369,7 @@ class ScreenEditor:
             self.reply_to(inner_line)
 
         self.status_chars = ""
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
         self.texting_restore(texting, line=line)
 
@@ -378,13 +378,13 @@ class ScreenEditor:
 
         self.texting = "Inserting"
 
-        self.write(b"\x1B[4h")  # CSI Pm h Set Mode (SM)  # Ps 4 Insert Mode (IRM)
-        self.write(b"\x1B[6 q")  # CSI Pm SP q Cursor Style (DECSCUSR)  # Steady Bar
+        self.write(b"\x1b[4h")  # CSI Pm h Set Mode (SM)  # Ps 4 Insert Mode (IRM)
+        self.write(b"\x1b[6 q")  # CSI Pm SP q Cursor Style (DECSCUSR)  # Steady Bar
 
     def right_and_inserting_enter(self, line):  # Vi A scrolls past last Column
         """Step right and tell the Screen to take Writes as Inserts, and stop helping"""
 
-        self.write(b"\x1B[C")  # CSI Ps C Cursor Forward (CUF)
+        self.write(b"\x1b[C")  # CSI Ps C Cursor Forward (CUF)
         self.inserting_enter(line)
 
     def inserting_enter_this(self, line):  # Vi ⇧I inserts past Dent
@@ -398,8 +398,8 @@ class ScreenEditor:
 
         self.texting = "Replacing"
 
-        self.write(b"\x1B[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert Mode (IRM)
-        self.write(b"\x1B[4 q")  # CSI Pm SP q Cursor Style (DECSCUSR)  # Steady Line
+        self.write(b"\x1b[4l")  # CSI Pm l Reset Mode (RM)  # Ps 4 Insert Mode (IRM)
+        self.write(b"\x1b[4 q")  # CSI Pm SP q Cursor Style (DECSCUSR)  # Steady Line
 
     def replacing_visit(self, line):  # Vi R
         """Take one Keyboard Input Line as Replacing"""
@@ -409,7 +409,7 @@ class ScreenEditor:
         texting = self.texting_backup()
 
         self.status_chars = "R"
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
         self.replacing_enter(line)
 
@@ -420,7 +420,7 @@ class ScreenEditor:
             self.reply_to(inner_line)
 
         self.status_chars = ""
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
         self.texting_restore(texting, line=line)
 
@@ -432,7 +432,7 @@ class ScreenEditor:
         texting = self.texting_backup()
 
         self.status_chars = "⌃V"
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
         self.replacing_enter(line)
 
@@ -446,15 +446,15 @@ class ScreenEditor:
             self.write(inner_line)
 
         self.status_chars = ""
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
         self.texting_restore(texting, line=line)
 
     def write_device_status_report(self, line):  # Vi ⌃G
-        """Call for b'\x1B[{y};{x}R' Cursor Position (CPR)"""
+        """Call for b'\x1b[{y};{x}R' Cursor Position (CPR)"""
 
         self.status_chars = None
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
     #
     # Move the Cursor relatively
@@ -468,17 +468,17 @@ class ScreenEditor:
     def to_column_right(self, line):  # Vi L stops on Last Char in Line
         """Cursor Move Right"""
 
-        self.write(b"\x1B[C")
+        self.write(b"\x1b[C")
 
     def to_row_down(self, line):  # Vi J  # Vi ⌃N  # Vi ⇧= + goes past Dent
         """Cursor Move Down"""
 
-        self.write(b"\x1B[B")
+        self.write(b"\x1b[B")
 
     def to_row_up(self, line):  # Vi K  # Vi ⌃P  # Vi - goes past Dent
         """Cursor Move Up"""
 
-        self.write(b"\x1B[A")
+        self.write(b"\x1b[A")
 
     #
     # Move the Cursor absolutely
@@ -493,26 +493,26 @@ class ScreenEditor:
         """Cursor Move to last Column of Row"""
 
         (x, y) = self.get_terminal_size()
-        reply = "\x1B[{}G".format(x).encode()  # CSI Ps G  # Cursor Char Absolute (CHA)
+        reply = "\x1b[{}G".format(x).encode()  # CSI Ps G  # Cursor Char Absolute (CHA)
         os.write(sys.__stdout__.fileno(), reply)
 
     def to_row_first(self, line):  # Vi ⇧H goes to first Row, past Dent
         """Cursor Move to first Row of Screen"""
 
-        self.write(b"\x1B[d")  # CSI Ps d  # Line Position Absolute
+        self.write(b"\x1b[d")  # CSI Ps d  # Line Position Absolute
 
     def to_row_middle(self, line):  # Vi ⇧M goes to middle Row, past Dent
         """Cursor Move to middle Row of Screen"""
 
         (x, y) = self.get_terminal_size()
-        reply = "\x1B[{}d".format(y // 2).encode()  # CSI Ps d  # Line Pos Abs
+        reply = "\x1b[{}d".format(y // 2).encode()  # CSI Ps d  # Line Pos Abs
         os.write(sys.__stdout__.fileno(), reply)
 
     def to_row_last(self, line):  # Vi ⇧L goes to last Row, past Dent
         """Cursor Move to last Row of Screen"""
 
         (x, y) = self.get_terminal_size()
-        reply = "\x1B[{}d".format(y).encode()  # CSI Ps d  # Line Pos Abs
+        reply = "\x1b[{}d".format(y).encode()  # CSI Ps d  # Line Pos Abs
         os.write(sys.__stdout__.fileno(), reply)
 
     def to_row_this(self, line):  # Vi ⇧6 ^ goes past Dent
@@ -527,14 +527,14 @@ class ScreenEditor:
     def char_change_to_beyond(self, line):  # Vi ⇧C
         """Char Delete to beyond last Char of Line and start Inserting"""
 
-        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+        self.write(b"\x1b[K")  # CSI Ps K  # Erase in Line (DECSEL)
 
         self.inserting_enter(line)
 
     def char_change_right(self, line):  # Vi S
         """Char Delete Right and start Inserting"""
 
-        self.write(b"\x1B[P")  # CSI Ps P  # Delete Characters (DCH)
+        self.write(b"\x1b[P")  # CSI Ps P  # Delete Characters (DCH)
 
         self.inserting_enter(line)
 
@@ -542,23 +542,23 @@ class ScreenEditor:
         """Char Delete Left"""
 
         self.write(b"\b")
-        self.write(b"\x1B[P")  # CSI Ps P  # Delete Characters (DCH)
+        self.write(b"\x1b[P")  # CSI Ps P  # Delete Characters (DCH)
 
     def char_delete_right(self, line):  # Vi X
         """Char Delete Right"""
 
-        self.write(b"\x1B[P")  # CSI Ps P  # Delete Characters (DCH)
+        self.write(b"\x1b[P")  # CSI Ps P  # Delete Characters (DCH)
 
     def char_delete_to_beyond(self, line):  # Vi ⇧D
         """Char Delete to beyond last Char of Line"""
 
-        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+        self.write(b"\x1b[K")  # CSI Ps K  # Erase in Line (DECSEL)
         self.write(b"\b")
 
     def char_insert_line_break(self, line):  # Vi ⌃M Return splits the Line
         """Split the Line"""
 
-        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+        self.write(b"\x1b[K")  # CSI Ps K  # Erase in Line (DECSEL)
         self.write(b"\r\n")
         self.line_insert_above(line)
 
@@ -566,14 +566,14 @@ class ScreenEditor:
         """Char Delete Right and start Inserting"""
 
         self.write(b"\r")
-        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+        self.write(b"\x1b[K")  # CSI Ps K  # Erase in Line (DECSEL)
 
         self.inserting_enter(line)
 
     def line_insert_above(self, line):  # Vi ⇧O
         """Insert Line Above"""
 
-        self.write(b"\x1B[L")  # CSI Ps L  # Insert Lines (IL)
+        self.write(b"\x1b[L")  # CSI Ps L  # Insert Lines (IL)
         self.write(b"\r")
 
         self.inserting_enter(line)
@@ -595,7 +595,7 @@ class ScreenEditor:
         gt = self.gt
 
         self.status_chars = "C"
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
         inner_line = gt.readline()
         m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=inner_line)
@@ -608,17 +608,17 @@ class ScreenEditor:
             self.reply_to(inner_line)
 
         self.to_lower_left()
-        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+        self.write(b"\x1b[K")  # CSI Ps K  # Erase in Line (DECSEL)
 
-        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+        self.write("\x1b[{};{}H".format(self.y, self.x).encode())
 
         if changing_kind == b"c":
-            self.write(b"\x1B[M")
+            self.write(b"\x1b[M")
         else:
             self.write(b"\x07")
 
         x_1 = 1
-        self.write("\x1B[{};{}H".format(self.y, x_1).encode())
+        self.write("\x1b[{};{}H".format(self.y, x_1).encode())
 
         self.line_insert_above(line)
 
@@ -628,7 +628,7 @@ class ScreenEditor:
         gt = self.gt
 
         self.status_chars = "D"
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
         inner_line = gt.readline()
         m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=inner_line)
@@ -641,16 +641,16 @@ class ScreenEditor:
             self.reply_to(inner_line)
 
         self.to_lower_left()
-        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+        self.write(b"\x1b[K")  # CSI Ps K  # Erase in Line (DECSEL)
 
-        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+        self.write("\x1b[{};{}H".format(self.y, self.x).encode())
 
         if deleting_kind == b"d":
-            self.write(b"\x1B[M")
+            self.write(b"\x1b[M")
         else:
             self.write(b"\x07")
 
-        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+        self.write("\x1b[{};{}H".format(self.y, self.x).encode())
 
     def write_cr(self, line):  # Vi ⌃M
         """Write Carriage Return"""
@@ -668,7 +668,7 @@ class ScreenEditor:
         gt = self.gt
 
         self.status_chars = "⇧Z"
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
         inner_line = gt.readline()
         m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=inner_line)
@@ -681,9 +681,9 @@ class ScreenEditor:
             self.reply_to(inner_line)
 
         self.to_lower_left()
-        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+        self.write(b"\x1b[K")  # CSI Ps K  # Erase in Line (DECSEL)
 
-        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+        self.write("\x1b[{};{}H".format(self.y, self.x).encode())
 
         if quitting_kind == b"Q":
             sys.exit()
@@ -700,7 +700,7 @@ class ScreenEditor:
         gt = self.gt
 
         self.status_chars = "<"
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
         self.replacing_enter(line)
 
@@ -716,25 +716,25 @@ class ScreenEditor:
 
         if denting_kind == b"<":
             self.inserting_enter(line)
-            self.write(b"\r\x1B[4P")  # CSI Ps P  # Delete Characters (DCH)
+            self.write(b"\r\x1b[4P")  # CSI Ps P  # Delete Characters (DCH)
             self.helping_enter(line)
         elif denting_kind == b"L":
             self.inserting_enter(line)
             y = self.y
             while y < self.lines:
-                self.write(b"\r\x1B[4P\n")  # CSI Ps P  # Delete Characters (DCH)
+                self.write(b"\r\x1b[4P\n")  # CSI Ps P  # Delete Characters (DCH)
                 y += 1
-            self.write(b"\r\x1B[4P")  # CSI Ps P  # Delete Characters (DCH)
+            self.write(b"\r\x1b[4P")  # CSI Ps P  # Delete Characters (DCH)
             self.helping_enter(line)
         else:
             self.write(b"\x07")
 
-        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+        self.write("\x1b[{};{}H".format(self.y, self.x).encode())
 
         self.to_lower_left()
-        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+        self.write(b"\x1b[K")  # CSI Ps K  # Erase in Line (DECSEL)
 
-        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+        self.write("\x1b[{};{}H".format(self.y, self.x).encode())
 
     def indenting_visit(self, line):  # Vi >>  # Vi >L ends at Dent
         """Take one Keyboard Input Line as how many Lines to Indent"""
@@ -742,7 +742,7 @@ class ScreenEditor:
         gt = self.gt
 
         self.status_chars = ">"
-        self.write(b"\x1B[6n")  # CSI Ps n Device Status Report (DSR)
+        self.write(b"\x1b[6n")  # CSI Ps n Device Status Report (DSR)
 
         self.replacing_enter(line)
 
@@ -771,12 +771,12 @@ class ScreenEditor:
         else:
             self.write(b"\x07")
 
-        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+        self.write("\x1b[{};{}H".format(self.y, self.x).encode())
 
         self.to_lower_left()
-        self.write(b"\x1B[K")  # CSI Ps K  # Erase in Line (DECSEL)
+        self.write(b"\x1b[K")  # CSI Ps K  # Erase in Line (DECSEL)
 
-        self.write("\x1B[{};{}H".format(self.y, self.x).encode())
+        self.write("\x1b[{};{}H".format(self.y, self.x).encode())
 
     #
     # Map Keyboard Input Lines to Editor Action while Helping
@@ -799,15 +799,15 @@ class ScreenEditor:
         # Vi ⌃V⌃J works when echoed (including scroll up 1 row when at last row)
         # Vi ⌃K works when echoed (as Vertical Tab VT alias of ⌃J Line Feed LF)
         # Vi ⌃L
-        bot_by_line[b"\x0D"] = self.write_cr  # Vi ⌃M works when echoed as CR
-        bot_by_line[b"\x0E"] = self.to_row_down  # Vi ⌃N
+        bot_by_line[b"\x0d"] = self.write_cr  # Vi ⌃M works when echoed as CR
+        bot_by_line[b"\x0e"] = self.to_row_down  # Vi ⌃N
         # Vi ⌃O
         bot_by_line[b"\x10"] = self.to_row_up  # Vi ⌃P
         # Vi ⌃Q, Vi ⌃R, Vi ⌃S, Vi ⌃T, Vi ⌃U
         # todo: ⌃V Alt Editing Flavor ⌃V
         # Vi ⌃W, Vi ⌃X, Vi ⌃Y, Vi ⌃Z
 
-        bot_by_line[b"\x1B"] = self.on_esc  # Vi ⌃[
+        bot_by_line[b"\x1b"] = self.on_esc  # Vi ⌃[
         # Vi ⌃[, Vi ⌃\, Vi ⌃], Vi ⌃^, Vi ⌃_, Vi ⌃`
 
         # Vi Space, Vi !, Vi ", Vi #
@@ -906,10 +906,10 @@ class ScreenEditor:
 
         bot_by_line[b"\x03"] = self.helping_enter  # Vi ⌃C
         bot_by_line[b"\x07"] = self.write_device_status_report  # Vi ⌃G
-        bot_by_line[b"\x0D"] = self.char_insert_line_break  # Vi ⌃M Return
-        bot_by_line[b"\x0F"] = self.helping_visit  # Vi ⌃O
+        bot_by_line[b"\x0d"] = self.char_insert_line_break  # Vi ⌃M Return
+        bot_by_line[b"\x0f"] = self.helping_visit  # Vi ⌃O
         bot_by_line[b"\x16"] = self.writing_visit  # Vi ⌃V
-        bot_by_line[b"\x1B"] = self.on_esc  # Vi ⌃[
+        bot_by_line[b"\x1b"] = self.on_esc  # Vi ⌃[
 
         return bot_by_line
 
@@ -927,15 +927,15 @@ class GlassTeletype:
 
         fd = self.fd
 
-        assert MouseEnter == b"\x1B[" b"?1000h"
-        assert PasteEnter == b"\x1B[" b"?2004h"
+        assert MouseEnter == b"\x1b[" b"?1000h"
+        assert PasteEnter == b"\x1b[" b"?2004h"
 
         tcgetattr = termios.tcgetattr(fd)
         tty.setraw(fd, when=termios.TCSADRAIN)  # Drain flushes Output, then changes
         # termios.TCSAFLUSH  # Flush destroys Input, flushes Output, then changes
 
-        os.write(fd, b"\x1B[" b"?2004h")
-        os.write(fd, b"\x1B[" b"?1000h")
+        os.write(fd, b"\x1b[" b"?2004h")
+        os.write(fd, b"\x1b[" b"?1000h")
 
         self.tcgetattr = tcgetattr
 
@@ -949,11 +949,11 @@ class GlassTeletype:
         fd = self.fd
         tcgetattr = self.tcgetattr
 
-        assert MouseExit == b"\x1B[" b"?1000l"
-        assert PasteExit == b"\x1B[" b"?2004l"
+        assert MouseExit == b"\x1b[" b"?1000l"
+        assert PasteExit == b"\x1b[" b"?2004l"
 
-        os.write(fd, b"\x1B[" b"?1000l")
-        os.write(fd, b"\x1B[" b"?2004l")
+        os.write(fd, b"\x1b[" b"?1000l")
+        os.write(fd, b"\x1b[" b"?2004l")
 
         when = termios.TCSADRAIN
         termios.tcsetattr(fd, when, tcgetattr)
@@ -1019,13 +1019,13 @@ class GlassTeletype:
 def bytes_splitstroke(line):
     """Pick out the next whole Chunk of Paste or Key Stroke"""
 
-    assert MouseButton == b"\x1B[" b"M"
+    assert MouseButton == b"\x1b[" b"M"
 
     stroke = line
     lookahead = b""
 
     if len(line) >= 6:
-        if line.startswith(b"\x1B[" b"M"):
+        if line.startswith(b"\x1b[" b"M"):
             stroke = line[:6]
             lookahead = line[6:]
 
@@ -1039,9 +1039,9 @@ def bytes_splitstroke(line):
 # Decipher Terminal Byte Codes, written or read
 #
 
-Esc = b"\x1B"
+Esc = b"\x1b"
 
-CSI = b"\x1B["
+CSI = b"\x1b["
 
 
 #
@@ -1049,9 +1049,9 @@ CSI = b"\x1B["
 #
 
 
-CPR = b"\x1B[{};{}R"  # Cursor Position Report (CPR) of Row Y Column X in reply to DSR
+CPR = b"\x1b[{};{}R"  # Cursor Position Report (CPR) of Row Y Column X in reply to DSR
 
-MouseButton = b"\x1B[" b"M"
+MouseButton = b"\x1b[" b"M"
 
 
 #
@@ -1059,15 +1059,15 @@ MouseButton = b"\x1B[" b"M"
 #
 
 
-CUP_Y_X = b"\x1B[{};{}H"  # Cursor Position (CUP) to move Cursor to Row Y Column X
+CUP_Y_X = b"\x1b[{};{}H"  # Cursor Position (CUP) to move Cursor to Row Y Column X
 
-DSR = b"\x1B[" b"6n"  # Device Status Report (DSR) call for CPR
+DSR = b"\x1b[" b"6n"  # Device Status Report (DSR) call for CPR
 
-MouseEnter = b"\x1B[" b"?1000h"  # CSI ? Pm h  # Ps = 1 0 0 0  # SET_VT200_MOUSE
-MouseExit = b"\x1B[" b"?1000l"  # CSI ? Pm l  # Ps = 1 0 0 0  # SET_VT200_MOUSE
+MouseEnter = b"\x1b[" b"?1000h"  # CSI ? Pm h  # Ps = 1 0 0 0  # SET_VT200_MOUSE
+MouseExit = b"\x1b[" b"?1000l"  # CSI ? Pm l  # Ps = 1 0 0 0  # SET_VT200_MOUSE
 
-PasteEnter = b"\x1B[" b"?2004h"  # CSI ? Pm h  # Ps = 2 0 0 4
-PasteExit = b"\x1B[" b"?2004l"  # CSI ? Pm l  # Ps = 2 0 0 4
+PasteEnter = b"\x1b[" b"?2004h"  # CSI ? Pm h  # Ps = 2 0 0 4
+PasteExit = b"\x1b[" b"?2004l"  # CSI ? Pm l  # Ps = 2 0 0 4
 
 
 #

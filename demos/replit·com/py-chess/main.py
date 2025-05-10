@@ -81,12 +81,12 @@ def main() -> None:
         print("Try a larger Terminal, such as 50 Rows x 36 Columns", file=sys.stderr)
         sys.exit(1)
 
-    print("\x1B[?25l", end="")  # DecCsiCursorHide  # 06/12 l
+    print("\x1b[?25l", end="")  # DecCsiCursorHide  # 06/12 l
     try:
         player.run_awhile()
     finally:
-        print("\x1B[?25h", end="")  # DecCsiCursorShow  # 06/12 l
-        print(f"\x1B[{board.y1_below}H", end="")
+        print("\x1b[?25h", end="")  # DecCsiCursorShow  # 06/12 l
+        print(f"\x1b[{board.y1_below}H", end="")
         sys.stdout.flush()
         for _ in range(19):
             print()
@@ -115,14 +115,14 @@ class Player:
             # wrong in Upper Left of Shell, but that's rarely tested
 
         while True:
-            print("\x1B[H" + "\x1B[2J" + "\x1B[3J", end="")  # a la Sh 'clear'
+            print("\x1b[H" + "\x1b[2J" + "\x1b[3J", end="")  # a la Sh 'clear'
             player.play_once()
 
             print()
             print("Press Return to roll back the Game")
             sys.stdin.readline()
 
-            print("\x1B[H" + "\x1B[2J" + "\x1B[3J", end="")  # a la Sh 'clear'
+            print("\x1b[H" + "\x1b[2J" + "\x1b[3J", end="")  # a la Sh 'clear'
             player.roll_back()
 
             print()
@@ -186,13 +186,13 @@ class Player:
 class Printer:
     """Print well, into a Sh Terminal or Replit Console"""
 
-    Plain = "\x1B[m"  # Select Graphic Rendition (SGR)  # 06/13 m
+    Plain = "\x1b[m"  # Select Graphic Rendition (SGR)  # 06/13 m
 
     def __init__(self) -> None:
         default_eq_None = None
 
-        BlackBack = "\x1B[40m"  # SGR 06/13 m  # 40 Black Background
-        GrayBack = "\x1B[47m"  # SGR 06/13 m  # 47 White Background
+        BlackBack = "\x1b[40m"  # SGR 06/13 m  # 40 Black Background
+        GrayBack = "\x1b[47m"  # SGR 06/13 m  # 47 White Background
         if os.getenv("REPLIT_ENVIRONMENT", default_eq_None):
             (BlackBack, GrayBack) = (GrayBack, BlackBack)
             # 24/Mar/2024 Replit·Com got these backwards
@@ -215,7 +215,7 @@ class Printer:
         tcgetattr = termios.tcgetattr(fd)
         tty.setraw(fd, when=termios.TCSADRAIN)
 
-        sys.stderr.write("\x1B[6n")  # Device Status Report (DSR) 06/14 n
+        sys.stderr.write("\x1b[6n")  # Device Status Report (DSR) 06/14 n
         sys.stderr.flush()
 
         ibytes = os.read(fd, 100)
@@ -426,7 +426,7 @@ class Board:
             if cell.stale_if != cell.piece_if:
                 cell.stale_if = cell.piece_if
 
-                print(f"\x1B[{y1};{x1 - 2}H", end="")  # CUP_Y1_X1
+                print(f"\x1b[{y1};{x1 - 2}H", end="")  # CUP_Y1_X1
                 if cell.color != "Light":
                     print(printer.color_sequence_str(cell.color), end="")
 
@@ -439,7 +439,7 @@ class Board:
 
         #
 
-        print(f"\x1B[{y1_below}H", end="")  # CUP_Y1
+        print(f"\x1b[{y1_below}H", end="")  # CUP_Y1
         sys.stdout.flush()
 
         print()
@@ -453,7 +453,7 @@ class Board:
 
         print()
         if not outs:
-            print("\x1B[K", end="")  # EL  # needed to roll back
+            print("\x1b[K", end="")  # EL  # needed to roll back
         else:
             print("Outs")
             print()
@@ -468,14 +468,14 @@ class Board:
                     print(color, end="")
                     sys.stdout.flush()
 
-                print("\x1B[K", end="")  # EL
+                print("\x1b[K", end="")  # EL
                 print()
 
-        print("\x1B[K", end="")  # EL
+        print("\x1b[K", end="")  # EL
         print()
         sys.stdout.flush()
 
-        print("\x1B[J", end="")  # ED
+        print("\x1b[J", end="")  # ED
         sys.stdout.flush()
 
         # CUP_Y1 = "\x1B[{}H"  # Cursor Position  # 04/08 H

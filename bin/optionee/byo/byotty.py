@@ -59,7 +59,7 @@ def main() -> None:
     # as Chords of Words of Chars and themselves, else as themselves alone
 
     with BytesTerminal(sys.stderr) as bt:
-        quits = (b"\x03", b"\x04", b"\x1A", b"\x1C", b"Q")  # ⌃C ⌃D ⌃Z ⌃\ ⇧Q
+        quits = (b"\x03", b"\x04", b"\x1a", b"\x1c", b"Q")  # ⌃C ⌃D ⌃Z ⌃\ ⇧Q
         bt.print(r"Press ⇧Z ⇧Q to quit, or any one of ⌃C ⌃D ⌃Z ⌃\ ".rstrip())
         bt.print()  # doesn't accept : Q ! Return
 
@@ -102,7 +102,7 @@ LF = b"\n"  # 00/10 Line Feed
 #
 
 
-C0_BYTES = bytes(_ for _ in range(0, 0x20)) + b"\x7F"
+C0_BYTES = bytes(_ for _ in range(0, 0x20)) + b"\x7f"
 C1_BYTES = bytes(_ for _ in range(0x80, 0xA0))  # not U+00A0, U+00AD
 UTF8_START_BYTES = bytes(_ for _ in range(0xC2, 0xF5))
 
@@ -118,20 +118,20 @@ assert len(UTF8_START_BYTES) == 0x33 == 51
 #
 
 
-ESC = b"\x1B"  # 01/11 Escape
+ESC = b"\x1b"  # 01/11 Escape
 
-CSI = b"\x1B["  # 01/11 05/11 Control Sequence Introducer  # till rb"[\x30-\x7E]"
-OSC = b"\x1B]"  # 01/11 05/13 Operating System Command  # till BEL, CR, Esc \ ST, etc
-SS3 = b"\x1BO"  # 01/11 04/15 Single Shift Three
+CSI = b"\x1b["  # 01/11 05/11 Control Sequence Introducer  # till rb"[\x30-\x7E]"
+OSC = b"\x1b]"  # 01/11 05/13 Operating System Command  # till BEL, CR, Esc \ ST, etc
+SS3 = b"\x1bO"  # 01/11 04/15 Single Shift Three
 
-CsiStartPattern = b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"  # leading Zeroes allowed
+CsiStartPattern = b"\x1b\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"  # leading Zeroes allowed
 CsiEndPattern = rb"[\x40-\x7E]"
 CsiPattern = CsiStartPattern + CsiEndPattern
 # Csi Patterns define many Pm, Pn, and Ps, but not the Pt of Esc ] OSC Ps ; Pt BEL
 # in 5.4 Control Sequences of ECMA-48_5th 1991
 
-MouseThreeByteStartPattern = b"\x1B\\[" rb"M"
-MouseSixByteEndPattern = b"\x1B\\[" rb"M..."  # MPR X Y
+MouseThreeByteStartPattern = b"\x1b\\[" rb"M"
+MouseSixByteEndPattern = b"\x1b\\[" rb"M..."  # MPR X Y
 
 
 #
@@ -361,8 +361,8 @@ def _bytes_take_mouse_six_else(data) -> bytes | None:
 
     assert data, data  # not empty here
 
-    assert MouseThreeByteStartPattern == b"\x1B\\[" rb"M"
-    assert MouseSixByteEndPattern == b"\x1B\\[" rb"M..."  # MPR X Y
+    assert MouseThreeByteStartPattern == b"\x1b\\[" rb"M"
+    assert MouseSixByteEndPattern == b"\x1b\\[" rb"M..."  # MPR X Y
     assert len(MouseThreeByteStartPattern) == 4  # pattern of 4 Bytes to take 3 Bytes
     assert len(MouseSixByteEndPattern) == 7  # pattern of 7 Bytes to take 6 Bytes
 
@@ -399,9 +399,9 @@ def _bytes_take_c0_plus_else(data) -> bytes | None:
 
     # Do take a C0 Control Byte by itself, other than Esc
 
-    assert ESC == b"\x1B"
+    assert ESC == b"\x1b"
 
-    if head != b"\x1B":
+    if head != b"\x1b":
         return head  # doesn't say block for \r\n after \r, like Screen Writers do
 
     # Take 1 whole C0 Esc Control Sequence, else zero Bytes while partial, else None
@@ -414,10 +414,10 @@ def _bytes_take_c0_plus_else(data) -> bytes | None:
 def _bytes_take_c0_esc_etc_else(data) -> bytes:
     """Take 1 whole C0 Esc Control Sequence, else zero Bytes while partial, else None"""
 
-    assert data.startswith(b"\x1B"), (data,)  # given Esc already here
+    assert data.startswith(b"\x1b"), (data,)  # given Esc already here
 
-    assert ESC == b"\x1B"
-    assert CsiStartPattern == b"\x1B\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"
+    assert ESC == b"\x1b"
+    assert CsiStartPattern == b"\x1b\\[" rb"[\x30-\x3F]*[\x20-\x2F]*"
     assert CsiEndPattern == rb"[\x40-\x7E]"
 
     assert data.startswith(ESC), data
@@ -428,14 +428,14 @@ def _bytes_take_c0_esc_etc_else(data) -> bytes:
         return b""  # partial C0 Esc Control Sequence
 
     esc_plus = data[:2]
-    assert esc_plus[:1] == b"\x1B", (esc_plus,)
+    assert esc_plus[:1] == b"\x1b", (esc_plus,)
 
     # Do say block for the Byte after Esc O,
     # such as the Single Shift Three (SS3) of F1 F2 F3 F4
 
-    assert SS3 == b"\x1BO"
+    assert SS3 == b"\x1bO"
 
-    if esc_plus == b"\x1BO":
+    if esc_plus == b"\x1bO":
         if not data[2:]:
             return b""  # partial C0 SS3 Control Sequence
 
@@ -445,16 +445,16 @@ def _bytes_take_c0_esc_etc_else(data) -> bytes:
     # Take Esc with a Text Byte of 7-Bit US-Ascii as a Byte Pair,
     # and take Esc alone when given before Esc or Control or not 7-bit US-Ascii
 
-    if esc_plus != b"\x1B[":  # CSI
+    if esc_plus != b"\x1b[":  # CSI
         if (esc_plus[-1:] in C0_BYTES) or (esc_plus[-1] >= 0x80):
-            return b"\x1B"
+            return b"\x1b"
 
         return esc_plus
 
     # Do say block for the Bytes after Esc [
 
-    assert ESC == b"\x1B"
-    assert CSI == b"\x1B["
+    assert ESC == b"\x1b"
+    assert CSI == b"\x1b["
 
     assert data.startswith(CSI), data
 

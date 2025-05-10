@@ -1572,8 +1572,8 @@ def text_to_grafs(text) -> list[list[str]]:
 def unicodedata_name_anyhow(char) -> str:
     """Supply the Unicode Names that UnicodeData mystically omits"""
 
-    assert unicodedata.name("\xA0").title() == "No-Break Space"
-    assert unicodedata.name("\xAD").title() == "Soft Hyphen"
+    assert unicodedata.name("\xa0").title() == "No-Break Space"
+    assert unicodedata.name("\xad").title() == "Soft Hyphen"
 
     try:
         name = unicodedata.name(char)
@@ -1601,12 +1601,12 @@ UNICODEDATA_NAMES_ANYHOW_BY_CHAR = {  # omitting x 80 81 99 A0 AD
     "\x07": ("BEL",),  # Bell  # != unicode.lookup("Bell"), U+01F514
     "\x08": ("Backspace", "BS"),
     "\x09": ("Character Tabulation", "HT"),  # Horizontal Tabulation
-    "\x0A": ("Line Feed", "LF"),
-    "\x0B": ("Line Tabulation", "VT"),  # Vertical Tabulation
-    "\x0C": ("Form Feed", "FF"),
-    "\x0D": ("Carriage Return", "CR"),
-    "\x0E": ("Shift Out", "SO"),
-    "\x0F": ("Shift In", "SI"),
+    "\x0a": ("Line Feed", "LF"),
+    "\x0b": ("Line Tabulation", "VT"),  # Vertical Tabulation
+    "\x0c": ("Form Feed", "FF"),
+    "\x0d": ("Carriage Return", "CR"),
+    "\x0e": ("Shift Out", "SO"),
+    "\x0f": ("Shift In", "SI"),
     "\x10": ("Data Link Escape", "DLE"),
     "\x11": ("Device Control One", "DC1"),
     "\x12": ("Device Control Two", "DC2"),
@@ -1617,13 +1617,13 @@ UNICODEDATA_NAMES_ANYHOW_BY_CHAR = {  # omitting x 80 81 99 A0 AD
     "\x17": ("End Of Transmission Block", "ETB"),
     "\x18": ("Cancel", "CAN"),
     "\x19": ("End Of Medium", "EM"),
-    "\x1A": ("Substitute", "SUB"),
-    "\x1B": ("Escape", "ESC"),
-    "\x1C": ("Information Separator Four", "FS"),  # File Separator
-    "\x1D": ("Information Separator Three", "GS"),  # Group Separator
-    "\x1E": ("Information Separator Two", "RS"),  # Record Separator
-    "\x1F": ("Information Separator One", "US"),  # Unit Separator
-    "\x7F": ("Delete", "DEL"),
+    "\x1a": ("Substitute", "SUB"),
+    "\x1b": ("Escape", "ESC"),
+    "\x1c": ("Information Separator Four", "FS"),  # File Separator
+    "\x1d": ("Information Separator Three", "GS"),  # Group Separator
+    "\x1e": ("Information Separator Two", "RS"),  # Record Separator
+    "\x1f": ("Information Separator One", "US"),  # Unit Separator
+    "\x7f": ("Delete", "DEL"),
     "\x82": ("Break Permitted Here", "BPH"),  # ! = "Zero Width Space" U+200B ZWSP
     "\x83": ("No Break Here", "NBH"),  # != "Word Joiner" U+2060 WJ
     "\x84": ("Index", "IND"),
@@ -1632,12 +1632,12 @@ UNICODEDATA_NAMES_ANYHOW_BY_CHAR = {  # omitting x 80 81 99 A0 AD
     "\x87": ("End of Selected Area", "ESA"),
     "\x88": ("Character Tabulation Set", "HTS"),
     "\x89": ("Character Tabulation With Justification", "HTJ"),
-    "\x8A": ("Line Tabulation Set", "VTS"),
-    "\x8B": ("Partial Line Forward", "PLD"),
-    "\x8C": ("Partial Line Backward", "PLU"),
-    "\x8D": ("Reverse Line Feed", "RI"),
-    "\x8E": ("Single Shift Two", "SS2"),
-    "\x8F": ("Single Shift Three", "SS3"),
+    "\x8a": ("Line Tabulation Set", "VTS"),
+    "\x8b": ("Partial Line Forward", "PLD"),
+    "\x8c": ("Partial Line Backward", "PLU"),
+    "\x8d": ("Reverse Line Feed", "RI"),
+    "\x8e": ("Single Shift Two", "SS2"),
+    "\x8f": ("Single Shift Three", "SS3"),
     "\x90": ("Device Control String", "DCS"),
     "\x91": ("Private Use One", "PU1"),
     "\x92": ("Private Use Two", "PU2"),
@@ -1647,12 +1647,12 @@ UNICODEDATA_NAMES_ANYHOW_BY_CHAR = {  # omitting x 80 81 99 A0 AD
     "\x96": ("Start of Guarded Area", "SPA"),
     "\x97": ("End of Guarded Area", "EPA"),
     "\x98": ("Start of String", "SOS"),
-    "\x9A": ("Single Character Introducer", "SCI"),
-    "\x9B": ("Control Sequence Introducer", "CSI"),
-    "\x9C": ("String Terminator", "ST"),
-    "\x9D": ("Operating System Command", "OSC"),
-    "\x9E": ("Privacy Message", "PM"),
-    "\x9F": ("Application Program Command", "APC"),
+    "\x9a": ("Single Character Introducer", "SCI"),
+    "\x9b": ("Control Sequence Introducer", "CSI"),
+    "\x9c": ("String Terminator", "ST"),
+    "\x9d": ("Operating System Command", "OSC"),
+    "\x9e": ("Privacy Message", "PM"),
+    "\x9f": ("Application Program Command", "APC"),
 }
 
 

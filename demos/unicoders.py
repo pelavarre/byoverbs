@@ -27,7 +27,7 @@ def main() -> None:
 def some_decodable_startswith(bytes_) -> bool:
     """Say if these Bytes start 1 or more UTF-8 Encodings of Chars"""
 
-    suffixes = (b"\x80", b"\xBF", b"\x80\x80", b"\xBF\xBF", b"\x80\x80\x80", b"\xBF\xBF\xBF")
+    suffixes = (b"\x80", b"\xbf", b"\x80\x80", b"\xbf\xbf", b"\x80\x80\x80", b"\xbf\xbf\xbf")
 
     for suffix in suffixes:
         suffixed = bytes_ + suffix
