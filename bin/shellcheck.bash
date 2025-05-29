@@ -94,6 +94,8 @@ cd bin/ || exit 1
 for SHFILE in *; do
     if [[ -d "$SHFILE" ]]; then  # skips, if dir
         :
+    elif [ "$SHFILE" = a ]; then
+       (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
     elif [ "$SHFILE" = bash_profile ]; then
        (set -xe; shellcheck --norc --shell=bash "$@" -- "$SHFILE")
     elif [ "$SHFILE" = zprofile ]; then

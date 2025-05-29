@@ -1,7 +1,8 @@
 (set -xe; git commit --all --amend "$@")
 xs=$?
 if [ $xs -ne 0 ]; then
-    if [[ "$(cat .git/COMMIT_EDITMSG)" != "" ]]; then
+    editmsg=$(cat .git/COMMIT_EDITMSG)
+    if [ "$editmsg" != "" ]; then
         echo "+ exit $xs" >&2
         (set -xe; cat .git/COMMIT_EDITMSG; cat - >/dev/null)
     fi
