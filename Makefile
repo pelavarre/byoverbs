@@ -123,7 +123,10 @@ flake8:
 		pip freeze |grep '^flake8-import-order==' >/dev/null
 	~/.pyvenvs/flake8/bin/flake8 \
 		--max-line-length=999 --max-complexity 15 --ignore=E203,W503 \
-		../byoverbs
+		../byoverbs 2>&1 \
+		|grep -v '^/[^:]*flake8_import_order/styles.py:' \
+		|grep -v '  from pkg_resources import iter_entry_points' \
+		|cat -
 	:
 
 # --max-line-length=999  # Black max line lengths over Flake8 max line lengths
