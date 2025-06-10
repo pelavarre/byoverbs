@@ -104,7 +104,7 @@ print(
     ">>> import argparse, builtins, importlib, os, sys, urllib.parse",
     file=sys.stderr,
 )
-print(">>> import decimal as D", file=sys.stderr)
+print(">>> from decimal import Decimal as D", file=sys.stderr)
 print(">>> import ... Pacific ... PacificLaunch ... parser", file=sys.stderr)
 print(">>> import ...", file=sys.stderr)
 print(">>> ", file=sys.stderr)
