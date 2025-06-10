@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
 r"""
+
 env -i zsh -f
+
+echo '$' && env -i PS1='%% ' TERM=$TERM zsh -f
 
 alias
 bindkey
