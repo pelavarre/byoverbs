@@ -41,20 +41,15 @@ _ = urllib.parse  # todo: lazy-import X.Y, not just lazy-import X
 
 # Do speculatively run a few lines of Python in advance
 
+print(">>> import argparse, builtins, importlib, os, sys, urllib.parse, zoneinfo", file=sys.stderr)
+print(">>> import ... D ... Pacific ... PacificLaunch ... parser ... dt ... t ...", file=sys.stderr)
+print(">>> ", file=sys.stderr)
+
 Pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
 PacificLaunch = dt.datetime.now(Pacific)
 
 parser = argparse.ArgumentParser()
-
-
-print(
-    ">>> import argparse, builtins, importlib, os, sys, urllib.parse",
-    file=sys.stderr,
-)
-print(">>> from decimal import Decimal as D", file=sys.stderr)
-print(">>> import ... Pacific ... PacificLaunch ... parser", file=sys.stderr)
-print(">>> import ...", file=sys.stderr)
-print(">>> ", file=sys.stderr)
+t = dt.datetime.now().astimezone(Pacific)
 
 
 QUICK_LAZY_IMPORT_NAMES = """

@@ -11,9 +11,12 @@
 
 # cd bin/ && find bin/find.py should work sometimes
 
-# touch -d 2024-01-01T00:00:00 2023/2024-01-01
-# touch -d 2024-01-01 2023/2024-01-01  # Linux accepts T00:00:00 abbreviated
-# find . -not -newer 2023/2024-01-01  # finds the first Second of the New Year too :-(
+# mkdir -p 2024
+# touch -d 2024-07-01T00:00:00 2024/2024-07-01
+# touch -d 2024-07-01          2024/2024-07-01  # Linux accepts T00:00:00 abbreviated
+# find . -maxdepth 1 -not -newer 2024/2024-07-01
+
+# todo: how to add in a constraint of:  -not -type d
 
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/find.py

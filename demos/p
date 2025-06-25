@@ -1,8 +1,8 @@
 # kept up by
 #
-#   F=demos/lazy_import.py && cp -ip bin/p $F && vi $F
+#   F=demos/lazy_import.py && cp -ip demos/p $F && vi $F
 #
-#   diff -brpu demos/lazy_import.py bin/p
+#   diff -brpu demos/lazy_import.py demos/p
 #
 
 
@@ -94,20 +94,17 @@ _ = urllib.parse  # todo: lazy-import X.Y, not just lazy-import X
 
 # Do speculatively run a few lines of Python in advance
 
+print(
+    ">>> import argparse, builtins, importlib, os, sys, urllib.parse, zoneinfo", file=sys.stderr
+)
+print(">>> import ... D ... Pacific ... PacificLaunch ... parser ... dt ... t ...", file=sys.stderr)
+print(">>> ", file=sys.stderr)
+
 Pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
 PacificLaunch = dt.datetime.now(Pacific)
 
 parser = argparse.ArgumentParser()
-
-
-print(
-    ">>> import argparse, builtins, importlib, os, sys, urllib.parse",
-    file=sys.stderr,
-)
-print(">>> from decimal import Decimal as D", file=sys.stderr)
-print(">>> import ... Pacific ... PacificLaunch ... parser", file=sys.stderr)
-print(">>> import ...", file=sys.stderr)
-print(">>> ", file=sys.stderr)
+t = dt.datetime.now().astimezone(Pacific)
 
 
 QUICK_LAZY_IMPORT_NAMES = """
@@ -272,5 +269,5 @@ def_some_lazy_imports()  # ~0.75 ms
 # todo: up line, insert line, print Import, restore cursor - when Import happens
 
 
-# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/p
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/p
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

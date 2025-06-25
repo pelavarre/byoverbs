@@ -45,7 +45,3 @@ fi
 
 # ( cat bin/1 |sed 's,1,2,'g >bin/2 ) && ( cat bin/1 |sed 's,1,1,'g >bin/1 )
 # chmod +x bin/[121]
-
-
-# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/1
-# copied from:  git clone https://github.com/pelavarre/byoverbs.git
