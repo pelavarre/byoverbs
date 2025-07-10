@@ -120,12 +120,10 @@ black:
 
 flake8:
 	source ~/.pyvenvs/flake8/bin/activate && \
-		pip freeze |grep '^flake8-import-order==' >/dev/null
+		pip freeze |grep '^flake8.import.order==' >/dev/null
 	~/.pyvenvs/flake8/bin/flake8 \
 		--max-line-length=999 --max-complexity 15 --ignore=E203,W503 \
 		../byoverbs 2>&1 \
-		|grep -v '^/[^:]*flake8_import_order/styles.py:' \
-		|grep -v '  from pkg_resources import iter_entry_points' \
 		|cat -
 	:
 
