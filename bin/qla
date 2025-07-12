@@ -11,6 +11,10 @@ if [ $# -ne 0 ] && [ "$1" = '.' ]; then
     shift
 fi
 
+if [ $# -ne 0 ] && [ "$1" = '--numstat' ]; then
+    shift
+fi
+
 while [ $# -ne 0 ]; do
     case "$1" in
         -*)
