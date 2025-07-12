@@ -2,16 +2,16 @@ set -e
 
 shline='git log --pretty=fuller --no-decorate'
 
+if [ $# -ne 0 ] && [ "$1" = '--numstat' ]; then
+    shift
+fi
+
 if [ $# -eq 0 ]; then
     shline="$shline --numstat --author=$(git config user.email)"
 fi
 
 if [ $# -ne 0 ] && [ "$1" = '.' ]; then
     shline="$shline --author=$(git config user.email)"  # no --numstat
-    shift
-fi
-
-if [ $# -ne 0 ] && [ "$1" = '--numstat' ]; then
     shift
 fi
 
