@@ -1027,7 +1027,7 @@ the most extreme Red/ Green/ Blue mixes of the Html 24-Bit Colors
     Relaunch
 
     Restart  Right 0    SetPenColor 'FFffFF'  Forward  # White = Red + Green + Blue
-    Restart  Right 15    SetPenColor 'FF80FF'  Forward
+    Restart  Right 15   SetPenColor 'FF80FF'  Forward
     Restart  Right 30   SetPenColor 'FF00FF'  Forward  # Magenta = Red + Blue
     Restart  Right 45   SetPenColor '8000FF'  Forward
     Restart  Right 60   SetPenColor '0000FF'  Forward  # Blue

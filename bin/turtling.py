@@ -277,50 +277,54 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 
 
 #
-# Name Control Bytes and Escape Sequences, like for working with Import Termios, Tty
+# Sketch out the Byte Sequences to test early & often
 #
 
 
+# Keycap Symbols are ⎋ Esc, ⌃ Control, ⌥ Option/ Alt, ⇧ Shift, ⌘ Command/ Os
+
+#     ⌃G ⌃H ⌃I ⌃J ⌃M mean \a \b \t \n \r, and ⌃[ means \e, also known as ⎋ Esc
+#     Tab means ⌃I \t, and Return means ⌃M \r
 #
-#   ⌃G ⌃H ⌃I ⌃J ⌃M mean \a \b \t \n \r, and ⌃[ means \e, also known as ⎋
+# The famous Esc ⎋ Byte Pairs are ⎋ 7 8 C L ⇧D ⇧E ⇧M
 #
-#   macOS Terminals also understand a LIFO Stack of 1 Copy of the Y X Terminal Cursor
+#     ⎋7 cursor-checkpoint  ⎋8 cursor-revert (defaults to Y 1 X 1)
+#     ⎋C screen-erase  ⎋L row-column-leap
+#     ⎋⇧D ↓  ⎋⇧E \r\n else \r  ⎋⇧M ↑
 #
-#       ⎋7 cursor-checkpoint  ⎋8 cursor-revert  (reverting defaults to Y 1 X 1)
+# The famous Csi ⎋[ Sequences are ⎋[ ⇧@ ⇧A⇧B⇧C⇧D⇧E⇧G⇧H⇧I⇧J⇧K⇧L⇧M⇧P⇧S⇧T⇧Z and ⎋[ DHLMNQT
 #
-#   The ⇧ @ABCDEGHIJKLMPSTZ & dhlm forms of ⎋[ Csi, without ⇧R n q t ⇧} ⇧~, are
+#     ⎋[⇧A ↑  ⎋[⇧B ↓  ⎋[⇧C →  ⎋[⇧D ←
+#     ⎋[I ⌃I  ⎋[⇧Z ⇧Tab
+#     ⎋[D row-leap  ⎋[⇧G column-leap  ⎋[⇧H row-column-leap
 #
-#       ⎋[⇧A ↑  ⎋[⇧B ↓  ⎋[⇧C →  ⎋[⇧D ←
-#       ⎋[I Tab  ⎋[⇧Z ⇧Tab
-#       ⎋[d row-go  ⎋[⇧G column-go  ⎋[⇧H row-column-go
+#     ⎋[⇧M rows-delete  ⎋[⇧L rows-insert  ⎋[⇧P chars-delete  ⎋[⇧@ chars-insert
+#     ⎋[⇧J after-erase  ⎋[1⇧J before-erase  ⎋[2⇧J screen-erase  ⎋[3⇧J scrollback-erase
+#     ⎋[⇧K row-tail-erase  ⎋[1⇧K row-head-erase  ⎋[2⇧K row-erase
+#     ⎋[⇧T scrolls-down  ⎋[⇧S scrolls-up
 #
-#       ⎋[⇧M rows-delete  ⎋[⇧L rows-insert  ⎋[⇧P chars-delete  ⎋[⇧@ chars-insert
-#       ⎋[⇧J after-erase  ⎋[1⇧J before-erase  ⎋[2⇧J screen-erase  ⎋[3⇧J scrollback-erase
-#       ⎋[⇧K row-tail-erase  ⎋[1⇧K row-head-erase  ⎋[2⇧K row-erase
-#       ⎋[⇧T scrolls-down  ⎋[⇧S scrolls-up
+#     ⎋[4H insert  ⎋[4L replace  ⎋[6 Q bar  ⎋[4 Q skid  ⎋[ Q unstyled
 #
-#       ⎋[4h insert  ⎋[4l replace  ⎋[6 q bar  ⎋[4 q skid  ⎋[ q unstyled
+#     ⎋[1M bold  ⎋[4M underline  ⎋[7M reverse/inverse
+#     ⎋[31M red  ⎋[32M green  ⎋[34M blue  ⎋[38;5;130M orange
+#     ⎋[M plain
 #
-#       ⎋[1m bold, ⎋[3m italic, ⎋[4m underline, ⎋[7m reverse/inverse
-#       ⎋[31m red  ⎋[32m green  ⎋[34m blue  ⎋[38;5;130m orange
-#       ⎋[m plain
+#     ⎋[5N call for reply ⎋[0N
+#     ⎋[6N call for reply ⎋[{y};{x}⇧R  ⎋[18T call for reply ⎋[8;{rows};{columns}T
 #
-#       ⎋[6n call for reply ⎋[{y};{x}R  ⎋[18t call for reply⎋[{rows};{columns}t
-#       ⎋[⇧E \r\n but never implies ⎋[⇧S
-#
-#   Our VT420 Terminal Emulation includes
-#
-#       ⎋['⇧} cols-insert  ⎋['⇧~ cols-delete
+#     ⎋['⇧} cols-insert  ⎋['⇧~ cols-delete
+
+
 #
 #   macOS Keyboard encodes Fn⇧← as ⎋[⇧H row-column-go
 #   macOS Mouse answers ⎋[?1006;1000h till ⎋[?1006;1000l with ⎋[<{b};{y};{x}M and ⎋[<{b};{y};{x}m
 #
 #   Our macOS App Emulation includes
 #
-#       ⌃A column-go-leftmost
-#       ⌃B column-go-left
+#       ⌃A column-leap-leftmost
+#       ⌃B ←
 #       ⌃D char-delete-right  # FIXME: make it so
-#       ⌃F column-go-right
+#       ⌃F →
 #       ⌃G alarm-ring
 #       ⌃H char-delete-left  # FIXME: make it so
 #       ⌃K row-tail-erase  # FIXME: make it so
@@ -335,6 +339,11 @@ def parse_args_else(parser: argparse.ArgumentParser) -> argparse.Namespace:
 #           note: ⌘K ⌘K is already plenty destructive at macOS now
 #
 #       Also Turtle Press "⌘K ⌘K" works  # FIXME: make it so
+#
+
+
+#
+# Name Control Bytes and Escape Sequences, like for working with Import Termios, Tty
 #
 
 
@@ -365,7 +374,7 @@ CUB_X = "\x1b" "[" "{}D"  # CSI 04/04 Cursor [Back] Left  # \b is Pn 1
 
 CNL_Y = "\x1b" "[" "{}E"  # CSI 04/05 Cursor Next Line (CNL)  # \r\n but never implies ⎋[⇧S
 
-CHA_Y = "\x1b" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # \r is Pn 1
+CHA_X = "\x1b" "[" "{}G"  # CSI 04/07 Cursor Character Absolute  # \r is Pn 1
 VPA_Y = "\x1b" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
 # CUP_1_1 = "\x1B" "[" "H"  # CSI 04/08 Cursor Position
@@ -380,8 +389,8 @@ CBT_X = "\x1b" "[" "{}Z"  # CSI 05/10 Cursor Backward Tabulation
 ED_P = "\x1b" "[" "{}J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
 
 ICH_X = "\x1b" "[" "{}@"  # CSI 04/00 Insert Character
-IL_Y = "\x1b" "[" "{}L"  # CSI 04/12 Insert Line
-DL_Y = "\x1b" "[" "{}M"  # CSI 04/13 Delete Line
+IL_Y = "\x1b" "[" "{}L"  # CSI 04/12 Insert Line [Row]
+DL_Y = "\x1b" "[" "{}M"  # CSI 04/13 Delete Line [Row]
 DCH_X = "\x1b" "[" "{}P"  # CSI 05/00 Delete Character
 
 DECIC_X = "\x1b" "[" "{}'}}"  # CSI 02/07 07/13 DECIC_X  # "}}" to mean "}"
@@ -1007,7 +1016,7 @@ class TerminalBytePacket:
 def yolo2() -> None:
     """Loop Keyboard back to Screen"""
 
-    assert DL_Y == "\x1b" "[" "{}M"  # CSI 04/13 Delete Line
+    assert DL_Y == "\x1b" "[" "{}M"  # CSI 04/13 Delete Line [Row]
 
     with BytesTerminal() as bt:
         print("Loop Keyboard back to Screen", end="\r\n")
@@ -1028,7 +1037,7 @@ def yolo2() -> None:
 def yolo1() -> None:
     """Trace Keyboard"""
 
-    assert DL_Y == "\x1b" "[" "{}M"  # CSI 04/13 Delete Line
+    assert DL_Y == "\x1b" "[" "{}M"  # CSI 04/13 Delete Line [Row]
 
     with BytesTerminal() as bt:
         print("Tracing Keyboard ...", end="\r\n")
@@ -2074,7 +2083,7 @@ class StrTerminal:
             self.row_y += int(p)
             self.column_x = 1
 
-        assert CHA_Y == "\x1b" "[" "{}G"  # CSI 04/07 Cursor Character Absolute
+        assert CHA_X == "\x1b" "[" "{}G"  # CSI 04/07 Cursor Character Absolute
         assert VPA_Y == "\x1b" "[" "{}d"  # CSI 06/04 Line Position Absolute
         assert CUP_Y_X == "\x1b" "[" "{};{}H"  # CSI 04/08 Cursor Position
 
@@ -2526,7 +2535,7 @@ class GlassTeletype:
         if column_x != 1:
             self.schars_write("\x1b[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
         else:
-            self.schars_write("\x1b[L")  # CSI 04/12 Insert Line
+            self.schars_write("\x1b[L")  # CSI 04/12 Insert Line [Row]
 
         # todo: split differently at left edge, at right edge, at middle
 
@@ -2537,7 +2546,7 @@ class GlassTeletype:
         if column_x != 1:
             self.schars_write("\x1b[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
         else:
-            self.schars_write("\x1b[L")  # CSI 04/12 Insert Line
+            self.schars_write("\x1b[L")  # CSI 04/12 Insert Line [Row]
             self.schars_write("\x1b[B")  # CSI 04/02 Cursor [Down] Next  # could be "\n"
 
         # todo: split differently at left edge, at right edge, at middle
@@ -2554,7 +2563,7 @@ class GlassTeletype:
         if column_x == 1:
             kstrs = list(_[-1] for _ in kchords[-2:])
             if kstrs == ["⌃K", "⌃K"]:
-                self.schars_write("\x1b[M")  # CSI 04/13 Delete Line
+                self.schars_write("\x1b[M")  # CSI 04/13 Delete Line [Row]
 
                 kchord = (b"", "")  # takes ⌃K ⌃K ⌃K as ⌃K ⌃K and ⌃K
                 kchords.append(kchord)
