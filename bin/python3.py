@@ -75,6 +75,9 @@ examples:
   : : Sep/2024 Python 3.12.6  # micro release date
   : Oct/2024 Python 3.13  # minor release date
   : : Dec/2024 Python 3.13.1  # micro release date
+  : : Apr/2025 Python 3.13.3  # micro release date
+  : : Aug/2025 Python 3.13.6  # micro release date
+  : Oct/2025 Python 3.14  # minor release date
 
 """
 

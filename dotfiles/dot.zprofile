@@ -21,6 +21,8 @@ export PATH=$PATH:$HOME/bin
 # Name the next Pwd:  -, .., ~
 
 alias -- -='echo + cd - >&2 && cd -'
+
+function . { if [ $# -eq 0 ]; then open .; else source "$@"; fi; }
 alias ..='echo + cd .. >&2 && cd .. && (dirs -p |head -1)'
 alias ~='echo + cd "~" >&2 && cd ~ && (dirs -p |head -1)'
 
@@ -43,7 +45,7 @@ stty -ixon  # let Sh ⌃S mean undo ⌃R  # don't take ⌃Q and ⌃S as XOn/ XOf
 #
 
 
-alias %%='echo -n "%%   ⌃ ⌥ ⇧ ⌘   # £   ← ↑ → ↓ ⎋ ⏎ ⇥ ⇤   ⋮ ·" |tee >(pbcopy) && echo'
+alias %%='echo -n "%% # £   ⎋ ⌃ ⌥ ⇧ ⌘ Fn   ← ↑ → ↓ ⇥ ⌫ ⏎   ; ⋮ ☰ ⬅️  ⬆️  ➡️  ⬇️  ·" |tee >(pbcopy) && echo'
 
 function :scf: () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug: () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
@@ -142,7 +144,7 @@ return
 
 # Git-Track rejected Python install patches
 #
-#   PATH="/Library/Frameworks/Python.framework/Versions/3.13/bin:${PATH}"
+#   PATH="/Library/Frameworks/Python.framework/Versions/3.14/bin:${PATH}"
 #   export PATH
 #
 

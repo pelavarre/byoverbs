@@ -1,2 +1,2 @@
-set -xe
+echo ': qa && git add ...' >&2
 git add "$@"

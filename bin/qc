@@ -1,2 +1,2 @@
-set -xe
+echo ': qc && git commit ...' >&2
 git commit "$@"

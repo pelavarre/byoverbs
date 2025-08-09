@@ -1,8 +1,7 @@
 if [ $# -eq 0 ]; then
-    set -xe
-    git checkout
+    echo ': q && git checkout' >&2
+    : q && git checkout
 else
-    set -xe
-    git config --get-regexp "^alias.$1"
-    git "$@"
+    echo ': q ... && git config --get-regexp "^alias[.]..." && git ...' >&2
+    : q "$1" && git config --get-regexp "^alias[.]$1" && git "$@"
 fi

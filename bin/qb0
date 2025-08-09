@@ -1,2 +1,2 @@
-set -xe
-git branch --sort=committerdate "$@"
+echo ': qb0 && git branch --sort=committerdate' >&2
+git branch --sort=committerdate

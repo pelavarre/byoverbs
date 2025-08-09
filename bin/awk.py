@@ -29,6 +29,9 @@ examples:
   awk.py --h  # show help lines and exit (more reliable than -h)
   awk.py --  # prefix each line with "-- " and suffix each line with " --"
 
+  echo a b c d e f |tr ' ' '\n' |awk '(NR<=2){print NR":",$0} {o2=o1} {o1=$0} END{print (NR-1)":", o2; print NR":", o1}'
+  echo a b c d e f |tr ' ' '\n' |cat -n |expand |tee >(head -2) >(tail -2) >/dev/null  # more cogent, less reliable
+
   F=log; (cat $F; tail -F $F) |awk '!d[$0]++' |grep -i Error  # don't repeat Lines seen already
 
   F=bin/awk.py && cat $F |awk '(length($0)>88){print "'$F':"NR":"$0}'

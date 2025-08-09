@@ -34,6 +34,8 @@ assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 
 _: object  # '_: object' tells MyPy to accept '_ =' tests across two and more Datatypes
 
+default_eq_None = None
+
 
 _ = re.fullmatch  # new since Mar/2014 Python 3.4
 
@@ -194,21 +196,29 @@ class ArgumentParser(argparse.ArgumentParser):
         got_filename = "./{} --help".format(main_filename)
 
         # Fetch the Parser Doc from a fitting virtual Terminal
-        # Fetch from a Black Terminal of 89 columns, not current Terminal width
-        # Fetch from later Python of "options:", not earlier Python of "optional arguments:"
+        # Fetch from a Black Terminal of 89 columns, not from the current Terminal Width
 
-        with_columns = os.getenv("COLUMNS")
-        os.environ["COLUMNS"] = str(89)
+        with_columns_else = os.environ.get("COLUMNS", default_eq_None)  # checkpoints
+        with_no_color_else = os.environ.get("NO_COLOR", default_eq_None)  # checkpoints
+
+        os.environ["COLUMNS"] = str(89)  # adds or replaces
+        os.environ["NO_COLOR"] = "True"  # adds or replaces
+
         try:
+
             parser_doc = self.format_help()
 
         finally:
-            if with_columns is None:
-                os.environ.pop("COLUMNS")
-            else:
-                os.environ["COLUMNS"] = with_columns
 
-        parser_doc = parser_doc.replace("optional arguments:", "options:")
+            if with_no_color_else is None:
+                del os.environ["NO_COLOR"]  # removes
+            else:
+                os.environ["NO_COLOR"] = with_no_color_else  # reverts
+
+            if with_columns_else is None:
+                del os.environ["COLUMNS"]  # removes
+            else:
+                os.environ["COLUMNS"] = with_columns_else  # reverts
 
         parser_filename = "ArgumentParser(...)"
         want_filename = parser_filename

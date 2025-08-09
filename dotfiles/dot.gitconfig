@@ -3,10 +3,15 @@
 
 
 [user]
-	email = jqdoe@example.com
-	name = J Q Doe
-	initials = jqdoe
 
+        email = jqdoe@example.com
+        name = J Q Doe
+        initials = jqdoe
+
+[alias]
+
+        co = checkout
+        q = status
 
 # posted as:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.gitconfig
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git

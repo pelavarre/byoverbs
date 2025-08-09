@@ -1,2 +1,2 @@
-set -xe
+echo ': qb && git rev-parse --abbrev-ref HEAD' >&2
 git rev-parse --abbrev-ref HEAD

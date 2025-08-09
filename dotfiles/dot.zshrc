@@ -5,7 +5,7 @@
 
 if [ "$OLDPS1" != "$PS1" ]; then
     export OLDPS1=$PS1
-    PS1='%% '
+    PS1='%# '
 fi
 
 
@@ -19,8 +19,8 @@ if [ -t 2 ]; then
 fi
 
 function ps1 () {
-    if [ "$PS1" != '%% %B' ]; then
-        PS1='%% %B'
+    if [ "$PS1" != '%# %B' ]; then
+        PS1='%# %B'
         POSTEDIT=$'\e[m'  # '%b' to turn off '%B' doesn't work here
         _=$POSTEDIT
     else

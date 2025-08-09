@@ -17,6 +17,7 @@ export PATH=$PATH:$HOME/bin  # Ubuntu often does this for you
 
 # Name the next Pwd:  -, .., ~
 
+function . { if [ $# -eq 0 ]; then open .; else source "$@"; fi; }
 alias -- -='echo + cd - >&2 && cd -'
 alias ..='echo + cd .. >&2 && cd .. && (dirs -p |head -1)'
 alias ~='echo + cd "~" >&2 && cd ~ && (dirs -p |head -1)'
@@ -56,7 +57,7 @@ alias cd=ZSH_CHDIR
 #
 
 
-alias %%='echo -n "%% # £   ⎋ ⌃ ⌥ ⇧ ⌘ Fn   ← ↑ → ↓ ⏎ ⇥ ⇤   ⋮ ·" |tee >(pbcopy) && echo'
+alias %%='echo -n "%% # £   ⎋ ⌃ ⌥ ⇧ ⌘ Fn   ← ↑ → ↓ ⇥ ⌫ ⏎   ; ⋮ ☰ ⬅️  ⬆️  ➡️  ⬇️  ·" |tee >(pbcopy) && echo'
 
 function :scf: () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug: () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
@@ -172,6 +173,8 @@ if [[ -e ~/.ssh/bash_profile ]]; then source ~/.ssh/bash_profile; fi
 : # if ... bind ...; then ... bind '"\eOP": "\C-abind -s \C-j"' ...
 
 : # bind '"\eOP": "\C-abind -s \C-j"'
+
+screen -ls >/dev/null && (echo; (set -xe; screen -ls); echo +; echo)
 
 
 #

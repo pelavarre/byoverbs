@@ -403,8 +403,8 @@ EL_P = "\x1b" "[" "{}K"  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
 SU_Y = "\x1b" "[" "{}S"  # CSI 05/03 Scroll Up   # Insert Bottom Lines
 SD_Y = "\x1b" "[" "{}T"  # CSI 05/04 Scroll Down  # Insert Top Lines
 
-SM_IRM = "\x1b" "[" "4h"  # CSI 06/08 4 Set Mode Insert/ Replace
-RM_IRM = "\x1b" "[" "4l"  # CSI 06/12 4 Reset Mode Replace/ Insert
+SM_IRM = "\x1b" "[" "4h"  # CSI 06/08 4 Set Mode Insert, not Replace
+RM_IRM = "\x1b" "[" "4l"  # CSI 06/12 4 Reset Mode Replace, not Insert
 
 # todo = "\x1B" "[" "1000h"  # CSI 06/08 4 Set Mode  # Mouse Reports
 # todo = "\x1B" "[" "1005h"  # CSI 06/08 4 Set Mode  # UTF-8 vs VT200 Byte Encoding

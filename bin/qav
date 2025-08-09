@@ -1,6 +1,7 @@
-set -xe
 if [ $# -eq 0 ]; then
+    echo ': qav && git apply -v p.patch' >&2
     git apply -v p.patch
 else
+    echo ': qav && git apply -v ...' >&2
     git apply -v "$@"
 fi
