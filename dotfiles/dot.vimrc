@@ -112,12 +112,13 @@ endif
     call cursor(with_line, with_col)
 endfun
 
-" ⇧Z ⇧E  => Discard changes and reload
-:nnoremap ZE :e!<return>
 " ⇧Z ⇧Q => Quit Without Saving
-" ⇧Z ⇧W  => save changes
-:nnoremap ZW :w<return>
 " ⇧Z ⇧Z => Save Then Quit
+
+" ⇧Z ⇧E  => Discard changes and reload  # but too close to ⇧Z ⇧W
+:nnoremap ZE :e!<return>
+" ⇧Z ⇧W  => Save Changes  # but too close to ⇧Z ⇧Q and too close to ⇧Z ⇧E
+:nnoremap ZW :w<return>
 
 
 " posted as:  https://github.com/pelavarre/byoverbs/blob/main/dotfiles/dot.vimrc
