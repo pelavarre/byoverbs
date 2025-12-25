@@ -59,5 +59,5 @@ git log --pretty=fuller --numstat --no-decorate -p
 """
 
 
-# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/git.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/git.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
