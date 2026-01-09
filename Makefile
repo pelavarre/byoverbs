@@ -88,6 +88,9 @@ push: smoke
 	git push
 	:
 
+sense: smoke
+	:
+
 smoke: black flake8 mypy shellcheck selftest
 	:
 	demos/last2lines.py ./ bin/ demos/
