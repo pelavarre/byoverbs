@@ -192,7 +192,7 @@ p.py:
 bin:
 	rm -fr bin/__pycache__/
 	cp -pR bin/* ~/bin/.
-	bash -c 'diff -bpru <(ls -1 ~/bin |grep -v ^__pycache__$$) <(ls -1 bin)'
+	: bash -c 'diff -bpru <(ls -1 ~/bin |grep -v ^__pycache__$$) <(ls -1 bin)'
 	:
 
 
