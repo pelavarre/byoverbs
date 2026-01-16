@@ -10,6 +10,7 @@ options:
 
 quirks same as classic:
   steals ⌃A away, burying the work of ⌃A at ⌃A A
+  appends more lines into the -L -Logfile $T.screen, doesn't start over
   defaults to flush faster than 'script $T.screen' does
 
 quirks better than classic:
