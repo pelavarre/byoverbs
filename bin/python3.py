@@ -37,47 +37,30 @@ examples:
   : Sep/2015 Python 3.5  # minor release date
   : : Jun/2016 Python 3.5.2  # micro release date
   : Dec/2016 Python 3.6  # minor release date  # <- Ubuntu 2018
-  : : Mar/2018 Python 3.6.5  # micro release date
-  : : Dec/2018 Python 3.6.8  # micro release date
-  : : Jul/2019 Python 3.6.9  # micro release date
-  : : Dec/2019 Python 3.6.10  # micro release date
   : : Sep/2021 Python 3.6.15  # micro release date
   : Dec/2016 CPython 3.6  # minor release date  # Dict Keys ordered by Insertion
 
   : 2011 + Minor-Version = year of Python Minor-Version since 3.7
 
   : Jun/2018 Python 3.7  # minor release date  # Dict Keys ordered by Insertion
-  : : Mar/2019 Python 3.7.3  # micro release date
   : : Dec/2019 Python 3.7.6  # micro release date
   : Oct/2019 Python 3.8  # minor release date  # <- Ubuntu 2020
-  : : Feb/2020 Python 3.8.2  # micro release date
-  : : May/2021 Python 3.8.10  # micro release date
   : : Dec/2022 Python 3.8.16  # micro release date
   : Oct/2020 Python 3.9  # minor release date  # <- G Cloud Shell 2023
-  : : Dec/2020 Python 3.9.1  # micro release date
   : : Feb/2021 Python 3.9.2  # micro release date  # <- G Cloud Shell later 2023
-  : : Apr/2021 Python 3.9.4  # micro release date
-  : : May/2021 Python 3.9.5  # micro release date
   : : Jun/2021 Python 3.9.6  # micro release date  # <- macOS 2021..2023 Monterey Plus
   : Oct/2021 Python 3.10  # minor release date  # <- Ubuntu 2022
-  : : Mar/2022 Python 3.10.4  # micro release date
-  : : Jun/2022 Python 3.10.5  # micro release date
-  : : Aug/2022 Python 3.10.6  # micro release date
   : : Oct/2022 Python 3.10.8  # micro release date  # <- ReplIt-Com Python 2023
   : : Jun/2023 Python 3.10.12  # micro release date
   : Oct/2022 Python 3.11  # minor release date
-  : : Apr/2023 Python 3.11.3  # micro release date
   : : Oct/2023 Python 3.11.6  # micro release date
   : Oct/2023 Python 3.12  # minor release date  # <- Ubuntu 2024
-  : : Apr/2024 Python 3.12.3  # micro release date
-  : : Jun/2024 Python 3.12.4  # micro release date
-  : : Aug/2024 Python 3.12.5  # micro release date
   : : Sep/2024 Python 3.12.6  # micro release date
   : Oct/2024 Python 3.13  # minor release date
-  : : Dec/2024 Python 3.13.1  # micro release date
-  : : Apr/2025 Python 3.13.3  # micro release date
   : : Aug/2025 Python 3.13.6  # micro release date
   : Oct/2025 Python 3.14  # minor release date
+  : : Dec/2025 Python 3.14.1  # micro release date  # across 2/Dec 3/Dec 4/Dec
+  : : Dec/2025 Python 3.14.2  # micro release date  # since 5/Dec
 
 """
 
