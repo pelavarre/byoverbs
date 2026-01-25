@@ -890,5 +890,5 @@ if __name__ == "__main__":
 # todo: name the Dir in -l as ~/
 
 
-# posted as:  https://github.com/pelavarre/byoverbs/blob/main/bin/ls.py
+# posted as:  https://github.com/pelavarre/byoverbs/blob/main/demos/ls.py
 # copied from:  git clone https://github.com/pelavarre/byoverbs.git
