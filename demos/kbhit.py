@@ -14,7 +14,7 @@ def kbhit(timeout=None) -> bool:  # 'timeout' in seconds
     wlist: list[int] = list()
     xlist: list[int] = list()
 
-    (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout)
+    alt_rlist, _, _ = select.select(rlist, wlist, xlist, timeout)
     hit = bool(alt_rlist)
 
     return hit

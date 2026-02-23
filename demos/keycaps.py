@@ -1317,7 +1317,7 @@ class TextUserInterface:  # FIXME work in Windows too, not just in Mac and Linux
         ws_0 = list()
         xs_0 = list()
 
-        (rs_1, _, _) = select.select(rs_0, ws_0, xs_0, timeout)
+        rs_1, _, _ = select.select(rs_0, ws_0, xs_0, timeout)
 
         if rs_1 != rs_0:
             assert rs_1 == [], rs_1

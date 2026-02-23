@@ -1,6 +1,5 @@
 import collections
 
-
 cc = list()
 
 for o0 in range(9):

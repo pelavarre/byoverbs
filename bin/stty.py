@@ -12,7 +12,6 @@ stty cbreak  # implies 'stty ixon' at macOS, but not at Linux
 
 import byotools as byo
 
-
 byo.sys_exit()
 
 

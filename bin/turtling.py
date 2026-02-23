@@ -106,7 +106,7 @@ def main() -> None:
     except bdb.BdbQuit:
         raise
     except Exception as exc:
-        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        exc_type, exc_value, exc_traceback = sys.exc_info()
         assert exc_type is type(exc_value), (exc_type, exc_value)
         assert exc is exc_value, (exc, exc_value)
 
@@ -758,7 +758,7 @@ class TerminalBytePacket:
 
         # Take 1 Byte into Stash, if next Bytes could make it Decodable
 
-        (decode_if, stash_laters) = self._take_one_stashable_if(byte)
+        decode_if, stash_laters = self._take_one_stashable_if(byte)
         assert len(decode_if) <= 1, (decode_if, stash_laters, byte)
         if not stash_laters:
             return b""  # holds 1..3 possibly Decodable Bytes in Stash
@@ -1023,7 +1023,7 @@ def yolo2() -> None:
         print(r"To quit, press ⌃\ or close this Terminal Window Pane", end="\r\n")
 
         while True:
-            (tbp, laters) = yolo_read_tbp_laters(bt, t=None)
+            tbp, laters = yolo_read_tbp_laters(bt, t=None)
             bytes_ = tbp.to_bytes() + laters
 
             fd = bt.fileno
@@ -1048,7 +1048,7 @@ def yolo1() -> None:
 
             t = dt.datetime.now().astimezone()
             while True:
-                (tbp, laters) = yolo_read_tbp_laters(bt, t=t)
+                tbp, laters = yolo_read_tbp_laters(bt, t=t)
                 if laters:
                     print(laters, end="\r\n")
 
@@ -1307,7 +1307,7 @@ class BytesTerminal:
 
         self.sbytes_flush()  # for 'kbhit'  # todo: log how often unneeded
 
-        (r, w, x) = select.select([fileno], [], [], timeout)
+        r, w, x = select.select([fileno], [], [], timeout)
         hit = fileno in r
 
         return hit
@@ -1569,7 +1569,7 @@ class StrTerminal:
         if kchords:
             self.schars_print()
             while kchords:
-                (kbytes, kstr) = kchords.pop(0)
+                kbytes, kstr = kchords.pop(0)
                 self.schars_print(kstr)
 
         bt.__exit__()
@@ -1792,8 +1792,8 @@ class StrTerminal:
         bt = self.bytes_terminal
 
         fileno = bt.fileno
-        (columns, lines) = os.get_terminal_size(fileno)
-        (x_count, y_count) = (columns, lines)
+        columns, lines = os.get_terminal_size(fileno)
+        x_count, y_count = (columns, lines)
 
         assert y_count >= 5, (y_count,)  # macOS Terminal min 5 Rows
         assert x_count >= 20, (x_count,)  # macOS Terminal min 20 Columns
@@ -1851,7 +1851,7 @@ class StrTerminal:
 
         # Accept the CSI Escape Sequences that a macOS Terminal accepts
 
-        (csi, p, i, f) = self.schars_csi_partition(schars)
+        csi, p, i, f = self.schars_csi_partition(schars)
         if csi:
 
             if not i:
@@ -1905,8 +1905,8 @@ class StrTerminal:
         assert DCH_X == "\x1b" "[" "{}P"  # CSI 05/00 Delete Character
         assert VPA_Y == "\x1b" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-        (y_count, x_count) = self.y_count_x_count_read(timeout=0)
-        (row_y, column_x) = self.row_y_column_x_read(timeout=0)
+        y_count, x_count = self.y_count_x_count_read(timeout=0)
+        row_y, column_x = self.row_y_column_x_read(timeout=0)
 
         for y in range(1, y_count + 1):
             ctext = "\x1b" "[" f"{y}d"
@@ -1922,8 +1922,8 @@ class StrTerminal:
         assert ICH_X == "\x1b" "[" "{}@"  # CSI 04/00 Insert Character
         assert VPA_Y == "\x1b" "[" "{}d"  # CSI 06/04 Line Position Absolute
 
-        (y_count, x_count) = self.y_count_x_count_read(timeout=0)
-        (row_y, column_x) = self.row_y_column_x_read(timeout=0)
+        y_count, x_count = self.y_count_x_count_read(timeout=0)
+        row_y, column_x = self.row_y_column_x_read(timeout=0)
 
         for y in range(1, y_count + 1):
             ctext = "\x1b" "[" f"{y}d"
@@ -1981,7 +1981,7 @@ class StrTerminal:
                 bt.sbytes_write(sbytes)
                 self.control_schars_emulate(schars=split)
             else:
-                (row_y, column_x) = self.row_y_column_x_read(timeout=0)
+                row_y, column_x = self.row_y_column_x_read(timeout=0)
                 bt.sbytes_write(sbytes)
 
                 for sch in split:
@@ -2055,9 +2055,9 @@ class StrTerminal:
         # i = m.group(3) if m.group(3) else ""
         f = m.group(4)
 
-        (py, px) = (p, "")
+        py, px = (p, "")
         if p.count(";") == 1:
-            (py, px) = p.split(";")
+            py, px = p.split(";")
 
         p = p if p else "1"  # mutates into default 1 for Final in ABCD E GdH IZ
         py = py if py else "1"
@@ -2241,7 +2241,7 @@ class StrTerminal:
                 sbytes = sch.encode()
                 bt.sbytes_write(sbytes)
 
-        (row_y, column_x) = row_y_column_x
+        row_y, column_x = row_y_column_x
         self.write_row_y_column_x(row_y, column_x=column_x)
 
     #
@@ -2362,12 +2362,12 @@ class GlassTeletype:
 
     def os_terminal_y_row_x_column(self) -> tuple[int, int]:
         st = self.str_terminal
-        (row_y, column_x) = st.row_y_column_x_read(timeout=0)
+        row_y, column_x = st.row_y_column_x_read(timeout=0)
         return (row_y, column_x)
 
     def os_terminal_y_count_x_count(self) -> tuple[int, int]:
         st = self.str_terminal
-        (y_count, x_count) = st.y_count_x_count_read(timeout=0)
+        y_count, x_count = st.y_count_x_count_read(timeout=0)
         return (y_count, x_count)
 
     def writelog_bleach(self) -> None:
@@ -2388,7 +2388,7 @@ class GlassTeletype:
         if self.kchord_edit_like_macos(kchord):
             return
 
-        (kbytes, kstr) = kchord
+        kbytes, kstr = kchord
 
         if kstr == "Return":
             self.schars_write("\r\n")
@@ -2415,7 +2415,7 @@ class GlassTeletype:
         """Reply to 1 Keyboard Chord that edits the Terminal"""
         # Return True if served, else return False
 
-        (kbytes, kstr) = kchord
+        kbytes, kstr = kchord
 
         func_by_kstr = {
             "⌃A": self.do_column_go_leftmost,
@@ -2445,7 +2445,7 @@ class GlassTeletype:
 
         st = self.str_terminal
 
-        (kbytes, kstr) = kchord
+        kbytes, kstr = kchord
         if not kbytes:
             kbytes = st.kstr_to_kbytes(kstr)
 
@@ -2457,7 +2457,7 @@ class GlassTeletype:
         if not st.schars_to_writable(schars):
             st.schars_print(kstr, end=" ")
         else:
-            (csi, p, i, f) = st.schars_csi_partition(schars)
+            csi, p, i, f = st.schars_csi_partition(schars)
             if csi:
                 if not p:
                     n = 1
@@ -2531,7 +2531,7 @@ class GlassTeletype:
     def do_row_insert_below(self, kchord) -> None:  # ⌃O
         """Insert a Row below this Row"""
 
-        (row_y, column_x) = self.os_terminal_y_row_x_column()
+        row_y, column_x = self.os_terminal_y_row_x_column()
         if column_x != 1:
             self.schars_write("\x1b[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
         else:
@@ -2542,7 +2542,7 @@ class GlassTeletype:
     def do_row_insert_go_below(self, kchord) -> None:  # Return
         """Insert a Row below this Row and move into it"""
 
-        (row_y, column_x) = self.os_terminal_y_row_x_column()
+        row_y, column_x = self.os_terminal_y_row_x_column()
         if column_x != 1:
             self.schars_write("\x1b[G")  # CSI 04/06 Cursor Char Absolute (CHA))  # could be "\r"
         else:
@@ -2559,7 +2559,7 @@ class GlassTeletype:
 
         self.schars_write("\x1b[K")  # CSI 04/11 Erase in Line  # 0 Tail # 1 Head # 2 Row
 
-        (row_y, column_x) = self.os_terminal_y_row_x_column()
+        row_y, column_x = self.os_terminal_y_row_x_column()
         if column_x == 1:
             kstrs = list(_[-1] for _ in kchords[-2:])
             if kstrs == ["⌃K", "⌃K"]:
@@ -2797,7 +2797,7 @@ class Turtle:
 
         gt = self.glass_teletype
 
-        (y_count, x_count) = gt.os_terminal_y_count_x_count()
+        y_count, x_count = gt.os_terminal_y_count_x_count()
         assert y_count >= 1, (y_count,)
 
         y = y_count  # todo: remember why we coded this as 'y_count - 3' for awhile
@@ -2814,7 +2814,7 @@ class Turtle:
         ctext = "\x1b[2J"  # CSI 04/10 Erase in Display  # 0 Tail # 1 Head # 2 Rows # 3 Scrollback
         self._schars_write_(ctext)
 
-        (x_min, x_max, y_min, y_max) = self._xy_min_max_()
+        x_min, x_max, y_min, y_max = self._xy_min_max_()
 
         d = dict(
             x_min=x_min,
@@ -2838,7 +2838,7 @@ class Turtle:
 
         gt = self.glass_teletype
 
-        (y_count, x_count) = gt.os_terminal_y_count_x_count()
+        y_count, x_count = gt.os_terminal_y_count_x_count()
         center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
         center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
 
@@ -2942,7 +2942,7 @@ class Turtle:
         yscale = self.yscale
 
         a1 = (90e0 - bearing) % 360e0  # converts to 0° East Anticlockwise
-        (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
+        x1, y1 = self._x_y_position_()  # may change .xfloat .yfloat
 
         a0 = (a1 - 90e0) % 360e0
         x0 = (x1 / xscale) + (radius * math.cos(math.radians(a0)))
@@ -3001,7 +3001,7 @@ class Turtle:
         for item in d.items():
             items.append(item)
 
-            (k, v) = item
+            k, v = item
             if k == "bearing":
                 bearing = v
                 if bearing in compasses_by_bearing.keys():
@@ -3219,7 +3219,7 @@ class Turtle:
             # todo: Printing Labels for -90° West and 0° North
             # todo: Printing Labels for Headings other than 90° East and 180° South
 
-        (row_y, column_x) = gt.os_terminal_y_row_x_column()
+        row_y, column_x = gt.os_terminal_y_row_x_column()
 
         text = " ".join(str(_) for _ in args)
         ctext = f"\x1b[{row_y};{column_x}H"  # CSI 06/12 Cursor Position  # 0 Tail # 1 Head # 2 Rows # 3 Columns]"
@@ -3344,7 +3344,7 @@ class Turtle:
             kchord = (b"", kstr)
             gt.keyboard_serve_one_kchord(kchord)
 
-        (row_y, column_x) = (st.row_y, st.column_x)
+        row_y, column_x = (st.row_y, st.column_x)
         self._snap_to_column_x_row_y_(column_x, row_y=row_y)
 
         return dict(row_y=row_y, column_x=column_x)
@@ -3855,7 +3855,7 @@ class Turtle:
 
         # Choose the Starting Point
 
-        (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
+        x1, y1 = self._x_y_position_()  # may change .xfloat .yfloat
 
         # Choose the Ending Point
 
@@ -3967,7 +3967,7 @@ class Turtle:
 
         self._schars_write_(s)  # for .write  # arbitrary mix of Controls and Text
 
-        (row_y, column_x) = (st.row_y, st.column_x)
+        row_y, column_x = (st.row_y, st.column_x)
         self._snap_to_column_x_row_y_(column_x, row_y=row_y)
 
         # PyTurtle Write
@@ -3977,7 +3977,7 @@ class Turtle:
 
         gt = self.glass_teletype
 
-        (y_count, x_count) = gt.os_terminal_y_count_x_count()
+        y_count, x_count = gt.os_terminal_y_count_x_count()
 
         center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
         center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
@@ -4030,12 +4030,12 @@ class Turtle:
 
         # Limit travel
 
-        (x_min, x_max, y_min, y_max) = self._xy_min_max_()
+        x_min, x_max, y_min, y_max = self._xy_min_max_()
 
         # Choose the Starting Point
 
         if xys is None:
-            (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
+            x1, y1 = self._x_y_position_()  # may change .xfloat .yfloat
         else:
             x1 = round(2 * xfloat) / 2  # doublewide X
             y1 = round(yfloat)
@@ -4371,8 +4371,8 @@ class Turtle:
         # on a Plane of Y is Down and X is Right,
         # counted from an Upper Left (1, 1)
 
-        (row_y, column_x) = gt.os_terminal_y_row_x_column()
-        (y_count, x_count) = gt.os_terminal_y_count_x_count()
+        row_y, column_x = gt.os_terminal_y_row_x_column()
+        y_count, x_count = gt.os_terminal_y_count_x_count()
 
         center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
         center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
@@ -4396,7 +4396,7 @@ class Turtle:
         if (x1 != xf) or (y1 != yf):
 
             floats = (xfloat_, yfloat_, xfloat, yfloat)
-            (ix_, iy_, ix, iy) = (int(xfloat_), int(yfloat_), int(xfloat), int(yfloat))
+            ix_, iy_, ix, iy = (int(xfloat_), int(yfloat_), int(xfloat), int(yfloat))
 
             if floats == (ix_, iy_, ix, iy):
                 note = f"Snap to X Y {ix_} {iy_} from {ix} {iy} for Y X {row_y} {column_x}"
@@ -4488,7 +4488,7 @@ class Turtle:
         x1 = -(((2 * 4) + 56) / 2 / 2) / xscale
         y1 = 18 / yscale  # because (2 + 15 + 1 + 17 + 2) == 37
         self.setxy(x=x1, y=y1)  # todo: ⌃C of .setxy while not .warping
-        (xa, ya) = self._x_y_position_()  # may change .xfloat .yfloat
+        xa, ya = self._x_y_position_()  # may change .xfloat .yfloat
 
         if not warping:
             self.pendown()  # todo: stop calling .penup .pendown .penup sometimes
@@ -4555,18 +4555,18 @@ class Turtle:
         self.xfloat = xa
         self.yfloat = -ya - 1
 
-        (xb, yb) = self._x_y_position_()  # may change .xfloat .yfloat
+        xb, yb = self._x_y_position_()  # may change .xfloat .yfloat
 
         # End over the left Dot beneath Home
 
-        (xc, yc) = (xb, yb)
+        xc, yc = (xb, yb)
         if not broke:
 
             if not warping:
                 self.penup()
 
             self.setxy(-1 / xscale, -8 / yscale)  # (-1, -8), because I measured it : -)
-            (xc, yc) = self._x_y_position_()  # may change .xfloat .yfloat
+            xc, yc = self._x_y_position_()  # may change .xfloat .yfloat
 
             if not warping:
                 self.pendown()
@@ -4687,11 +4687,11 @@ class Turtle:
 
         # Find the Place of this Turtle on Screen
 
-        (y_count, x_count) = gt.os_terminal_y_count_x_count()
+        y_count, x_count = gt.os_terminal_y_count_x_count()
         center_x = 1 + ((x_count - 1) // 2)  # biased left when odd
         center_y = 1 + ((y_count - 1) // 2)  # biased up when odd
 
-        (x1, y1) = self._x_y_position_()  # may change .xfloat .yfloat
+        x1, y1 = self._x_y_position_()  # may change .xfloat .yfloat
 
         column_x1 = int(center_x + (2 * x1))
         column_x1_plus = int(column_x1 + 1)
@@ -4727,7 +4727,7 @@ class Turtle:
 
         # Find the Next Place of this Turtle on Screen
 
-        (x2, y2) = xy
+        x2, y2 = xy
 
         column_x2 = int(center_x + (2 * x2))
         column_x2_plus = int(column_x2 + 1)
@@ -4795,7 +4795,7 @@ class Turtle:
             xy2 = xys2[-1]
             self._punch_bresenham_stride_(distance_float, xys=xys2)  # for ._puck_step_
 
-            (x2, y2) = xy2  # replaces
+            x2, y2 = xy2  # replaces
             column_x2 = int(center_x + (2 * x2))  # replaces
             row_y2 = int(center_y - y2)  # replaces
 
@@ -4821,10 +4821,10 @@ class Turtle:
 
         # Look around
 
-        (ya, xa) = (row_y1 - 1, column_x1)  # Up
-        (yb, xb) = (row_y1 + 1, column_x1)  # Down
-        (yc, xc) = (row_y1, column_x1 + 2)  # Right
-        (yd, xd) = (row_y1, column_x1 - 2)  # Left
+        ya, xa = (row_y1 - 1, column_x1)  # Up
+        yb, xb = (row_y1 + 1, column_x1)  # Down
+        yc, xc = (row_y1, column_x1 + 2)  # Right
+        yd, xd = (row_y1, column_x1 - 2)  # Left
 
         sa0 = st.schar_read_if(row_y=ya, column_x=xa, default="")
         sa1 = st.schar_read_if(row_y=ya, column_x=xa + 1, default="")
@@ -4882,7 +4882,7 @@ class Turtle:
         bearings = list()
         food_bearings = list()
         for sibling in siblings:  # todo: Look outside of the 4 Close Siblings
-            (dx, dy, b) = sibling
+            dx, dy, b = sibling
 
             x = column_x1 + dx
             x_plus = x + 1
@@ -5359,7 +5359,7 @@ class PythonSpeaker:
             if split.count("=") != 1:
                 return list()
 
-            (left_, _, right_) = split.partition("=")
+            left_, _, right_ = split.partition("=")
             left = left_.strip()
             right = right_.strip()
 
@@ -5535,7 +5535,7 @@ class PythonSpeaker:
             for i in range(len(args), len(args_kws)):
                 kw = args_kws[i]
 
-                (chosen, value) = self.kw_to_chosen_arg(kw, verb=verb)
+                chosen, value = self.kw_to_chosen_arg(kw, verb=verb)
                 if not chosen:
                     break
 
@@ -5645,7 +5645,7 @@ class PythonSpeaker:
 
         # Weakly emulate the Remote Sketchist assignment of an Object with a default Repr
 
-        (key, sep, value) = py.partition("=")
+        key, sep, value = py.partition("=")
         key = key.strip()
         value = value.strip()
 
@@ -5795,7 +5795,7 @@ class PythonSpeaker:
                 assert key not in d.keys(), (key,)
                 d[key] = key  # d['backward_distance'] = 'backward_distance'
 
-                (verb, kw) = key.split("_")  # ('backward', 'distance')
+                verb, kw = key.split("_")  # ('backward', 'distance')
 
                 # Collect each 'Func.Kw =' as abbreviating 'Func_Kw ='
 
@@ -6624,7 +6624,7 @@ class TurtleClient:
             eprint(f"BYO Turtling·Py {__version__}")
             eprint("Chatting with you, till you say:  bye")
 
-            (trade_else, value_else) = self.py_trade_else("t.relaunch(); pass")
+            trade_else, value_else = self.py_trade_else("t.relaunch(); pass")
             if trade_else is not None:
                 eprint(trade_else)
                 assert False, (trade_else, value_else)
@@ -6669,7 +6669,7 @@ class TurtleClient:
 
                         # Py itself completes 'forward(50)' to 'turtling.forward(50)'
 
-                    (trade_else, value_else) = self.py_trade_else(pycode)
+                    trade_else, value_else = self.py_trade_else(pycode)
                     if trade_else is None:
                         continue
 

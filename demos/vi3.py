@@ -1750,7 +1750,7 @@ class ChordsTerminal:
 
         #
 
-        (before, after) = before_after
+        before, after = before_after
 
         self.write(after)
 
@@ -1891,7 +1891,7 @@ class ChordsTerminal:
             return
 
         if seq == b"\x1b8":
-            (self.row, self.column) = self.pushed_row_column
+            self.row, self.column = self.pushed_row_column
             return
 
         pass  # drops undefined Mock Writes  # no count, no log
@@ -2075,7 +2075,7 @@ class ChordsTerminal:
 
         index = 0
         while True:
-            (seq, plus) = self.bytes_splitseq(holds)
+            seq, plus = self.bytes_splitseq(holds)
 
             enough_holds = holds[: len(seq)] if seq else holds
             if enough_holds and (len(peeks) < len(enough_holds)):
@@ -2129,7 +2129,7 @@ class ChordsTerminal:
 
         # Read the last Bytes of a whole Sequence, else Bytes of the next Sequence
 
-        (seq, plus) = self.bytes_splitseq(holds)
+        seq, plus = self.bytes_splitseq(holds)
 
         enough_holds = holds[: len(seq)] if seq else holds
         if enough_holds and (len(peeks) < len(enough_holds)):
@@ -2837,7 +2837,7 @@ class BytesTerminal:
         wlist = list()
         xlist = list()
 
-        (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout)
+        alt_rlist, _, _ = select.select(rlist, wlist, xlist, timeout)
         available = bool(alt_rlist)
 
         return available

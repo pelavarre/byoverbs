@@ -1243,7 +1243,7 @@ def traces(P: Process, trace: list[Event] = list()) -> list[list[Event]]:
     bleep = Event("BLEEP")  # todo: Bleep is the Event that is not an Event, but ...
 
     while pairs:
-        (Q, q_trace) = pairs.pop(0)
+        Q, q_trace = pairs.pop(0)
         # print(f"{q_trace=}  # traces")
 
         #

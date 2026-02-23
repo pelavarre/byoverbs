@@ -31,7 +31,6 @@ import urllib.parse
 import zoneinfo
 from decimal import Decimal as D
 
-
 _: object  # '_: object' tells MyPy to accept '_ =' tests across two and more Datatypes
 
 _ = D  # todo: lazy-import X.Y as Z, not just lazy-import X as Z
@@ -187,7 +186,7 @@ def discover_more_lazy_imports() -> None:
 
     top = os.path.dirname(os.__file__)
     for find in sorted(os.listdir(top)):
-        (name, ext) = os.path.splitext(find)
+        name, ext = os.path.splitext(find)
         if not name.startswith("_"):
             if ext == ".py":
                 pynames.append(name)

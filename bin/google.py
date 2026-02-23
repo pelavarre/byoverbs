@@ -19,7 +19,6 @@ examples:
 
 import byotools as byo
 
-
 byo.sys_exit()
 
 

@@ -38,7 +38,6 @@ import sys
 
 import byotools as byo
 
-
 _: object  # '_: object' tells MyPy to accept '_ =' tests across two and more Datatypes
 
 

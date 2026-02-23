@@ -45,7 +45,6 @@ import sys
 
 import byoverbs.bin.byotools as byo
 
-
 OS_ENV_VARS = "COLUMNS LINES SHELL".split()
 
 
@@ -183,7 +182,7 @@ def take_in(takes):
 
         if deferrals or takes_is_controlling(pops):
             while pops:
-                (some, more) = takes_split(deferrals)
+                some, more = takes_split(deferrals)
                 if some:
                     break
 
@@ -196,7 +195,7 @@ def take_in(takes):
 
         # Erase the Echoes of the Control Sequence, when more Bytes arrive
 
-        (some, more) = takes_split(deferrals)
+        some, more = takes_split(deferrals)
         assert (not some) or (not more), (deferrals, some, more)
 
         if some:

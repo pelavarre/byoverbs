@@ -29,7 +29,6 @@ examples:
   TZ=America/Los_Angeles date
 """
 
-
 import byohelper
 
 ... == byohelper  # type: ignore

@@ -211,7 +211,7 @@ def board_init() -> None:  # noqa C901
             yx_list.append(yx)
 
     for yx in yx_list:
-        (y, x) = yx
+        y, x = yx
         assert yx not in cell_by_yx.keys(), (yx,)
 
         y1 = Y1Below - 1 - (y * 2)
@@ -366,7 +366,7 @@ def board_judge() -> None:  # noqa C901
     futures.clear()
 
     for yx in yx_list:
-        (y, x) = yx
+        y, x = yx
 
         cell = cell_by_yx[yx]
         if cell.color in Emptyish:
@@ -455,25 +455,25 @@ def board_judge() -> None:  # noqa C901
 
 
 def yx_plus_north_plus_east(yx) -> tuple[int, int]:
-    (y, x) = yx
+    y, x = yx
     yx_plus = (y + 1, x) if (y % 2) else (y + 1, x - 1)
     return yx_plus
 
 
 def yx_plus_north_plus_west(yx) -> tuple[int, int]:
-    (y, x) = yx
+    y, x = yx
     yx_plus = (y + 1, x + 1) if (y % 2) else (y + 1, x)
     return yx_plus
 
 
 def yx_plus_south_plus_east(yx) -> tuple[int, int]:
-    (y, x) = yx
+    y, x = yx
     yx_plus = (y - 1, x) if (y % 2) else (y - 1, x - 1)
     return yx_plus
 
 
 def yx_plus_south_plus_west(yx) -> tuple[int, int]:
-    (y, x) = yx
+    y, x = yx
     yx_plus = (y - 1, x + 1) if (y % 2) else (y - 1, x)
     return yx_plus
 

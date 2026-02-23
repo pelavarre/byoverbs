@@ -22,7 +22,6 @@ examples:
 import hashlib
 import turtle  # gCloud Shell raises ModuleNotFoundError: No module named 'tkinter'
 
-
 #
 # Run from the Sh command line
 #

@@ -202,9 +202,9 @@ def run_ls_args(args) -> None:
     # Pick the Code to show or run
 
     if args.one:
-        (opt, func, kwargs) = parse_ls_one_args(args)
+        opt, func, kwargs = parse_ls_one_args(args)
     elif args.ell:
-        (opt, func, kwargs) = parse_ls_ell_args(args)
+        opt, func, kwargs = parse_ls_ell_args(args)
     elif args.cee:
         opt = "-C"  # show as columns of names
         func = ls_by_ljust
@@ -727,14 +727,14 @@ def st_mtime_ns_brief(st_mtime_ns) -> str:
     now = dt.datetime.now()
     now = now.replace(microsecond=0)  # rounds down to an int timestamp
 
-    (early_year, early_month) = (now.year, now.month)
+    early_year, early_month = (now.year, now.month)
     early_month -= 6
     if early_month < 1:
         early_month += 12
         early_year -= 1
     early = now.replace(year=early_year, month=early_month)
 
-    (late_year, late_month) = (now.year, now.month)
+    late_year, late_month = (now.year, now.month)
     late_month += 6
     if late_month > 12:
         late_month -= 12

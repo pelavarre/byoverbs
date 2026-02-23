@@ -23,7 +23,6 @@ examples:
   apt list --installed 2>&1 |wc -l
 """
 
-
 import byohelper
 
 ... == byohelper  # type: ignore

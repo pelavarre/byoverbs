@@ -63,7 +63,6 @@ import sys
 
 import byotools as byo
 
-
 if sys.argv[1:][:1] != ["--"]:
     byo.sys_exit()
 

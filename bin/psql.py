@@ -49,7 +49,6 @@ import sys
 
 import byotools as byo
 
-
 if sys.argv[1:]:
     sys.stderr.write("psql.py: did you mean:  psql ...\n")
     sys.exit(2)

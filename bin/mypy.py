@@ -43,7 +43,6 @@ import sys
 
 import byotools as byo
 
-
 if sys.argv[1:]:
     sys.stderr.write("mypy.py: did you mean:  mypy ...\n")
     sys.exit(2)

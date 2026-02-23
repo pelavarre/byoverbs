@@ -25,7 +25,6 @@ examples:
   time sleep 0.1
 """
 
-
 import byohelper
 
 ... == byohelper  # type: ignore

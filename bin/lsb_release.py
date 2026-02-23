@@ -41,7 +41,6 @@ import sys
 
 import byotools as byo
 
-
 byo.sys_exit_if()  # prints examples or help and exits, else returns args
 
 run = subprocess.run(

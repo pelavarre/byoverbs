@@ -39,7 +39,6 @@ import textwrap
 import traceback
 import typing
 
-
 #
 # 1.1 Introduction
 #
@@ -341,7 +340,7 @@ def try_func_else_pdb_pm(func) -> None:
     except bdb.BdbQuit:
         raise
     except Exception as exc:
-        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        exc_type, exc_value, exc_traceback = sys.exc_info()
         assert exc is exc_value
 
         if not hasattr(sys, "last_exc"):
@@ -903,7 +902,7 @@ def eq_pop(key: str, value: object | None) -> None:
     assert g[key] is value, (g[key], value)
 
     eq_push = eq_pushes.pop()
-    (k, v) = eq_push
+    k, v = eq_push
     assert k == key, (k, key, value)
 
     if v is None:
@@ -1099,7 +1098,7 @@ def try_cspbook_corner_texts() -> None:
     iprint()
     for text in CspBookCornerTexts:
         iprint(text)
-        (head, sep, tail) = text.partition("#")
+        head, sep, tail = text.partition("#")
 
         evallable = head.rstrip()
         if not tail:
@@ -1256,7 +1255,7 @@ def process_to_afters(p: Process, limit=None, *, after: list[str] = empty_list) 
 
     q1 = q  # aliases
     while pairs:
-        (q, q_after) = pairs.pop(0)
+        q, q_after = pairs.pop(0)
 
         # Stop work after running out of Choices
 
@@ -1466,7 +1465,7 @@ def exec_(csp_text: str) -> None:  # kin to Py 'exec'
         if isinstance(item_0, str) and str_is_process_name(item_0):
             assert len(execcable) == 2, (len(execcable), execcable)
 
-            (name, process) = execcable
+            name, process = execcable
             # print(f"execcable = {execcable}")  # todo: log this Parser Result
             p = to_process_if(process)
 
@@ -1672,7 +1671,7 @@ class Parser:
             assert isinstance(take, list), (type(take), take)
 
             assert len(take) == 2, (len(take), take)
-            (name, process) = take
+            name, process = take
 
             d = dict()
             d[name] = process

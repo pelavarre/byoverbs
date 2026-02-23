@@ -915,7 +915,7 @@ def ast_word_to_pycall(word) -> PyCall:
         index += 1
 
     for split in kwarg_splits:
-        (k, eq, v0) = split.partition("=")
+        k, eq, v0 = split.partition("=")
         kwarg_by_key[k] = ast_str_to_typed_value(v0)
 
     pycall = PyCall(defname=defname, arg_by_int=arg_by_int, kwarg_by_key=kwarg_by_key)
@@ -949,11 +949,11 @@ def ast_def_line_to_pydef(def_line) -> PyDef:
     # Pick apart the Def Name, Args Line, Result Type Name, and Comment
 
     s = def_line
-    (s, hash_, comment) = s.partition("  #")
+    s, hash_, comment = s.partition("  #")
     s = s.removeprefix("def ")
 
-    (defname, _opener, s) = s.partition("(")
-    (argsline, _closer, s) = s.partition(")")
+    defname, _opener, s = s.partition("(")
+    argsline, _closer, s = s.partition(")")
     result_tname = s.removeprefix(" -> ")
 
     result_type = ast_type_eval(result_tname)
@@ -972,8 +972,8 @@ def ast_def_line_to_pydef(def_line) -> PyDef:
     splits = argsline.split(", ") if argsline else list()
     group = 0
     for split in splits:
-        (key, _colon, keyed) = split.partition(": ")
-        (tname, _eq, default_py) = keyed.partition(" = ")
+        key, _colon, keyed = split.partition(": ")
+        tname, _eq, default_py = keyed.partition(" = ")
 
         if key == "/":
             group = -1

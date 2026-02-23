@@ -185,7 +185,7 @@ class ScreenEditor:
 
         assert CUP_Y_X == b"\x1b[{};{}H"
 
-        (x, y) = self.get_terminal_size()
+        x, y = self.get_terminal_size()
 
         x_1 = 1
         self.write("\x1b[{};{}H".format(y, x_1).encode())
@@ -271,10 +271,10 @@ class ScreenEditor:
         # Parse the Cursor Position Report (CPR)
 
         m = re.match(rb"^\x1B\[([0-9]+);([0-9]+)R$", string=line)
-        (ydigits, xdigits) = (m.group(1), m.group(2))
-        (y, x) = (int(ydigits), int(xdigits))
+        ydigits, xdigits = (m.group(1), m.group(2))
+        y, x = (int(ydigits), int(xdigits))
 
-        (columns, lines) = self.get_terminal_size()
+        columns, lines = self.get_terminal_size()
 
         # Publish stale Status
 
@@ -301,13 +301,13 @@ class ScreenEditor:
 
         assert CUP_Y_X == b"\x1b[{};{}H"
 
-        (cb, cx, cy) = (line[-3], line[-2], line[-1])
+        cb, cx, cy = (line[-3], line[-2], line[-1])
 
         _ = cb
         assert cx > 0x20, hex(cx)
         assert cy > 0x20, hex(cy)
 
-        (x, y) = (cx - 0x20, cy - 0x20)
+        x, y = (cx - 0x20, cy - 0x20)
 
         self.write("\x1b[{};{}H".format(y, x).encode())
 
@@ -492,7 +492,7 @@ class ScreenEditor:
     def to_column_beyond(self, line):  # Vi ⇧4  # Vi $ goes to past last Char in Row
         """Cursor Move to last Column of Row"""
 
-        (x, y) = self.get_terminal_size()
+        x, y = self.get_terminal_size()
         reply = "\x1b[{}G".format(x).encode()  # CSI Ps G  # Cursor Char Absolute (CHA)
         os.write(sys.__stdout__.fileno(), reply)
 
@@ -504,14 +504,14 @@ class ScreenEditor:
     def to_row_middle(self, line):  # Vi ⇧M goes to middle Row, past Dent
         """Cursor Move to middle Row of Screen"""
 
-        (x, y) = self.get_terminal_size()
+        x, y = self.get_terminal_size()
         reply = "\x1b[{}d".format(y // 2).encode()  # CSI Ps d  # Line Pos Abs
         os.write(sys.__stdout__.fileno(), reply)
 
     def to_row_last(self, line):  # Vi ⇧L goes to last Row, past Dent
         """Cursor Move to last Row of Screen"""
 
-        (x, y) = self.get_terminal_size()
+        x, y = self.get_terminal_size()
         reply = "\x1b[{}d".format(y).encode()  # CSI Ps d  # Line Pos Abs
         os.write(sys.__stdout__.fileno(), reply)
 
@@ -985,7 +985,7 @@ class GlassTeletype:
         # Return the next whole Chunk of Paste or Key Stroke
 
         while True:
-            (stroke, lookahead) = bytes_splitstroke(line)
+            stroke, lookahead = bytes_splitstroke(line)
             if stroke:
                 line[::] = lookahead
                 return stroke
@@ -1011,7 +1011,7 @@ class GlassTeletype:
         wlist = list()
         xlist = list()
 
-        (rlist_, _, _) = select.select(rlist, wlist, xlist, timeout)
+        rlist_, _, _ = select.select(rlist, wlist, xlist, timeout)
 
         return rlist_  # emptied after Timeout, else copied 'rlist'
 

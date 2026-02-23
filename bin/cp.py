@@ -56,7 +56,7 @@ def main() -> None:
 
     # Peek at top of Stack
 
-    (_, _, filenames) = next(os.walk("."))
+    _, _, filenames = next(os.walk("."))
 
     peeks = list(_ for _ in filenames if not (_.startswith(".") or _.endswith("~")))
     peeks.sort(key=lambda _: (os.stat(_).st_mtime, _))

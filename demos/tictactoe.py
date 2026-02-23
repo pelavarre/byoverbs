@@ -250,7 +250,7 @@ class TicTacToeGame:
         shunting = False
         while True:
             prompt = self.format_prompt()
-            (keys, chord) = self.tui_read_keys(tui, prompt=(DENT + prompt + " ... "))
+            keys, chord = self.tui_read_keys(tui, prompt=(DENT + prompt + " ... "))
 
             for key in keys:
                 if key == "#":
@@ -638,7 +638,7 @@ class TicTacToeGame:
 
         move = board.choose_shove_in(turn)
         if move:
-            (move_turn, x, y) = move
+            move_turn, x, y = move
 
             assert move_turn == turn
 
@@ -722,7 +722,7 @@ class TicTacToeGame:
 
             return
 
-        (before, x, y) = move
+        before, x, y = move
 
         assert before == "."
 
@@ -736,7 +736,7 @@ class TicTacToeGame:
         board = self.board
 
         move = board.choose_random_mutate()
-        (turn, x, y) = move
+        turn, x, y = move
         self.turn = turn
 
         self.x = x
@@ -757,7 +757,7 @@ class TicTacToeGame:
             self.call_count = 0
             self.chords_helps_whys_clear()
         else:
-            (turn, x, y) = move
+            turn, x, y = move
             self.turn = turn
 
             winners = board.board_tui_print(
@@ -780,7 +780,7 @@ class TicTacToeGame:
             self.call_count = 0
             self.chords_helps_whys_clear()
         else:
-            (turn, x, y) = move
+            turn, x, y = move
             self.turn = turn
 
             winners = board.board_tui_print(
@@ -912,7 +912,7 @@ class TicTacToeBoard:
 
         cells[::] = len(self.cells) * ["."]
         for move in moves:
-            (turn, x, y) = move
+            turn, x, y = move
 
             xy = (x, y)
             index = xys.index(xy)
@@ -1039,7 +1039,7 @@ class TicTacToeBoard:
 
         cells[::] = list(len(cells) * ["."])
         for after_move in moves:
-            (turn, x, y) = after_move
+            turn, x, y = after_move
             self.x_y_mutate(x, y, turn)
 
     def x_y_mutate(self, x, y, turn):
@@ -1092,7 +1092,7 @@ class TicTacToeBoard:
         xy = random.choice(empty_xys)
 
         turn = "."
-        (x, y) = xy
+        x, y = xy
 
         move = "{}{}{}".format(turn, x, y)
 
@@ -1112,7 +1112,7 @@ class TicTacToeBoard:
         turns.remove(turn_before)
 
         turn = random.choice(turns)
-        (x, y) = xy
+        x, y = xy
 
         move = "{}{}{}".format(turn, x, y)
 
@@ -1152,7 +1152,7 @@ class TicTacToeBoard:
             ]
 
         for goal in goals:
-            (voter, party) = goal
+            voter, party = goal
 
             voter_xys = voter
             if not isinstance(voter, list):
@@ -1170,7 +1170,7 @@ class TicTacToeBoard:
 
         xy = random.choice(shoves)
 
-        (x, y) = xy
+        x, y = xy
         move = "{}{}{}".format(turn, x, y)
 
         return move
@@ -1261,7 +1261,7 @@ class TicTacToeBoard:
         opposite_xys = list()
 
         for xy in corner_xys:
-            (x, y) = xy
+            x, y = xy
 
             ox = xs[len(xs) - 1 - xs.index(x)]
             oy = ys[len(ys) - 1 - ys.index(y)]
@@ -1286,7 +1286,7 @@ class TicTacToeBoard:
 
         empty_xys = self.find_empty_xys()
         for xy in empty_xys:
-            (x, y) = xy
+            x, y = xy
 
             for streak in streaks:
                 if xy in streak:
@@ -1319,14 +1319,14 @@ class TicTacToeBoard:
     def find_block_fork_xys(self, turn):
         """Find the Empty Cells to take to Fork for Them"""
 
-        (_, ofork_xys) = self._find_fork_ofork_xys(turn)
+        _, ofork_xys = self._find_fork_ofork_xys(turn)
 
         return ofork_xys
 
     def find_fork_xys(self, turn):
         """Find the Empty Cells to take to Fork for Us"""
 
-        (fork_xys, _) = self._find_fork_ofork_xys(turn)
+        fork_xys, _ = self._find_fork_ofork_xys(turn)
 
         return fork_xys
 
@@ -1335,7 +1335,7 @@ class TicTacToeBoard:
 
         # List all the Empty Cells that do Form or Block Forks
 
-        (forks_by_xy, oforks_by_oxoy) = self._find_fork_ofork_by_xy(turn)
+        forks_by_xy, oforks_by_oxoy = self._find_fork_ofork_by_xy(turn)
 
         # Drop the Empty Cells that don't create the most Winning Moves
 
@@ -1403,7 +1403,7 @@ class TicTacToeBoard:
     def find_block_win_xys(self, turn):
         """Find the Empty Cells to take to Win for Them"""
 
-        (_, blocker_xys) = self._find_winner_blocker_xys(turn)
+        _, blocker_xys = self._find_winner_blocker_xys(turn)
 
         if FEATURE_STEPPING:
             breakpoint()
@@ -1413,7 +1413,7 @@ class TicTacToeBoard:
     def find_win_xys(self, turn):
         """Find the Empty Cells to take to Win for Us"""
 
-        (winner_xys, _) = self._find_winner_blocker_xys(turn)
+        winner_xys, _ = self._find_winner_blocker_xys(turn)
 
         return winner_xys
 
@@ -1496,7 +1496,7 @@ class TicTacToeBoard:
         empty_opposite_xys = list()
 
         for xy in corner_xys:
-            (x, y) = xy
+            x, y = xy
 
             ox = xs[len(xs) - 1 - xs.index(x)]
             oy = ys[len(ys) - 1 - ys.index(y)]
@@ -1514,7 +1514,7 @@ class TicTacToeBoard:
             return None
 
         xy = random.choice(empty_opposite_xys)
-        (x, y) = xy
+        x, y = xy
 
         move = "{}{}{}".format(turn, x, y)
 
@@ -1585,7 +1585,7 @@ class TicTacToeBoard:
         for move in reversed(moves):
             assert len(move) == len("Oxy")
 
-            (turn, x, y) = move
+            turn, x, y = move
             xy = (x, y)
 
             if xy not in xys_set:
@@ -1611,7 +1611,7 @@ class TicTacToeBoard:
 
         # Print the Chords, the Handicaps, and the Moves
 
-        (handicaps, xo_moves) = self._moves_split()
+        handicaps, xo_moves = self._moves_split()
 
         if chords:
             tui.print(DENT + "input " + chords_echo)
@@ -1751,7 +1751,7 @@ class TicTacToeBoard:
             # if len(empty_xys) <= 9:
 
             t0 = dt.datetime.now()
-            (x, o, z) = self.forecast_x_o_wins(turn=turn)
+            x, o, z = self.forecast_x_o_wins(turn=turn)
             t1 = dt.datetime.now()
 
             str_td = dt_timedelta_strftime(t1 - t0)
@@ -1794,7 +1794,7 @@ class TicTacToeBoard:
 
         #
 
-        (handicaps, xo_moves) = self._moves_split()
+        handicaps, xo_moves = self._moves_split()
 
         tui.print(dminus, "", "", "", " ".join(self.xs))
         tui.print()
@@ -1830,8 +1830,8 @@ class TicTacToeBoard:
         # Forecast for X Next or O Next
 
         if turn == ".":
-            (xx, xo) = self.forecast("X")
-            (ox, oo) = self.forecast("O")
+            xx, xo = self.forecast("X")
+            ox, oo = self.forecast("O")
 
             x_ = xx + ox
             o_ = xo + oo
@@ -1850,11 +1850,11 @@ class TicTacToeBoard:
         z_ = 0
         while scoreables:
             scoreable = scoreables.pop(0)
-            (turn_, cells_) = scoreable
+            turn_, cells_ = scoreable
 
             turn__ = "X" if (turn_ != "X") else "O"
 
-            (x, o, z) = self.score_x_o_wins(cells=cells_)
+            x, o, z = self.score_x_o_wins(cells=cells_)
 
             if z and ("." in cells_):
                 for index, cell_ in enumerate(cells_):
@@ -1866,7 +1866,7 @@ class TicTacToeBoard:
                         scoreables.append(scoreable__)
 
             else:
-                (x, o, z) = self.score_x_o_wins(cells=cells_)
+                x, o, z = self.score_x_o_wins(cells=cells_)
                 x_ += x
                 o_ += o
                 z_ += z

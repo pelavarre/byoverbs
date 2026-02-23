@@ -309,7 +309,7 @@ class BytesTerminal:
         wlist: list[int] = list()
         xlist: list[int] = list()
 
-        (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout)
+        alt_rlist, _, _ = select.select(rlist, wlist, xlist, timeout)
 
         return alt_rlist
 

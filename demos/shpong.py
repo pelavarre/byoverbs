@@ -22,6 +22,7 @@ examples:
   ./demos/shpong.py  # show these examples
   ./demos/shpong.py --  # bounce a \u25A0 Ping-Pong Ball back & forth between 2 Paddles
 """
+
 # $B $D $L $R $U initted far below
 
 # code reviewed by people, and by Black and Flake8
@@ -258,7 +259,7 @@ class ShPongGame:
         # Measure the Screen and the Board inside it
 
         size = tui.shutil_get_terminal_size()
-        (columns, rows) = (size.columns, size.lines)
+        columns, rows = (size.columns, size.lines)
 
         board_rows = rows - 2  # top margin, bottom margin
         board_columns = columns - 2  # left margin, right margin
@@ -406,13 +407,13 @@ class ShPongGame:
 
         # Draw one Ball
 
-        (ball_y, ball_x) = self.ball_yx
+        ball_y, ball_x = self.ball_yx
         tui.print(CUP_Y_X.format(ball_y, ball_x) + BALL, end="")
 
         # Draw two Paddles
 
         for paddle_yx in zip(self.paddle_ys, self.paddle_xs):
-            (paddle_y, paddle_x) = paddle_yx
+            paddle_y, paddle_x = paddle_yx
             for row in range(PADDLE_ROWS):
                 tui.print(CUP_Y_X.format(paddle_y + row, paddle_x) + BALL, end="")
 
@@ -453,13 +454,13 @@ class ShPongGame:
         # Erase two Paddles
 
         for paddle_yx in zip(self.paddle_ys, self.paddle_xs):
-            (paddle_y, paddle_x) = paddle_yx
+            paddle_y, paddle_x = paddle_yx
             for row in range(PADDLE_ROWS):
                 tui.print(CUP_Y_X.format(paddle_y + row, paddle_x) + " ", end="")
 
         # Erase one Ball
 
-        (ball_y, ball_x) = self.ball_yx
+        ball_y, ball_x = self.ball_yx
         tui.print(CUP_Y_X.format(ball_y, ball_x) + " ", end="")
 
     def paddle_find_yx(self, yx):
@@ -468,7 +469,7 @@ class ShPongGame:
         y_center = PADDLE_ROWS // 2
 
         for paddle_yx in zip(self.paddle_ys, self.paddle_xs):
-            (paddle_y, paddle_x) = paddle_yx
+            paddle_y, paddle_x = paddle_yx
             for row in range(PADDLE_ROWS):
                 if yx == (paddle_y + row, paddle_x):
                     y_minus_center = row - y_center
@@ -484,8 +485,8 @@ class ShPongGame:
         ball_x_mid = self.ball_x_mid
         scores = self.scores
 
-        (_, x) = self.ball_yx
-        (_, vector_x) = self.ball_vector_yx
+        _, x = self.ball_yx
+        _, vector_x = self.ball_vector_yx
 
         index = 1 - int(x >= ball_x_mid)
         if vector_x:
@@ -542,7 +543,7 @@ class ShPongGame:
 
         vector_yx = VECTOR_YX_BY_CAP[cap]
 
-        (vector_y, vector_x) = self.ball_vector_yx
+        vector_y, vector_x = self.ball_vector_yx
 
         vector_y_next = vector_y + vector_yx[0]
         if not (-2 <= vector_y_next <= +2):
@@ -561,10 +562,10 @@ class ShPongGame:
     def ball_step(self):
         """Step the Ball along"""
 
-        (y, x) = self.ball_yx
+        y, x = self.ball_yx
 
-        (vector_y, vector_x) = self.ball_vector_yx
-        (vector_y_next, vector_x_next) = (vector_y, vector_x)
+        vector_y, vector_x = self.ball_vector_yx
+        vector_y_next, vector_x_next = (vector_y, vector_x)
 
         # Move up or down or neither
 
@@ -604,8 +605,8 @@ class ShPongGame:
     def ball_score_and_serve(self):
         """Score and Serve, at far Left or far Right"""
 
-        (_, ball_x) = self.ball_yx
-        (_, vector_x) = self.ball_vector_yx
+        _, ball_x = self.ball_yx
+        _, vector_x = self.ball_vector_yx
 
         index = None
         if ball_x == self.ball_x_min:

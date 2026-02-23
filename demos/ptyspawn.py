@@ -29,7 +29,6 @@ import shlex
 import sys
 import textwrap
 
-
 default_sh = "sh"
 ENV_SHELL = os.getenv("SHELL", default_sh)
 
@@ -94,7 +93,7 @@ def pty_spawn_argv(argv) -> None:
 
             pbytes = bytearray()
             for k in ibytes:
-                (i, j) = ij
+                i, j = ij
                 ij[::] = [j, k]
 
                 # Take the 2 Bytes b"\r~" to mean hold the b"~" till next Byte

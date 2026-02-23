@@ -32,6 +32,7 @@ examples:
     https://www.google.com/search?tbm=isch&q=Carelman+Everyday
 
 """
+
 # todo: look for '#' over '?' examples of key-value pairs, but found outside the Vpn's
 
 
@@ -90,7 +91,7 @@ def address_print_nears(address) -> None:
 
     # Form the Offers
 
-    (paras, lines) = address_form_nears(address=alt_address)
+    paras, lines = address_form_nears(address=alt_address)
 
     # Sort the Offers
 
@@ -232,7 +233,7 @@ def address_form_nears(address) -> tuple[Graf, Graf]:  # FIXME  # noqa C901
 
         pairs = urllib.parse.parse_qsl(kv_splits_query, separator=kv_sep)
         for index, pair in enumerate(pairs):
-            (name, value) = pair
+            name, value = pair
             qvalue = urllib.parse.quote(value)
             if not index:
                 para_lines.append("    {}={}".format(name, qvalue))

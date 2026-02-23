@@ -55,7 +55,6 @@ import dataclasses
 import sys
 import textwrap
 
-
 #
 # Git-track the Man Page
 #
@@ -233,7 +232,7 @@ def main() -> None:
 def parse_pq_py_args() -> PqPyArgs:
     """Parse the Command-Line Arguments of Pq Py"""
 
-    (main_doc, lil_doc, big_doc) = fetch_pq_py_docs()
+    main_doc, lil_doc, big_doc = fetch_pq_py_docs()
 
     # Form the Arg Parser
 

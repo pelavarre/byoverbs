@@ -9,7 +9,6 @@ examples:
   python3 main.py --
 """
 
-
 # code reviewed by people, and by Black & Flake8 & MyPy
 
 import calendar
@@ -76,7 +75,7 @@ def main() -> None:
     """Run well, inside a Sh Terminal or Replit Console"""
 
     fd = sys.stderr.fileno()  # Py Idle raises io.UnsupportedOperation here
-    (columns, rows) = os.get_terminal_size(fd)
+    columns, rows = os.get_terminal_size(fd)
     if (columns < 50) or (rows < 36):
         print("Try a larger Terminal, such as 50 Rows x 36 Columns", file=sys.stderr)
         sys.exit(1)
@@ -194,7 +193,7 @@ class Printer:
         BlackBack = "\x1b[40m"  # SGR 06/13 m  # 40 Black Background
         GrayBack = "\x1b[47m"  # SGR 06/13 m  # 47 White Background
         if os.getenv("REPLIT_ENVIRONMENT", default_eq_None):
-            (BlackBack, GrayBack) = (GrayBack, BlackBack)
+            BlackBack, GrayBack = (GrayBack, BlackBack)
             # 24/Mar/2024 Replit·Com got these backwards
 
         self.BlackBack = BlackBack
@@ -419,7 +418,7 @@ class Board:
             y1 = cell.y1
             x1 = cell.x1
 
-            (y, x) = yx
+            y, x = yx
             assert y1 == 1 + 3 + ((7 - y) * 2), (y1, yx, cell)
             assert x1 == 1 + 4 + 2 + (5 * x), (x1, yx, cell)
 
@@ -529,7 +528,7 @@ class Judge:
         cell_by_yx = board.cell_by_yx
 
         for yx, cell in cell_by_yx.items():
-            (y, x) = yx
+            y, x = yx
 
             # Move only Pawns, only ahead
 
@@ -550,7 +549,7 @@ class Judge:
         cell_by_yx = board.cell_by_yx
 
         cell = cell_by_yx[yx]
-        (y, x) = yx
+        y, x = yx
 
         # Move to the Cell ahead, or leap to the Cell after that
 
@@ -594,7 +593,7 @@ class Judge:
 
         SingleSteppers = sorted(Kings + Knights)
         for yx, cell in cell_by_yx.items():
-            (y, x) = yx
+            y, x = yx
             piece_if = cell.piece_if
 
             if piece_if not in pieces:
@@ -605,7 +604,7 @@ class Judge:
 
             for dy, dx in dy_dx_vectors:
                 move = [cell]
-                (my, mx) = (y, x)
+                my, mx = (y, x)
 
                 while True:
                     step_yx = (my + dy, mx + dx)
@@ -620,7 +619,7 @@ class Judge:
                             if cell.piece_if in SingleSteppers:
                                 break
 
-                            (my, mx) = step_yx
+                            my, mx = step_yx
                             continue
 
                         far_title = unicodedata.name(far_piece_if).title()

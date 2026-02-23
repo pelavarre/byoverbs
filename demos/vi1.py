@@ -491,7 +491,7 @@ class ViTerminal:
         # Split out the next Key Chords or Paste
 
         while True:
-            (bot, more) = self.splits_splitbot(splits)
+            bot, more = self.splits_splitbot(splits)
             if bot:
                 splits[::] = more
 
@@ -615,7 +615,7 @@ class CharTerminal:
         # Split out the next Key Chords or Paste
 
         while True:
-            (some, more) = self.bytes_splitchord(lines)
+            some, more = self.bytes_splitchord(lines)
             if some:
                 lines[::] = more
 
@@ -1001,7 +1001,7 @@ class ByteTerminal:
         wlist = list()
         xlist = list()
 
-        (rlist_, _, _) = select.select(rlist, wlist, xlist, timeout)
+        rlist_, _, _ = select.select(rlist, wlist, xlist, timeout)
 
         return rlist_  # empty after Timeout, else clone of  'rlist'
 
@@ -1015,7 +1015,7 @@ class ByteTerminal:
         # Split out the next Key Chords or Paste
 
         while True:
-            (some, more) = self.bytes_splitbytes(lines)
+            some, more = self.bytes_splitbytes(lines)
             if some:
                 lines[::] = more
                 return some

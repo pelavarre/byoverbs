@@ -297,7 +297,7 @@ def balls_sort() -> None:  # noqa C901 too complex
         moved = 0
 
         pair = random.choice(pairs)
-        (g, t) = pair
+        g, t = pair
         while g.balls and (len(t.balls) < BallCount4):
             giving = g.balls[-1]
             taking = t.balls[-1] if t.balls else giving
@@ -371,7 +371,7 @@ def balls_scramble() -> None:  # noqa C901 too complex
 
         pair = random.choice(pairs)
 
-        (g, t) = pair
+        g, t = pair
         moving = g.balls.pop()
         t.balls.append(moving)
 

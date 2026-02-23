@@ -6,7 +6,6 @@ import subprocess
 import sys
 import unicodedata
 
-
 SLACK_NAME_TO_UNICODE = {
     "black_circle": "Medium Black Circle",  # not Large
     "large_blue_circle": "Large Blue Circle",

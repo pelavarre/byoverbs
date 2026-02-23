@@ -12,14 +12,12 @@ examples:
   black demos && flake8 demos && python3.bash demos/t3studio.py --
 """
 
-
 import code
 import collections
 import datetime as dt
 import string
 
 import tictactoe
-
 
 #
 # Say how to flip, spin, and turn the Board

@@ -79,7 +79,6 @@ import sys
 
 import byotools as byo
 
-
 if sys.argv[1:]:
     sys.stderr.write("python3.py: did you mean:  python3 ...\n")
     sys.exit(2)

@@ -20,7 +20,6 @@ see also:  bin/bash.py
 
 import byotools as byo
 
-
 byo.sys_exit()
 
 

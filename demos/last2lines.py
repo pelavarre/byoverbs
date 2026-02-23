@@ -20,7 +20,6 @@ import os
 import pathlib
 import sys
 
-
 FIND = os.path.abspath(sys.argv[0])
 assert FIND.endswith("/demos/last2lines.py"), (FIND,)
 

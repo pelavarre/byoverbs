@@ -37,7 +37,7 @@ def main() -> None:
 
             #
 
-            (name, ext) = os.path.splitext(pathname)
+            name, ext = os.path.splitext(pathname)
             has_ext = bool(ext)
 
             path = pathlib.Path(pathname)
@@ -56,7 +56,7 @@ def main() -> None:
 
     d = dict()
     for i in range(8):
-        (has_ext, is_xecutable, has_hashbang) = list(bool(int(_)) for _ in f"{i:03b}")
+        has_ext, is_xecutable, has_hashbang = list(bool(int(_)) for _ in f"{i:03b}")
         rep = "#"
         rep += " Ext" if has_ext else ""
         rep += " Xecutable" if is_xecutable else ""

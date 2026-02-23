@@ -93,7 +93,6 @@ import urllib.parse
 
 import byotools as byo
 
-
 #
 # Edit the Os Copy/Paste Buffer else other Stdin/ Stdout
 #

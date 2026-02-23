@@ -39,7 +39,6 @@ import sys
 import textwrap
 import typing
 
-
 ... == dict[str, int]  # new Syntax since Oct/2020 Python 3.9
 # ... == bytes | None  # new Syntax since Oct/2021 Python 3.10
 
@@ -198,7 +197,7 @@ def pty_spawn_argv(argv) -> None:  # noqa C901
 
             pbytes = bytearray()
             for d in ibytes:
-                (a, b, c) = abc
+                a, b, c = abc
                 abc[::] = [b, c, d]
 
                 abcd = bytes([a, b, c, d])
@@ -360,7 +359,7 @@ def sprites_take_abcd(sprites, abcd) -> str:  # noqa C901
     dy_by_byte = dict(zip(b"asdf" b"hjkl", 2 * (0, +1, -1, 0)))
     dx_by_byte = dict(zip(b"asdf" b"hjkl", 2 * (-1, 0, 0, +1)))
     if dbyte in b"asdf" b"hjkl":
-        (dy, dx) = (dy_by_byte[ord(dbyte)], dx_by_byte[ord(dbyte)])
+        dy, dx = (dy_by_byte[ord(dbyte)], dx_by_byte[ord(dbyte)])
 
         index = dbyte in b"hjkl"  # not in b"asdf"
 
@@ -475,7 +474,7 @@ class TerminalShadow:
 
         el = "\x1b[K"
         for i, pair in enumerate(zip(alt_rows, alt_bitrows)):
-            (row, bitrow) = pair
+            row, bitrow = pair
             assert len(row) == len(bitrow), (len(row), len(bitrow), i, n)
 
             compressed = ""
@@ -776,7 +775,7 @@ def sys_stdio_kbhit(stdio, timeout) -> list[int]:  # 'timeout' in seconds
     wlist: list[int] = list()
     xlist: list[int] = list()
 
-    (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout)
+    alt_rlist, _, _ = select.select(rlist, wlist, xlist, timeout)
     assert alt_rlist in (list(), rlist), (alt_rlist, rlist)
 
     return alt_rlist

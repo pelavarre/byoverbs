@@ -46,7 +46,6 @@ import sys
 
 import byoverbs.bin.byotools as byo
 
-
 OS_ENV_VARS = "COLUMNS LINES SHELL".split()
 
 
@@ -196,7 +195,7 @@ def take_in(takes):
         # or start completing a sequence of Control Bytes
 
         controls.append(take)
-        (some, more) = takes_split_one(controls)
+        some, more = takes_split_one(controls)
 
         if some:
             assert not more, more
@@ -281,7 +280,7 @@ def takes_split_some(takes):  # FIXME: unused?
     somes = list()
     more = takes
     while more:
-        (some, more) = takes_split_one(more)
+        some, more = takes_split_one(more)
         if not some:
             break
         somes.append(some)

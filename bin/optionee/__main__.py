@@ -49,7 +49,6 @@ from byo import byoargparse
 from byo import byotermios
 from byo import byotty
 
-
 ... == dict[str, int]  # new since Oct/2020 Python 3.9
 ... == byo, byotermios, byotty, time  # ducks Flake8 F401 imported.but.unused
 

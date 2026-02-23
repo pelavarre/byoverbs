@@ -17,7 +17,6 @@ examples:
 
 import byotools as byo
 
-
 byo.subprocess_exit_run_if()
 
 

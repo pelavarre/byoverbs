@@ -69,7 +69,7 @@ def main() -> None:
 
     image_exts = ".jpeg .jpg .png .svg .webp".split()
 
-    (_, _, filenames) = next(os.walk("."))
+    _, _, filenames = next(os.walk("."))
 
     exts_set = set()
     for filename in filenames:

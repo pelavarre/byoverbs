@@ -22,7 +22,6 @@ import os
 import sys
 import textwrap
 
-
 #
 # Run from the Sh command line
 #

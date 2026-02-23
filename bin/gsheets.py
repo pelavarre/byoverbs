@@ -21,7 +21,6 @@ they paste back in well if you choose ⇧⌘V to ask for Paste Special > Values 
 
 import byotools as byo
 
-
 byo.sys_exit()
 
 

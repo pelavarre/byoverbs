@@ -25,7 +25,6 @@ examples:
   readlink -f "$PWD"  # maybe works better sometimes
 """
 
-
 import byohelper
 
 ... == byohelper  # type: ignore

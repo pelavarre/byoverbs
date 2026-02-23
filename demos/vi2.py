@@ -1676,8 +1676,8 @@ class ChordsScreenTest:
                 m = re.match(rb"^" + CprPatternYX + rb"$", string=cpr_else)
                 assert m, cpr_else  # todo: let my people type this fast
 
-                (y, x) = (m.group(1), m.group(2))
-                (y, x) = (y.decode(), x.decode())
+                y, x = (m.group(1), m.group(2))
+                y, x = (y.decode(), x.decode())
                 yx_by_frame[frame] = (y, x)
 
                 # Warp the Cursor to the Frame of Str, if need be
@@ -1908,7 +1908,7 @@ class ChordsTerminal:
         exit_writes = self.exit_writes
 
         if before_after:
-            (before, after) = before_after
+            before, after = before_after
 
             self.write(after)
 
@@ -2026,7 +2026,7 @@ class ChordsTerminal:
             if f in mocks_by_f.keys():
                 mocks = mocks_by_f[f]
                 for mock in mocks:
-                    (func, arg) = mock
+                    func, arg = mock
                     func(arg)
 
             # Flake8 feels unrolling this Code is "too complex" in McCabe Complexity
@@ -2100,7 +2100,7 @@ class ChordsTerminal:
 
         index = 0
         while True:
-            (seq, plus) = self.bytes_splitseq(holds)
+            seq, plus = self.bytes_splitseq(holds)
 
             enough_holds = holds[: len(seq)] if seq else holds
             if enough_holds and (len(peeks) < len(enough_holds)):
@@ -2152,7 +2152,7 @@ class ChordsTerminal:
 
         # Read the last Bytes of a whole Sequence, else Bytes of the next Sequence
 
-        (seq, plus) = self.bytes_splitseq(holds)
+        seq, plus = self.bytes_splitseq(holds)
 
         enough_holds = holds[: len(seq)] if seq else holds
         if enough_holds and (len(peeks) < len(enough_holds)):
@@ -2818,7 +2818,7 @@ class BytesTerminal:
         wlist = list()
         xlist = list()
 
-        (alt_rlist, _, _) = select.select(rlist, wlist, xlist, timeout)
+        alt_rlist, _, _ = select.select(rlist, wlist, xlist, timeout)
 
         return alt_rlist
 

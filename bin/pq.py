@@ -86,7 +86,6 @@ import time
 import traceback
 import unicodedata
 
-
 # import ast
 # import datetime as dt
 # import decimal
@@ -133,7 +132,7 @@ def try_func_else_pdb_pm(func) -> None:
     except bdb.BdbQuit:
         raise
     except Exception as exc:
-        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        exc_type, exc_value, exc_traceback = sys.exc_info()
         assert exc is exc_value
 
         if not hasattr(sys, "last_exc"):  # give up when raised inside exec(py, ...)
@@ -219,7 +218,7 @@ class PyExecQueryResult:
         # Parse some Py Code and compose the rest,
         # and maybe sponge up 'self.ibytes_else', and maybe also 'self.itext_else'
 
-        (found_py_graf, complete_py_graf, importables) = self.find_and_form_py_lines()
+        found_py_graf, complete_py_graf, importables = self.find_and_form_py_lines()
 
         # Option to trace the Py Code without running it
 
@@ -393,7 +392,7 @@ class PyExecQueryResult:
     def py_graf_assert_ipull_to_opush(self, py_graf) -> None:
         """Assert this Graf has 1 Input and 1 Output"""
 
-        (ipulls, opushes) = self.py_graf_to_i_pulls_o_pushes(py_graf)
+        ipulls, opushes = self.py_graf_to_i_pulls_o_pushes(py_graf)
 
         if ipulls == ["iolines"]:  # pq reverse  # pq sort
             assert not opushes, (ipulls, opushes, py_graf)
@@ -421,7 +420,7 @@ class PyExecQueryResult:
         iwords = iowords + ["stdin", "ibytes", "itext", "ilines", "iline"]  # mentions
         owords = ["obytes", "otext", "olines", "oline", "oobject", "oobjects"]  # inits
 
-        (ipulls, opushes) = py_graf_to_pulls_pushes(py_graf)
+        ipulls, opushes = py_graf_to_pulls_pushes(py_graf)
 
         ipulls = list(_ for _ in ipulls if _ in iwords)
         opushes = list(_ for _ in opushes if _ in owords)
@@ -436,7 +435,7 @@ class PyExecQueryResult:
 
         for py_graf in py_grafs:
             for py_line in py_graf:
-                (_, _, py_right) = py_line.partition("#")
+                _, _, py_right = py_line.partition("#")
 
                 cues_py_list = py_right.split("#")
                 cues_py_list = list(_.strip() for _ in cues_py_list if _)
@@ -546,9 +545,9 @@ class PyExecQueryResult:
 
         found_py_graf = py_graf
 
-        (ipulls, opushes) = self.py_graf_to_i_pulls_o_pushes(py_graf)
+        ipulls, opushes = self.py_graf_to_i_pulls_o_pushes(py_graf)
 
-        (complete_py_graf, importables) = self.py_graf_complete(
+        complete_py_graf, importables = self.py_graf_complete(
             py_graf, ipulls=ipulls, opushes=opushes
         )
 
@@ -589,7 +588,7 @@ class PyExecQueryResult:
             full_py_graf = before_py_graf + div + run_py_graf + div + after_py_graf
             full_py_graf = graf_deframe(full_py_graf)
 
-        (fuller_py_graf, importables) = py_graf_insert_imports(py_graf=full_py_graf)
+        fuller_py_graf, importables = py_graf_insert_imports(py_graf=full_py_graf)
 
         # Succeed
 
@@ -1129,7 +1128,7 @@ class PyExecQueryResult:
         # Read the Bytes, as if some of the completed Py Graf already ran
 
         core_py_graf = self.form_read_bytes_py_graf()
-        (read_py_graf, imoortables) = py_graf_insert_imports(py_graf=core_py_graf)
+        read_py_graf, imoortables = py_graf_insert_imports(py_graf=core_py_graf)
 
         read_py_text = "\n".join(read_py_graf)
 
@@ -1174,11 +1173,9 @@ class PyExecQueryResult:
 
         # Fall back to end the Text Lines and exit zero
 
-        default_py_graf = [
-            r"""
+        default_py_graf = [r"""
                 olines = ilines  # end  # ended  # ends every line with "\n"
-            """.strip()
-        ]
+            """.strip()]
 
         assert verbose, (verbose,)
         print("+ pq ended", file=sys.stderr)
@@ -1197,7 +1194,7 @@ class PyExecQueryResult:
 
         for mgraf in mgrafs:
             raw_py_graf = ["for iline in ilines:"] + list((dent + _) for _ in mgraf)
-            (py_graf, importables) = py_graf_insert_imports(py_graf=raw_py_graf)
+            py_graf, importables = py_graf_insert_imports(py_graf=raw_py_graf)
             py_text = "\n".join(py_graf)
 
             alt_locals = dict(ilines=ilines)
@@ -1516,7 +1513,7 @@ def py_graf_to_pulls_pushes(py_graf) -> tuple[list[str], list[str]]:
     alt_py_graf = list()  # split by ';' surfaces '; {setter} = ...'
 
     for py_line in py_graf:
-        (py_left, _, _) = py_line.partition("#")
+        py_left, _, _ = py_line.partition("#")
         py_left_lines = py_left.split(";")
         alt_py_graf.extend(_.strip() for _ in py_left_lines)
 

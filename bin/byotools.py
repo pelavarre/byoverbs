@@ -28,7 +28,6 @@ import sys
 import textwrap
 import zoneinfo
 
-
 assert sys.version_info[:2] >= (3, 9), (sys.version_info,)
 
 

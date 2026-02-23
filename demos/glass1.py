@@ -36,7 +36,6 @@ import termios
 import time
 import tty
 
-
 DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 sys.path[1:1] = [os.path.join(DIR, os.pardir, "bin")]
 
@@ -154,7 +153,7 @@ def main():
                     if len(set(ibytes[-3:])) == 1:
                         break
 
-            (columns, lines) = tui.terminal_size()
+            columns, lines = tui.terminal_size()
             sys.stdout.write(CUP_Y_X.format(lines, 1))
 
     finally:
@@ -714,7 +713,7 @@ class TextUserInterface:  # todo: port to Windows
 
         reps = list()
         for run in runs:
-            (found, codes) = run
+            found, codes = run
 
             if found < 4:
                 rep = str(codes)
@@ -734,7 +733,7 @@ class TextUserInterface:  # todo: port to Windows
         ws_0 = list()
         xs_0 = list()
 
-        (rs_1, _, _) = select.select(rs_0, ws_0, xs_0, timeout)
+        rs_1, _, _ = select.select(rs_0, ws_0, xs_0, timeout)
 
         if rs_1 != rs_0:
             assert rs_1 == [], rs_1

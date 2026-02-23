@@ -32,7 +32,6 @@ import struct
 import sys
 import time
 
-
 C0_C1_INTS = list(range(0x00, 0x20)) + [0x7F] + list(range(0x80, 0xA0))
 C0_C1 = list(struct.pack("B", _) for _ in C0_C1_INTS)
 
@@ -216,7 +215,7 @@ def pty_bytes_split(bytes_, mode):
 
     splitted = 0
     for i in range(len(bytes_)):
-        (packet, more) = pty_bytes_split_once(bytes_=bytes_[splitted:], mode=mode)
+        packet, more = pty_bytes_split_once(bytes_=bytes_[splitted:], mode=mode)
 
         splittable = i + 1 - splitted
         if splittable >= len(packet):
@@ -356,7 +355,7 @@ def pty_groups_print_repr(groups, path_name):
     print()
     print('with open("{}", "wb") as writing:'.format(path_name))
     for group in groups:
-        (repeats, packet) = group
+        repeats, packet = group
 
         # Pick out the Meaning of a Packet
 
@@ -402,12 +401,12 @@ def pty_packet_told(packet):
 
     elif packet.startswith(b"\x1b["):  # Control Sequence Introducer (CSI)
         if packet.startswith(b"\x1b[M") and (len(packet) == 6):
-            (cb, cx, cy) = (packet[-3], packet[-2], packet[-1])
+            cb, cx, cy = (packet[-3], packet[-2], packet[-1])
 
-            (cx_, cy_) = (cx, cy)
+            cx_, cy_ = (cx, cy)
             told = "Mouse Button 0x{:02X} at X={} Y={}".format(cb, cx_, cy_)
             if cb & 0x20:
-                (cx_, cy_) = (cx - 0x20, cy - 0x20)
+                cx_, cy_ = (cx - 0x20, cy - 0x20)
                 told = "Mouse Button 0x{:02X} at X={} Y={}".format(cb, cx_, cy_)
 
         elif packet.endswith(b"H"):
