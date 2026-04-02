@@ -47,6 +47,8 @@ stty -ixon  # let Sh ⌃S mean undo ⌃R  # don't take ⌃Q and ⌃S as XOn/ XOf
 
 alias %%='echo -n "%% # £   ⎋ ⌃ ⌥ ⇧ ⌘ Fn   ← ↑ → ↓ ⇥ ⌫ ⏎   ; ⋮ ☰ ⬅️  ⬆️  ➡️  ⬇️  ·" |tee >(pbcopy) && echo'
 
+function .exit() { echo + exit $? >&2; }  # most classic Sh rejects .exit as 'not a valid id'
+
 function :scf: () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug: () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
 
@@ -116,6 +118,9 @@ fi
 # Mix in LocalHost ZProfile for Sh Path, PushD, AltPwdS, Ssh Aliases, Zsh BindKey, etc
 
 if [[ -e ~/.ssh/zprofile ]]; then source ~/.ssh/zprofile; fi
+
+bindkey '\e[1;3D' backward-word
+bindkey '\e[1;3C' forward-word
 
 : # export PATH=$PATH:$HOME/...
 : # pushd ~/Desktop >/dev/null

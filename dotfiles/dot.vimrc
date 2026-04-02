@@ -103,8 +103,11 @@ endif
 " \ N  => Toggle line numbers
 :nnoremap <BSlash>n :set invnumber<return>
 
-" \ W  => Delete the trailing whitespace from each line (not yet from file)
-:nnoremap <BSlash>w :call RStripEachLine()<return>
+" \ W  => Toggle word wrap
+:nnoremap <BSlash>w :set invwrap<return>
+
+" \ X  => Delete the trailing whitespace from each line (not yet from file)
+:nnoremap <BSlash>x :call RStripEachLine()<return>
 :function! RStripEachLine()
     let with_line = line(".")
     let with_col = col(".")

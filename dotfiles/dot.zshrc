@@ -39,11 +39,11 @@ if ! type -f precmd >/dev/null; then  # a la Bash $PROMPT_COMMAND
 fi
 
 
-# ZModLoad in your '~/.zshrc' not your '~/.zprofile'
-# to duck out of 'failed to load module' 'symbol not found in flat namespace'
-
-zmodload zsh/deltochar  # not yet found in Bash
-bindkey "\ez" zap-to-char  # ⌥Z for Zsh, like Emacs, but ignores case and keeps char
+# # ZModLoad in your '~/.zshrc' not your '~/.zprofile'
+# # to duck out of 'failed to load module' 'symbol not found in flat namespace'
+#
+# zmodload zsh/deltochar  # not yet found in Bash
+# bindkey "\ez" zap-to-char  # ⌥Z for Zsh, like Emacs, but ignores case and keeps char
 
 
 # Shrug off more Sourcelines added later

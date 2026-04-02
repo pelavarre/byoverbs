@@ -59,6 +59,8 @@ alias cd=ZSH_CHDIR
 
 alias %%='echo -n "%% # £   ⎋ ⌃ ⌥ ⇧ ⌘ Fn   ← ↑ → ↓ ⇥ ⌫ ⏎   ; ⋮ ☰ ⬅️  ⬆️  ➡️  ⬇️  ·" |tee >(pbcopy) && echo'
 
+function .exit() { echo + exit $? >&2; }  # most classic Sh rejects .exit as 'not a valid id'
+
 function :scf: () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug: () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
 
@@ -97,20 +99,6 @@ function pips () {
 
 # HISTTIMEFORMAT='%b %d %H:%M:%S  ' history
 function bh () { d=$(which q); d=$(dirname "$d"); source "$d"/bh.source "$@"; }
-
-# cd, popd
-function qcd () { d=$(which q); d=$(dirname "$d"); source "$d"/qcd.source "$@"; }
-function qp () { d=$(which q); d=$(dirname "$d"); source "$d"/qp.source "$@"; }
-
-# "${ALTPWDS[@]}"
-function eqol () { d=$(which q); d=$(dirname "$d"); source "$d"/eqol "$@"; }
-function qo () { d=$(which q); d=$(dirname "$d"); source "$d"/qo "$@"; }
-function qof () { d=$(which q); d=$(dirname "$d"); source "$d"/qof "$@"; }
-function qoi () { d=$(which q); d=$(dirname "$d"); source "$d"/qoi "$@"; }
-function qoil () { d=$(which q); d=$(dirname "$d"); source "$d"/qoil "$@"; }
-function qol () { d=$(which q); d=$(dirname "$d"); source "$d"/qol "$@"; }
-function qolf () { d=$(which q); d=$(dirname "$d"); source "$d"/qolf "$@"; }
-function vqol () { d=$(which q); d=$(dirname "$d"); source "$d"/vqol "$@"; }
 
 
 #
