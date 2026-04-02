@@ -137,7 +137,7 @@ oline = iosplits.geturl()
 ++ echo http://ourJenkins//
 ++ bin/pq.py --yolo
 + pq jkwide
-+ T=https://ourjenkins.dev.example.com
++ T=https://ourjenkins.dev.purestorage.com
 + :
 + A=https://jira.example.com/browse/PROJ-123456
 ++ echo https://jira.example.com/browse/PROJ-123456
@@ -180,7 +180,7 @@ oline = osplits.geturl()
 ++ echo PROJ-123456
 ++ bin/pq.py --yolo
 + pq jlink
-+ T=https://jira.example.com/browse/PROJ-123456
++ T=https://jira.purestorage.com/browse/PROJ-123456
 + :
 ++ echo '{"//":[""]}'
 ++ bin/pq.py -q --py jq .

@@ -1424,15 +1424,24 @@ class ArgumentParser(argparse.ArgumentParser):
         # Fetch from later Python of "options:", not earlier Python of "optional arguments:"
 
         with_columns = os.getenv("COLUMNS")
+        with_no_color_else = os.environ.get("NO_COLOR")
         os.environ["COLUMNS"] = str(89)
+        os.environ["NO_COLOR"] = "True"
         try:
+
             parser_doc = self.format_help()
 
         finally:
+
             if with_columns is None:
                 os.environ.pop("COLUMNS")
             else:
                 os.environ["COLUMNS"] = with_columns
+
+            if with_no_color_else is None:
+                os.environ.pop("NO_COLOR")
+            else:
+                os.environ["NO_COLOR"] = with_no_color_else
 
         parser_doc = parser_doc.replace("optional arguments:", "options:")
 
