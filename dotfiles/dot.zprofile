@@ -74,7 +74,7 @@ function ll () {
 }
 
 
-# Sandbox Python Extensions
+# Lock Python Extensions inside a Py VEnv Sandbox
 
 function pips () {
     echo + source ~/.pyvenvs/pips/bin/activate >&2
@@ -82,25 +82,13 @@ function pips () {
 }
 
 
-# Work the deep magic inside the Sh Process that Git SubProcesses can't reach,
-# provided that $(which q) is a Sh File, not a Sh Func
+# Work the deep magic inside the Sh Process that Child Subprocesses can't reach
 
-# history -t '%b %d %H:%M:%S' 0
-function zh () { d=$(which q); d=$(dirname "$d"); source "$d"/zh.source "$@"; }
-
-# cd, popd
-function qcd () { d=$(which q); d=$(dirname "$d"); source "$d"/qcd.source "$@"; }
-function qp () { d=$(which q); d=$(dirname "$d"); source "$d"/qp.source "$@"; }
-
-# "${ALTPWDS[@]}"
-function eqol () { d=$(which q); d=$(dirname "$d"); source "$d"/eqol "$@"; }
-function qo () { d=$(which q); d=$(dirname "$d"); source "$d"/qo "$@"; }
-function qof () { d=$(which q); d=$(dirname "$d"); source "$d"/qof "$@"; }
-function qoi () { d=$(which q); d=$(dirname "$d"); source "$d"/qoi "$@"; }
-function qoil () { d=$(which q); d=$(dirname "$d"); source "$d"/qoil "$@"; }
-function qol () { d=$(which q); d=$(dirname "$d"); source "$d"/qol "$@"; }
-function qolf () { d=$(which q); d=$(dirname "$d"); source "$d"/qolf "$@"; }
-function vqol () { d=$(which q); d=$(dirname "$d"); source "$d"/vqol "$@"; }
+function .bracket () {  # takes 1 Line of Paste at a time
+    echo "+ : bracket; bind 'set enable-bracketed-paste off' 2>/dev/null; unset zle_bracketed_paste"
+    bind 'set enable-bracketed-paste off' 2>/dev/null  # at Bash
+    unset zle_bracketed_paste  # at Zsh
+}
 
 
 #

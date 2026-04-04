@@ -4,12 +4,6 @@
 # shellcheck disable=SC1091  # Not following, Does not exist, No such file
 
 
-# Revert enough Bash back to the Classic Bash Design
-
-# bind 'set enable-bracketed-paste off'
-# unset zle_bracketed_paste
-
-
 # Grow Sh Path
 
 export PATH=$PATH:$HOME/bin  # Ubuntu often does this for you
@@ -86,7 +80,7 @@ function ll () {
 }
 
 
-# Sandbox Python Extensions
+# Lock Python Extensions inside a Py VEnv Sandbox
 
 function pips () {
     echo + source ~/.pyvenvs/pips/bin/activate >&2
@@ -94,11 +88,13 @@ function pips () {
 }
 
 
-# Work the deep magic inside the Sh Process that Git SubProcesses can't reach,
-# provided that $(which q) is a Sh File, not a Sh Func
+# Work the deep magic inside the Sh Process that Child Subprocesses can't reach
 
-# HISTTIMEFORMAT='%b %d %H:%M:%S  ' history
-function bh () { d=$(which q); d=$(dirname "$d"); source "$d"/bh.source "$@"; }
+function .bracket () {  # takes 1 Line of Paste at a time
+    echo "+ : bracket; bind 'set enable-bracketed-paste off' 2>/dev/null; unset zle_bracketed_paste" >&2
+    bind 'set enable-bracketed-paste off' 2>/dev/null  # at Bash
+    unset zle_bracketed_paste  # at Zsh
+}
 
 
 #
