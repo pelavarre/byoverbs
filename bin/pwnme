@@ -1,5 +1,9 @@
 # shellcheck disable=SC3040  # Posix Sh rejects 'set -o pipefail'
 
+echo >&2
+echo 'cd ~/Public/pelavarre/byoverbs/' >&2
+echo >&2
+
 if sh -c 'set -o pipefail' 2>/dev/null; then
     set -xeuo pipefail
 else
