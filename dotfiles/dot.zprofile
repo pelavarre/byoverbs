@@ -6,11 +6,9 @@
 
 # Revert enough Zsh back to the Classic Bash Design
 
-# bind 'set enable-bracketed-paste off'
-# unset zle_bracketed_paste
-setopt InteractiveComments
-
-setopt NO_nomatch
+# + : bracket; bind 'set enable-bracketed-paste off' 2>/dev/null; unset zle_bracketed_paste
+setopt interactive_comments
+setopt no_no_match
 
 
 # Grow Sh Path
@@ -26,7 +24,7 @@ function . { if [ $# -eq 0 ]; then open .; else source "$@"; fi; }
 alias ..='echo + cd .. >&2 && cd .. && (dirs -p |head -1)'
 alias ~='echo + cd "~" >&2 && cd ~ && (dirs -p |head -1)'
 
-: setopt AUTO_CD  # Zsh  # lacks tab-completion
+: setopt auto_cd  # Zsh  # lacks tab-completion
 : shopt -s autocd 2>/dev/null  # Bash
 
 
