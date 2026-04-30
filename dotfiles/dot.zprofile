@@ -126,10 +126,11 @@ bindkey '\e[1;3C' forward-word
 date
 echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
 
-if ! uptime |grep days, >/dev/null; then
+if ! uptime |grep day >/dev/null; then
     echo
     echo '+ uptime.py --pretty  # while less than a day'
     uptime.py --pretty
+    echo +
 fi
 
 echo
