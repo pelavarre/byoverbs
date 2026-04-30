@@ -170,6 +170,13 @@ screen -ls >/dev/null && (echo; (set -xe; screen -ls); echo +; echo)
 
 date
 echo "$(id -un)@$(hostname):$(dirs -p |head -1)/."
+
+if ! uptime |grep days, >/dev/null; then
+    echo
+    echo '+ uptime --pretty  # while less than a day'
+    uptime --pretty
+fi
+
 echo
 
 
