@@ -27,7 +27,7 @@ default:
 	@echo "make sense  # restyles & tests the source, but doesn't say push it"
 	@echo
 	@echo 'make bin  # puts bin dir files under test at home bin dir'
-	@echo 'make dotfiles  # updates local dotfiles dir from home dot files'
+	@echo 'make dotfiles  # updates dotfiles dir here from home dot files'
 	@echo "make slow  # run the expensive self-test's"
 	@echo
 	@echo 'open https://twitter.com/intent/tweet?text=.@PELaVarre'
