@@ -13,7 +13,8 @@ setopt no_no_match
 
 # Grow Sh Path
 
-export PATH=$PATH:$HOME/bin
+export PATH=$PATH:$HOME/bin  # classic
+export PATH=$PATH:$HOME/.local/bin  # shoved by Claude
 
 
 # Name the next Pwd:  -, .., ~
