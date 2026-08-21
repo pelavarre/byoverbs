@@ -1,3 +1,5 @@
+# man -k $KEY  # to search them a bit
+
 # man color - to grep across them
 
 
