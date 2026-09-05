@@ -1,23 +1,22 @@
-# shellcheck disable=SC3040  # Posix Sh rejects 'set -o pipefail'
+#!/bin/bash
 
-echo >&2
-echo 'cd ~/Public/pelavarre/byoverbs/' >&2
-echo >&2
-
-if sh -c 'set -o pipefail' 2>/dev/null; then
-    set -xeuo pipefail
-else
-    set -xeu  # some Linux 'dash' choke over '-o pipefail'
-fi
+# usage: pwnme
+# update this Git Clone
 
 D=$(dirname "$0")/..
+cd "$D"/ || exit 1
 
-cd "$D"/
-pwd |sed "s,^$HOME$,~,; s,^$HOME/,~/,"  # as if Bash:  dirs -p |tail -1
+echo >&2
+echo + cd "$(dirs -p |head -1)/" >&2
 
+set -xe
+
+:
 git log --oneline --no-decorate -3
 
+:
 git fetch --prune --prune-tags --force
 git rebase
 
+:
 git log --oneline --no-decorate -3
