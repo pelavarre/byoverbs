@@ -77,11 +77,11 @@ class OptioneeArgs:
 class Main:
     """Open up a shared workspace for the Code of this Py File"""
 
-    args: OptioneeArgs  # parsed Sh Args
-    ibytes: bytes  # the Bytes read as Input
-    obytes: bytes  # the Bytes to write as Output
-    klogger: typing.TextIO  # the Stream to log Keyboard Reads into
-    slogger: typing.TextIO  # the Stream to log Screen Writes into
+    args: typing.ClassVar[OptioneeArgs]  # parsed Sh Args
+    ibytes: typing.ClassVar[bytes]  # the Bytes read as Input
+    obytes: typing.ClassVar[bytes]  # the Bytes to write as Output
+    klogger: typing.ClassVar[typing.TextIO]  # the Stream to log Keyboard Reads into
+    slogger: typing.ClassVar[typing.TextIO]  # the Stream to log Screen Writes into
 
 
 def main() -> None:

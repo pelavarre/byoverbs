@@ -462,7 +462,7 @@ def parse_pq_py_args() -> PqPyArgs:
 class Main:
     """Open up a shared workspace for the Code of this Py File"""
 
-    args: PqPyArgs
+    args: typing.ClassVar[PqPyArgs]
 
 
 @dataclasses.dataclass
