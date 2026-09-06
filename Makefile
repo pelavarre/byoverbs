@@ -190,7 +190,7 @@ p.py:
 
 .PHONY: bin  # make input:  ls -d ./bin
 bin:
-	rm -fr bin/__pycache__/
+	find bin/ -name __pycache__ -type d |xargs rm -fr
 	cp -pR bin/* ~/bin/.
 	: bash -c 'diff -bpru <(ls -1 ~/bin |grep -v ^__pycache__$$) <(ls -1 bin)'
 	:
