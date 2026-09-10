@@ -1,5 +1,5 @@
 (   set -xe
-    mv -i ~/.hushlogin ~/.hushlogin~ || :
+    [ -e ~/.hushlogin ] && mv -i ~/.hushlogin ~/.hushlogin~
     (echo |ssh -t -A localhost 2>&1 |grep -i -e Release -e System.Restart.Required) || :
-    mv -i ~/.hushlogin~ ~/.hushlogin || :
+    [ -e ~/.hushlogin~ ] && mv -i ~/.hushlogin~ ~/.hushlogin
 )
