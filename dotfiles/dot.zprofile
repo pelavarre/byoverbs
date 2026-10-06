@@ -44,9 +44,10 @@ stty -ixon  # let Sh ⌃S mean undo ⌃R  # don't take ⌃Q and ⌃S as XOn/ XOf
 #
 
 
+alias ::='echo -n · |tee >(pbcopy) && echo'
 alias %%='echo -n "%% # £   ⎋ ⌃ ⌥ ⇧ ⌘ Fn   ← ↑ → ↓ ⇥ ⌫ ⏎   ; ⋮ ☰ ⬅️  ⬆️  ➡️  ⬇️  ·" |tee >(pbcopy) && echo'
 
-function .exit() { echo + exit $? >&2; }  # most classic Sh rejects .exit as 'not a valid id'
+function .exit() { local rc=$?; echo + exit $rc >&2; return $rc; }  # reads without clearing
 
 function :scf: () { echo 'supercalifragilisticexpialidocious' |tee >(pbcopy); }
 function :shrug: () { echo '¯\_(ツ)_/¯' |tee >(pbcopy); }
