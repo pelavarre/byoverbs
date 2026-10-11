@@ -2,7 +2,7 @@
 
 #
 # Sign in to
-# <a href="https://grafana.app.purestorage.com/d/${__dashboard.uid}/${__dashboard.slug}">
+# <a href="https://grafana.../d/${__dashboard.uid}/${__dashboard.slug}">
 # Download Csv
 # </a>.
 #
