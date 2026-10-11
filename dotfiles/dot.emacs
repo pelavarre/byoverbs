@@ -1,3 +1,5 @@
+;;; -*- lexical-binding: t -*-
+
 ; ~/.emacs
 
 ; macOS per se lacks Emacs, but you can add:  /opt/homebrew/bin/emacs
