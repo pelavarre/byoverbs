@@ -16,11 +16,17 @@
 
 " Choose colors, despite no ':set background=auto' found in macOS Vim
 
-let mactheme = system('defaults read kCFPreferencesAnyApplication AppleInterfaceStyle')
-if mactheme =~ 'Dark'
-    set background=dark
-else
-    set background=light
+:set background=dark
+:set background=light
+
+let sys_platform = system('uname')
+if sys_platform == 'Darwin'
+    let mactheme = system('defaults read kCFPreferencesAnyApplication AppleInterfaceStyle')
+    if mactheme =~ 'Dark'
+        set background=dark
+    else
+        set background=light
+    endif
 endif
 
 :syntax off
